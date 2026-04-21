@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.local
+
+# Vite
+front/dist/
+
+# IDE
+.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

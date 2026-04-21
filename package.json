@@ -1,0 +1,19 @@
+{
+  "name": "miracle",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "back",
+    "front",
+    "tools"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces --include-workspace-root",
+    "launch:full": "concurrently --kill-others --names \"BACK,FRONT\" -c \"blue,green\" \"npm run launch:back\" \"npm run launch:front\"",
+    "launch:back": "npm run dev --workspace=back",
+    "launch:front": "npm run dev --workspace=front"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
