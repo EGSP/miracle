@@ -5,7 +5,8 @@
   "workspaces": [
     "back",
     "front",
-    "tools"
+    "tools",
+    "types"
   ],
   "scripts": {
     "install:all": "npm install --workspaces --include-workspace-root",
