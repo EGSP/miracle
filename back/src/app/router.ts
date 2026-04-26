@@ -5,6 +5,8 @@ export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 export type MaybePromise<T> = T | Promise<T>;
 
+export type AppMiddleware = RequestHandler;
+
 export type RouteContext = {
     params?: unknown;
     query?: unknown;
@@ -26,6 +28,7 @@ export type AppRoute<
     kind: 'route';
     method: TMethod;
     path: TPath;
+    middlewares: readonly AppMiddleware[];
     handler: THandler;
 };
 
@@ -37,6 +40,7 @@ export type AppRouter<
 > = {
     kind: 'router';
     prefix: TPrefix;
+    middlewares: readonly AppMiddleware[];
     routes: TRoutes;
 };
 
@@ -55,15 +59,47 @@ export type RouteSuccess<TRoute extends AnyRoute> = Exclude<RouteResult<TRoute>,
 
 export type RouteFailure<TRoute extends AnyRoute> = Extract<RouteResult<TRoute>, RouteError>;
 
+export type RouteOptions<THandler extends RouteHandler<any, any>> = {
+    middlewares?: readonly AppMiddleware[];
+    handler: THandler;
+};
+
+export type RouterOptions<TRoutes extends readonly AnyRoute[]> = {
+    middlewares?: readonly AppMiddleware[];
+    routes: TRoutes;
+};
+
+type RouteDefinition<THandler extends RouteHandler<any, any>> =
+    | THandler
+    | RouteOptions<THandler>;
+
+function isRouterOptions<TRoutes extends readonly AnyRoute[]>(
+    definition: TRoutes | RouterOptions<TRoutes>,
+): definition is RouterOptions<TRoutes> {
+    return !Array.isArray(definition);
+}
+
 function defineRoute<
     const TMethod extends HttpMethod,
     const TPath extends string,
     const THandler extends RouteHandler<any, any>,
->(method: TMethod, path: TPath, handler: THandler): AppRoute<TMethod, TPath, THandler> {
+>(
+    method: TMethod,
+    path: TPath,
+    definition: RouteDefinition<THandler>,
+): AppRoute<TMethod, TPath, THandler> {
+    const handler = typeof definition === 'function'
+        ? definition
+        : definition.handler;
+    const middlewares = typeof definition === 'function'
+        ? []
+        : definition.middlewares ?? [];
+
     return {
         kind: 'route',
         method,
         path,
+        middlewares,
         handler,
     };
 }
@@ -71,33 +107,41 @@ function defineRoute<
 export const route = {
     get: <const TPath extends string, const THandler extends RouteHandler<any, any>>(
         path: TPath,
-        handler: THandler,
-    ) => defineRoute('get', path, handler),
+        definition: RouteDefinition<THandler>,
+    ) => defineRoute('get', path, definition),
     post: <const TPath extends string, const THandler extends RouteHandler<any, any>>(
         path: TPath,
-        handler: THandler,
-    ) => defineRoute('post', path, handler),
+        definition: RouteDefinition<THandler>,
+    ) => defineRoute('post', path, definition),
     put: <const TPath extends string, const THandler extends RouteHandler<any, any>>(
         path: TPath,
-        handler: THandler,
-    ) => defineRoute('put', path, handler),
+        definition: RouteDefinition<THandler>,
+    ) => defineRoute('put', path, definition),
     patch: <const TPath extends string, const THandler extends RouteHandler<any, any>>(
         path: TPath,
-        handler: THandler,
-    ) => defineRoute('patch', path, handler),
+        definition: RouteDefinition<THandler>,
+    ) => defineRoute('patch', path, definition),
     delete: <const TPath extends string, const THandler extends RouteHandler<any, any>>(
         path: TPath,
-        handler: THandler,
-    ) => defineRoute('delete', path, handler),
+        definition: RouteDefinition<THandler>,
+    ) => defineRoute('delete', path, definition),
 };
 
 export function defineRouter<
     const TPrefix extends string,
     const TRoutes extends readonly AnyRoute[],
->(prefix: TPrefix, routes: TRoutes): AppRouter<TPrefix, TRoutes> {
+>(prefix: TPrefix, definition: TRoutes | RouterOptions<TRoutes>): AppRouter<TPrefix, TRoutes> {
+    const routes = isRouterOptions(definition)
+        ? definition.routes
+        : definition;
+    const middlewares = isRouterOptions(definition)
+        ? definition.middlewares ?? []
+        : [];
+
     return {
         kind: 'router',
         prefix,
+        middlewares,
         routes,
     };
 }
@@ -115,8 +159,16 @@ export function registerApp(app: Application, definition: AppDefinition): void {
     definition.routers.forEach((routerDefinition) => {
         const router = express.Router();
 
+        if (routerDefinition.middlewares.length > 0) {
+            router.use(...routerDefinition.middlewares);
+        }
+
         routerDefinition.routes.forEach((routeDefinition) => {
-            router[routeDefinition.method](routeDefinition.path, createRequestHandler(routeDefinition));
+            router[routeDefinition.method](
+                routeDefinition.path,
+                ...routeDefinition.middlewares,
+                createRequestHandler(routeDefinition),
+            );
         });
 
         app.use(routerDefinition.prefix, router);
