@@ -3,7 +3,7 @@ import argon2 from 'argon2';
 import type { Request, Response } from 'express';
 import type { AuthTokens, JwtPayload } from '@miracle/types';
 import { serverConfig } from '../config.js';
-import { getUser, userDb } from '../databases/user.db.js';
+import { userService } from '../databases/user.db.js';
 import { err, mw } from '../app/index.js';
 import { verifyToken } from '../databases/session.db.js';
 import { TOKENS } from './tokensTools.js';
@@ -20,7 +20,7 @@ export const authMiddleware = mw(async ({ cookies, locals }) => {
         return err.unauthorized();
     }
 
-    const user = await getUser(access.sub);
+    const user = await userService.get(access.sub);
 
     if (!user) {
         return err.notFound('User not found');

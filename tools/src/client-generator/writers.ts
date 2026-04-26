@@ -3,6 +3,7 @@ import path from 'path';
 import { toCamelCase, toImportPath } from './naming.js';
 import type {
     AppModel,
+    ExternalTypeImportModel,
     NormalizedClientGeneratorConfig,
     RouteModel,
     RouterModel,
@@ -62,6 +63,11 @@ async function writeRouterModels(router: RouterModel, outputDir: string): Promis
     const commonImport = router.commonTypeNames.length > 0
         ? `import type { ${router.commonTypeNames.join(', ')} } from './common.models';`
         : undefined;
+    const externalImports = getExternalTypeImportLines(router.routes.flatMap((route) => (
+        route.responseTypeText
+            ? filterExternalTypeImportsByText(route.externalTypeImports, route.responseTypeText)
+            : []
+    )));
     const routeModels = router.routes.flatMap((route) => {
         const aliases = [
             route.responseTypeText
@@ -71,12 +77,20 @@ async function writeRouterModels(router: RouterModel, outputDir: string): Promis
 
         return aliases.filter((alias): alias is string => Boolean(alias));
     });
+    const modelBody = [
+        commonImport,
+        externalImports,
+        router.modelSourceText,
+        routeModels.join('\n\n'),
+    ].filter(Boolean);
+
+    if (modelBody.length === 0) {
+        return;
+    }
 
     const content = [
         GENERATED_HEADER.trimEnd(),
-        commonImport,
-        router.modelSourceText,
-        routeModels.join('\n\n'),
+        ...modelBody,
         '',
     ].filter(Boolean).join('\n\n');
 
@@ -92,16 +106,24 @@ async function writeRouterClient(
     config: NormalizedClientGeneratorConfig,
 ): Promise<void> {
     const modelImport = './models';
+    const externalImports = getClientExternalTypeImports(router);
+    const externalTypeNames = new Set(externalImports.map((externalImport) => externalImport.typeName));
     const typeNames = router.routes.flatMap((route) => [
         ...route.clientArgs.flatMap((arg) => arg.referencedTypeNames),
         route.responseTypeName,
-    ]).filter((typeName): typeName is string => Boolean(typeName));
+    ])
+        .filter((typeName): typeName is string => Boolean(typeName))
+        .filter((typeName) => !externalTypeNames.has(typeName));
     const customInstanceImport = getRelativeImport(config.outputDir, config.customInstancePath);
     const usesFormatPath = router.routes.some((route) => route.hasParams);
+    const modelTypeNames = Array.from(new Set(typeNames));
     const imports = [
         `import { customInstance } from '${customInstanceImport}';`,
         usesFormatPath ? `import { formatPath } from './http';` : undefined,
-        `import type { ${Array.from(new Set(typeNames)).join(', ')} } from '${modelImport}';`,
+        getExternalTypeImportLines(externalImports),
+        modelTypeNames.length > 0
+            ? `import type { ${modelTypeNames.join(', ')} } from '${modelImport}';`
+            : undefined,
     ].filter(Boolean).join('\n');
 
     const methods = router.routes.map((route) => writeRouteMethod(route)).join('\n');
@@ -113,6 +135,63 @@ ${methods}
 `;
 
     await writeFile(path.join(config.outputDir, `${router.fileBaseName}.client.ts`), content, 'utf8');
+}
+
+function getClientExternalTypeImports(router: RouterModel): ExternalTypeImportModel[] {
+    return uniqueExternalTypeImports(router.routes.flatMap((route) => {
+        const clientTypeTexts = route.clientArgs.map((arg) => arg.typeText);
+
+        if (!route.responseTypeText) {
+            clientTypeTexts.push(route.responseTypeName);
+        }
+
+        return filterExternalTypeImportsByText(route.externalTypeImports, clientTypeTexts.join('\n'));
+    }));
+}
+
+function filterExternalTypeImportsByText(
+    externalTypeImports: ExternalTypeImportModel[],
+    typeText: string,
+): ExternalTypeImportModel[] {
+    return externalTypeImports.filter((externalTypeImport) => (
+        new RegExp(`\\b${escapeRegExp(externalTypeImport.typeName)}\\b`, 'u').test(typeText)
+    ));
+}
+
+function getExternalTypeImportLines(externalTypeImports: ExternalTypeImportModel[]): string | undefined {
+    const importsByModule = new Map<string, string[]>();
+
+    uniqueExternalTypeImports(externalTypeImports).forEach(({ moduleSpecifier, typeName }) => {
+        const typeNames = importsByModule.get(moduleSpecifier) ?? [];
+        typeNames.push(typeName);
+        importsByModule.set(moduleSpecifier, typeNames);
+    });
+
+    const lines = Array.from(importsByModule)
+        .map(([moduleSpecifier, typeNames]) => (
+            `import type { ${Array.from(new Set(typeNames)).sort().join(', ')} } from '${moduleSpecifier}';`
+        ));
+
+    return lines.length > 0 ? lines.join('\n') : undefined;
+}
+
+function uniqueExternalTypeImports(externalTypeImports: ExternalTypeImportModel[]): ExternalTypeImportModel[] {
+    const seen = new Set<string>();
+
+    return externalTypeImports.filter((externalTypeImport) => {
+        const key = `${externalTypeImport.moduleSpecifier}:${externalTypeImport.typeName}`;
+
+        if (seen.has(key)) {
+            return false;
+        }
+
+        seen.add(key);
+        return true;
+    });
+}
+
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 }
 
 function writeRouteMethod(route: RouteModel): string {
@@ -141,7 +220,9 @@ async function writeBarrelFiles(appModel: AppModel, outputDir: string): Promise<
     const modelExports = [
         GENERATED_HEADER.trimEnd(),
         appModel.commonModelSourceText ? "export * from './common.models';" : undefined,
-        ...appModel.routers.map((router) => `export * from './${router.fileBaseName}.models';`),
+        ...appModel.routers
+            .filter((router) => router.hasModelFile)
+            .map((router) => `export * from './${router.fileBaseName}.models';`),
         '',
     ].filter((line): line is string => Boolean(line)).join('\n');
 

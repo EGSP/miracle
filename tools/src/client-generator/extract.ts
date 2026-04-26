@@ -1,4 +1,5 @@
 import path from 'path';
+import { existsSync, readFileSync } from 'fs';
 import {
     ArrowFunction,
     ArrayLiteralExpression,
@@ -24,6 +25,7 @@ import type {
     AppModel,
     ClientArgModel,
     ClientArgSource,
+    ExternalTypeImportModel,
     HttpMethod,
     NormalizedClientGeneratorConfig,
     RouteModel,
@@ -108,14 +110,20 @@ function extractRouter(routerDeclaration: VariableDeclaration): RouterModel {
         const routeDeclaration = resolveVariableDeclaration(routeElement);
         return extractRoute(routeDeclaration, prefix);
     });
+    const modelSourceText = getModelSourceText(
+        sourceFile,
+        routes.flatMap((route) => route.referencedTypeNames),
+    );
+    const hasModelFile = Boolean(modelSourceText) || routes.some((route) => Boolean(route.responseTypeText));
 
     return {
         name,
         fileBaseName,
         prefix,
         routes,
-        modelSourceText: getModelSourceText(sourceFile, routes.flatMap((route) => route.referencedTypeNames)),
+        modelSourceText,
         commonTypeNames: [],
+        hasModelFile,
     };
 }
 
@@ -144,6 +152,10 @@ function extractRoute(routeDeclaration: VariableDeclaration, routerPrefix: strin
     const operationTypeName = toPascalCase(operationName);
     const request = getRequestInfo(handler, operationTypeName);
     const response = getResponseInfo(handler, routeDeclaration.getSourceFile(), operationTypeName);
+    const externalTypeImports = uniqueExternalTypeImports([
+        ...request.externalTypeImports,
+        ...response.externalTypeImports,
+    ]);
     const referencedTypeNames = collectTypeNames([
         ...request.clientArgs.map((arg) => arg.typeText),
         response.typeName,
@@ -159,6 +171,7 @@ function extractRoute(routeDeclaration: VariableDeclaration, routerPrefix: strin
         clientArgs: request.clientArgs,
         responseTypeName: response.typeName,
         responseTypeText: response.typeText,
+        externalTypeImports,
         referencedTypeNames,
         hasBody: request.hasBody,
         hasQuery: request.hasQuery,
@@ -175,6 +188,7 @@ function getRequestInfo(
     hasBody: boolean;
     hasQuery: boolean;
     hasParams: boolean;
+    externalTypeImports: ExternalTypeImportModel[];
 } {
     const parameter = handler.getParameters()[0];
 
@@ -185,10 +199,12 @@ function getRequestInfo(
             hasBody: false,
             hasQuery: false,
             hasParams: false,
+            externalTypeImports: [],
         };
     }
 
     const parameterType = parameter.getType();
+    const externalTypeImports: ExternalTypeImportModel[] = [];
     const clientArgs = CLIENT_REQUEST_PROPERTIES.flatMap((propertyName) => {
         const property = parameterType.getProperty(propertyName);
 
@@ -198,13 +214,16 @@ function getRequestInfo(
 
         const declaration = property.getValueDeclaration() ?? property.getDeclarations()[0];
         const propertyType = property.getTypeAtLocation(declaration ?? parameter);
-        const typeText = propertyType.getText(parameter, TypeFormatFlags.NoTruncation);
+        const normalizedType = normalizeGeneratedTypeText(
+            propertyType.getText(parameter, TypeFormatFlags.NoTruncation),
+        );
+        externalTypeImports.push(...normalizedType.externalTypeImports);
 
         return [{
             source: propertyName,
-            name: getClientArgName(propertyName, typeText),
-            typeText,
-            referencedTypeNames: collectTypeNames([typeText]),
+            name: getClientArgName(propertyName, normalizedType.typeText),
+            typeText: normalizedType.typeText,
+            referencedTypeNames: collectTypeNames([normalizedType.typeText]),
         }];
     });
     const uniqueClientArgs = ensureUniqueArgNames(clientArgs);
@@ -216,6 +235,7 @@ function getRequestInfo(
         hasBody: properties.has('body'),
         hasQuery: properties.has('query'),
         hasParams: properties.has('params'),
+        externalTypeImports: uniqueExternalTypeImports(externalTypeImports),
     };
 }
 
@@ -226,6 +246,7 @@ function getResponseInfo(
 ): {
     typeName: string;
     typeText?: string;
+    externalTypeImports: ExternalTypeImportModel[];
 } {
     const successExpressions = getReturnExpressions(handler).filter((expression) => !isErrCall(expression));
     const satisfiesTypes = successExpressions
@@ -233,8 +254,13 @@ function getResponseInfo(
         .filter((typeText): typeText is string => Boolean(typeText));
 
     if (satisfiesTypes.length > 0) {
-        const typeText = unique(satisfiesTypes).join(' | ');
-        return createResponseInfo(operationTypeName, typeText);
+        const normalizedTypes = satisfiesTypes.map(normalizeGeneratedTypeText);
+        const typeText = unique(normalizedTypes.map((type) => type.typeText)).join(' | ');
+        return createResponseInfo(
+            operationTypeName,
+            typeText,
+            normalizedTypes.flatMap((type) => type.externalTypeImports),
+        );
     }
 
     const successTypes = successExpressions
@@ -242,30 +268,132 @@ function getResponseInfo(
         .filter((type) => !isRouteErrorType(type));
 
     if (successTypes.length > 0) {
-        const typeText = unique(successTypes.map((type) => type.getText(sourceFile, TypeFormatFlags.NoTruncation))).join(' | ');
-        return createResponseInfo(operationTypeName, typeText);
+        const normalizedTypes = successTypes.map((type) => normalizeGeneratedTypeText(
+            type.getText(sourceFile, TypeFormatFlags.NoTruncation),
+        ));
+        const typeText = unique(normalizedTypes.map((type) => type.typeText)).join(' | ');
+        return createResponseInfo(
+            operationTypeName,
+            typeText,
+            normalizedTypes.flatMap((type) => type.externalTypeImports),
+        );
     }
 
     return {
         typeName: `${operationTypeName}Response`,
         typeText: 'null',
+        externalTypeImports: [],
     };
 }
 
-function createResponseInfo(operationTypeName: string, typeText: string): {
+function createResponseInfo(
+    operationTypeName: string,
+    typeText: string,
+    externalTypeImports: ExternalTypeImportModel[] = [],
+): {
     typeName: string;
     typeText?: string;
+    externalTypeImports: ExternalTypeImportModel[];
 } {
     if (isReusableTypeReference(typeText)) {
         return {
             typeName: typeText,
+            externalTypeImports: uniqueExternalTypeImports(externalTypeImports),
         };
     }
 
     return {
         typeName: `${operationTypeName}Response`,
         typeText,
+        externalTypeImports: uniqueExternalTypeImports(externalTypeImports),
     };
+}
+
+function normalizeGeneratedTypeText(typeText: string): {
+    typeText: string;
+    externalTypeImports: ExternalTypeImportModel[];
+} {
+    const externalTypeImports: ExternalTypeImportModel[] = [];
+    const normalizedTypeText = typeText.replace(
+        /import\("([^"]+)"\)\.([A-Za-z_$][\w$]*)/gu,
+        (match, importPath: string, typeName: string) => {
+            const moduleSpecifier = resolvePackageModuleSpecifier(importPath);
+
+            if (!moduleSpecifier) {
+                return match;
+            }
+
+            externalTypeImports.push({
+                moduleSpecifier,
+                typeName,
+            });
+
+            return typeName;
+        },
+    );
+
+    return {
+        typeText: normalizedTypeText,
+        externalTypeImports: uniqueExternalTypeImports(externalTypeImports),
+    };
+}
+
+function resolvePackageModuleSpecifier(importPath: string): string | undefined {
+    const normalizedPath = path.resolve(decodeImportPath(importPath));
+    const packageJsonPath = findPackageJson(path.dirname(normalizedPath));
+
+    if (!packageJsonPath) {
+        return undefined;
+    }
+
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+        name?: unknown;
+    };
+
+    return typeof packageJson.name === 'string' ? packageJson.name : undefined;
+}
+
+function decodeImportPath(importPath: string): string {
+    try {
+        return JSON.parse(`"${importPath}"`) as string;
+    } catch {
+        return importPath;
+    }
+}
+
+function findPackageJson(startDir: string): string | undefined {
+    let currentDir = path.resolve(startDir);
+
+    while (true) {
+        const packageJsonPath = path.join(currentDir, 'package.json');
+
+        if (existsSync(packageJsonPath)) {
+            return packageJsonPath;
+        }
+
+        const parentDir = path.dirname(currentDir);
+
+        if (parentDir === currentDir) {
+            return undefined;
+        }
+
+        currentDir = parentDir;
+    }
+}
+
+function uniqueExternalTypeImports(externalTypeImports: ExternalTypeImportModel[]): ExternalTypeImportModel[] {
+    const seen = new Set<string>();
+
+    return externalTypeImports.filter((externalTypeImport) => {
+        const key = `${externalTypeImport.moduleSpecifier}:${externalTypeImport.typeName}`;
+
+        if (seen.has(key)) {
+            return false;
+        }
+
+        seen.add(key);
+        return true;
+    });
 }
 
 function getClientArgName(source: ClientArgSource, typeText: string): string {
@@ -372,7 +500,10 @@ function isRouteErrorType(type: Type): boolean {
     return okType?.getText() === 'false';
 }
 
-function getModelSourceText(sourceFile: SourceFile, referencedTypeNames: string[]): string {
+function getModelSourceText(
+    sourceFile: SourceFile,
+    referencedTypeNames: string[],
+): string {
     const declarations = getReferencedLocalDeclarations(sourceFile, referencedTypeNames);
     const declarationText = declarations
         .map((declaration) => ensureExportedDeclaration(declaration.getText()))

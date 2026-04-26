@@ -26,6 +26,11 @@ export type ClientArgModel = {
     referencedTypeNames: string[];
 };
 
+export type ExternalTypeImportModel = {
+    moduleSpecifier: string;
+    typeName: string;
+};
+
 export type RouteModel = {
     name: string;
     method: HttpMethod;
@@ -35,6 +40,7 @@ export type RouteModel = {
     clientArgs: ClientArgModel[];
     responseTypeName: string;
     responseTypeText?: string;
+    externalTypeImports: ExternalTypeImportModel[];
     referencedTypeNames: string[];
     hasBody: boolean;
     hasQuery: boolean;
@@ -48,6 +54,7 @@ export type RouterModel = {
     routes: RouteModel[];
     modelSourceText: string;
     commonTypeNames: string[];
+    hasModelFile: boolean;
 };
 
 export type AppModel = {

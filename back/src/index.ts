@@ -8,6 +8,8 @@ import { defineApp, registerApp } from './app/index.js';
 import { healthRouter } from './routers/health.router.js';
 import { authRouter } from './routers/auth.router.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
+import { sessionRouter } from './routers/session.router.js';
+import { userRouter } from './routers/user.router.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +25,8 @@ app.use(express.json());
 const appDefinition = defineApp([
   healthRouter,
   authRouter,
+  sessionRouter,
+  userRouter,
 ] as const);
 
 registerApp(app, appDefinition);

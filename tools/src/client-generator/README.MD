@@ -195,9 +195,26 @@ refreshTokens: () => customInstance<RefreshTokensResponse>({
 попадают в `generated/models/common.models.ts`. Генератор рекурсивно подтягивает
 их зависимости, если эти зависимости тоже объявлены в backend-local файлах.
 
-Типы из общих пакетов, например `@miracle/types`, не копируются. Файлы моделей
-сохраняют import и добавляют type re-export, чтобы client-файлы могли импортировать
-все публичные типы из `./models`.
+Типы из общих пакетов, например `@miracle/types`, не копируются.
+
+Если TypeScript вывел response type неявно и вернул его в форме
+`import(".../types/src/user").User`, генератор нормализует такой тип до обычного
+package import прямо в client-файле:
+
+```ts
+import type { User } from '@miracle/types';
+
+export const user = {
+    getUser: (params: { id: string }) => customInstance<User>({
+        method: 'GET',
+        url: formatPath('/user/:id', params),
+    }),
+};
+```
+
+Router-specific model-файл не re-export-ит такой тип, если он не нужен для
+локального alias. Если для роутера нет собственных моделей, router-specific
+model-файл вообще не создается и не попадает в `models/index.ts`.
 
 Клиенты всегда импортируют модели из barrel-файла:
 
@@ -205,8 +222,9 @@ refreshTokens: () => customInstance<RefreshTokensResponse>({
 import type { HealthResponse, UserDto } from './models';
 ```
 
-Это скрывает от клиентского кода, где именно лежит модель: в router-specific
-файле, `common.models.ts` или общем workspace-пакете.
+Это скрывает от клиентского кода, где именно лежит локальная модель:
+в router-specific файле или `common.models.ts`. Типы из workspace-пакетов могут
+импортироваться client-файлами напрямую.
 
 ## CLI
 

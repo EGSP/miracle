@@ -1,4 +1,5 @@
 import { useCheckHealth, useRefetchHealth } from "@/lib/queries/health.query";
+import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 
 export default function HomePage() {
@@ -12,18 +13,21 @@ export default function HomePage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center">
-      <section>
+      <div>
         <h1>Miracle</h1>
         <p>Обработка опросных листов ИИ агентом</p>
-      </section>
-      <section>
+      </div>
+      <div>
         <h2>Проверка состояния сервера</h2>
         {isLoading && <p>Загрузка...</p>}
         {error && <p>Ошибка: {error.message}</p>}
         {data && <p>Состояние сервера: {data.status} от {localizedTimestamp}</p>}
 
         <button onClick={refetchHealth}>Проверить</button>
-      </section>
+      </div>
+      <div>
+        <Link to="/auth">Авторизация</Link>
+      </div>
     </main>
   );
 }
