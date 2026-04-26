@@ -3,6 +3,9 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import { serverConfig } from './config.js';
+import { defineApp, registerApp } from './app/index.js';
+import { healthRouter } from './routers/health.router.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,14 +13,16 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const app = express();
-const PORT = Number(process.env.PORT ?? 3001);
+const PORT = serverConfig.PORT;
 
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? `http://localhost:8081` }));
+app.use(cors({ origin: serverConfig.CORS_ORIGIN }));
 app.use(express.json());
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+const appDefinition = defineApp([
+  healthRouter,
+] as const);
+
+registerApp(app, appDefinition);
 
 app.listen(PORT, () => {
   console.log(`[back] Server running on http://localhost:${PORT}`);

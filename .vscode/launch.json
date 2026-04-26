@@ -16,7 +16,7 @@
     },
     {
       "name": "Front: Browser",
-      "type": "chrome",
+      "type": "msedge",
       "request": "launch",
       "url": "http://localhost:8081",
       "webRoot": "${workspaceFolder}/front/src",

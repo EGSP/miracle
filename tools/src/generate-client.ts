@@ -1,15 +1,11 @@
-/**
- * API client generator.
- * Generates a typed fetch client from the back OpenAPI/route definitions.
- * TODO: implement generation logic when API routes are stabilized.
- */
+export { generateClient } from './client-generator/index.js';
 
-export async function generateClient(outputPath: string): Promise<void> {
-  console.log(`[generate-client] Output path: ${outputPath}`);
-  console.log('[generate-client] Not implemented yet.');
-}
+import { fileURLToPath } from 'url';
+import { generateClient } from './client-generator/index.js';
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
-  const output = process.argv[2] ?? '../front/src/api/client.ts';
-  generateClient(output).catch(console.error);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  generateClient(process.argv[2]).catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }

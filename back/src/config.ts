@@ -2,6 +2,10 @@ import ms from 'ms';
 import type { StringValue } from 'ms';
 
 export type ServerConfig = {
+
+    PORT: number;
+    CORS_ORIGIN: string;
+
     ACCESS_TOKEN_LIFETIME: string;
     REFRESH_TOKEN_LIFETIME: string;
     ACCESS_TOKEN_LIFETIME_MS: number;
@@ -14,6 +18,9 @@ const ACCESS_TOKEN_LIFETIME = (process.env.ACCESS_TOKEN_LIFETIME ?? '15m') as St
 const REFRESH_TOKEN_LIFETIME = (process.env.REFRESH_TOKEN_LIFETIME ?? '7d') as StringValue;
 
 export const serverConfig: ServerConfig = {
+    PORT: Number(process.env.PORT ?? 3001),
+    CORS_ORIGIN: process.env.CORS_ORIGIN ?? `http://localhost:8081`,
+    
     ACCESS_TOKEN_LIFETIME,
     REFRESH_TOKEN_LIFETIME,
     ACCESS_TOKEN_LIFETIME_MS: ms(ACCESS_TOKEN_LIFETIME),
