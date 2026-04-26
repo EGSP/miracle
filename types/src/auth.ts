@@ -17,6 +17,11 @@ export interface JwtPayload {
 }
 
 export interface AuthTokens {
-    accessToken: string;
+    accessToken?: string;
     refreshToken?: string;
+}
+
+export interface NewAuthTokens extends AuthTokens {
+    accessToken: string;
+    refreshToken: string;
 }

@@ -58,19 +58,138 @@ const result = await health.checkHealth();
 
 - `back/src/index.ts` содержит один `defineApp([...])`.
 - Массив app содержит переменные роутеров верхнего уровня.
-- Роутеры создаются через `defineRouter(prefix, [...routes])`.
-- Маршруты создаются через `route.get/post/put/patch/delete(path, handler)`.
+- Роутеры создаются через `defineRouter(prefix, [...routes])` или `defineRouter(prefix, { routes })`.
+- Маршруты создаются через `route.get/post/put/patch/delete(path, handler)` или `route.method(path, { handler })`.
 - Массивы роутеров и маршрутов должны быть литералами.
 - Пути должны быть строковыми литералами.
 - Имена route-переменных становятся именами методов клиента.
-- Типизированные API-ошибки нужно возвращать через `err[...]`; `throw` считается неожиданной серверной ошибкой.
+- Типизированные API-ошибки нужно возвращать через `err.badRequest`, `err.unauthorized`, `err.notFound` и другие helpers; `throw` считается неожиданной серверной ошибкой.
+
+## Что Считается Client Request
+
+Генератор читает первый аргумент route handler-а, но в client-функцию превращает
+только публичные HTTP-поля:
+
+- `params` — path params, подставляется в `/:param`;
+- `query` — query params, попадает в `params`;
+- `body` — тело запроса, попадает в `data`.
+
+Аргументы client-функции генерируются явно, без wrapper-типа вроде
+`LoginRequest`. Порядок аргументов фиксированный:
+
+```txt
+params -> query -> body
+```
+
+Если поле имеет именованный тип, имя аргумента строится из имени типа:
+
+- `body: LoginDTO` -> `loginDTO`;
+- `body: RegisterDTO` -> `registerDTO`;
+- `query: UserFilterDTO` -> `userFilterDTO`;
+- `params: TaskParams` -> `taskParams`.
+
+Если тип inline, используется fallback по имени поля: `params`, `query` или `body`.
+
+Серверные поля не попадают в модели и client-функции:
+
+- `req`;
+- `res`;
+- `cookies`;
+- `headers`;
+- `locals`.
+
+Например backend handler:
+
+```ts
+type LoginDTO = {
+    login: string;
+    password: string;
+};
+
+const login = route.post('/login', async ({
+    body,
+    res,
+}: {
+    body: LoginDTO;
+    res: Response;
+}) => {
+    // res нужен только серверу, например для установки cookies.
+    return { status: 'success' } satisfies LoginResponse;
+});
+```
+
+Даст client-функцию с одним явным аргументом:
+
+```ts
+login: (loginDTO: LoginDTO) => customInstance<LoginResponse>({
+    method: 'POST',
+    url: '/auth/login',
+    data: loginDTO,
+});
+```
+
+Для маршрута с несколькими публичными частями запроса:
+
+```ts
+type TaskParams = {
+    id: string;
+};
+
+type TaskFilterDTO = {
+    includeDone?: boolean;
+};
+
+const getTask = route.get('/tasks/:id', async ({
+    params,
+    query,
+}: {
+    params: TaskParams;
+    query: TaskFilterDTO;
+}) => {
+    return { status: 'success' } satisfies TaskResponse;
+});
+```
+
+Клиент будет сгенерирован так:
+
+```ts
+getTask: (taskParams: TaskParams, taskFilterDTO: TaskFilterDTO) => customInstance<TaskResponse>({
+    method: 'GET',
+    url: formatPath('/tasks/:id', taskParams),
+    params: taskFilterDTO,
+});
+```
+
+Если handler использует только server-side cookies:
+
+```ts
+const refreshTokens = route.post('/refresh-tokens', async ({ cookies, res }) => {
+    // cookies и res не являются client request.
+    return { status: 'success' } satisfies RefreshTokensResponse;
+});
+```
+
+То client method будет без аргументов:
+
+```ts
+refreshTokens: () => customInstance<RefreshTokensResponse>({
+    method: 'POST',
+    url: '/auth/refresh-tokens',
+});
+```
 
 ## Модели
 
-Генератор пишет модели в `generated/models`. Локальные `type` и `interface` из
-файла роутера копируются в соответствующий файл моделей. Если response уже
-является именованным типом, например `HealthResponse`, клиент использует его
-напрямую и не создает лишний alias вроде `CheckHealthResponse`.
+Генератор пишет модели в `generated/models`. В router-specific model-файл попадают
+только локальные `type`, `interface` и `enum`, которые реально используются
+сгенерированными аргументами client-функций и response-типами.
+
+Серверные imports из router-файла не копируются во frontend. Например `Response`
+из `express`, сервисы, базы данных, middleware helpers и другие backend-only
+зависимости не должны появляться в `generated/models`.
+
+Если response уже является именованным типом, например `HealthResponse`, клиент
+использует его напрямую и не создает лишний alias вроде `CheckHealthResponse`.
 
 Общие backend-local типы, которые роутеры импортируют из относительных backend-файлов,
 попадают в `generated/models/common.models.ts`. Генератор рекурсивно подтягивает

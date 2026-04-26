@@ -1,9 +1,11 @@
 import path from 'path';
 import {
     ArrowFunction,
+    ArrayLiteralExpression,
     CallExpression,
     InterfaceDeclaration,
     Node,
+    ObjectLiteralExpression,
     Project,
     ReturnStatement,
     SatisfiesExpression,
@@ -17,9 +19,11 @@ import {
     type Type,
     type ImportDeclaration,
 } from 'ts-morph';
-import { normalizeUrl, stripSuffix, toPascalCase } from './naming.js';
+import { normalizeUrl, stripSuffix, toCamelCase, toPascalCase } from './naming.js';
 import type {
     AppModel,
+    ClientArgModel,
+    ClientArgSource,
     HttpMethod,
     NormalizedClientGeneratorConfig,
     RouteModel,
@@ -27,6 +31,7 @@ import type {
 } from './types.js';
 
 const ROUTE_METHODS = new Set<HttpMethod>(['get', 'post', 'put', 'patch', 'delete']);
+const CLIENT_REQUEST_PROPERTIES = ['params', 'query', 'body'] as const satisfies readonly ClientArgSource[];
 const TYPE_NAME_PATTERN = /\b[A-Z][A-Za-z0-9_]*\b/gu;
 const BUILTIN_TYPE_NAMES = new Set([
     'Array',
@@ -93,11 +98,7 @@ function extractRouter(routerDeclaration: VariableDeclaration): RouterModel {
     }
 
     const prefix = getStringArgument(routerCall, 0, `Router ${routerDeclaration.getName()} prefix`);
-    const routesArg = unwrapExpression(routerCall.getArguments()[1]);
-
-    if (!Node.isArrayLiteralExpression(routesArg)) {
-        throw new Error(`Router ${routerDeclaration.getName()} must receive a routes array literal.`);
-    }
+    const routesArg = getRouterRoutesArray(routerCall, routerDeclaration.getName());
 
     const sourceFile = routerDeclaration.getSourceFile();
     const fileBaseName = stripSuffix(path.basename(sourceFile.getFilePath()), '.router.ts');
@@ -113,7 +114,7 @@ function extractRouter(routerDeclaration: VariableDeclaration): RouterModel {
         fileBaseName,
         prefix,
         routes,
-        modelSourceText: getModelSourceText(sourceFile),
+        modelSourceText: getModelSourceText(sourceFile, routes.flatMap((route) => route.referencedTypeNames)),
         commonTypeNames: [],
     };
 }
@@ -133,7 +134,7 @@ function extractRoute(routeDeclaration: VariableDeclaration, routerPrefix: strin
     }
 
     const pathValue = getStringArgument(routeCall, 0, `Route ${routeDeclaration.getName()} path`);
-    const handler = routeCall.getArguments()[1];
+    const handler = getRouteHandler(routeCall, routeDeclaration.getName());
 
     if (!Node.isArrowFunction(handler) && !Node.isFunctionExpression(handler)) {
         throw new Error(`${routeDeclaration.getName()} must pass a function handler.`);
@@ -144,7 +145,7 @@ function extractRoute(routeDeclaration: VariableDeclaration, routerPrefix: strin
     const request = getRequestInfo(handler, operationTypeName);
     const response = getResponseInfo(handler, routeDeclaration.getSourceFile(), operationTypeName);
     const referencedTypeNames = collectTypeNames([
-        request.typeText,
+        ...request.clientArgs.map((arg) => arg.typeText),
         response.typeName,
         response.typeText,
     ]);
@@ -155,8 +156,7 @@ function extractRoute(routeDeclaration: VariableDeclaration, routerPrefix: strin
         path: pathValue,
         fullPath: normalizeUrl(routerPrefix, pathValue),
         hasRequest: request.hasRequest,
-        requestTypeName: `${operationTypeName}Request`,
-        requestTypeText: request.typeText,
+        clientArgs: request.clientArgs,
         responseTypeName: response.typeName,
         responseTypeText: response.typeText,
         referencedTypeNames,
@@ -171,7 +171,7 @@ function getRequestInfo(
     operationTypeName: string,
 ): {
     hasRequest: boolean;
-    typeText?: string;
+    clientArgs: ClientArgModel[];
     hasBody: boolean;
     hasQuery: boolean;
     hasParams: boolean;
@@ -181,6 +181,7 @@ function getRequestInfo(
     if (!parameter) {
         return {
             hasRequest: false,
+            clientArgs: [],
             hasBody: false,
             hasQuery: false,
             hasParams: false,
@@ -188,15 +189,30 @@ function getRequestInfo(
     }
 
     const parameterType = parameter.getType();
-    const properties = new Set(parameterType.getProperties().map((property) => property.getName()));
-    const typeNode = parameter.getTypeNode();
-    const typeText = typeNode
-        ? typeNode.getText()
-        : parameterType.getText(parameter, TypeFormatFlags.NoTruncation);
+    const clientArgs = CLIENT_REQUEST_PROPERTIES.flatMap((propertyName) => {
+        const property = parameterType.getProperty(propertyName);
+
+        if (!property) {
+            return [];
+        }
+
+        const declaration = property.getValueDeclaration() ?? property.getDeclarations()[0];
+        const propertyType = property.getTypeAtLocation(declaration ?? parameter);
+        const typeText = propertyType.getText(parameter, TypeFormatFlags.NoTruncation);
+
+        return [{
+            source: propertyName,
+            name: getClientArgName(propertyName, typeText),
+            typeText,
+            referencedTypeNames: collectTypeNames([typeText]),
+        }];
+    });
+    const uniqueClientArgs = ensureUniqueArgNames(clientArgs);
+    const properties = new Set(uniqueClientArgs.map((arg) => arg.source));
 
     return {
-        hasRequest: properties.size > 0,
-        typeText: properties.size > 0 ? typeText : undefined,
+        hasRequest: uniqueClientArgs.length > 0,
+        clientArgs: uniqueClientArgs,
         hasBody: properties.has('body'),
         hasQuery: properties.has('query'),
         hasParams: properties.has('params'),
@@ -250,6 +266,42 @@ function createResponseInfo(operationTypeName: string, typeText: string): {
         typeName: `${operationTypeName}Response`,
         typeText,
     };
+}
+
+function getClientArgName(source: ClientArgSource, typeText: string): string {
+    const reusableTypeName = getReusableTypeName(typeText);
+
+    if (reusableTypeName) {
+        return toCamelCase(reusableTypeName);
+    }
+
+    return source;
+}
+
+function getReusableTypeName(typeText: string): string | undefined {
+    if (!isReusableTypeReference(typeText)) {
+        return undefined;
+    }
+
+    return typeText.split('.').at(-1);
+}
+
+function ensureUniqueArgNames(clientArgs: ClientArgModel[]): ClientArgModel[] {
+    const seenNames = new Map<string, number>();
+
+    return clientArgs.map((arg) => {
+        const seenCount = seenNames.get(arg.name) ?? 0;
+        seenNames.set(arg.name, seenCount + 1);
+
+        if (seenCount === 0) {
+            return arg;
+        }
+
+        return {
+            ...arg,
+            name: `${arg.name}${toPascalCase(arg.source)}`,
+        };
+    });
 }
 
 function isReusableTypeReference(typeText: string): boolean {
@@ -320,20 +372,15 @@ function isRouteErrorType(type: Type): boolean {
     return okType?.getText() === 'false';
 }
 
-function getModelSourceText(sourceFile: SourceFile): string {
-    const imports = getExternalImportSourceText(sourceFile);
-
-    const declarations = sourceFile
-        .getStatements()
-        .filter((statement): statement is TypeAliasDeclaration | InterfaceDeclaration | EnumDeclaration => (
-            Node.isTypeAliasDeclaration(statement) ||
-            Node.isInterfaceDeclaration(statement) ||
-            Node.isEnumDeclaration(statement)
-        ))
+function getModelSourceText(sourceFile: SourceFile, referencedTypeNames: string[]): string {
+    const declarations = getReferencedLocalDeclarations(sourceFile, referencedTypeNames);
+    const declarationText = declarations
         .map((declaration) => ensureExportedDeclaration(declaration.getText()))
         .join('\n\n');
+    const usedTypeNames = declarations.flatMap((declaration) => collectTypeNames([declaration.getText()]));
+    const imports = getExternalImportSourceText(sourceFile, usedTypeNames);
 
-    return [imports, declarations].filter(Boolean).join('\n\n');
+    return [imports, declarationText].filter(Boolean).join('\n\n');
 }
 
 function collectCommonModels(routers: RouterModel[], backendSrcDir: string): {
@@ -341,7 +388,7 @@ function collectCommonModels(routers: RouterModel[], backendSrcDir: string): {
     typeNames: string[];
 } {
     const declarations = new Map<string, TypeAliasDeclaration | InterfaceDeclaration | EnumDeclaration>();
-    const externalImportSourceFiles = new Set<SourceFile>();
+    const usedTypeNamesBySourceFile = new Map<SourceFile, Set<string>>();
     const routerSourceFiles = new Set(routers.map(getRouterSourceFile));
 
     const collectDeclaration = (
@@ -354,9 +401,11 @@ function collectCommonModels(routers: RouterModel[], backendSrcDir: string): {
         }
 
         declarations.set(name, declaration);
-        externalImportSourceFiles.add(declaration.getSourceFile());
+        const declarationTypeNames = collectTypeNames([declaration.getText()]);
+        const usedTypeNames = usedTypeNamesBySourceFile.get(declaration.getSourceFile()) ?? new Set<string>();
 
-        collectTypeNames([declaration.getText()]).forEach((typeName) => {
+        declarationTypeNames.forEach((typeName) => {
+            usedTypeNames.add(typeName);
             const dependency = resolveTypeDeclaration(declaration.getSourceFile(), typeName);
 
             if (!dependency || isExternalImport(declaration.getSourceFile(), typeName)) {
@@ -367,6 +416,8 @@ function collectCommonModels(routers: RouterModel[], backendSrcDir: string): {
                 collectDeclaration(dependency);
             }
         });
+
+        usedTypeNamesBySourceFile.set(declaration.getSourceFile(), usedTypeNames);
     };
 
     routers.forEach((router) => {
@@ -391,8 +442,8 @@ function collectCommonModels(routers: RouterModel[], backendSrcDir: string): {
         });
     });
 
-    const imports = Array.from(externalImportSourceFiles)
-        .map(getExternalImportSourceText)
+    const imports = Array.from(usedTypeNamesBySourceFile)
+        .map(([sourceFile, usedTypeNames]) => getExternalImportSourceText(sourceFile, Array.from(usedTypeNames)))
         .filter(Boolean);
     const declarationTexts = Array.from(declarations.values()).map((declaration) => (
         ensureExportedDeclaration(declaration.getText())
@@ -412,6 +463,38 @@ function getRouterSourceFile(router: RouterModel): SourceFile {
     }
 
     return sourceFile;
+}
+
+function getReferencedLocalDeclarations(
+    sourceFile: SourceFile,
+    referencedTypeNames: string[],
+): Array<TypeAliasDeclaration | InterfaceDeclaration | EnumDeclaration> {
+    const declarations = new Map<string, TypeAliasDeclaration | InterfaceDeclaration | EnumDeclaration>();
+
+    const collectDeclaration = (typeName: string) => {
+        if (declarations.has(typeName)) {
+            return;
+        }
+
+        const declaration =
+            sourceFile.getTypeAlias(typeName) ??
+            sourceFile.getInterface(typeName) ??
+            sourceFile.getEnum(typeName);
+
+        if (!declaration) {
+            return;
+        }
+
+        declarations.set(typeName, declaration);
+
+        collectTypeNames([declaration.getText()]).forEach((dependencyName) => {
+            collectDeclaration(dependencyName);
+        });
+    };
+
+    referencedTypeNames.forEach(collectDeclaration);
+
+    return Array.from(declarations.values());
 }
 
 function collectTypeNames(typeTexts: Array<string | undefined>): string[] {
@@ -477,10 +560,21 @@ function isExternalImport(sourceFile: SourceFile, typeName: string): boolean {
     });
 }
 
-function getExternalImportSourceText(sourceFile: SourceFile): string {
+function getExternalImportSourceText(sourceFile: SourceFile, usedTypeNames?: string[]): string {
+    const usedNames = usedTypeNames ? new Set(usedTypeNames) : undefined;
     const imports = sourceFile
         .getImportDeclarations()
-        .filter((importDeclaration) => !importDeclaration.getModuleSpecifierValue().startsWith('.'));
+        .filter((importDeclaration) => !importDeclaration.getModuleSpecifierValue().startsWith('.'))
+        .filter((importDeclaration) => {
+            if (!usedNames) {
+                return true;
+            }
+
+            return importDeclaration.getNamedImports().some((namedImport) => {
+                const localName = namedImport.getAliasNode()?.getText() ?? namedImport.getName();
+                return usedNames.has(localName);
+            });
+        });
     const importTexts = imports.map((importDeclaration) => importDeclaration.getText());
     const exportTexts = imports
         .map(getExternalTypeExportText)
@@ -553,6 +647,52 @@ function getStringArgument(call: CallExpression, index: number, label: string): 
     }
 
     return argument.getLiteralText();
+}
+
+function getRouterRoutesArray(call: CallExpression, routerName: string): ArrayLiteralExpression {
+    const definition = unwrapExpression(call.getArguments()[1]);
+
+    if (Node.isArrayLiteralExpression(definition)) {
+        return definition;
+    }
+
+    if (Node.isObjectLiteralExpression(definition)) {
+        const routes = getObjectLiteralInitializer(definition, 'routes');
+
+        if (Node.isArrayLiteralExpression(routes)) {
+            return routes;
+        }
+    }
+
+    throw new Error(`Router ${routerName} must receive a routes array literal.`);
+}
+
+function getRouteHandler(call: CallExpression, routeName: string): Node {
+    const definition = unwrapExpression(call.getArguments()[1]);
+
+    if (Node.isArrowFunction(definition) || Node.isFunctionExpression(definition)) {
+        return definition;
+    }
+
+    if (Node.isObjectLiteralExpression(definition)) {
+        const handler = getObjectLiteralInitializer(definition, 'handler');
+
+        if (Node.isArrowFunction(handler) || Node.isFunctionExpression(handler)) {
+            return handler;
+        }
+    }
+
+    throw new Error(`${routeName} must pass a function handler.`);
+}
+
+function getObjectLiteralInitializer(objectLiteral: ObjectLiteralExpression, propertyName: string): Node | undefined {
+    const property = objectLiteral.getProperty(propertyName);
+
+    if (Node.isPropertyAssignment(property)) {
+        return unwrapExpression(property.getInitializer());
+    }
+
+    return undefined;
 }
 
 function resolveVariableDeclaration(node: Node): VariableDeclaration {

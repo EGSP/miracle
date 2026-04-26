@@ -17,14 +17,22 @@ export type NormalizedClientGeneratorConfig = {
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
+export type ClientArgSource = 'params' | 'query' | 'body';
+
+export type ClientArgModel = {
+    source: ClientArgSource;
+    name: string;
+    typeText: string;
+    referencedTypeNames: string[];
+};
+
 export type RouteModel = {
     name: string;
     method: HttpMethod;
     path: string;
     fullPath: string;
     hasRequest: boolean;
-    requestTypeName: string;
-    requestTypeText?: string;
+    clientArgs: ClientArgModel[];
     responseTypeName: string;
     responseTypeText?: string;
     referencedTypeNames: string[];

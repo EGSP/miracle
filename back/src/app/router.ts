@@ -1,4 +1,4 @@
-import express, { type Application, type RequestHandler } from 'express';
+import express, { type Application, type Request, type RequestHandler, type Response } from 'express';
 import { isRouteError, type RouteError } from './errors.js';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
@@ -8,17 +8,31 @@ export type MaybePromise<T> = T | Promise<T>;
 export type AppMiddleware = RequestHandler;
 
 export type RouteContext = {
+    req?: Request;
+    res?: Response;
     params?: unknown;
     query?: unknown;
     body?: unknown;
     headers?: unknown;
     cookies?: unknown;
-    user?: unknown;
+    locals?: Record<string, unknown>;
 };
 
 export type RouteHandler<TContext extends RouteContext = RouteContext, TResult = unknown> = (
     context: TContext,
 ) => MaybePromise<TResult>;
+
+export type MiddlewareContext = RouteContext & {
+    req: Request;
+    res: Response;
+    locals: Record<string, unknown>;
+};
+
+export type MiddlewareResult = void | RouteError;
+
+export type MiddlewareHandler<TContext extends MiddlewareContext = MiddlewareContext> = (
+    context: TContext,
+) => MaybePromise<MiddlewareResult>;
 
 export type AppRoute<
     TMethod extends HttpMethod = HttpMethod,
@@ -155,6 +169,25 @@ export function defineApp<const TRouters extends readonly AnyRouter[]>(
     };
 }
 
+export function mw<TContext extends MiddlewareContext>(
+    handler: MiddlewareHandler<TContext>,
+): RequestHandler {
+    return async (req, res, next) => {
+        try {
+            const result = await handler(createRequestContext(req, res) as TContext);
+
+            if (isRouteError(result)) {
+                res.status(result.status).json(result);
+                return;
+            }
+
+            next();
+        } catch (error) {
+            next(error);
+        }
+    };
+}
+
 export function registerApp(app: Application, definition: AppDefinition): void {
     definition.routers.forEach((routerDefinition) => {
         const router = express.Router();
@@ -178,19 +211,7 @@ export function registerApp(app: Application, definition: AppDefinition): void {
 function createRequestHandler(routeDefinition: AnyRoute): RequestHandler {
     return async (req, res, next) => {
         try {
-            const request = req as typeof req & {
-                cookies?: unknown;
-                user?: unknown;
-            };
-
-            const result = await routeDefinition.handler({
-                params: request.params,
-                query: request.query,
-                body: request.body,
-                headers: request.headers,
-                cookies: request.cookies,
-                user: request.user,
-            });
+            const result = await routeDefinition.handler(createRequestContext(req, res));
 
             if (isRouteError(result)) {
                 res.status(result.status).json(result);
@@ -201,5 +222,22 @@ function createRequestHandler(routeDefinition: AnyRoute): RequestHandler {
         } catch (error) {
             next(error);
         }
+    };
+}
+
+function createRequestContext(req: Request, res: Response): MiddlewareContext {
+    const request = req as typeof req & {
+        cookies?: unknown;
+    };
+
+    return {
+        req,
+        res,
+        params: request.params,
+        query: request.query,
+        body: request.body,
+        headers: request.headers,
+        cookies: request.cookies,
+        locals: res.locals,
     };
 }

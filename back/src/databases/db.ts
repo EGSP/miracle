@@ -98,6 +98,10 @@ export class JsonCollection<TItem extends object> {
         ]);
     }
 
+    ref():StoredEntity<TItem>[] {
+        return this.db.data.items;
+    }
+
     list(): StoredEntity<TItem>[] {
         return structuredClone(this.db.data.items);
     }

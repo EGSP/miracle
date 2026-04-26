@@ -64,9 +64,6 @@ async function writeRouterModels(router: RouterModel, outputDir: string): Promis
         : undefined;
     const routeModels = router.routes.flatMap((route) => {
         const aliases = [
-            route.hasRequest && route.requestTypeText
-                ? `export type ${route.requestTypeName} = ${route.requestTypeText};`
-                : undefined,
             route.responseTypeText
                 ? `export type ${route.responseTypeName} = ${route.responseTypeText};`
                 : undefined,
@@ -96,7 +93,7 @@ async function writeRouterClient(
 ): Promise<void> {
     const modelImport = './models';
     const typeNames = router.routes.flatMap((route) => [
-        route.hasRequest ? route.requestTypeName : undefined,
+        ...route.clientArgs.flatMap((arg) => arg.referencedTypeNames),
         route.responseTypeName,
     ]).filter((typeName): typeName is string => Boolean(typeName));
     const customInstanceImport = getRelativeImport(config.outputDir, config.customInstancePath);
@@ -119,15 +116,18 @@ ${methods}
 }
 
 function writeRouteMethod(route: RouteModel): string {
-    const requestArg = route.hasRequest ? `request: ${route.requestTypeName}` : '';
+    const args = route.clientArgs.map((arg) => `${arg.name}: ${arg.typeText}`).join(', ');
+    const paramsArg = route.clientArgs.find((arg) => arg.source === 'params')?.name;
+    const queryArg = route.clientArgs.find((arg) => arg.source === 'query')?.name;
+    const bodyArg = route.clientArgs.find((arg) => arg.source === 'body')?.name;
     const configLines = [
         `method: '${route.method.toUpperCase()}',`,
-        `url: ${route.hasParams ? `formatPath('${route.fullPath}', request.params)` : `'${route.fullPath}'`},`,
-        route.hasQuery ? 'params: request.query,' : undefined,
-        route.hasBody ? 'data: request.body,' : undefined,
+        `url: ${paramsArg ? `formatPath('${route.fullPath}', ${paramsArg})` : `'${route.fullPath}'`},`,
+        queryArg ? `params: ${queryArg},` : undefined,
+        bodyArg ? `data: ${bodyArg},` : undefined,
     ].filter(Boolean);
 
-    return `    ${route.name}: (${requestArg}) => customInstance<${route.responseTypeName}>({
+    return `    ${route.name}: (${args}) => customInstance<${route.responseTypeName}>({
 ${configLines.map((line) => `        ${line}`).join('\n')}
     }),`;
 }
