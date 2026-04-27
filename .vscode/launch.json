@@ -6,10 +6,11 @@
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--import", "tsx/esm"],
+      "runtimeArgs": ["--watch", "--import", "tsx/esm"],
       "program": "${workspaceFolder}/back/src/index.ts",
       "cwd": "${workspaceFolder}/back",
       "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "outputCapture": "std"

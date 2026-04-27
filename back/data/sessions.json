@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "userId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0ZWVmYjAwOS05NTMzLTQ3ODctOTVkNS05ZGUwZmEwNWIyMWUiLCJpYXQiOjE3NzcyOTQwMTgsImV4cCI6MTc3NzI5NDkxOH0.WLcDWdOK-l8MwphV6y6jdNu_sJKoGSYo-JJWNeBgKvs",
+      "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0ZWVmYjAwOS05NTMzLTQ3ODctOTVkNS05ZGUwZmEwNWIyMWUiLCJpYXQiOjE3NzcyOTQwMTgsImV4cCI6MTc3Nzg5ODgxOH0.HrRzpRHVZ3csGGtPu0a0dNYf4sMFiqOmIXIoj3yxkOs",
+      "id": "03f2b5b9-7be4-4b00-a9ac-0cf0b93a55a7",
+      "createdAt": 1777294018800,
+      "updatedAt": 1777294018800
+    }
+  ]
+}

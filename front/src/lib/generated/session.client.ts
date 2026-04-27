@@ -5,8 +5,8 @@ import { customInstance } from '../api';
 import type { GetSessionResponse } from './models';
 
 export const session = {
-    getSession: () => customInstance<GetSessionResponse>({
+    getCookieSession: () => customInstance<GetSessionResponse>({
         method: 'GET',
-        url: '/session/session',
+        url: '/sessions/cookie',
     }),
 };

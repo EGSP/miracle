@@ -2,9 +2,24 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "back:build",
+      "type": "shell",
+      "command": "npm run build --workspace=back",
+      "group": "build",
+      "problemMatcher": "$tsc",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "label": "Back Build"
+      }
+    },
+    {
       "label": "front:dev",
       "type": "shell",
-      "command": "npm run launch:front",
+      "command": "node ../node_modules/vite/bin/vite.js",
+      "options": {
+        "cwd": "${workspaceFolder}/front"
+      },
       "isBackground": true,
       "presentation": {
         "reveal": "silent",

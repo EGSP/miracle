@@ -1,4 +1,5 @@
 import { useCheckHealth, useRefetchHealth } from "@/lib/queries/health.query";
+import { useGetCookieSession } from "@/lib/queries/sessions.query";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 

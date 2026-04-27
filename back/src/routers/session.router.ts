@@ -6,15 +6,15 @@ type GetSessionResponse = {
     userId: string;
 }
 
-const getSession =
-    route.get('/session', async ({ locals }: { locals: Record<string, unknown> }) => {
+const getCookieSession =
+    route.get('/cookie', async ({ locals }: { locals: Record<string, unknown> }) => {
         return { userId: (locals.user as User).id! } satisfies GetSessionResponse;
     });
 
 
-export const sessionRouter = defineRouter('/session', {
+export const sessionRouter = defineRouter('/sessions', {
     middlewares: [authMiddleware],
     routes: [
-        getSession,
+        getCookieSession,
     ],
 } as const);

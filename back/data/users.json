@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "login": "tatapstar",
+      "password": "$argon2id$v=19$m=65536,t=3,p=4$wdFOPGoie1iBQIA0sX18cQ$W5t7Ooz1cQVYQRypIO/WAR2/IZMfOlNVPg1oVcyxMm0",
+      "id": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1777293977640,
+      "updatedAt": 1777293977640
+    }
+  ]
+}
