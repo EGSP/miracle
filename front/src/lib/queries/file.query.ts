@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { file } from "../generated";
+import type { FilesQuery } from "@miracle/types";
 
 export const FILES_QUERY_KEY = ['files'] as const;
 
-export const useGetFiles = () => {
+export const useGetFiles = (query: FilesQuery = {}) => {
     return useQuery({
-        queryKey: FILES_QUERY_KEY,
-        queryFn: () => file.getFiles(),
+        queryKey: [...FILES_QUERY_KEY, query.id, query.authorId, query.available, query.includeMeta] as const,
+        queryFn: () => file.getFiles(query),
     });
 };
 

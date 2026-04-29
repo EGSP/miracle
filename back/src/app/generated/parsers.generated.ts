@@ -79,3 +79,65 @@ export function parseGetUserParams(raw: Record<string, unknown>) {
 
     return result;
 }
+
+export function parseGetFilesQuery(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        result["id"] = undefined;
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
+    } else {
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
+        } else {
+            result["id"] = raw_id.value;
+        }
+    }
+    const raw_authorId = readSingleValue(raw, "authorId");
+    if (raw_authorId.missing) {
+        result["authorId"] = undefined;
+    } else if (raw_authorId.multi) {
+        errors.push({ field: "authorId", message: 'expected single value' });
+    } else {
+        if (typeof raw_authorId.value !== 'string') {
+            errors.push({ field: "authorId", message: 'expected string' });
+        } else {
+            result["authorId"] = raw_authorId.value;
+        }
+    }
+    const raw_available = readSingleValue(raw, "available");
+    if (raw_available.missing) {
+        result["available"] = undefined;
+    } else if (raw_available.multi) {
+        errors.push({ field: "available", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_available.value, [false,true]);
+        if (parsed === undefined) {
+            errors.push({ field: "available", message: "expected one of: false, true" });
+        } else {
+            result["available"] = parsed;
+        }
+    }
+    const raw_includeMeta = readSingleValue(raw, "includeMeta");
+    if (raw_includeMeta.missing) {
+        result["includeMeta"] = undefined;
+    } else if (raw_includeMeta.multi) {
+        errors.push({ field: "includeMeta", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_includeMeta.value, [false,true]);
+        if (parsed === undefined) {
+            errors.push({ field: "includeMeta", message: "expected one of: false, true" });
+        } else {
+            result["includeMeta"] = parsed;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}

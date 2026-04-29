@@ -1,7 +1,7 @@
 import path from 'path';
 import multer from 'multer';
 import type { Request } from 'express';
-import type { FileModel, User } from '@miracle/types';
+import type { FileModel, FileWithMeta, FilesQuery, User } from '@miracle/types';
 import { route, defineRouter, err } from '../app/index.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { filesService, getUploadsDir } from '../databases/file.db.js';
@@ -16,7 +16,7 @@ type UploadBody = FormData;
 
 type UploadFileResponse = FileModel;
 
-type GetFilesResponse = FileModel[];
+type GetFilesResponse = FileWithMeta[];
 
 export const FILE_UPLOAD_CONFIG = {
     maxSizeBytes: 50 * 1024 * 1024,
@@ -87,27 +87,15 @@ const uploadFile = route.post('/upload', {
     },
 });
 
-const getAllFiles = route.get('/all', async () => {
-    const files = filesService.getAll();
-    return files satisfies GetFilesResponse;
-});
-
-const getFiles = route.get('/', async ({ locals }: { locals: Record<string, unknown> }) => {
-    const user = locals.user as User | undefined;
-    if (!user?.id) {
-        return err.unauthorized('Authenticated user is missing');
-    }
-
-    const files = filesService.getByAuthor(user.id);
-    return files satisfies GetFilesResponse;
+const getFiles = route.get('/', {
+    validate: { query: true },
+    handler: async ({ query }: { query: FilesQuery }) => {
+        const files = filesService.getFiles(query);
+        return files satisfies GetFilesResponse;
+    },
 });
 
 export const fileRouter = defineRouter('/files', {
     middlewares: [authMiddleware],
-    validate: {
-        query: true,
-        params: true,
-        
-    },
-    routes: [getAllFiles, getFiles, uploadFile],
+    routes: [getFiles, uploadFile],
 } as const);

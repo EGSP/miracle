@@ -8,3 +8,16 @@ export type FileModel = {
 
     authorId: string;
 }
+
+export type FileWithMeta = FileModel & {
+    meta?: {
+        available?: boolean;
+    };
+}
+
+export type FilesQuery = {
+    id?: string;
+    authorId?: string;
+    available?: boolean;
+    includeMeta?: boolean;
+};

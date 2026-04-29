@@ -1,8 +1,9 @@
 import path from 'path';
 import { mkdir } from 'fs/promises';
-import type { FileModel } from '@miracle/types';
+import type { FileModel, FilesQuery, FileWithMeta } from '@miracle/types';
 import { JsonCollection, registerDb, type CreateEntityInput } from './db.js';
 import { runFileEncodingFix } from './runners/file.run.js';
+import fs from 'fs';
 
 export function getUploadsDir(): string {
     return path.join(process.cwd(), 'data', 'uploads');
@@ -33,6 +34,63 @@ export const filesService = {
 
     getAll: () => {
         return filesDb.list();
+    },
+
+    getFiles: (query: FilesQuery): FileWithMeta[] => {
+        const getStoredFileName = (file: FileModel) => {
+            return file.extension ? `${file.id}.${file.extension}` : file.id;
+        };
+
+        const withAvailability = (file: FileModel) => {
+            const filePath = path.join(getUploadsDir(), getStoredFileName(file));
+            return fs.existsSync(filePath);
+        };
+
+        return filesDb.ref().filter((file) => {
+            if (query.id !== undefined && file.id !== query.id) {
+                return false;
+            }
+
+            if (query.authorId !== undefined && file.authorId !== query.authorId) {
+                return false;
+            }
+
+            if (query.available !== undefined) {
+                const isAvailable = withAvailability(file);
+                if (isAvailable !== query.available) {
+                    return false;
+                }
+            }
+
+            return true;
+        }).map((file) => {
+            if (!query.includeMeta) {
+                return file;
+            }
+
+            return {
+                ...file,
+                meta: {
+                    available: withAvailability(file),
+                },
+            };
+        });
+    },
+
+    /**
+     * Проверяет, действительно ли файл существует в файловой системе
+     * @param id - ID файла
+     * @returns true, если файл существует, false в противном случае
+     */
+    checkFileAvailability: async (id: string) => {
+        const file = await filesDb.getById(id);
+        if (!file) {
+            return false;
+        }
+
+        const storedFileName = file.extension ? `${file.id}.${file.extension}` : file.id;
+        const filePath = path.join(getUploadsDir(), storedFileName);
+        return fs.existsSync(filePath);
     },
 };
 

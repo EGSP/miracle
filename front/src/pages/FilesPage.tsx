@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { FileIcon, ArrowLeft, Upload } from 'lucide-react';
+import { FileIcon, ArrowLeft, Upload, CircleCheck, CircleX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FileDropZone } from '@/components/ui/file-dropzone';
+import { Checkbox } from '@/components/ui/checkbox';
+import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation/tri-state-checkbox';
 import { useGetFiles, useUploadFile } from '@/lib/queries/file.query';
-import type { FileModel } from '@miracle/types';
+import type { FileWithMeta } from '@miracle/types';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 function formatBytes(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -12,11 +15,24 @@ function formatBytes(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function FileListItem({ file }: { file: FileModel }) {
+function FileListItem({ file }: { file: FileWithMeta }) {
+    const isAvailable = file.meta?.available;
+
     return (
         <div className="flex items-center gap-3 border border-border px-3 py-2.5 text-xs">
             <FileIcon className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate font-medium text-foreground">{file.name}</span>
+            {isAvailable ? (
+                <span className="inline-flex items-center gap-1 text-emerald-500">
+                    <CircleCheck className="size-3.5" />
+                    Доступен
+                </span>
+            ) : (
+                <span className="inline-flex items-center gap-1 text-destructive">
+                    <CircleX className="size-3.5" />
+                    Недоступен
+                </span>
+            )}
             <span className="shrink-0 text-muted-foreground">{file.extension.toUpperCase()}</span>
             <span className="shrink-0 text-muted-foreground">{formatBytes(file.bytes)}</span>
         </div>
@@ -25,8 +41,15 @@ function FileListItem({ file }: { file: FileModel }) {
 
 export default function FilesPage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [myFilesOnly, setMyFilesOnly] = useState(false);
+    const [availableOnly, setAvailableOnly] = useState<TriStateValue>(undefined);
+    const { userId } = useAuthContext();
 
-    const { data: files, isLoading, error } = useGetFiles();
+    const { data: files, isLoading, error } = useGetFiles({
+        authorId: myFilesOnly === true ? userId : undefined,
+        available: availableOnly,
+        includeMeta: true,
+    });
     const uploadMutation = useUploadFile();
 
     const handleUpload = () => {
@@ -55,6 +78,17 @@ export default function FilesPage() {
                     <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Загруженные файлы
                     </h2>
+                    <div className="flex flex-wrap items-center gap-4 border border-border p-2">
+                        <label className="inline-flex items-center gap-2 text-xs text-foreground">
+                            <Checkbox checked={myFilesOnly} onCheckedChange={(checked) => setMyFilesOnly(checked === true)} />
+                            <span>Мои файлы</span>
+                        </label>
+                        <TriStateCheckbox
+                            label="Доступные"
+                            value={availableOnly}
+                            onChange={setAvailableOnly}
+                        />
+                    </div>
 
                     {isLoading && (
                         <p className="text-xs text-muted-foreground">Загрузка...</p>
