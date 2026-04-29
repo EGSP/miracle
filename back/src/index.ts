@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { serverConfig } from './config.js';
 import { defineApp, registerApp } from './app/index.js';
 import { healthRouter } from './routers/health.router.js';
@@ -20,7 +21,8 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const app = express();
 const PORT = serverConfig.PORT;
 
-app.use(cors({ origin: serverConfig.CORS_ORIGIN }));
+app.use(cors({ origin: serverConfig.CORS_ORIGIN, credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
 
 const appDefinition = defineApp([

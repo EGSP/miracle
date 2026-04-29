@@ -6,6 +6,7 @@ import { useAuthStore } from "./stores/auth.store";
 
 const api = axios.create({
     baseURL: frontConfig.API_URL,
+    withCredentials: true,
 });
 
 export const customInstance = async <T>(config: AxiosRequestConfig): Promise<T> => {

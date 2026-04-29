@@ -16,8 +16,11 @@ export const authMiddleware = mw(async ({ cookies, locals }) => {
     const { accessToken } = TOKENS.extractFromCookies(cookies);
     const access = await verifyToken(accessToken, serverConfig.ACCESS_TOKEN_SECRET);
 
-    if (access === 'expired' || access === 'invalid') {
-        return err.unauthorized();
+    if (access === 'expired') {
+        return err.unauthorized('Access token expired');
+    }
+    if (access === 'invalid') {
+        return err.unauthorized('Access token invalid');
     }
 
     const user = await userService.get(access.sub);

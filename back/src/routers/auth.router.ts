@@ -2,6 +2,7 @@ import { err } from "../app/index.js";
 import { defineRouter, route } from "../app/router.js";
 import { sessionsService } from "../databases/session.db.js";
 import { userService } from "../databases/user.db.js";
+import { logger } from "../logger/logger.js";
 import { PASSWORD, signTokens, TOKENS } from "../middlewares/tokensTools.js";
 import type { Response } from "express";
 
@@ -35,6 +36,7 @@ const login =
         }
 
         const tokens = await sessionsService.createSession(user.id);
+        logger.info(`[auth] User "${user.login}" logged in. Tokens: ${tokens.accessToken}, ${tokens.refreshToken}`);
         TOKENS.setCookies(res, tokens);
 
         return { status: 'success' } satisfies LoginResponse;
@@ -58,6 +60,8 @@ const refreshTokens = route.post('/refresh-tokens', async ({ cookies, res }: { c
     const accessToken = await signTokens({ sub: session.userId });
     await sessionsService.updateSession(session.id, accessToken.accessToken, refreshToken);
     TOKENS.setCookies(res, { accessToken: accessToken.accessToken, refreshToken: refreshToken });
+
+    logger.info(`[auth] User "${session.userId}" refreshed tokens. Tokens: ${accessToken.accessToken}, ${refreshToken}`);
     return { status: 'success' } satisfies RefreshTokensResponse;
 });
 

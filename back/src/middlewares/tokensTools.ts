@@ -61,14 +61,14 @@ export const TOKENS = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: parseInt(serverConfig.ACCESS_TOKEN_LIFETIME) * 1000,
+            maxAge: serverConfig.ACCESS_TOKEN_LIFETIME_MS,
         });
         if (tokens.refreshToken) {
             res.cookie('refreshToken', tokens.refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                maxAge: parseInt(serverConfig.REFRESH_TOKEN_LIFETIME) * 1000,
+                maxAge: serverConfig.REFRESH_TOKEN_LIFETIME_MS,
             });
         }
     },

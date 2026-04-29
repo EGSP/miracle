@@ -92,6 +92,41 @@ Error {
 
 ---
 
+## Аутентификация через куки
+
+Токены (`accessToken`, `refreshToken`) передаются как `httpOnly`-куки — JS на фронте их не видит.
+
+### Требования к стеку
+
+| Сторона | Что нужно | Где |
+|---|---|---|
+| Backend | `cookie-parser` подключён через `app.use(cookieParser())` | `back/src/index.ts` |
+| Backend | CORS с `credentials: true` | `back/src/index.ts` |
+| Frontend | Axios-инстанс с `withCredentials: true` | `front/src/lib/api.ts` |
+
+Все три условия обязательны одновременно. Без любого из них куки не будут устанавливаться или отправляться.
+
+### Как работает авторизация
+
+1. `POST /auth/login` — сервер генерирует пару токенов, кладёт их в `Set-Cookie` и возвращает `{ status: 'success' }`
+2. Браузер автоматически прикладывает куки к каждому последующему запросу
+3. `authMiddleware` читает `accessToken` из `req.cookies`, верифицирует его и кладёт `user` в `res.locals`
+4. При `401` с кодом просроченного токена — `POST /auth/refresh-tokens` выдаёт новый `accessToken`, оставляя `refreshToken` прежним
+5. `POST /auth/logout` — сервер очищает куки через `res.clearCookie`
+
+### Lifetime токенов
+
+Настраивается через переменные окружения (`.env`):
+
+```
+ACCESS_TOKEN_LIFETIME=15m
+REFRESH_TOKEN_LIFETIME=7d
+```
+
+Дефолты — `15m` и `7d`. Значения парсятся библиотекой `ms`.
+
+---
+
 ### getApiErrorMessage — зачем нужен, если message уже есть
 
 В TypeScript catch-блок получает `error: unknown`. Прямой доступ к `error.message` не компилируется без приведения типов:
