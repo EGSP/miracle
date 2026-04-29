@@ -11,6 +11,7 @@ import { authRouter } from './routers/auth.router.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 import { sessionRouter } from './routers/session.router.js';
 import { userRouter } from './routers/user.router.js';
+import { fileRouter } from './routers/file.router.js';
 import { logger } from './logger/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,6 +31,7 @@ const appDefinition = defineApp([
   authRouter,
   sessionRouter,
   userRouter,
+  fileRouter,
 ] as const);
 
 registerApp(app, appDefinition);

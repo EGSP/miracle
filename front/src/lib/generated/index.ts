@@ -4,3 +4,4 @@ export * from './health.client';
 export * from './auth.client';
 export * from './session.client';
 export * from './user.client';
+export * from './file.client';

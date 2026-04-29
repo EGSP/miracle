@@ -55,6 +55,14 @@ const BUILTIN_TYPE_NAMES = new Set([
     'Extract',
     'ReturnType',
     'Awaited',
+    // Web API globals available in both browser and Node.js 18+
+    'Blob',
+    'File',
+    'FormData',
+    'URL',
+    'URLSearchParams',
+    'ReadableStream',
+    'WritableStream',
 ]);
 const routerSourceFilesByName = new Map<string, SourceFile>();
 
