@@ -26,7 +26,11 @@ export const filesService = {
         return filesDb.getById(id);
     },
 
-    getByAuthor: async (authorId: string) => {
+    getByAuthor: (authorId: string) => {
         return filesDb.ref().filter((file) => file.authorId === authorId);
+    },
+
+    getAll: () => {
+        return filesDb.list();
     },
 };

@@ -4,4 +4,6 @@
 import type { FileModel, User } from '@miracle/types';
 export type { FileModel, User } from '@miracle/types';
 
+export type GetFilesResponse = FileModel[];
+
 export type UploadFileResponse = FileModel;

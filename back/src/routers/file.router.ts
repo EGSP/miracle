@@ -15,6 +15,8 @@ type UploadBody = FormData;
 
 type UploadFileResponse = FileModel;
 
+type GetFilesResponse = FileModel[];
+
 export const FILE_UPLOAD_CONFIG = {
     maxSizeBytes: 50 * 1024 * 1024,
     allowedMimeTypes: [
@@ -83,7 +85,22 @@ const uploadFile = route.post('/upload', {
     },
 });
 
+const getAllFiles = route.get('/all', async () => {
+    const files = filesService.getAll();
+    return files satisfies GetFilesResponse;
+});
+
+const getFiles = route.get('/', async ({ locals }: { locals: Record<string, unknown> }) => {
+    const user = locals.user as User | undefined;
+    if (!user?.id) {
+        return err.unauthorized('Authenticated user is missing');
+    }
+
+    const files = filesService.getByAuthor(user.id);
+    return files satisfies GetFilesResponse;
+});
+
 export const fileRouter = defineRouter('/files', {
     middlewares: [authMiddleware],
-    routes: [uploadFile],
+    routes: [getAllFiles, getFiles, uploadFile],
 } as const);

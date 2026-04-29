@@ -39,6 +39,12 @@ export default function HomePage() {
           <p>Перейдите к странице входа и регистрации.</p>
           <Link to="/auth">Авторизация</Link>
         </section>
+
+        <section className="space-y-2">
+          <h2>Файлы</h2>
+          <p>Загрузка и просмотр файлов.</p>
+          <Link to="/files">Перейти к файлам</Link>
+        </section>
       </div>
     </main>
   );

@@ -117,6 +117,8 @@ api.interceptors.response.use(
         const { response, config } = error;
         const routeErrorPayload = response?.data;
 
+        console.log('routeErrorPayload', routeErrorPayload);
+
         if (isApiRouteError(routeErrorPayload)) {
             const apiError = new Error(routeErrorPayload.message) as ClientApiError;
             apiError.status = routeErrorPayload.status;
@@ -127,9 +129,14 @@ api.interceptors.response.use(
             }
         }
 
+        console.log('continue to refresh')
+
         const authState = useAuthStore.getState();
 
-        if (!response || response.status !== 401 || !config || authState.status === 'unauthorized') throw error;
+        if (!response || response.status !== 401 || !config || authState.status === 'unauthorized') {
+            console.log(authState.status);
+            return Promise.reject(error);
+        }
 
         // Это важная проверка, чтобы не зациклиться на обновлении токена при вызове refreshTokenPair
         if (config.url?.includes('/auth/refresh')) throw error;
