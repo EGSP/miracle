@@ -33,7 +33,7 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
     }
 
     const deactivate = () => {
-        authStore.setStatus('unauthorized');
+        authStore.setStatus(undefined);
         setIsAuthenticated(false);
         setUserId(undefined);
     }

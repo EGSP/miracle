@@ -2,6 +2,7 @@ import path from 'path';
 import { mkdir } from 'fs/promises';
 import type { FileModel } from '@miracle/types';
 import { JsonCollection, registerDb, type CreateEntityInput } from './db.js';
+import { runFileEncodingFix } from './runners/file.run.js';
 
 export function getUploadsDir(): string {
     return path.join(process.cwd(), 'data', 'uploads');
@@ -34,3 +35,5 @@ export const filesService = {
         return filesDb.list();
     },
 };
+
+await runFileEncodingFix(filesDb);

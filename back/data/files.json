@@ -1,3 +1,40 @@
 {
-  "items": []
+  "items": [
+    {
+      "id": "2891c3d5-1457-4abb-affb-f64a02147fc8",
+      "name": "chad_2837d7ca914f411b8e7f9393ed5170d6.png",
+      "extension": "png",
+      "bytes": 2016776,
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1777472938642,
+      "updatedAt": 1777472938642
+    },
+    {
+      "id": "ad9d0790-feb8-4318-b1de-14664beb1220",
+      "name": "otchet-organizaciya-tekushchego-hraneniya-dokumentov.docx",
+      "extension": "docx",
+      "bytes": 94359,
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1777473001300,
+      "updatedAt": 1777473001300
+    },
+    {
+      "id": "30be2045-ca82-4f6a-8a6c-f02d93505ae1",
+      "name": "План обогащения за счет Mindustry.png",
+      "extension": "png",
+      "bytes": 153163,
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1777473160279,
+      "updatedAt": 1777473598913
+    },
+    {
+      "id": "b28d335b-7471-451f-b395-2ff2552bea9f",
+      "name": "ГасановКТ_Резюме_2026.pdf",
+      "extension": "pdf",
+      "bytes": 588212,
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1777473699382,
+      "updatedAt": 1777473699382
+    }
+  ]
 }

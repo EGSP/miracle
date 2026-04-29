@@ -12,3 +12,7 @@ front/dist/
 *.ntvs*
 *.njsproj
 *.sln
+
+
+# Data
+*/data/uploads/*

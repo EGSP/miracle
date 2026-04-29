@@ -5,6 +5,7 @@ import type { FileModel, User } from '@miracle/types';
 import { route, defineRouter, err } from '../app/index.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { filesService, getUploadsDir } from '../databases/file.db.js';
+import { fixFileNameEncoding } from '../databases/runners/file.run.js';
 
 /**
  * Type hint for the client generator.
@@ -69,12 +70,13 @@ const uploadFile = route.post('/upload', {
             return err.unauthorized('Authenticated user is missing');
         }
 
-        const ext = path.extname(file.originalname);
+        const originalName = fixFileNameEncoding(file.originalname);
+        const ext = path.extname(originalName);
         const id = path.basename(file.filename, ext);
 
         const created = await filesService.create({
             id,
-            name: file.originalname,
+            name: originalName,
             extension: ext.slice(1),
             bytes: file.size,
             pages: undefined,
