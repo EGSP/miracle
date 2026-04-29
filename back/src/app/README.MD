@@ -19,6 +19,8 @@
 - [10. Порядок Выполнения](#10-порядок-выполнения)
 - [11. Регистрация Приложения](#11-регистрация-приложения)
 - [12. Контракт Структуры](#12-контракт-структуры)
+- [13. Основные Типы](#13-основные-типы)
+- [14. Логирование](#14-логирование)
 
 ## 1. Основная Идея
 
@@ -360,3 +362,159 @@ registerApp(app, appDefinition);
 - роутеры не вкладываются в другие роутеры;
 - порядок роутов определяется порядком элементов в массивах `defineApp` и `defineRouter`;
 - пути должны быть строковыми литералами.
+
+## 13. Основные Типы
+
+### `RouteContext`
+
+Объект, который получает каждый хендлер и custom middleware. Поля опциональны — TypeScript позволяет сузить тип до только тех полей, которые нужны конкретному хендлеру.
+
+```ts
+type RouteContext = {
+    req?: Request;        // Оригинальный Express Request — для низкоуровневых операций
+    res?: Response;       // Оригинальный Express Response — для cookie, header и т.п.
+    params?: unknown;     // Параметры пути, например { id: string } для /user/:id
+    query?: unknown;      // Query string параметры, например { page: string }
+    body?: unknown;       // Тело запроса (POST/PUT/PATCH)
+    headers?: unknown;    // Заголовки запроса
+    cookies?: unknown;    // Cookie из запроса
+    locals?: Record<string, unknown>; // Данные, переданные между middleware
+};
+```
+
+### `MiddlewareContext`
+
+Расширение `RouteContext` для custom middleware. `req`, `res`, `locals` всегда присутствуют (не опциональны), потому что middleware гарантированно вызывается внутри Express.
+
+```ts
+type MiddlewareContext = RouteContext & {
+    req: Request;
+    res: Response;
+    locals: Record<string, unknown>;
+};
+```
+
+### `RouteError`
+
+Типизированная ошибка, которую возвращает роут или middleware. Routing layer сам отправит её клиенту как JSON с нужным HTTP-статусом.
+
+```ts
+type RouteError<TStatus, TCode, TDetails> = {
+    ok: false;
+    status: TStatus;    // HTTP статус: 400, 401, 403, 404, 409, 422, 500
+    code: TCode;        // Машинно-читаемый код: "not_found", "unauthorized" и т.д.
+    message: string;    // Человекочитаемое сообщение — всегда доходит до клиента
+    details?: TDetails; // Опциональные детали, например список ошибок валидации
+};
+```
+
+### `AppRoute`
+
+Описание одного эндпоинта. Создаётся через `route.get/post/...` и хранит метод, путь, middleware и хендлер. Используется как элемент массива в `defineRouter`.
+
+```ts
+type AppRoute = {
+    kind: 'route';
+    method: HttpMethod;
+    path: string;
+    middlewares: readonly AppMiddleware[];
+    handler: RouteHandler;
+};
+```
+
+### `AppRouter`
+
+Описание группы роутов с общим префиксом и опциональными middleware. Создаётся через `defineRouter`.
+
+```ts
+type AppRouter = {
+    kind: 'router';
+    prefix: string;
+    middlewares: readonly AppMiddleware[];
+    routes: readonly AppRoute[];
+};
+```
+
+### `AppDefinition`
+
+Корневой объект приложения — массив роутеров. Передаётся в `registerApp`, который регистрирует всё в Express.
+
+```ts
+type AppDefinition = {
+    kind: 'app';
+    routers: readonly AppRouter[];
+};
+```
+
+### Вспомогательные типы для типизации снаружи
+
+Если нужно получить типы входа/выхода роута извне (например, для генератора клиента):
+
+```ts
+// Тип аргументов хендлера
+type RouteInput<TRoute extends AnyRoute> = Parameters<TRoute['handler']>[0];
+
+// Тип возвращаемого значения (включая RouteError)
+type RouteResult<TRoute extends AnyRoute> = Awaited<ReturnType<TRoute['handler']>>;
+
+// Только успешный результат (RouteError исключён)
+type RouteSuccess<TRoute extends AnyRoute> = Exclude<RouteResult<TRoute>, RouteError>;
+
+// Только ошибочный результат
+type RouteFailure<TRoute extends AnyRoute> = Extract<RouteResult<TRoute>, RouteError>;
+```
+
+## 14. Логирование
+
+Логгер находится в `back/src/logger/logger.ts`. Используется `winston` с цветным консольным выводом.
+
+### Уровни
+
+| Уровень | Когда использовать |
+|---|---|
+| `logger.error(msg)` | Сбои: необработанное исключение, упала база, внешний сервис недоступен |
+| `logger.warn(msg)` | Ожидаемые, но заметные ситуации: истёк токен, обращение к устаревшему API |
+| `logger.info(msg)` | Старт сервера, важные жизненные события приложения |
+| `logger.http(msg)` | Каждый HTTP-запрос с результатом |
+
+### Что логируется автоматически
+
+Routing layer (`router.ts`) логирует каждый запрос автоматически — вручную ничего добавлять не нужно:
+
+```
+// Успешный ответ:
+GET /health -> 200
+
+// Роут вернул RouteError:
+POST /auth/register -> 409 (conflict): Login "bob" is already taken
+
+// Необработанное исключение из роута:
+POST /auth/login -> 500: some db error
+```
+
+`errorMiddleware` дополнительно логирует необработанные исключения на уровне `error`, чтобы они попали в консоль с полным стек-трейсом.
+
+### Как использовать вручную
+
+Логгер можно использовать в любом месте backend:
+
+```ts
+import { logger } from '../logger/logger.js';
+
+// Старт сервера
+logger.info('[back] Server running on http://localhost:3001');
+
+// Предупреждение в бизнес-логике
+logger.warn(`Session not found for userId: ${userId}`);
+
+// Ошибка в сервисе
+logger.error(`Failed to hash password: ${error.message}`);
+```
+
+### Формат вывода в консоль
+
+```
+2026-04-29 09:15:00 info: [back] Server running on http://localhost:3001
+2026-04-29 09:15:01 http: POST /auth/register -> 409 (conflict): Login "bob" is already taken
+2026-04-29 09:15:02 error: POST /auth/login -> 500: Cannot read properties of undefined
+```

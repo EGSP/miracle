@@ -216,13 +216,15 @@ function createRequestHandler(routeDefinition: AnyRoute): RequestHandler {
 
             if (isRouteError(result)) {
                 res.status(result.status).json(result);
-                logger.http(`${req.method} ${req.originalUrl} -> ${result.status} (${result.code})`);
+                logger.http(`${req.method} ${req.originalUrl} -> ${result.status} (${result.code}): ${result.message}`);
                 return;
             }
 
             res.json(result ?? null);
             logger.http(`${req.method} ${req.originalUrl} -> ${res.statusCode}`);
         } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            logger.error(`${req.method} ${req.originalUrl} -> 500: ${message}`);
             next(error);
         }
     };
