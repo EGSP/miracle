@@ -122,7 +122,9 @@ api.interceptors.response.use(
             apiError.status = routeErrorPayload.status;
             apiError.code = routeErrorPayload.code;
             apiError.details = routeErrorPayload.details;
-            return Promise.reject(apiError);
+            if (routeErrorPayload.status !== 401) {
+                return Promise.reject(apiError);
+            }
         }
 
         const authState = useAuthStore.getState();
@@ -133,6 +135,7 @@ api.interceptors.response.use(
         if (config.url?.includes('/auth/refresh')) throw error;
 
         try {
+            console.log('Trying to refresh token');
             const accessToken = await refreshTokenPair();
 
             config.headers.Authorization = `Bearer ${accessToken}`;

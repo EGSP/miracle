@@ -2,6 +2,7 @@ import { useCheckHealth, useRefetchHealth } from "@/lib/queries/health.query";
 import { useGetCookieSession } from "@/lib/queries/sessions.query";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
 
@@ -24,7 +25,7 @@ export default function HomePage() {
         {error && <p>Ошибка: {error.message}</p>}
         {data && <p>Состояние сервера: {data.status} от {localizedTimestamp}</p>}
 
-        <button onClick={refetchHealth}>Проверить</button>
+        <Button onClick={refetchHealth}>Проверить</Button>
       </div>
       <div>
         <Link to="/auth">Авторизация</Link>

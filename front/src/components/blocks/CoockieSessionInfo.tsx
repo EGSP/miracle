@@ -19,7 +19,7 @@ export default function CookieSessionInfo() {
 
 
     return (
-        <div className="flex flex-col gap-2 w-full h-fit">
+        <div className="flex flex-row gap-2 w-full h-fit">
             <span>Session ID: {cookieSession?.userId || 'N/A'}</span>
             <span>User ID: {cookieSession?.userId || 'N/A'}</span>
         </div>
