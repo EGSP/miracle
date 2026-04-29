@@ -22,3 +22,7 @@ export type RegisterDTO = {
 export type RegisterResponse = {
     status: 'success';
 }
+
+export type LogoutResponse = {
+    status: 'success';
+}

@@ -92,8 +92,18 @@ const register = route.post('/register', async ({ body }: { body: RegisterDTO })
     return { status: 'success' } satisfies RegisterResponse;
 });
 
+type LogoutResponse = {
+    status: 'success';
+}
+
+const logout = route.post('/logout', async ({ res }: { res: Response }) => {
+    TOKENS.clearCookies(res);
+    return { status: 'success' } satisfies LogoutResponse;
+});
+
 export const authRouter = defineRouter('/auth', [
     login,
     refreshTokens,
     register,
+    logout,
 ] as const);

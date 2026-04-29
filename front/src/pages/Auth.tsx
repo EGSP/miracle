@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useLogin, useRegister } from "@/lib/queries/auth.query";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { useLogin, useLogout, useRegister } from "@/lib/queries/auth.query";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { Link, Outlet } from "@tanstack/react-router";
 import { useState } from "react"
@@ -8,19 +9,52 @@ import { useState } from "react"
 export function AuthPage() {
 
     const authStore = useAuthStore();
-    if(authStore.status === 'valid') {
-        return <div>Logged in</div>;
+    const { mutate: logout, isPending: isLogoutPending } = useLogout();
+
+    const { isAuthenticated } = useAuthContext();
+    
+    if(isAuthenticated) {
+        return (
+            <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-6 py-8">
+                <section className="w-full space-y-3">
+                    <h1>Вы авторизованы</h1>
+                    <p>Сессия активна. Можно перейти к рабочим разделам приложения.</p>
+                    <Link to="/">На главную</Link>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => logout()}
+                        disabled={isLogoutPending}
+                    >
+                        {isLogoutPending ? "Выйти из аккаунта..." : "Выйти из аккаунта"}
+                    </Button>
+                </section>
+            </main>
+        );
     }
 
     return (
-        <div>
-            <h1>Auth</h1>
-            <nav>
-                <Link to="/auth/login">Login</Link>
-                <Link to="/auth/register">Register</Link>
+        <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-6 py-8">
+            <section className="w-full space-y-4">
+            <h1>Авторизация</h1>
+            <p>Войдите или создайте новый аккаунт.</p>
+            <nav className="flex gap-3">
+                <Link
+                    to="/auth/login"
+                    activeProps={{}}
+                >
+                    Login
+                </Link>
+                <Link
+                    to="/auth/register"
+                    activeProps={{}}
+                >
+                    Register
+                </Link>
             </nav>
             <Outlet />
-        </div>
+            </section>
+        </main>
     )
 }
 
@@ -31,19 +65,19 @@ export function LoginForm() {
     const { mutate: login, isPending, isError, error } = useLogin({ login: loginValue, password: passwordValue });
 
     if(isError) {
-        return <div>Error: {error.message}</div>;
+        return <p>Error: {error.message}</p>;
     }
 
     if(isPending) {
-        return <div>Loading...</div>;
+        return <p>Loading...</p>;
     }
 
     return (
-        <div>
+        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); login(); }}>
             <Input type="text" placeholder="Login" value={loginValue} onChange={(e) => setLoginValue(e.target.value)} />
             <Input type="password" placeholder="Password" value={passwordValue} onChange={(e) => setPasswordValue(e.target.value)} />
-            <Button type="button" onClick={() => login()}>Login</Button>
-        </div>
+            <Button type="submit">Login</Button>
+        </form>
     )
 
 }
@@ -55,11 +89,11 @@ export function RegisterForm() {
     const { mutate: register, isPending, isError, error } = useRegister({ login: loginValue, password: passwordValue });
 
     if(isError) {
-        return <div>Error: {error.message}</div>;
+        return <p>Error: {error.message}</p>;
     }
 
     if(isPending) {
-        return <div>Loading...</div>;
+        return <p>Loading...</p>;
     }
 
     const handleRegister = () => {
@@ -71,11 +105,11 @@ export function RegisterForm() {
     }
     
     return (
-        <div>
+        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
             <Input type="text" placeholder="Login" value={loginValue} onChange={(e) => setLoginValue(e.target.value)} />
             <Input type="password" placeholder="Password" value={passwordValue} onChange={(e) => setPasswordValue(e.target.value)} />
             <Input type="password" placeholder="Confirm Password" value={confirmPasswordValue} onChange={(e) => setConfirmPasswordValue(e.target.value)} />
-            <Button type="button" onClick={handleRegister}>Register</Button>
-        </div>
+            <Button type="submit">Register</Button>
+        </form>
     )
 }
