@@ -253,6 +253,11 @@ function createRequestHandler(routeDefinition: AnyRoute, validationKey: string):
 
             const result = await routeDefinition.handler(context);
 
+            if (res.headersSent) {
+                logger.http(`${req.method} ${req.originalUrl} -> ${res.statusCode}`);
+                return;
+            }
+
             if (isRouteError(result)) {
                 res.status(result.status).json(result);
                 logger.http(`${req.method} ${req.originalUrl} -> ${result.status} (${result.code}): ${result.message}`);

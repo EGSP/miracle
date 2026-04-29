@@ -9,6 +9,14 @@ export function getUploadsDir(): string {
     return path.join(process.cwd(), 'data', 'uploads');
 }
 
+export function getStoredFileName(file: FileModel): string {
+    return file.extension ? `${file.id}.${file.extension}` : file.id;
+}
+
+export function getFilePath(file: FileModel): string {
+    return path.join(getUploadsDir(), getStoredFileName(file));
+}
+
 export const filesDb = registerDb('files', await JsonCollection.create<FileModel>('files'));
 
 await mkdir(getUploadsDir(), { recursive: true });
@@ -37,12 +45,8 @@ export const filesService = {
     },
 
     getFiles: (query: FilesQuery): FileWithMeta[] => {
-        const getStoredFileName = (file: FileModel) => {
-            return file.extension ? `${file.id}.${file.extension}` : file.id;
-        };
-
         const withAvailability = (file: FileModel) => {
-            const filePath = path.join(getUploadsDir(), getStoredFileName(file));
+            const filePath = getFilePath(file);
             return fs.existsSync(filePath);
         };
 
@@ -88,8 +92,7 @@ export const filesService = {
             return false;
         }
 
-        const storedFileName = file.extension ? `${file.id}.${file.extension}` : file.id;
-        const filePath = path.join(getUploadsDir(), storedFileName);
+        const filePath = getFilePath(file);
         return fs.existsSync(filePath);
     },
 };

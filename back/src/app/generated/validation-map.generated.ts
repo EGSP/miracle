@@ -4,6 +4,7 @@
 import {
     parseGetUserParams,
     parseGetFilesQuery,
+    parseStreamFileContentParams,
 } from './parsers.generated.js';
 
 export const validationMap: Record<string, {
@@ -12,4 +13,5 @@ export const validationMap: Record<string, {
 }> = {
     'GET /user/user/:id': { params: parseGetUserParams },
     'GET /files': { query: parseGetFilesQuery },
+    'GET /files/:id/content': { params: parseStreamFileContentParams },
 };

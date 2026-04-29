@@ -35,6 +35,33 @@
       "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
       "createdAt": 1777473699382,
       "updatedAt": 1777473699382
+    },
+    {
+      "id": "543b84b7-9268-4c59-8682-7ec94f6bff40",
+      "name": "gamestrelalka-plan.png",
+      "extension": "png",
+      "bytes": 24890,
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1777481016848,
+      "updatedAt": 1777481016848
+    },
+    {
+      "id": "85ddedc4-f933-4fe6-b93a-935594a31921",
+      "name": "image (16).png",
+      "extension": "png",
+      "bytes": 3119506,
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1777481138986,
+      "updatedAt": 1777481138986
+    },
+    {
+      "id": "312f784d-7414-4805-bdf7-aaf96ccb040d",
+      "name": "Резюме_Аналитик_Сергей_Валерьевич_Васечкин_от_06_03_2025_12_47.pdf",
+      "extension": "pdf",
+      "bytes": 176513,
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1777488957377,
+      "updatedAt": 1777488957377
     }
   ]
 }

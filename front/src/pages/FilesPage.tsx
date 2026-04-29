@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { FileIcon, ArrowLeft, Upload, CircleCheck, CircleX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FileDropZone } from '@/components/ui/file-dropzone';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation/tri-state-checkbox';
+import { ListBox } from '@/components/ui/listbox';
+import { FileContentPreview } from '@/components/ui/file-content-preview';
 import { useGetFiles, useUploadFile } from '@/lib/queries/file.query';
 import type { FileWithMeta } from '@miracle/types';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { frontConfig } from '@/lib/config';
 
 function formatBytes(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -40,6 +43,7 @@ function FileListItem({ file }: { file: FileWithMeta }) {
 }
 
 export default function FilesPage() {
+    const [selectedFileInList, setSelectedFileInList] = useState<FileWithMeta | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [myFilesOnly, setMyFilesOnly] = useState(false);
     const [availableOnly, setAvailableOnly] = useState<TriStateValue>(undefined);
@@ -51,6 +55,9 @@ export default function FilesPage() {
         includeMeta: true,
     });
     const uploadMutation = useUploadFile();
+    const resolvePreviewUrl = useCallback((file: FileWithMeta) => {
+        return `${frontConfig.API_URL}/files/${encodeURIComponent(file.id)}/content`;
+    }, []);
 
     const handleUpload = () => {
         if (!selectedFile) return;
@@ -100,11 +107,35 @@ export default function FilesPage() {
                         <p className="text-xs text-muted-foreground">Нет загруженных файлов</p>
                     )}
                     {files && files.length > 0 && (
-                        <div className="flex flex-col gap-1">
-                            {files.map((f) => (
-                                <FileListItem key={f.id} file={f} />
-                            ))}
-                        </div>
+                        <>
+                            <ListBox
+                                items={files}
+                                value={selectedFileInList}
+                                onChange={setSelectedFileInList}
+                                getKey={(item) => item.id}
+                                className="flex flex-col gap-1 outline-none"
+                            >
+                                <ListBox.Items>
+                                    {(item: FileWithMeta, index) => (
+                                        <ListBox.Item
+                                            item={item}
+                                            index={index}
+                                            className="cursor-default data-active:bg-muted/60 data-selected:border-primary data-selected:bg-primary/5"
+                                        >
+                                            <FileListItem file={item} />
+                                        </ListBox.Item>
+                                    )}
+                                </ListBox.Items>
+                            </ListBox>
+                            {selectedFileInList && (
+                                <section className="mt-3 flex flex-col gap-2">
+                                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                        Предпросмотр
+                                    </h3>
+                                    <FileContentPreview file={selectedFileInList} resolveUrl={resolvePreviewUrl} />
+                                </section>
+                            )}
+                        </>
                     )}
                 </section>
 

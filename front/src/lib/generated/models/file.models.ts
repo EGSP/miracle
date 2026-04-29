@@ -7,3 +7,5 @@ export type { FileModel, FileWithMeta, FilesQuery, User } from '@miracle/types';
 export type GetFilesResponse = FileWithMeta[];
 
 export type UploadFileResponse = FileModel;
+
+export type StreamFileContentResponse = null;
