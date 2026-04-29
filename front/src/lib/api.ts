@@ -62,7 +62,7 @@ export default api;
 /// REFRESH TOKEN INTERCEPTOR
 
 // Этот promise используется для запуска refreshTokenPair в единственном экземпляре.
-let sharedRefreshPromise: Promise<string> | null = null;
+let sharedRefreshPromise: Promise<RefreshTokensResponse> | null = null;
 
 /**
  * Проверяет необходимость обновления, запускает refresh и обновляет authState.
@@ -70,7 +70,7 @@ let sharedRefreshPromise: Promise<string> | null = null;
  * @returns Новый accessToken
  * @throws При ошибке обновления — вызывает logout и пробрасывает ошибку
  */
-export async function refreshTokenPair(): Promise<string> {
+export async function refreshTokenPair(): Promise<RefreshTokensResponse> {
     const authState = useAuthStore.getState();
 
     if (authState.status === 'unauthorized') {
@@ -87,13 +87,13 @@ export async function refreshTokenPair(): Promise<string> {
             // если ответ будет с ошибкой (например 401).
             // Поэтому в интерсепторе мы учитываем конкретный api-путь /api/v1/auth/refresh.
             // чтобы не зациклиться на обновлении токена при вызове refreshTokenPair.
-            const { status }: RefreshTokensResponse = await auth.refreshTokens();
+            const refreshTokensResponse: RefreshTokensResponse = await auth.refreshTokens();
 
-            if (status !== 'success') throw new Error('Failed to refresh tokens');
+            if (refreshTokensResponse.status !== 'success') throw new Error('Failed to refresh tokens');
 
             authState.setStatus('valid');
 
-            return 'success';
+            return refreshTokensResponse;
         } catch (error) {
             console.warn('Refresh token failed');
             authState.setStatus('unauthorized');
@@ -136,9 +136,8 @@ api.interceptors.response.use(
 
         try {
             console.log('Trying to refresh token');
-            const accessToken = await refreshTokenPair();
+            await refreshTokenPair();
 
-            config.headers.Authorization = `Bearer ${accessToken}`;
             return api(config);
         } catch (refreshError) {
             return Promise.reject(refreshError);
