@@ -17,15 +17,21 @@ type LoginResponse = {
 const login =
     route.post('/login', async ({ body, res }: { body: LoginDTO, res: Response }) => {
         const { login, password } = body;
+        if (!login) {
+            return err.validation('Login is required');
+        }
+        if (!password) {
+            return err.validation('Password is required');
+        }
 
         const user = await userService.getByLogin(login);
         if (!user || !user.id) {
-            return err.notFound('User not found');
+            return err.notFound(`User "${login}" not found`);
         }
 
         const isPasswordValid = await userService.verifyPassword(user, password);
         if (!isPasswordValid) {
-            return err.unauthorized('Invalid password');
+            return err.unauthorized('Invalid login or password');
         }
 
         const tokens = await sessionsService.createSession(user.id);
@@ -64,9 +70,21 @@ type RegisterResponse = {
     status: 'success';
 }
 
-const register = route.post('/register', async ({ body, res }: { body: RegisterDTO, res: Response }) => {
+const register = route.post('/register', async ({ body }: { body: RegisterDTO }) => {
     const { login, password } = body;
-    const user = await userService.create({ login, password });
+    if (!login) {
+        return err.validation('Login is required');
+    }
+    if (!password) {
+        return err.validation('Password is required');
+    }
+
+    const existingUser = await userService.getByLogin(login);
+    if (existingUser) {
+        return err.conflict(`Login "${login}" is already taken`);
+    }
+
+    await userService.create({ login, password });
     return { status: 'success' } satisfies RegisterResponse;
 });
 

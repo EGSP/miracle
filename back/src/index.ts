@@ -10,6 +10,7 @@ import { authRouter } from './routers/auth.router.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 import { sessionRouter } from './routers/session.router.js';
 import { userRouter } from './routers/user.router.js';
+import { logger } from './logger/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,5 +34,7 @@ registerApp(app, appDefinition);
 app.use(errorMiddleware);
 
 app.listen(PORT, () => {
-  console.log(`[back] Server running on http://localhost:${PORT}`);
+  logger.info(`[back] Server running on http://localhost:${PORT}`);
+  logger.info(`Access token lifetime: ${serverConfig.ACCESS_TOKEN_LIFETIME} (ms: ${serverConfig.ACCESS_TOKEN_LIFETIME_MS})`);
+  logger.info(`Refresh token lifetime: ${serverConfig.REFRESH_TOKEN_LIFETIME} (ms: ${serverConfig.REFRESH_TOKEN_LIFETIME_MS})`);
 });

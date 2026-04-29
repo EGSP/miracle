@@ -14,6 +14,30 @@
       }
     },
     {
+      "label": "back:dev",
+      "type": "shell",
+      "command": "npm run dev:debug --workspace=back",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "label": "Back Dev Server"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "tsx",
+          "endsPattern": "running on http"
+        }
+      }
+    },
+    {
       "label": "front:dev",
       "type": "shell",
       "command": "node ../node_modules/vite/bin/vite.js",
@@ -22,7 +46,7 @@
       },
       "isBackground": true,
       "presentation": {
-        "reveal": "silent",
+        "reveal": "always",
         "panel": "dedicated",
         "label": "Front Dev Server"
       },

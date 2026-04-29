@@ -13,6 +13,47 @@ export const customInstance = async <T>(config: AxiosRequestConfig): Promise<T> 
     return response.data;
 };
 
+type ApiRouteError = {
+    ok: false;
+    status: number;
+    code: string;
+    message: string;
+    details?: unknown;
+};
+
+type ClientApiError = Error & {
+    status?: number;
+    code?: string;
+    details?: unknown;
+};
+
+function isApiRouteError(value: unknown): value is ApiRouteError {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'ok' in value &&
+        (value as Record<string, unknown>).ok === false &&
+        typeof (value as Record<string, unknown>).message === 'string'
+    );
+}
+
+export function getApiErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        isApiRouteError((error as { response?: { data?: unknown } }).response?.data)
+    ) {
+        return (error as { response: { data: ApiRouteError } }).response.data.message;
+    }
+
+    return 'Request failed';
+}
+
 export default api;
 
 
@@ -73,6 +114,16 @@ api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const { response, config } = error;
+        const routeErrorPayload = response?.data;
+
+        if (isApiRouteError(routeErrorPayload)) {
+            const apiError = new Error(routeErrorPayload.message) as ClientApiError;
+            apiError.status = routeErrorPayload.status;
+            apiError.code = routeErrorPayload.code;
+            apiError.details = routeErrorPayload.details;
+            return Promise.reject(apiError);
+        }
+
         const authState = useAuthStore.getState();
 
         if (!response || response.status !== 401 || !config || authState.status === 'unauthorized') throw error;

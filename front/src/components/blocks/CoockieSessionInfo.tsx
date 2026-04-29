@@ -1,7 +1,7 @@
 import { useGetCookieSession } from "@/lib/queries/sessions.query";
 import { useGetUser } from "@/lib/queries/user.query";
 
-export function CookieSessionInfo() {
+export default function CookieSessionInfo() {
     const {data: cookieSession, isLoading: isCookieSessionLoading, isError: isCookieSessionError, error: cookieSessionError} = useGetCookieSession();
     const {data: user, isLoading: isUserLoading, isError: isUserError, error: userError} = useGetUser(cookieSession?.userId);
     if (isCookieSessionLoading) {
@@ -19,8 +19,9 @@ export function CookieSessionInfo() {
 
 
     return (
-        <div>
-            <span>User ID: {cookieSession?.userId}</span>
+        <div className="flex flex-col gap-2 w-full h-fit">
+            <span>Session ID: {cookieSession?.userId || 'N/A'}</span>
+            <span>User ID: {cookieSession?.userId || 'N/A'}</span>
         </div>
     )
 

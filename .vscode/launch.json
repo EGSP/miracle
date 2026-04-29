@@ -4,16 +4,13 @@
     {
       "name": "Back: Debug",
       "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["--watch", "--import", "tsx/esm"],
-      "program": "${workspaceFolder}/back/src/index.ts",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
       "cwd": "${workspaceFolder}/back",
-      "envFile": "${workspaceFolder}/.env",
-      "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
-      "outputCapture": "std"
+      "preLaunchTask": "back:dev"
     },
     {
       "name": "Front: Browser",

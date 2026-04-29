@@ -1,5 +1,5 @@
 import { Session, User } from "@miracle/types";
-import { defineRouter, err, route } from "../app/index.js";
+import { defineRouter, route } from "../app/index.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 type GetSessionResponse = {
@@ -8,7 +8,12 @@ type GetSessionResponse = {
 
 const getCookieSession =
     route.get('/cookie', async ({ locals }: { locals: Record<string, unknown> }) => {
-        return { userId: (locals.user as User).id! } satisfies GetSessionResponse;
+        const user = locals.user as User | undefined;
+        if (!user?.id) {
+            throw new Error('Authenticated user is missing in session context');
+        }
+
+        return { userId: user.id } satisfies GetSessionResponse;
     });
 
 

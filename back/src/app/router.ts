@@ -1,5 +1,6 @@
 import express, { type Application, type Request, type RequestHandler, type Response } from 'express';
 import { isRouteError, type RouteError } from './errors.js';
+import { logger } from '../logger/logger.js';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -215,10 +216,12 @@ function createRequestHandler(routeDefinition: AnyRoute): RequestHandler {
 
             if (isRouteError(result)) {
                 res.status(result.status).json(result);
+                logger.http(`${req.method} ${req.originalUrl} -> ${result.status} (${result.code})`);
                 return;
             }
 
             res.json(result ?? null);
+            logger.http(`${req.method} ${req.originalUrl} -> ${res.statusCode}`);
         } catch (error) {
             next(error);
         }

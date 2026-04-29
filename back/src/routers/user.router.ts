@@ -4,9 +4,13 @@ import { userService } from "../databases/user.db.js";
 
 const getUser = route.get('/user/:id',
     async ({ params }: { params: { id: string } }) => {
+        if (!params.id) {
+            return err.validation('User id parameter is required');
+        }
+
         const user = await userService.get(params.id);
         if(!user)
-            return err.notFound();
+            return err.notFound(`User with id "${params.id}" not found`);
         return user;
     }
 );

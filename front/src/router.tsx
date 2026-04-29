@@ -1,9 +1,10 @@
 import { createRouter, createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
 import HomePage from './pages/HomePage';
 import { AuthPage, LoginForm, RegisterForm } from './pages/Auth';
+import { App } from './App';
 
 const rootRoute = createRootRoute({
-  component: () => <Outlet />,
+  component: App,
 });
 
 const indexRoute = createRoute({
