@@ -12,6 +12,17 @@ export type RouteError<
     details?: TDetails;
 };
 
+export type ParseFieldError = {
+    field: string;
+    message: string;
+};
+
+export class ParseError extends Error {
+    constructor(public readonly errors: ParseFieldError[]) {
+        super('Validation failed');
+    }
+}
+
 type ErrorFactory<TStatus extends ErrorStatus, TCode extends string> = <TDetails = never>(
     message?: string,
     details?: TDetails,

@@ -1,12 +1,18 @@
 import express, { type Application, type Request, type RequestHandler, type Response } from 'express';
-import { isRouteError, type RouteError } from './errors.js';
+import { err, isRouteError, ParseError, type RouteError } from './errors.js';
 import { logger } from '../logger/logger.js';
+import { validationMap } from './generated/validation-map.generated.js';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 export type MaybePromise<T> = T | Promise<T>;
 
 export type AppMiddleware = RequestHandler;
+
+export type RouteValidationOptions = {
+    query?: boolean;
+    params?: boolean;
+};
 
 export type RouteContext = {
     req?: Request;
@@ -44,6 +50,7 @@ export type AppRoute<
     method: TMethod;
     path: TPath;
     middlewares: readonly AppMiddleware[];
+    validate: RouteValidationOptions;
     handler: THandler;
 };
 
@@ -56,6 +63,7 @@ export type AppRouter<
     kind: 'router';
     prefix: TPrefix;
     middlewares: readonly AppMiddleware[];
+    validate: RouteValidationOptions;
     routes: TRoutes;
 };
 
@@ -76,11 +84,13 @@ export type RouteFailure<TRoute extends AnyRoute> = Extract<RouteResult<TRoute>,
 
 export type RouteOptions<THandler extends RouteHandler<any, any>> = {
     middlewares?: readonly AppMiddleware[];
+    validate?: RouteValidationOptions;
     handler: THandler;
 };
 
 export type RouterOptions<TRoutes extends readonly AnyRoute[]> = {
     middlewares?: readonly AppMiddleware[];
+    validate?: RouteValidationOptions;
     routes: TRoutes;
 };
 
@@ -109,12 +119,16 @@ function defineRoute<
     const middlewares = typeof definition === 'function'
         ? []
         : definition.middlewares ?? [];
+    const validate = typeof definition === 'function'
+        ? {}
+        : definition.validate ?? {};
 
     return {
         kind: 'route',
         method,
         path,
         middlewares,
+        validate,
         handler,
     };
 }
@@ -152,11 +166,15 @@ export function defineRouter<
     const middlewares = isRouterOptions(definition)
         ? definition.middlewares ?? []
         : [];
+    const validate = isRouterOptions(definition)
+        ? definition.validate ?? {}
+        : {};
 
     return {
         kind: 'router',
         prefix,
         middlewares,
+        validate,
         routes,
     };
 }
@@ -198,10 +216,12 @@ export function registerApp(app: Application, definition: AppDefinition): void {
         }
 
         routerDefinition.routes.forEach((routeDefinition) => {
+            const validationKey = getValidationKey(routerDefinition.prefix, routeDefinition);
+
             router[routeDefinition.method](
                 routeDefinition.path,
                 ...routeDefinition.middlewares,
-                createRequestHandler(routeDefinition),
+                createRequestHandler(routeDefinition, validationKey),
             );
         });
 
@@ -209,10 +229,29 @@ export function registerApp(app: Application, definition: AppDefinition): void {
     });
 }
 
-function createRequestHandler(routeDefinition: AnyRoute): RequestHandler {
+function createRequestHandler(routeDefinition: AnyRoute, validationKey: string): RequestHandler {
     return async (req, res, next) => {
         try {
-            const result = await routeDefinition.handler(createRequestContext(req, res));
+            const context = createRequestContext(req, res);
+            const validators = validationMap[validationKey];
+
+            try {
+                context.query = validators?.query ? validators.query(req.query) : req.query;
+                context.params = validators?.params ? validators.params(req.params) : req.params;
+            } catch (error) {
+                if (error instanceof ParseError) {
+                    const result = errValidation(error);
+                    res.status(result.status).json(result);
+                    logger.http(
+                        `${req.method} ${req.originalUrl} -> ${result.status} (${result.code}): ${result.message}`,
+                    );
+                    return;
+                }
+
+                throw error;
+            }
+
+            const result = await routeDefinition.handler(context);
 
             if (isRouteError(result)) {
                 res.status(result.status).json(result);
@@ -228,6 +267,24 @@ function createRequestHandler(routeDefinition: AnyRoute): RequestHandler {
             next(error);
         }
     };
+}
+
+function getValidationKey(prefix: string, routeDefinition: AnyRoute): string {
+    return `${routeDefinition.method.toUpperCase()} ${normalizeUrl(prefix, routeDefinition.path)}`;
+}
+
+function normalizeUrl(...parts: string[]): string {
+    const joined = parts
+        .filter((part) => part.length > 0 && part !== '/')
+        .map((part) => part.replace(/^\/+|\/+$/gu, ''))
+        .filter(Boolean)
+        .join('/');
+
+    return `/${joined}`;
+}
+
+function errValidation(error: ParseError) {
+    return err.validation('Validation failed', { details: error.errors });
 }
 
 function createRequestContext(req: Request, res: Response): MiddlewareContext {

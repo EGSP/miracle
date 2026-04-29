@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "generate:client": "tsx src/generate-client.ts"
+    "generate:client": "tsx src/generate-client.ts",
+    "generate:backend-validation": "tsx src/generate-backend-validation.ts"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

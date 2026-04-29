@@ -18,9 +18,10 @@
 - [9. Auth Пример](#9-auth-пример)
 - [10. Порядок Выполнения](#10-порядок-выполнения)
 - [11. Регистрация Приложения](#11-регистрация-приложения)
-- [12. Контракт Структуры](#12-контракт-структуры)
-- [13. Основные Типы](#13-основные-типы)
-- [14. Логирование](#14-логирование)
+- [12. Парсеры Query И Params](#12-парсеры-query-и-params)
+- [13. Контракт Структуры](#13-контракт-структуры)
+- [14. Основные Типы](#14-основные-типы)
+- [15. Логирование](#15-логирование)
 
 ## 1. Основная Идея
 
@@ -352,7 +353,108 @@ const appDefinition = defineApp([
 registerApp(app, appDefinition);
 ```
 
-## 12. Контракт Структуры
+## 12. Парсеры Query И Params
+
+`params` и `query` приходят из Express строками или массивами строк. Если хендлер
+типизирует их как `number`, `boolean` или union литералов, TypeScript проверяет
+это только на этапе компиляции. В runtime нужны парсеры.
+
+Для этого роут или роутер может объявить `validate`:
+
+```ts
+const getUser = route.get('/user/:id', {
+    validate: { params: true },
+    handler: async ({ params }: { params: { id: string } }) => {
+        return userService.get(params.id);
+    },
+});
+```
+
+Если `validate` указан на роутере, он становится дефолтом для всех его роутов:
+
+```ts
+export const usersRouter = defineRouter('/users', {
+    validate: {
+        query: true,
+        params: true,
+    },
+    routes: [
+        getUsers,
+        getUser,
+    ],
+} as const);
+```
+
+Роут может переопределить значение роутера: `false` отключает валидацию для
+конкретного источника, `true` включает.
+
+### Генерация
+
+Парсеры генерируются отдельной командой:
+
+```bash
+npm run generate-backend-validation
+```
+
+Конфиг находится в `back/validation-generator.config.ts`. В этом проекте
+сгенерированные файлы пишутся в `back/src/app/generated`:
+
+```txt
+app/generated/
+  parsers.generated.ts
+  validation-map.generated.ts
+```
+
+`parsers.generated.ts` содержит функции вида `parseGetUserParams`. Они проходят
+по всем полям, собирают все ошибки и только потом бросают `ParseError`.
+
+`validation-map.generated.ts` связывает роут с парсером по ключу
+`METHOD /full/path`:
+
+```ts
+export const validationMap = {
+    'GET /user/user/:id': { params: parseGetUserParams },
+};
+```
+
+### Как Это Подключено
+
+`registerApp` импортирует `validationMap` и перед вызовом handler ищет валидаторы
+для текущего роута:
+
+```ts
+const validationKey = `${route.method.toUpperCase()} ${fullPath}`;
+const validators = validationMap[validationKey];
+
+context.query = validators?.query ? validators.query(req.query) : req.query;
+context.params = validators?.params ? validators.params(req.params) : req.params;
+```
+
+Хендлер получает уже распарсенные `query` и `params`. Если парсер нашел ошибки,
+routing layer возвращает `err.validation`:
+
+```json
+{
+    "ok": false,
+    "status": 422,
+    "code": "validation_failed",
+    "message": "Validation failed",
+    "details": {
+        "details": [
+            {
+                "field": "id",
+                "message": "is required"
+            }
+        ]
+    }
+}
+```
+
+Поддерживаются поля типов `string`, `number`, `boolean` и union литералов вроде
+`'active' | 'archived'`. Вложенные объекты, массивы и union не-литеральных типов
+пропускаются генератором с предупреждением.
+
+## 13. Контракт Структуры
 
 Дерево роутов намеренно плоское:
 
@@ -361,9 +463,11 @@ registerApp(app, appDefinition);
 - роутеры объявляются в `src/routers`;
 - роутеры не вкладываются в другие роутеры;
 - порядок роутов определяется порядком элементов в массивах `defineApp` и `defineRouter`;
-- пути должны быть строковыми литералами.
+- пути должны быть строковыми литералами;
+- если используется runtime-валидация `query` или `params`, перед сборкой нужно
+  запускать генератор парсеров.
 
-## 13. Основные Типы
+## 14. Основные Типы
 
 ### `RouteContext`
 
@@ -418,6 +522,7 @@ type AppRoute = {
     method: HttpMethod;
     path: string;
     middlewares: readonly AppMiddleware[];
+    validate: RouteValidationOptions;
     handler: RouteHandler;
 };
 ```
@@ -431,6 +536,7 @@ type AppRouter = {
     kind: 'router';
     prefix: string;
     middlewares: readonly AppMiddleware[];
+    validate: RouteValidationOptions;
     routes: readonly AppRoute[];
 };
 ```
@@ -464,7 +570,7 @@ type RouteSuccess<TRoute extends AnyRoute> = Exclude<RouteResult<TRoute>, RouteE
 type RouteFailure<TRoute extends AnyRoute> = Extract<RouteResult<TRoute>, RouteError>;
 ```
 
-## 14. Логирование
+## 15. Логирование
 
 Логгер находится в `back/src/logger/logger.ts`. Используется `winston` с цветным консольным выводом.
 

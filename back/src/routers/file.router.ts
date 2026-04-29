@@ -104,5 +104,10 @@ const getFiles = route.get('/', async ({ locals }: { locals: Record<string, unkn
 
 export const fileRouter = defineRouter('/files', {
     middlewares: [authMiddleware],
+    validate: {
+        query: true,
+        params: true,
+        
+    },
     routes: [getAllFiles, getFiles, uploadFile],
 } as const);

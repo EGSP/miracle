@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "dev:debug": "tsx watch --inspect=9229 src/index.ts",
-    "build": "tsc",
+    "codegen:validation": "npm --prefix .. run generate-backend-validation",
+    "build": "npm run codegen:validation && tsc",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -22,6 +23,8 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
+    "@miracle/tools": "*",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/ms": "^2.1.0",
