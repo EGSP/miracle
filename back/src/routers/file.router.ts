@@ -112,7 +112,7 @@ const streamFileContent = route.get('/:id/content', {
             return err.validation('File id parameter is required');
         }
 
-        const file = await filesService.getById(params.id);
+        const file = await filesService.get(params.id);
         if (!file) {
             return err.notFound(`File with id "${params.id}" not found`);
         }

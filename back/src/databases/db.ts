@@ -3,16 +3,9 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
+import { DbEntity } from '@miracle/types';
 
 export type JsonDb<TData extends object> = Low<TData>;
-
-export type UnixTimestamp = number;
-
-export type DbEntity = {
-    id: string;
-    createdAt: UnixTimestamp;
-    updatedAt: UnixTimestamp;
-};
 
 export type StoredEntity<TItem extends object> = Omit<TItem, keyof DbEntity> & DbEntity;
 

@@ -165,3 +165,88 @@ export function parseStreamFileContentParams(raw: Record<string, unknown>) {
 
     return result;
 }
+
+export function parseGetOrderParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        errors.push({ field: "id", message: 'is required' });
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
+    } else {
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
+        } else {
+            result["id"] = raw_id.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
+export function parseGetOrdersQuery(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        result["id"] = undefined;
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
+    } else {
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
+        } else {
+            result["id"] = raw_id.value;
+        }
+    }
+    const raw_authorId = readSingleValue(raw, "authorId");
+    if (raw_authorId.missing) {
+        result["authorId"] = undefined;
+    } else if (raw_authorId.multi) {
+        errors.push({ field: "authorId", message: 'expected single value' });
+    } else {
+        if (typeof raw_authorId.value !== 'string') {
+            errors.push({ field: "authorId", message: 'expected string' });
+        } else {
+            result["authorId"] = raw_authorId.value;
+        }
+    }
+    const raw_fileId = readSingleValue(raw, "fileId");
+    if (raw_fileId.missing) {
+        result["fileId"] = undefined;
+    } else if (raw_fileId.multi) {
+        errors.push({ field: "fileId", message: 'expected single value' });
+    } else {
+        if (typeof raw_fileId.value !== 'string') {
+            errors.push({ field: "fileId", message: 'expected string' });
+        } else {
+            result["fileId"] = raw_fileId.value;
+        }
+    }
+    const raw_includeRequirements = readSingleValue(raw, "includeRequirements");
+    if (raw_includeRequirements.missing) {
+        result["includeRequirements"] = undefined;
+    } else if (raw_includeRequirements.multi) {
+        errors.push({ field: "includeRequirements", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_includeRequirements.value, [false,true]);
+        if (parsed === undefined) {
+            errors.push({ field: "includeRequirements", message: "expected one of: false, true" });
+        } else {
+            result["includeRequirements"] = parsed;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
