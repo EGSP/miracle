@@ -32,7 +32,7 @@ export const filesService = {
         return filesDb.create(data);
     },
 
-    getById: async (id: string) => {
+    get: async (id: string) => {
         return filesDb.getById(id);
     },
 

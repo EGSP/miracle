@@ -1,5 +1,9 @@
 # Miracle
 
+## Документация
+
+- Про устройство JSON DB и различия `Stored<T>` / `StoredEntity<T>`: `back/src/databases/db.md`
+
 ## Быстрый старт
 
 - Установить зависимости: `npm run install:all`

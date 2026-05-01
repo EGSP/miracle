@@ -216,6 +216,21 @@ Router-specific model-файл не re-export-ит такой тип, если �
 локального alias. Если для роутера нет собственных моделей, router-specific
 model-файл вообще не создается и не попадает в `models/index.ts`.
 
+### Памятка: почему лучше явно задавать response через `satisfies`
+
+Для стабильного контракта клиента лучше явно задавать тип успешного ответа:
+
+```ts
+type UploadFileResponse = StoredEntity<FileModel>;
+
+return created satisfies UploadFileResponse;
+```
+
+Причина: если вернуть переменную без `satisfies` (например `return created;`),
+TypeScript сам выведет тип и он может оказаться в форме `import("...").Type`
+с внутренними путями. Генератор умеет нормализовать часть таких случаев, но
+явный `satisfies` делает контракт предсказуемым и устраняет сюрпризы в codegen.
+
 Клиенты всегда импортируют модели из barrel-файла:
 
 ```ts
