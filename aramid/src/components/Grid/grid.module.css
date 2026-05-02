@@ -41,21 +41,3 @@
     padding-inline: var(--aramid-grid-margin-xlg, 32px);
   }
 }
-
-/* Column */
-
-.column {
-  grid-column: span var(--col-span-sm, 4);
-}
-
-@media (min-width: 672px) {
-  .column {
-    grid-column: span var(--col-span-md, 8);
-  }
-}
-
-@media (min-width: 1056px) {
-  .column {
-    grid-column: span var(--col-span-lg, 16);
-  }
-}

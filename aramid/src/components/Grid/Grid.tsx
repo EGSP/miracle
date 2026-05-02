@@ -3,11 +3,11 @@ import { clsx } from 'clsx'
 import styles from './grid.module.css'
 
 export interface GridProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Removes the default horizontal padding (margins) from the grid */
+  /** Убирает горизонтальные отступы (поля) сетки по умолчанию */
   narrow?: boolean
-  /** Collapses all gutters to 1px */
+  /** Сжимает все промежутки между колонками до 1px */
   condensed?: boolean
-  /** Removes the max-width constraint */
+  /** Убирает ограничение максимальной ширины */
   fullWidth?: boolean
 }
 

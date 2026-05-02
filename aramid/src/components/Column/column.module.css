@@ -1,0 +1,3 @@
+.column {
+  grid-column: var(--col-start, auto) / var(--col-end, span var(--col-span, 16));
+}
