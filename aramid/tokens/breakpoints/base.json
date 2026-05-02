@@ -1,0 +1,9 @@
+{
+  "breakpoint": {
+    "sm":  { "$value": "0px",    "$type": "dimension", "$description": "Small — mobile (0–671px)" },
+    "md":  { "$value": "672px",  "$type": "dimension", "$description": "Medium — tablet (672–1055px)" },
+    "lg":  { "$value": "1056px", "$type": "dimension", "$description": "Large — desktop (1056–1311px)" },
+    "xlg": { "$value": "1312px", "$type": "dimension", "$description": "Extra-large — wide (1312–1583px)" },
+    "max": { "$value": "1584px", "$type": "dimension", "$description": "Max — ultra-wide (1584px+)" }
+  }
+}

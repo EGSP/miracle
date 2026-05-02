@@ -1,0 +1,45 @@
+/*
+  Aramid Design System — Base Styles
+  Import this file once at the app root after css/tokens.css
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--aramid-font-family-sans, 'Roboto', sans-serif);
+  font-size: var(--aramid-font-size-md, 16px);
+  line-height: var(--aramid-font-line-height-normal, 1.5);
+  color: var(--aramid-color-gray-100, #161616);
+  background-color: var(--aramid-color-gray-10, #f4f4f4);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: var(--aramid-color-semantic-nav, var(--aramid-color-blue-60, #0f62fe));
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}

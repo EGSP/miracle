@@ -1,0 +1,21 @@
+{
+  "grid": {
+    "columns": {
+      "sm":  { "$value": "4",  "$type": "number", "$description": "4 columns on mobile" },
+      "md":  { "$value": "8",  "$type": "number", "$description": "8 columns on tablet" },
+      "lg":  { "$value": "16", "$type": "number", "$description": "16 columns on desktop" }
+    },
+    "gutter": {
+      "sm":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
+      "md":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
+      "lg":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" }
+    },
+    "margin": {
+      "sm":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
+      "md":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
+      "lg":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
+      "xlg": { "$value": "{spacing.7}", "$type": "dimension", "$description": "32px" }
+    },
+    "maxWidth": { "$value": "1584px", "$type": "dimension" }
+  }
+}

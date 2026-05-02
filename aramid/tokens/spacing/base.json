@@ -1,0 +1,17 @@
+{
+  "spacing": {
+    "1":  { "$value": "2px",   "$type": "dimension", "$description": "2px" },
+    "2":  { "$value": "4px",   "$type": "dimension", "$description": "4px" },
+    "3":  { "$value": "8px",   "$type": "dimension", "$description": "8px" },
+    "4":  { "$value": "12px",  "$type": "dimension", "$description": "12px" },
+    "5":  { "$value": "16px",  "$type": "dimension", "$description": "16px" },
+    "6":  { "$value": "24px",  "$type": "dimension", "$description": "24px" },
+    "7":  { "$value": "32px",  "$type": "dimension", "$description": "32px" },
+    "8":  { "$value": "40px",  "$type": "dimension", "$description": "40px" },
+    "9":  { "$value": "48px",  "$type": "dimension", "$description": "48px" },
+    "10": { "$value": "64px",  "$type": "dimension", "$description": "64px" },
+    "11": { "$value": "80px",  "$type": "dimension", "$description": "80px" },
+    "12": { "$value": "96px",  "$type": "dimension", "$description": "96px" },
+    "13": { "$value": "160px", "$type": "dimension", "$description": "160px" }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "@miracle/aramid",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles": "./dist/index.css",
+    "./css/tokens": "./dist/css/tokens.css"
+  },
+  "scripts": {
+    "build": "npm run build:js && npm run build:tokens",
+    "build:tokens": "node style-dictionary.config.mjs",
+    "build:js": "tsup && tsc",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "lucide-react": "^1.14.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "zustand": "^4.0.0 || ^5.0.0"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "lucide-react": "^1.14.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "style-dictionary": "^4.3.3",
+    "tsup": "^8.5.0",
+    "typescript": "^6.0.0",
+    "zustand": "^5.0.12"
+  }
+}

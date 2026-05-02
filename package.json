@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
+    "aramid",
     "back",
     "front",
     "tools",
@@ -11,6 +12,7 @@
   "scripts": {
     "install:all": "npm install --workspaces --include-workspace-root",
     
+    "build:aramid": "npm run build --workspace=aramid",
     "build:back": "npm run build --workspace=back",
 
     "launch:full": "concurrently --kill-others --names \"BACK,FRONT\" -c \"blue,green\" \"npm run launch:back\" \"npm run launch:front\"",
