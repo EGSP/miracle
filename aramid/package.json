@@ -13,7 +13,9 @@
       "require": "./dist/index.cjs"
     },
     "./styles": "./dist/index.css",
-    "./css/tokens": "./dist/css/tokens.css"
+    "./css/tokens": "./dist/css/tokens.css",
+    "./css/shadcn-tokens": "./dist/css/shadcn-tokens.css",
+    "./css/shadcn-tokens-dark": "./dist/css/shadcn-tokens-dark.css"
   },
   "scripts": {
     "build": "npm run build:js && npm run build:tokens",

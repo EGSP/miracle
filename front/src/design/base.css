@@ -1,8 +1,9 @@
 a {
-    color: var(--color-nav);
+    color: var(--aramid-color-blue-60);
     text-decoration: none;
 }
 
 a:hover {
+    color: var(--aramid-color-blue-hover-60);
     text-decoration: underline;
 }
