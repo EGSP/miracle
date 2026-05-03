@@ -82,10 +82,9 @@ export default function FilesPage() {
         <Grid
             as="main"
             withRowGap
-            className="py-8"
             style={{ '--grid-max-width': '64rem' } as CSSProperties}
         >
-            <Column span={16}>
+            <Column span={16} className="pt-8">
                 <Stack orientation="horizontal" gap={3} className="flex-wrap items-center">
                     <Link
                         to="/"
@@ -98,7 +97,7 @@ export default function FilesPage() {
                 </Stack>
             </Column>
 
-            <Column span={COL_LIST} className="min-w-0">
+            <Column span={COL_LIST} className="min-w-0 pb-8">
                 <Stack as="section" gap={4}>
                     <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                         Загруженные файлы
@@ -154,7 +153,7 @@ export default function FilesPage() {
                 </Stack>
             </Column>
 
-            <Column span={COL_UPLOAD}>
+            <Column span={COL_UPLOAD} className="pb-8">
                 <Stack as="aside" gap={4}>
                     <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                         Загрузить файл

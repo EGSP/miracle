@@ -1,85 +1,108 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useAuthContext } from "@/contexts/AuthContext";
-import { useLogin, useLogout, useRegister } from "@/lib/queries/auth.query";
-import { useAuthStore } from "@/lib/stores/auth.store";
-import { Link, Outlet } from "@tanstack/react-router";
-import { useState } from "react"
+import { useState, type ReactNode } from 'react';
+import { Link, Outlet } from '@tanstack/react-router';
+import { Column, Grid, Stack } from '@miracle/aramid';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useLogin, useLogout, useRegister } from '@/lib/queries/auth.query';
+
+/** Узкая колонка формы по центру сетки: 8 из 16, отступы 4+4. */
+const AUTH_CONTENT = { span: 8 as const, offset: 4 as const };
+
+function authShell(children: ReactNode) {
+    return (
+        <Grid as="main" className="min-h-screen">
+            <Column span={AUTH_CONTENT} className="min-w-0 py-8">
+                <Stack gap={4} className="w-full">
+                    {children}
+                </Stack>
+            </Column>
+        </Grid>
+    );
+}
 
 export function AuthPage() {
-
-    const authStore = useAuthStore();
     const { mutate: logout, isPending: isLogoutPending } = useLogout();
-
     const { isAuthenticated } = useAuthContext();
-    
-    if(isAuthenticated) {
-        return (
-            <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-6 py-8">
-                <section className="w-full space-y-3">
-                    <h1>Вы авторизованы</h1>
-                    <p>Сессия активна. Можно перейти к рабочим разделам приложения.</p>
-                    <Link to="/">На главную</Link>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => logout()}
-                        disabled={isLogoutPending}
+
+    if (isAuthenticated) {
+        return authShell(
+            <>
+                <Stack gap={1}>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Вы авторизованы</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Сессия активна. Можно перейти к рабочим разделам приложения.
+                    </p>
+                </Stack>
+                <Stack orientation="horizontal" gap={3} className="flex-wrap items-center">
+                    <Link
+                        to="/"
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
-                        {isLogoutPending ? "Выйти из аккаунта..." : "Выйти из аккаунта"}
+                        На главную
+                    </Link>
+                    <Button type="button" variant="outline" onClick={() => logout()} disabled={isLogoutPending}>
+                        {isLogoutPending ? 'Выйти из аккаунта...' : 'Выйти из аккаунта'}
                     </Button>
-                </section>
-            </main>
+                </Stack>
+            </>
         );
     }
 
-    return (
-        <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-6 py-8">
-            <section className="w-full space-y-4">
-            <h1>Авторизация</h1>
-            <p>Войдите или создайте новый аккаунт.</p>
-            <nav className="flex gap-3">
+    return authShell(
+        <>
+            <Stack gap={1}>
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">Авторизация</h1>
+                <p className="text-sm text-muted-foreground">Войдите или создайте новый аккаунт.</p>
+            </Stack>
+            <Stack as="nav" orientation="horizontal" gap={4} className="flex-wrap">
                 <Link
                     to="/auth/login"
-                    activeProps={{}}
+                    className="text-sm font-medium text-muted-foreground data-[status=active]:text-foreground"
                 >
-                    Login
+                    Вход
                 </Link>
                 <Link
                     to="/auth/register"
-                    activeProps={{}}
+                    className="text-sm font-medium text-muted-foreground data-[status=active]:text-foreground"
                 >
-                    Register
+                    Регистрация
                 </Link>
-            </nav>
+            </Stack>
             <Outlet />
-            </section>
-        </main>
-    )
+        </>
+    );
 }
 
 export function LoginForm() {
     const [loginValue, setLoginValue] = useState('');
     const [passwordValue, setPasswordValue] = useState('');
-
     const { mutate: login, isPending, isError, error } = useLogin({ login: loginValue, password: passwordValue });
 
-    if(isError) {
-        return <p>Error: {error.message}</p>;
-    }
-
-    if(isPending) {
-        return <p>Loading...</p>;
-    }
-
     return (
-        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); login(); }}>
-            <Input type="text" placeholder="Login" value={loginValue} onChange={(e) => setLoginValue(e.target.value)} />
-            <Input type="password" placeholder="Password" value={passwordValue} onChange={(e) => setPasswordValue(e.target.value)} />
-            <Button type="submit">Login</Button>
-        </form>
-    )
-
+        <Stack as="form" gap={3} onSubmit={(e) => { e.preventDefault(); login(); }}>
+            {isError && <p className="text-sm text-destructive">Ошибка: {error.message}</p>}
+            <Input
+                type="text"
+                placeholder="Логин"
+                autoComplete="username"
+                value={loginValue}
+                onChange={(e) => setLoginValue(e.target.value)}
+                disabled={isPending}
+            />
+            <Input
+                type="password"
+                placeholder="Пароль"
+                autoComplete="current-password"
+                value={passwordValue}
+                onChange={(e) => setPasswordValue(e.target.value)}
+                disabled={isPending}
+            />
+            <Button type="submit" disabled={isPending}>
+                {isPending ? 'Вход...' : 'Войти'}
+            </Button>
+        </Stack>
+    );
 }
 
 export function RegisterForm() {
@@ -88,28 +111,44 @@ export function RegisterForm() {
     const [confirmPasswordValue, setConfirmPasswordValue] = useState('');
     const { mutate: register, isPending, isError, error } = useRegister({ login: loginValue, password: passwordValue });
 
-    if(isError) {
-        return <p>Error: {error.message}</p>;
-    }
-
-    if(isPending) {
-        return <p>Loading...</p>;
-    }
-
     const handleRegister = () => {
-        if(passwordValue !== confirmPasswordValue) {
-            alert('Passwords do not match');
+        if (passwordValue !== confirmPasswordValue) {
+            alert('Пароли не совпадают');
             return;
         }
         register();
-    }
-    
+    };
+
     return (
-        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
-            <Input type="text" placeholder="Login" value={loginValue} onChange={(e) => setLoginValue(e.target.value)} />
-            <Input type="password" placeholder="Password" value={passwordValue} onChange={(e) => setPasswordValue(e.target.value)} />
-            <Input type="password" placeholder="Confirm Password" value={confirmPasswordValue} onChange={(e) => setConfirmPasswordValue(e.target.value)} />
-            <Button type="submit">Register</Button>
-        </form>
-    )
+        <Stack as="form" gap={3} onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
+            {isError && <p className="text-sm text-destructive">Ошибка: {error.message}</p>}
+            <Input
+                type="text"
+                placeholder="Логин"
+                autoComplete="username"
+                value={loginValue}
+                onChange={(e) => setLoginValue(e.target.value)}
+                disabled={isPending}
+            />
+            <Input
+                type="password"
+                placeholder="Пароль"
+                autoComplete="new-password"
+                value={passwordValue}
+                onChange={(e) => setPasswordValue(e.target.value)}
+                disabled={isPending}
+            />
+            <Input
+                type="password"
+                placeholder="Повторите пароль"
+                autoComplete="new-password"
+                value={confirmPasswordValue}
+                onChange={(e) => setConfirmPasswordValue(e.target.value)}
+                disabled={isPending}
+            />
+            <Button type="submit" disabled={isPending}>
+                {isPending ? 'Регистрация...' : 'Зарегистрироваться'}
+            </Button>
+        </Stack>
+    );
 }
