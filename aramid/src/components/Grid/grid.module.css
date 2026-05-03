@@ -1,43 +1,31 @@
+/*
+ * Корневая CSS Grid: одна конфигурация «как максимальный брейкпоинт» (только десктоп).
+ * Прокидываемые переменные — без префикса пакета (--grid-*).
+ * Значения по умолчанию / дизайн-токены — --aramid-*.
+ */
 .grid {
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: repeat(var(--aramid-grid-columns-sm, 4), 1fr);
-  gap: var(--aramid-grid-gutter-sm, 16px);
-  padding-inline: var(--aramid-grid-margin-sm, 16px);
   width: 100%;
-  max-width: var(--aramid-grid-max-width, 1584px);
-  margin-inline: auto;
+  max-width: var(--grid-max-width, var(--aramid-grid-max-width));
+  margin-inline-start: var(--grid-margin-inline-start, auto);
+  margin-inline-end: var(--grid-margin-inline-end, auto);
+
+  grid-template-columns: repeat(var(--grid-cols, var(--aramid-grid-cols)), 1fr);
+  column-gap: var(--grid-column-gap, var(--aramid-grid-gutter));
+  row-gap: var(--grid-row-gap, 0px);
+  padding-inline: var(--grid-padding-inline, var(--aramid-grid-margin));
 }
 
-.gridFullWidth {
-  max-width: 100%;
-}
-
-.gridCondensed {
-  gap: 1px;
-}
-
-.gridNarrow {
-  padding-inline: 0;
-}
-
-@media (min-width: 672px) {
-  .grid {
-    grid-template-columns: repeat(var(--aramid-grid-columns-md, 8), 1fr);
-    gap: var(--aramid-grid-gutter-md, 16px);
-    padding-inline: var(--aramid-grid-margin-md, 16px);
-  }
-}
-
-@media (min-width: 1056px) {
-  .grid {
-    grid-template-columns: repeat(var(--aramid-grid-columns-lg, 16), 1fr);
-    gap: var(--aramid-grid-gutter-lg, 16px);
-    padding-inline: var(--aramid-grid-margin-lg, 16px);
-  }
-}
-
-@media (min-width: 1312px) {
-  .grid {
-    padding-inline: var(--aramid-grid-margin-xlg, 32px);
-  }
+/*
+ * Вложенная сетка — subgrid по модели Carbon; зазоры задаются переменными.
+ */
+.subgrid {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-template-rows: subgrid;
+  width: 100%;
+  column-gap: var(--subgrid-column-gap, var(--grid-column-gap, var(--aramid-grid-gutter)));
+  row-gap: var(--subgrid-row-gap, var(--grid-row-gap, 0px));
 }

@@ -1,55 +1,39 @@
 import React from 'react';
 
-export type GridMode = 'flexbox' | 'css-grid';
-
 export interface GridSettingContext {
-
-    /**
-     * Specifies whether subgrid should be enabled
-     */
-    subgrid?: boolean;
+  /**
+   * Вложенный `Grid` рендерится как subgrid по отношению к родительской сетке.
+   */
+  subgrid?: boolean;
 }
 
-/**
- * Provides a grid context for communication the grid "mode" (flexbox or
- * css-grid) along with subgrid information.
- */
 const GridSettingsContext = React.createContext<GridSettingContext>({
-    subgrid: false,
+  subgrid: false,
 });
 
 export interface GridSettingsProps {
-    /**
-     * Pass in components which will be rendered within the `GridSettings`
-     * component
-     */
-    children?: React.ReactNode;
+  /**
+   * Дочерние элементы провайдера настроек сетки.
+   */
+  children?: React.ReactNode;
 
-    /**
-     * Specify whether subgrid should be enabled
-     */
-    subgrid?: boolean;
+  /**
+   * Для всех потомков следующий рендер `Grid` считается вложенной сеткой.
+   */
+  subgrid?: boolean;
 }
 
-export const GridSettings = ({
-    children,
-    subgrid = false,
-}: GridSettingsProps) => {
-    const value = React.useMemo(() => {
-        return {
-            subgrid,
-        };
-    }, [subgrid]);
-    return (
-        <GridSettingsContext.Provider value={value}>
-            {children}
-        </GridSettingsContext.Provider>
-    );
+export const GridSettings = ({ children, subgrid = false }: GridSettingsProps) => {
+  const value = React.useMemo(
+    () => ({
+      subgrid,
+    }),
+    [subgrid]
+  );
+  return <GridSettingsContext.Provider value={value}>{children}</GridSettingsContext.Provider>;
 };
 
-/**
- * Helper function for accessing the GridContext value
- */
+/** Доступ к настройкам сетки (вложенность subgrid). */
 export const useGridSettings = () => {
-    return React.useContext(GridSettingsContext);
+  return React.useContext(GridSettingsContext);
 };

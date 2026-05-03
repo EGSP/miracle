@@ -1,0 +1,11 @@
+{
+  "column": {
+    "span": {
+      "default": {
+        "$value": "{grid.cols}",
+        "$type": "number",
+        "$description": "Дефолтный span без пропсов в классе .column (CSS: --aramid-column-span-default)."
+      }
+    }
+  }
+}

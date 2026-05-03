@@ -1,21 +1,29 @@
 {
   "grid": {
-    "columns": {
-      "sm":  { "$value": "4",  "$type": "number", "$description": "4 columns on mobile" },
-      "md":  { "$value": "8",  "$type": "number", "$description": "8 columns on tablet" },
-      "lg":  { "$value": "16", "$type": "number", "$description": "16 columns on desktop" }
+    "cols": {
+      "$value": "16",
+      "$type": "number",
+      "$description": "Число колонок сетки для десктопного режима (класс .grid / API Grid без sm–md–lg)."
     },
     "gutter": {
-      "sm":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
-      "md":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
-      "lg":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" }
+      "$value": "{spacing.5}",
+      "$type": "dimension",
+      "$description": "Межколоночный зазор в wide / narrow (соответствует токенам в grid.module.css через --aramid-grid-gutter)."
+    },
+    "gutterCondensed": {
+      "$value": "1px",
+      "$type": "dimension",
+      "$description": "Межколоночный зазор режима condensed (как Carbon, не входит в шкалу spacing)."
     },
     "margin": {
-      "sm":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
-      "md":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
-      "lg":  { "$value": "{spacing.5}", "$type": "dimension", "$description": "16px" },
-      "xlg": { "$value": "{spacing.7}", "$type": "dimension", "$description": "32px" }
+      "$value": "{spacing.7}",
+      "$type": "dimension",
+      "$description": "Горизонтальный padding контейнера .grid (--aramid-grid-margin), раньше задавалось как отступ верхней шкалы экранов."
     },
-    "maxWidth": { "$value": "1584px", "$type": "dimension" }
+    "maxWidth": {
+      "$value": "{breakpoint.max}",
+      "$type": "dimension",
+      "$description": "Максимальная ширина контейнера сетки (совпадает с токеном breakpoint.max)."
+    }
   }
 }

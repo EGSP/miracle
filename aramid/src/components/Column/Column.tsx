@@ -123,4 +123,6 @@ const Column = React.forwardRef<
   }
 );
 
+Column.displayName = 'Column';
+
 export default Column as ColumnComponent;

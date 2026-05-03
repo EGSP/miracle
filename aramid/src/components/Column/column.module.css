@@ -1,3 +1,4 @@
 .column {
-  grid-column: var(--col-start, auto) / var(--col-end, span var(--col-span, 16));
+  grid-column: var(--col-start, auto) /
+    var(--col-end, span var(--col-span, var(--aramid-column-span-default)));
 }
