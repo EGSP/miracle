@@ -124,7 +124,8 @@ src/components/Foo/
 **Практика в репозитории:**
 
 - [`src/components/Grid/`](./src/components/Grid/) — `Grid.tsx`, `aramid-grid.css`, `GridContext.tsx`, `index.ts`;
-- [`src/components/Column/`](./src/components/Column/) — `Column.tsx`, `aramid-column.css`, `index.ts`.
+- [`src/components/Column/`](./src/components/Column/) — `Column.tsx`, `aramid-column.css`, `index.ts`;
+- [`docs/`](./docs/) — руководства по компонентам (`GRID.md`, `COLUMN.md`, `STACK.md`, `ASPECTRATIO.md`).
 
 **Полиморфный корень (`as`).** Если в Carbon компонент принимает `as`, в aramid сохраняйте контракт через [`PolymorphicComponentPropWithRef`](./src/internal/PolymorphicProps.ts), если нет веской причины упростить до фиксированного `div`.
 
