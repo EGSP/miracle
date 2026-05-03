@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type CSSProperties } from 'react';
 import { Link } from '@tanstack/react-router';
 import { FileIcon, ArrowLeft, Upload, CircleCheck, CircleX } from 'lucide-react';
+import { Column, Grid, Stack } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { FileDropZone } from '@/components/ui/file-dropzone';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,25 +23,33 @@ function FileListItem({ file }: { file: FileWithMeta }) {
     const isAvailable = file.meta?.available;
 
     return (
-        <div className="flex items-center gap-3 border border-border px-3 py-2.5 text-xs">
+        <Stack
+            orientation="horizontal"
+            gap={3}
+            className="min-w-0 items-center border border-border px-3 py-2.5 text-xs"
+        >
             <FileIcon className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate font-medium text-foreground">{file.name}</span>
             {isAvailable ? (
-                <span className="inline-flex items-center gap-1 text-emerald-500">
+                <span className="inline-flex shrink-0 items-center gap-1 text-emerald-500">
                     <CircleCheck className="size-3.5" />
                     Доступен
                 </span>
             ) : (
-                <span className="inline-flex items-center gap-1 text-destructive">
+                <span className="inline-flex shrink-0 items-center gap-1 text-destructive">
                     <CircleX className="size-3.5" />
                     Недоступен
                 </span>
             )}
             <span className="shrink-0 text-muted-foreground">{file.extension.toUpperCase()}</span>
             <span className="shrink-0 text-muted-foreground">{formatBytes(file.bytes)}</span>
-        </div>
+        </Stack>
     );
 }
+
+/** Двухколоночный контент на 16-колоночной сетке Aramid (модель 2× grid). */
+const COL_LIST = 11 as const;
+const COL_UPLOAD = 5 as const;
 
 export default function FilesPage() {
     const [selectedFileInList, setSelectedFileInList] = useState<FileWithMeta | null>(null);
@@ -70,39 +79,44 @@ export default function FilesPage() {
     };
 
     return (
-        <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-6 py-8">
-            <div className="flex items-center gap-3">
-                <Link to="/" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-                    <ArrowLeft className="size-3.5" />
-                    На главную
-                </Link>
-                <h1 className="text-base font-medium">Файлы</h1>
-            </div>
+        <Grid
+            as="main"
+            withRowGap
+            className="py-8"
+            style={{ '--grid-max-width': '64rem' } as CSSProperties}
+        >
+            <Column span={16}>
+                <Stack orientation="horizontal" gap={3} className="flex-wrap items-center">
+                    <Link
+                        to="/"
+                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                        <ArrowLeft className="size-3.5" />
+                        На главную
+                    </Link>
+                    <h1 className="text-base font-medium">Файлы</h1>
+                </Stack>
+            </Column>
 
-            <div className="flex gap-6">
-                {/* File list */}
-                <section className="flex flex-1 flex-col gap-3">
-                    <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <Column span={COL_LIST} className="min-w-0">
+                <Stack as="section" gap={4}>
+                    <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                         Загруженные файлы
                     </h2>
-                    <div className="flex flex-wrap items-center gap-4 border border-border p-2">
+                    <Stack
+                        orientation="horizontal"
+                        gap={4}
+                        className="flex-wrap items-center border border-border p-2"
+                    >
                         <label className="inline-flex items-center gap-2 text-xs text-foreground">
                             <Checkbox checked={myFilesOnly} onCheckedChange={(checked) => setMyFilesOnly(checked === true)} />
                             <span>Мои файлы</span>
                         </label>
-                        <TriStateCheckbox
-                            label="Доступные"
-                            value={availableOnly}
-                            onChange={setAvailableOnly}
-                        />
-                    </div>
+                        <TriStateCheckbox label="Доступные" value={availableOnly} onChange={setAvailableOnly} />
+                    </Stack>
 
-                    {isLoading && (
-                        <p className="text-xs text-muted-foreground">Загрузка...</p>
-                    )}
-                    {error && (
-                        <p className="text-xs text-destructive">Ошибка: {error.message}</p>
-                    )}
+                    {isLoading && <p className="text-xs text-muted-foreground">Загрузка...</p>}
+                    {error && <p className="text-xs text-destructive">Ошибка: {error.message}</p>}
                     {files && files.length === 0 && (
                         <p className="text-xs text-muted-foreground">Нет загруженных файлов</p>
                     )}
@@ -128,20 +142,21 @@ export default function FilesPage() {
                                 </ListBox.Items>
                             </ListBox>
                             {selectedFileInList && (
-                                <section className="mt-3 flex flex-col gap-2">
-                                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                <Stack as="section" gap={2}>
+                                    <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                                         Предпросмотр
                                     </h3>
                                     <FileContentPreview file={selectedFileInList} resolveUrl={resolvePreviewUrl} />
-                                </section>
+                                </Stack>
                             )}
                         </>
                     )}
-                </section>
+                </Stack>
+            </Column>
 
-                {/* Upload panel */}
-                <aside className="flex w-72 shrink-0 flex-col gap-3">
-                    <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <Column span={COL_UPLOAD}>
+                <Stack as="aside" gap={4}>
+                    <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                         Загрузить файл
                     </h2>
 
@@ -153,25 +168,22 @@ export default function FilesPage() {
                     />
 
                     {selectedFile && (
-                        <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                        <Stack gap={1} className="text-xs text-muted-foreground">
                             <span className="truncate font-medium text-foreground">{selectedFile.name}</span>
                             <span>{formatBytes(selectedFile.size)}</span>
-                        </div>
+                        </Stack>
                     )}
 
                     {uploadMutation.isError && (
                         <p className="text-xs text-destructive">{uploadMutation.error.message}</p>
                     )}
 
-                    <Button
-                        onClick={handleUpload}
-                        disabled={!selectedFile || uploadMutation.isPending}
-                    >
+                    <Button onClick={handleUpload} disabled={!selectedFile || uploadMutation.isPending}>
                         <Upload />
                         {uploadMutation.isPending ? 'Загрузка...' : 'Загрузить'}
                     </Button>
-                </aside>
-            </div>
-        </main>
+                </Stack>
+            </Column>
+        </Grid>
     );
 }

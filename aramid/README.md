@@ -57,7 +57,7 @@ aramid/
 │   │   └── Grid/                  # Пример компонента
 │   │       ├── Grid.tsx
 │   │       ├── Column.tsx
-│   │       ├── grid.module.css
+│   │       ├── aramid-grid.css
 │   │       └── index.ts
 │   └── styles/
 │       └── base.css               # Базовые стили (reset + глобальные переменные)
@@ -66,7 +66,7 @@ aramid/
 │   ├── index.js                   #   ESM-сборка
 │   ├── index.cjs                  #   CJS-сборка
 │   ├── index.d.ts                 #   типы TypeScript
-│   ├── index.css                  #   стили компонентов (CSS Modules → extracted)
+│   ├── index.css                  #   стили компонентов (plain CSS, собирается tsup)
 │   ├── css/
 │   │   └── tokens.css             #   CSS custom properties из токенов
 │   └── js/
@@ -163,7 +163,7 @@ npm run build:tokens --workspace=aramid
 ```
 src/components/ComponentName/
 ├── ComponentName.tsx      # Реализация
-├── ComponentName.css      # или ComponentName.module.css
+├── aramid-component.css   # префикс `aramid-*`, только var(--aramid-…)
 └── index.ts               # Реэкспорт: export { ComponentName } from './ComponentName'
 ```
 
@@ -246,8 +246,8 @@ import { Grid, Column } from '@miracle/aramid'
 - **Всегда задавай `displayName`** для облегчения отладки в React DevTools:  
   `Button.displayName = 'Button'`
 - **Экспортируй типы пропсов** отдельно (`export type ButtonProps`).
-- **Используй CSS Modules** (`.module.css`) для стилей компонента — не пиши глобальные классы.
-- **Используй CSS custom properties** из токенов внутри CSS Modules:  
+- **Стили компонента** — отдельный `.css` с классами с префиксом `aramid-`, `import './…css'` в `.tsx` и строковые имена классов в `clsx` (или общий `layoutClassNames.ts`). **CSS Modules не используются**: при сборке tsup маппинг `.module.css` в JS не подставляется, стили не попадали бы на DOM.
+- **Используй CSS custom properties** из токенов внутри стилей компонента:  
   `color: var(--aramid-color-semantic-interactive);`
 - **Помечай peer-зависимости** (React, lucide-react, zustand) как `external` — не бандли их в пакет.
 - **Пиши компоненты без состояния** там, где это возможно. Zustand — только для компонентов-контейнеров.
@@ -259,7 +259,7 @@ import { Grid, Column } from '@miracle/aramid'
 - Не импортируй Tailwind-классы, shadcn или любые другие UI-библиотеки в компоненты дизайн-системы.
 - Не хардкоди цвета, отступы и размеры — только через CSS custom properties из токенов.
 - Не создавай сложную бизнес-логику внутри компонентов. Дизайн-система — это UI-примитивы и паттерны, не бизнес-компоненты.
-- Не именуй CSS-классы описательно (`blue-button`) — классы изолированы через CSS Modules, называй их по роли (`primary`, `icon`, `label`).
+- Не именуй публичные CSS-классы без префикса (`grid`, `stack`) — только `aramid-*`, чтобы не пересечься с утилитами приложения.
 - Не забывай добавлять реэкспорт в `index.ts` после создания нового компонента.
 
 ---
@@ -271,7 +271,7 @@ import { Grid, Column } from '@miracle/aramid'
 2. [ ] Пересобрать токены: npm run build:tokens --workspace=aramid
 3. [ ] Создать директорию src/components/<ComponentName>/
 4. [ ] Написать ComponentName.tsx (props, displayName, разметка)
-5. [ ] Написать ComponentName.module.css (только CSS custom properties)
+5. [ ] Написать `aramid-*.css` (только `var(--aramid-…)`)
 6. [ ] Создать index.ts с реэкспортом
 7. [ ] Добавить реэкспорт в src/components/index.ts
 8. [ ] Собрать пакет: npm run build --workspace=aramid

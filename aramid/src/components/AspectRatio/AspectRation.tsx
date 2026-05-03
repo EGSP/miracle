@@ -1,6 +1,7 @@
 import React, { ReactElement } from 'react';
 import { clsx } from 'clsx';
-import styles from './aspect-ratio.module.css';
+import './aramid-aspect-ratio.css';
+import { aramidAspectRatioClass } from '../../internal/layoutClassNames';
 import { PolymorphicComponentPropWithRef } from '../../internal/PolymorphicProps';
 
 type AspectRatioValue =
@@ -50,7 +51,7 @@ const AspectRatio = React.forwardRef<
   } as React.CSSProperties & Record<string, string>;
 
   return (
-    <BaseComponent className={clsx(styles.aspectRatio, customClassName)} style={style} ref={ref} {...rest}>
+    <BaseComponent className={clsx(aramidAspectRatioClass, customClassName)} style={style} ref={ref} {...rest}>
       {children}
     </BaseComponent>
   );

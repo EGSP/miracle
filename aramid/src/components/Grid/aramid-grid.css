@@ -3,7 +3,7 @@
  * Прокидываемые переменные — без префикса пакета (--grid-*).
  * Значения по умолчанию / дизайн-токены — --aramid-*.
  */
-.grid {
+.aramid-grid {
   box-sizing: border-box;
   display: grid;
   width: 100%;
@@ -20,7 +20,7 @@
 /*
  * Вложенная сетка — subgrid по модели Carbon; зазоры задаются переменными.
  */
-.subgrid {
+.aramid-subgrid {
   box-sizing: border-box;
   display: grid;
   grid-template-columns: subgrid;

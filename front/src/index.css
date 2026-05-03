@@ -126,6 +126,7 @@
 @import "@miracle/aramid/css/tokens";
 @import "@miracle/aramid/css/shadcn-tokens";
 @import "@miracle/aramid/css/shadcn-tokens-dark";
+@import "@miracle/aramid/styles";
 
 @layer base {
   * {

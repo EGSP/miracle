@@ -1,6 +1,7 @@
 import React from 'react';
 import { clsx } from 'clsx';
-import styles from './grid.module.css';
+import './aramid-grid.css';
+import { aramidGridClass, aramidSubgridClass } from '../../internal/layoutClassNames';
 import { PolymorphicComponentPropWithRef } from '../../internal/PolymorphicProps';
 import { GridSettings, useGridSettings } from './GridContext';
 
@@ -19,7 +20,7 @@ export interface GridBaseProps {
   children?: React.ReactNode;
 
   /**
-   * Дополнительный `className` к единственному системному классу сетки (`grid` / `subgrid`).
+   * Дополнительный `className` к системному классу сетки (`aramid-grid` / `aramid-subgrid`).
    */
   className?: string;
 
@@ -91,7 +92,7 @@ function alignMargins(align?: GridBaseProps['align']): Pick<
 
 /**
  * CSS-переменные для корневой сетки (без префикса пакета у прокидываемых значений).
- * Токены по умолчанию — в `grid.module.css` через `--aramid-*`.
+ * Токены по умолчанию — в `aramid-grid.css` через `--aramid-*`.
  */
 function rootGridVariables(
   props: Pick<GridBaseProps, 'condensed' | 'narrow' | 'fullWidth' | 'align' | 'withRowGap'>
@@ -170,7 +171,7 @@ const CSSGrid = React.forwardRef<
         <GridSettings subgrid>
           <BaseComponent
             ref={ref}
-            className={clsx(styles.subgrid, customClassName)}
+            className={clsx(aramidSubgridClass, customClassName)}
             style={style}
             {...rest}>
             {children}
@@ -182,7 +183,7 @@ const CSSGrid = React.forwardRef<
     const style = { ...rootGridVariables(layoutProps), ...userStyle };
     return (
       <GridSettings subgrid>
-        <BaseComponent className={clsx(styles.grid, customClassName)} ref={ref} style={style} {...rest}>
+        <BaseComponent className={clsx(aramidGridClass, customClassName)} ref={ref} style={style} {...rest}>
           {children}
         </BaseComponent>
       </GridSettings>

@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { clsx } from 'clsx';
-import styles from './stack.module.css';
+import './aramid-stack.css';
+import { aramidStackClass } from '../../internal/layoutClassNames';
 
 const SPACING_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
 
@@ -47,7 +48,7 @@ export const Stack = forwardRef<HTMLElement, StackProps>((props, ref) => {
     orientation = 'vertical',
     ...rest
   } = props;
-  const className = clsx(styles.stack, customClassName);
+  const className = clsx(aramidStackClass, customClassName);
   const style: React.CSSProperties & Record<string, string> = { ...rest.style } as React.CSSProperties &
     Record<string, string>;
 

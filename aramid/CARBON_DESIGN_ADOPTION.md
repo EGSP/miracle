@@ -84,28 +84,28 @@ const vars: Record<string, string> = {
 
 Фрагмент из [`src/components/Grid/Grid.tsx`](./src/components/Grid/Grid.tsx).
 
-**Пример (CSS Module):** раскладка читает сначала прокинутое, потом токен:
+**Пример:** раскладка читает сначала прокинутое, потом токен:
 
 ```css
-.grid {
+.aramid-grid {
   grid-template-columns: repeat(var(--grid-cols, var(--aramid-grid-cols)), 1fr);
   column-gap: var(--grid-column-gap, var(--aramid-grid-gutter));
   padding-inline: var(--grid-padding-inline, var(--aramid-grid-margin));
 }
 ```
 
-Файл: [`src/components/Grid/grid.module.css`](./src/components/Grid/grid.module.css).
+Файл: [`src/components/Grid/aramid-grid.css`](./src/components/Grid/aramid-grid.css).
 
 **Column:** прокидываются `--col-span`, `--col-start`, `--col-end`; в модуле fallback на токен дефолтного span:
 
 ```css
-.column {
+.aramid-column {
   grid-column: var(--col-start, auto) /
     var(--col-end, span var(--col-span, var(--aramid-column-span-default)));
 }
 ```
 
-См. [`src/components/Column/column.module.css`](./src/components/Column/column.module.css) и [`tokens/column/base.json`](./tokens/column/base.json).
+См. [`src/components/Column/aramid-column.css`](./src/components/Column/aramid-column.css) и [`tokens/column/base.json`](./tokens/column/base.json).
 
 ---
 
@@ -116,15 +116,15 @@ const vars: Record<string, string> = {
 ```text
 src/components/Foo/
   Foo.tsx           — логика, пропсы, инлайн-переменные при необходимости
-  foo.module.css  — один (или минимум) системных классов + правила с var(...)
+  `aramid-*.css` — стабильные префиксованные классы + правила с `var(...)` (без CSS Modules: совместимость с tsup)
   FooContext.tsx  — только если нужен контекст (как у Grid / subgrid)
   index.ts        — реэкспорт публичного API
 ```
 
 **Практика в репозитории:**
 
-- [`src/components/Grid/`](./src/components/Grid/) — `Grid.tsx`, `grid.module.css`, `GridContext.tsx`, `index.ts`;
-- [`src/components/Column/`](./src/components/Column/) — `Column.tsx`, `column.module.css`, `index.ts`.
+- [`src/components/Grid/`](./src/components/Grid/) — `Grid.tsx`, `aramid-grid.css`, `GridContext.tsx`, `index.ts`;
+- [`src/components/Column/`](./src/components/Column/) — `Column.tsx`, `aramid-column.css`, `index.ts`.
 
 **Полиморфный корень (`as`).** Если в Carbon компонент принимает `as`, в aramid сохраняйте контракт через [`PolymorphicComponentPropWithRef`](./src/internal/PolymorphicProps.ts), если нет веской причины упростить до фиксированного `div`.
 
@@ -156,7 +156,7 @@ src/components/Foo/
 
 ## 7. Визуальные и презентационные компоненты
 
-**Токены.** Цвета и типографика — из [`tokens/color/`](./tokens/color) и [`tokens/typography/`](./tokens/typography); в CSS модулях ссылаться на `--aramid-*` из собранного `tokens.css`.
+**Токены.** Цвета и типографика — из [`tokens/color/`](./tokens/color) и [`tokens/typography/`](./tokens/typography); в CSS компонентов ссылаться на `--aramid-*` из собранного `tokens.css`.
 
 **Размеры и отступы.** По возможности выражать через `{spacing.N}` в JSON или через уже сгенерированные `--aramid-spacing-*` в CSS, чтобы не плодить «магические числа».
 
@@ -186,7 +186,7 @@ src/components/Foo/
 
 - **Брейкпоинтные ветки** в публичном API (`sm` / `md` / `lg` на одном и том же пропе), если продукт только для десктопа — заменить **одним** именованным параметром (как `span` у Column) или фиксированными токенами «максимального» брейкпоинта.
 - **FlexGrid** и прочие режимы, если в aramid договорён только **CSS Grid** (как у текущего Grid).
-- **Длинные цепочки BEM-классов** с префиксом Carbon (`cds--…`) — заменить на **один класс** из CSS Module плюс **CSS variables** для вариантов.
+- **Длинные цепочки BEM-классов** с префиксом Carbon (`cds--…`) — заменить на **один префиксованный класс** `aramid-*` плюс **CSS variables** для вариантов.
 - **Неиспользуемый контекст** (режимы `flexbox` / `css-grid` одновременно), если в коде остаётся один путь.
 
 **«До / после» (схематично):**
@@ -195,8 +195,8 @@ src/components/Foo/
 // Carbon-стиль: много модификаторов в className
 <div className={cx(`${prefix}--grid`, { [`${prefix}--grid--narrow`]: narrow })} />
 
-// Aramid-стиль: один класс модуля + переменные
-<div className={styles.grid} style={rootGridVariables(props)} />
+// Aramid: системный класс + переменные
+<div className="aramid-grid" style={rootGridVariables(props)} />
 ```
 
 **Breaking change.** Если меняются публичные пропсы или имена CSS-переменных, явно описать в PR и при необходимости обновить этот гайд.

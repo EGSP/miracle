@@ -1,6 +1,7 @@
 import React, { ReactElement } from 'react'
 import { clsx } from 'clsx'
-import styles from './column.module.css'
+import './aramid-column.css'
+import { aramidColumnClass } from '../../internal/layoutClassNames'
 import { PolymorphicComponentPropWithRef } from '../../internal/PolymorphicProps';
 
 type ColumnSpanRange = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
@@ -116,7 +117,7 @@ const Column = React.forwardRef<
     };
 
     return (
-      <BaseComponent className={clsx(styles.column, customClassName)} style={style} ref={ref} {...rest}>
+      <BaseComponent className={clsx(aramidColumnClass, customClassName)} style={style} ref={ref} {...rest}>
         {children}
       </BaseComponent>
     );
