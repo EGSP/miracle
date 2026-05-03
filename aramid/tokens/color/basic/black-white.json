@@ -1,0 +1,24 @@
+{
+  "color": {
+    "black": {
+      "100": {
+        "$value": "#000000",
+        "$type": "color"
+      },
+      "hover": {
+        "$value": "#212121",
+        "$type": "color"
+      }
+    },
+    "white": {
+      "0": {
+        "$value": "#ffffff",
+        "$type": "color"
+      },
+      "hover": {
+        "$value": "#e8e8e8",
+        "$type": "color"
+      }
+    }
+  }
+}

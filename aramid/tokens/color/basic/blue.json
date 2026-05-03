@@ -1,0 +1,89 @@
+{
+  "color": {
+    "blue": {
+      "10": {
+        "$value": "#edf5ff",
+        "$type": "color"
+      },
+      "20": {
+        "$value": "#d0e2ff",
+        "$type": "color"
+      },
+      "30": {
+        "$value": "#a6c8ff",
+        "$type": "color"
+      },
+      "40": {
+        "$value": "#78a9ff",
+        "$type": "color"
+      },
+      "50": {
+        "$value": "#4589ff",
+        "$type": "color"
+      },
+      "60": {
+        "$value": "#0f62fe",
+        "$type": "color",
+        "$description": "Основной интерактивный цвет (Carbon blue 60)."
+      },
+      "70": {
+        "$value": "#0043ce",
+        "$type": "color"
+      },
+      "80": {
+        "$value": "#002d9c",
+        "$type": "color"
+      },
+      "90": {
+        "$value": "#001d6c",
+        "$type": "color"
+      },
+      "100": {
+        "$value": "#001141",
+        "$type": "color"
+      },
+      "hover": {
+        "10": {
+          "$value": "#dbebff",
+          "$type": "color"
+        },
+        "20": {
+          "$value": "#b8d3ff",
+          "$type": "color"
+        },
+        "30": {
+          "$value": "#8ab6ff",
+          "$type": "color"
+        },
+        "40": {
+          "$value": "#5c97ff",
+          "$type": "color"
+        },
+        "50": {
+          "$value": "#1f70ff",
+          "$type": "color"
+        },
+        "60": {
+          "$value": "#0050e6",
+          "$type": "color"
+        },
+        "70": {
+          "$value": "#0053ff",
+          "$type": "color"
+        },
+        "80": {
+          "$value": "#0039c7",
+          "$type": "color"
+        },
+        "90": {
+          "$value": "#00258a",
+          "$type": "color"
+        },
+        "100": {
+          "$value": "#001f75",
+          "$type": "color"
+        }
+      }
+    }
+  }
+}

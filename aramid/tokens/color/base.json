@@ -5,43 +5,11 @@
       "$type": "color",
       "$description": "Primary brand color"
     },
-    "blue": {
-      "10": { "$value": "#edf5ff", "$type": "color" },
-      "20": { "$value": "#d0e2ff", "$type": "color" },
-      "30": { "$value": "#a6c8ff", "$type": "color" },
-      "40": { "$value": "#78a9ff", "$type": "color" },
-      "50": { "$value": "#4589ff", "$type": "color" },
-      "60": { "$value": "#0f62fe", "$type": "color", "$description": "Primary interactive color" },
-      "70": { "$value": "#0043ce", "$type": "color" },
-      "80": { "$value": "#002d9c", "$type": "color" },
-      "90": { "$value": "#001d6c", "$type": "color" },
-      "100": { "$value": "#001141", "$type": "color" }
-    },
-    "gray": {
-      "10": { "$value": "#f4f4f4", "$type": "color" },
-      "20": { "$value": "#e0e0e0", "$type": "color" },
-      "30": { "$value": "#c6c6c6", "$type": "color" },
-      "40": { "$value": "#a8a8a8", "$type": "color" },
-      "50": { "$value": "#8d8d8d", "$type": "color" },
-      "60": { "$value": "#6f6f6f", "$type": "color" },
-      "70": { "$value": "#525252", "$type": "color" },
-      "80": { "$value": "#393939", "$type": "color" },
-      "90": { "$value": "#262626", "$type": "color" },
-      "100": { "$value": "#161616", "$type": "color" }
-    },
-    "red": {
-      "50": { "$value": "#fa4d56", "$type": "color" },
-      "60": { "$value": "#da1e28", "$type": "color" }
-    },
-    "green": {
-      "40": { "$value": "#42be65", "$type": "color" },
-      "50": { "$value": "#24a148", "$type": "color" }
-    },
     "semantic": {
       "interactive": { "$value": "{color.blue.60}", "$type": "color" },
-      "danger":      { "$value": "{color.red.60}", "$type": "color" },
-      "success":     { "$value": "{color.green.50}", "$type": "color" },
-      "nav":         { "$value": "{color.blue.60}", "$type": "color" }
+      "danger": { "$value": "{color.red.60}", "$type": "color" },
+      "success": { "$value": "{color.green.50}", "$type": "color" },
+      "nav": { "$value": "{color.blue.60}", "$type": "color" }
     }
   }
 }
