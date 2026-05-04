@@ -1,7 +1,7 @@
 import { useCallback, useState, type CSSProperties } from 'react';
 import { Link } from '@tanstack/react-router';
-import { FileIcon, ArrowLeft, Upload, CircleCheck, CircleX } from 'lucide-react';
-import { Column, Grid, Stack, Text } from '@miracle/aramid';
+import { FileIcon, ArrowLeft, Upload } from 'lucide-react';
+import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { FileDropZone } from '@/components/ui/file-dropzone';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -20,7 +20,7 @@ function formatBytes(bytes: number): string {
 }
 
 function FileListItem({ file }: { file: FileWithMeta }) {
-    const isAvailable = file.meta?.available;
+    const available = file.meta?.available;
 
     return (
         <Stack
@@ -34,16 +34,10 @@ function FileListItem({ file }: { file: FileWithMeta }) {
                     {file.name}
                 </Text>
             </span>
-            {isAvailable ? (
-                <span className="inline-flex shrink-0 items-center gap-1">
-                    <CircleCheck className="size-3.5" />
-                    <Text.Label as="span">Доступен</Text.Label>
-                </span>
+            {available === true ? (
+                <IconIndicator kind="succeeded" label="Доступен" size={16} className="shrink-0" />
             ) : (
-                <span className="inline-flex shrink-0 items-center gap-1">
-                    <CircleX className="size-3.5" />
-                    <Text.Label as="span">Недоступен</Text.Label>
-                </span>
+                <IconIndicator kind="failed" label="Недоступен" size={16} className="shrink-0" />
             )}
             <span className="shrink-0">
                 <Text.Label as="span">{file.extension.toUpperCase()}</Text.Label>
