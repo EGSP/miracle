@@ -1,4 +1,4 @@
-import { useCallback, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { Link } from '@tanstack/react-router';
 import { FileIcon, ArrowLeft, Upload } from 'lucide-react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
@@ -9,8 +9,8 @@ import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation
 import { ListBox } from '@/components/ui/listbox';
 import { FileContentPreview } from '@/components/ui/file-content-preview';
 import { useGetFiles, useUploadFile } from '@/lib/queries/file.query';
+import { useFilteredFiles } from '@/lib/hooks/useFilteredFiles';
 import type { FileWithMeta } from '@miracle/types';
-import { useAuthContext } from '@/contexts/AuthContext';
 import { frontConfig } from '@/lib/config';
 
 function formatBytes(bytes: number): string {
@@ -58,13 +58,10 @@ export default function FilesPage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [myFilesOnly, setMyFilesOnly] = useState(false);
     const [availableOnly, setAvailableOnly] = useState<TriStateValue>(undefined);
-    const { userId } = useAuthContext();
-
     const { data: files, isLoading, error } = useGetFiles({
-        authorId: myFilesOnly === true ? userId : undefined,
-        available: availableOnly,
         includeMeta: true,
     });
+    const filteredFiles = useFilteredFiles(files, { myFilesOnly, availableOnly });
     const uploadMutation = useUploadFile();
     const resolvePreviewUrl = useCallback((file: FileWithMeta) => {
         return `${frontConfig.API_URL}/files/${encodeURIComponent(file.id)}/content`;
@@ -79,6 +76,13 @@ export default function FilesPage() {
             },
         });
     };
+
+    useEffect(() => {
+        if (!selectedFileInList) return;
+        if (!filteredFiles.some((file) => file.id === selectedFileInList.id)) {
+            setSelectedFileInList(null);
+        }
+    }, [filteredFiles, selectedFileInList]);
 
     return (
         <Grid
@@ -119,13 +123,13 @@ export default function FilesPage() {
 
                     {isLoading && <Text.Label as="p">Загрузка...</Text.Label>}
                     {error && <Text.Label as="p">Ошибка: {error.message}</Text.Label>}
-                    {files && files.length === 0 && (
+                    {filteredFiles.length === 0 && (
                         <Text.Label as="p">Нет загруженных файлов</Text.Label>
                     )}
-                    {files && files.length > 0 && (
+                    {filteredFiles.length > 0 && (
                         <>
                             <ListBox
-                                items={files}
+                                items={filteredFiles}
                                 value={selectedFileInList}
                                 onChange={setSelectedFileInList}
                                 getKey={(item) => item.id}
