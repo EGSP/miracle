@@ -12,6 +12,7 @@ import { DirtyGuardProvider, useGuard } from '@/contexts/dirty-state/DirtyGuardC
 import { useFilteredOrders } from '@/lib/hooks/useFilteredOrders';
 import { useGetFiles } from '@/lib/queries/file.query';
 import { useCreateOrder, useGetOrders } from '@/lib/queries/order.query';
+import { useGetUser } from '@/lib/queries/user.query';
 
 const COL_LIST = 6 as const;
 const COL_CARD = 10 as const;
@@ -38,6 +39,7 @@ function getFileIndicator(file: FileWithMeta | null): { kind: 'succeeded' | 'fai
 
 function OrderListItem({ order, file }: { order: Stored<Order>; file: FileWithMeta | null }) {
     const indicator = getFileIndicator(file);
+    const { data: author } = useGetUser(order.authorId);
 
     return (
         <Stack
@@ -51,7 +53,7 @@ function OrderListItem({ order, file }: { order: Stored<Order>; file: FileWithMe
             </span>
             <span className="min-w-0 flex-1 truncate">
                 <Text as="span" compact>
-                    Автор: {order.authorId}
+                    Автор: {author?.login ?? order.authorId}
                 </Text>
             </span>
             {file ? (
