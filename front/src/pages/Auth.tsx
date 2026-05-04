@@ -61,6 +61,11 @@ export function AuthPage() {
                 </Text>
             </Stack>
             <Stack as="nav" orientation="horizontal" gap={4} className="flex-wrap">
+                <Link to="/">
+                    <Text as="span" compact expressive>
+                        На главную
+                    </Text>
+                </Link>
                 <Link to="/auth/login">
                     <Text as="span" compact expressive>
                         Вход
