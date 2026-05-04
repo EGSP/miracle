@@ -52,6 +52,7 @@ const PALETTES: ReadonlyArray<{
   { baseKey: 'yellow', hoverKey: 'yellowHover', fileName: 'yellow', jsonColorKey: 'yellow' },
   { baseKey: 'orange', hoverKey: 'orangeHover', fileName: 'orange', jsonColorKey: 'orange' },
   { baseKey: 'red', hoverKey: 'redHover', fileName: 'red', jsonColorKey: 'red' },
+  { baseKey: 'sand', hoverKey: 'sandHover', fileName: 'sand', jsonColorKey: 'sand' },
   { baseKey: 'magenta', hoverKey: 'magentaHover', fileName: 'magenta', jsonColorKey: 'magenta' },
   { baseKey: 'purple', hoverKey: 'purpleHover', fileName: 'purple', jsonColorKey: 'purple' },
   { baseKey: 'blue', hoverKey: 'blueHover', fileName: 'blue', jsonColorKey: 'blue' },

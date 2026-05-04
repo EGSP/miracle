@@ -553,6 +553,52 @@ export const warmGray80Hover = '#4c4848';
 export const warmGray90Hover = '#343232';
 export const warmGray100Hover = '#2c2626';
 
+export const sand10 = '#f8f4ef';
+export const sand20 = '#ede4d6';
+export const sand30 = '#ddd0bc';
+export const sand40 = '#c9b59a';
+export const sand50 = '#b89a7c';
+export const sand60 = '#a08060';
+export const sand70 = '#886848';
+export const sand80 = '#6e5034';
+export const sand90 = '#4e3825';
+export const sand100 = '#2e2013';
+export const sand = {
+  10: sand10,
+  20: sand20,
+  30: sand30,
+  40: sand40,
+  50: sand50,
+  60: sand60,
+  70: sand70,
+  80: sand80,
+  90: sand90,
+  100: sand100,
+};
+
+export const sand10Hover = '#ede4d6';
+export const sand20Hover = '#e0d2bf';
+export const sand30Hover = '#cfc0a8';
+export const sand40Hover = '#bca588';
+export const sand50Hover = '#a88a6a';
+export const sand60Hover = '#b89a7c';
+export const sand70Hover = '#9a7858';
+export const sand80Hover = '#7e5c3e';
+export const sand90Hover = '#624830';
+export const sand100Hover = '#3e2c1a';
+export const sandHover = {
+  10: sand10Hover,
+  20: sand20Hover,
+  30: sand30Hover,
+  40: sand40Hover,
+  50: sand50Hover,
+  60: sand60Hover,
+  70: sand70Hover,
+  80: sand80Hover,
+  90: sand90Hover,
+  100: sand100Hover,
+};
+
 export const warmGrayHover = {
   10: warmGray10Hover,
   20: warmGray20Hover,
@@ -583,6 +629,7 @@ export const colors: ColorGroup = {
   orange,
   purple,
   red,
+  sand,
   teal,
   warmGray,
   white: {
@@ -603,6 +650,7 @@ export const hoverColors: HoverColorGroup = {
   orangeHover,
   purpleHover,
   redHover,
+  sandHover,
   tealHover,
   warmGrayHover,
   yellowHover,
