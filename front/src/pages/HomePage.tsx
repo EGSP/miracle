@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
+import { FileIcon, ListOrdered } from 'lucide-react';
 import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { useCheckHealth, useRefetchHealth } from '@/lib/queries/health.query';
@@ -65,17 +66,26 @@ export default function HomePage() {
                     </Stack>
 
                     <Stack as="section" gap={2}>
-                        <Text.Heading as="h2" variant="compact-01">
-                            Файлы
+                        <Text.Heading as="h2" variant="compact-02">
+                            Заказы и файлы
                         </Text.Heading>
-                        <Text as="p" compact>
-                            Загрузка и просмотр файлов.
+                        <Text as="p" compact expressive>
+                            Переход к разделам для работы с заказами и файлами.
                         </Text>
-                        <Link to="/files">
-                            <Text as="span" compact expressive>
-                                Перейти к файлам
-                            </Text>
-                        </Link>
+                        <Stack orientation="horizontal" gap={4} className="flex-wrap items-center">
+                            <Link to="/files" className="inline-flex items-center gap-1.5">
+                                <FileIcon className="size-3.5" />
+                                <Text as="span" compact expressive>
+                                    Перейти к файлам
+                                </Text>
+                            </Link>
+                            <Link to="/orders" className="inline-flex items-center gap-1.5">
+                                <ListOrdered className="size-3.5" />
+                                <Text as="span" compact expressive>
+                                    Перейти к заказам
+                                </Text>
+                            </Link>
+                        </Stack>
                     </Stack>
                 </Stack>
             </Column>

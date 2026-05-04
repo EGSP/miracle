@@ -1,6 +1,7 @@
 import { createRouter, createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
 import HomePage from './pages/HomePage';
 import FilesPage from './pages/FilesPage';
+import OrdersPage from './pages/OrdersPage';
 import { AuthPage, LoginForm, RegisterForm } from './pages/Auth';
 import { App } from './App';
 
@@ -38,9 +39,16 @@ const filesRoute = createRoute({
   component: FilesPage,
 });
 
+const ordersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders',
+  component: OrdersPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   filesRoute,
+  ordersRoute,
   authRoute.addChildren([ loginRoute, registerRoute]),
 ]);
 
