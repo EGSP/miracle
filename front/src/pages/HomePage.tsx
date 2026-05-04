@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Column, Grid, Stack } from '@miracle/aramid';
+import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { useCheckHealth, useRefetchHealth } from '@/lib/queries/health.query';
 
@@ -20,21 +20,29 @@ export default function HomePage() {
             <Column span={HOME_CONTENT} className="min-w-0 py-8">
                 <Stack gap={6} className="w-full">
                     <Stack gap={1}>
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Miracle</h1>
-                        <p className="text-sm text-muted-foreground">Обработка опросных листов ИИ агентом</p>
+                        <Text.Heading as="h1" variant="04">
+                            Miracle
+                        </Text.Heading>
+                        <Text as="p" compact>
+                            Обработка опросных листов ИИ агентом
+                        </Text>
                     </Stack>
 
                     <Stack as="section" gap={3}>
-                        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <Text.Heading as="h2" variant="compact-01">
                             Проверка состояния сервера
-                        </h2>
+                        </Text.Heading>
                         <Stack gap={2}>
-                            {isLoading && <p className="text-sm text-muted-foreground">Загрузка...</p>}
-                            {error && <p className="text-sm text-destructive">Ошибка: {error.message}</p>}
+                            {isLoading && (
+                                <Text.Label as="p">Загрузка...</Text.Label>
+                            )}
+                            {error && (
+                                <Text.Label as="p">Ошибка: {error.message}</Text.Label>
+                            )}
                             {data && (
-                                <p className="text-sm text-foreground">
+                                <Text as="p" compact>
                                     Состояние сервера: {data.status} от {localizedTimestamp}
-                                </p>
+                                </Text>
                             )}
                         </Stack>
                         <Button type="button" onClick={refetchHealth}>
@@ -43,20 +51,30 @@ export default function HomePage() {
                     </Stack>
 
                     <Stack as="section" gap={2}>
-                        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <Text.Heading as="h2" variant="compact-01">
                             Быстрый старт
-                        </h2>
-                        <p className="text-sm text-muted-foreground">Перейдите к странице входа и регистрации.</p>
-                        <Link to="/auth" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-                            Авторизация
+                        </Text.Heading>
+                        <Text as="p" compact>
+                            Перейдите к странице входа и регистрации.
+                        </Text>
+                        <Link to="/auth">
+                            <Text as="span" compact expressive>
+                                Авторизация
+                            </Text>
                         </Link>
                     </Stack>
 
                     <Stack as="section" gap={2}>
-                        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Файлы</h2>
-                        <p className="text-sm text-muted-foreground">Загрузка и просмотр файлов.</p>
-                        <Link to="/files" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-                            Перейти к файлам
+                        <Text.Heading as="h2" variant="compact-01">
+                            Файлы
+                        </Text.Heading>
+                        <Text as="p" compact>
+                            Загрузка и просмотр файлов.
+                        </Text>
+                        <Link to="/files">
+                            <Text as="span" compact expressive>
+                                Перейти к файлам
+                            </Text>
                         </Link>
                     </Stack>
                 </Stack>

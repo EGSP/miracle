@@ -1,7 +1,7 @@
 import { useCallback, useState, type CSSProperties } from 'react';
 import { Link } from '@tanstack/react-router';
 import { FileIcon, ArrowLeft, Upload, CircleCheck, CircleX } from 'lucide-react';
-import { Column, Grid, Stack } from '@miracle/aramid';
+import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { FileDropZone } from '@/components/ui/file-dropzone';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,23 +26,31 @@ function FileListItem({ file }: { file: FileWithMeta }) {
         <Stack
             orientation="horizontal"
             gap={3}
-            className="min-w-0 items-center border border-border px-3 py-2.5 text-xs"
+            className="min-w-0 items-center border border-border px-3 py-2.5"
         >
-            <FileIcon className="size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 truncate font-medium text-foreground">{file.name}</span>
+            <FileIcon className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">
+                <Text as="span" compact>
+                    {file.name}
+                </Text>
+            </span>
             {isAvailable ? (
-                <span className="inline-flex shrink-0 items-center gap-1 text-emerald-500">
+                <span className="inline-flex shrink-0 items-center gap-1">
                     <CircleCheck className="size-3.5" />
-                    Доступен
+                    <Text.Label as="span">Доступен</Text.Label>
                 </span>
             ) : (
-                <span className="inline-flex shrink-0 items-center gap-1 text-destructive">
+                <span className="inline-flex shrink-0 items-center gap-1">
                     <CircleX className="size-3.5" />
-                    Недоступен
+                    <Text.Label as="span">Недоступен</Text.Label>
                 </span>
             )}
-            <span className="shrink-0 text-muted-foreground">{file.extension.toUpperCase()}</span>
-            <span className="shrink-0 text-muted-foreground">{formatBytes(file.bytes)}</span>
+            <span className="shrink-0">
+                <Text.Label as="span">{file.extension.toUpperCase()}</Text.Label>
+            </span>
+            <span className="shrink-0">
+                <Text.Label as="span">{formatBytes(file.bytes)}</Text.Label>
+            </span>
         </Stack>
     );
 }
@@ -86,38 +94,39 @@ export default function FilesPage() {
         >
             <Column span={16} className="pt-8">
                 <Stack orientation="horizontal" gap={3} className="flex-wrap items-center">
-                    <Link
-                        to="/"
-                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                    >
+                    <Link to="/" className="inline-flex items-center gap-1.5">
                         <ArrowLeft className="size-3.5" />
-                        На главную
+                        <Text as="span" compact expressive>
+                            На главную
+                        </Text>
                     </Link>
-                    <h1 className="text-base font-medium">Файлы</h1>
+                    <Text.Heading as="h1" variant="02">
+                        Файлы
+                    </Text.Heading>
                 </Stack>
             </Column>
 
             <Column span={COL_LIST} className="min-w-0 pb-8">
                 <Stack as="section" gap={4}>
-                    <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    <Text.Heading as="h2" variant="compact-01">
                         Загруженные файлы
-                    </h2>
+                    </Text.Heading>
                     <Stack
                         orientation="horizontal"
                         gap={4}
                         className="flex-wrap items-center border border-border p-2"
                     >
-                        <label className="inline-flex items-center gap-2 text-xs text-foreground">
+                        <label className="inline-flex items-center gap-2">
                             <Checkbox checked={myFilesOnly} onCheckedChange={(checked) => setMyFilesOnly(checked === true)} />
-                            <span>Мои файлы</span>
+                            <Text.Label as="span">Мои файлы</Text.Label>
                         </label>
                         <TriStateCheckbox label="Доступные" value={availableOnly} onChange={setAvailableOnly} />
                     </Stack>
 
-                    {isLoading && <p className="text-xs text-muted-foreground">Загрузка...</p>}
-                    {error && <p className="text-xs text-destructive">Ошибка: {error.message}</p>}
+                    {isLoading && <Text.Label as="p">Загрузка...</Text.Label>}
+                    {error && <Text.Label as="p">Ошибка: {error.message}</Text.Label>}
                     {files && files.length === 0 && (
-                        <p className="text-xs text-muted-foreground">Нет загруженных файлов</p>
+                        <Text.Label as="p">Нет загруженных файлов</Text.Label>
                     )}
                     {files && files.length > 0 && (
                         <>
@@ -142,9 +151,9 @@ export default function FilesPage() {
                             </ListBox>
                             {selectedFileInList && (
                                 <Stack as="section" gap={2}>
-                                    <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                    <Text.Heading as="h3" variant="compact-01">
                                         Предпросмотр
-                                    </h3>
+                                    </Text.Heading>
                                     <FileContentPreview file={selectedFileInList} resolveUrl={resolvePreviewUrl} />
                                 </Stack>
                             )}
@@ -155,9 +164,9 @@ export default function FilesPage() {
 
             <Column span={COL_UPLOAD} className="pb-8">
                 <Stack as="aside" gap={4}>
-                    <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    <Text.Heading as="h2" variant="compact-01">
                         Загрузить файл
-                    </h2>
+                    </Text.Heading>
 
                     <FileDropZone
                         value={selectedFile}
@@ -167,14 +176,18 @@ export default function FilesPage() {
                     />
 
                     {selectedFile && (
-                        <Stack gap={1} className="text-xs text-muted-foreground">
-                            <span className="truncate font-medium text-foreground">{selectedFile.name}</span>
-                            <span>{formatBytes(selectedFile.size)}</span>
+                        <Stack gap={1}>
+                            <span className="truncate">
+                                <Text as="span" compact>
+                                    {selectedFile.name}
+                                </Text>
+                            </span>
+                            <Text.Label as="span">{formatBytes(selectedFile.size)}</Text.Label>
                         </Stack>
                     )}
 
                     {uploadMutation.isError && (
-                        <p className="text-xs text-destructive">{uploadMutation.error.message}</p>
+                        <Text.Label as="p">{uploadMutation.error.message}</Text.Label>
                     )}
 
                     <Button onClick={handleUpload} disabled={!selectedFile || uploadMutation.isPending}>

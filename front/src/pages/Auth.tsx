@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
-import { Column, Grid, Stack } from '@miracle/aramid';
+import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -29,17 +29,18 @@ export function AuthPage() {
         return authShell(
             <>
                 <Stack gap={1}>
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Вы авторизованы</h1>
-                    <p className="text-sm text-muted-foreground">
+                    <Text.Heading as="h1" variant="04">
+                        Вы авторизованы
+                    </Text.Heading>
+                    <Text as="p" compact>
                         Сессия активна. Можно перейти к рабочим разделам приложения.
-                    </p>
+                    </Text>
                 </Stack>
                 <Stack orientation="horizontal" gap={3} className="flex-wrap items-center">
-                    <Link
-                        to="/"
-                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                        На главную
+                    <Link to="/">
+                        <Text as="span" compact expressive>
+                            На главную
+                        </Text>
                     </Link>
                     <Button type="button" variant="outline" onClick={() => logout()} disabled={isLogoutPending}>
                         {isLogoutPending ? 'Выйти из аккаунта...' : 'Выйти из аккаунта'}
@@ -52,21 +53,23 @@ export function AuthPage() {
     return authShell(
         <>
             <Stack gap={1}>
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">Авторизация</h1>
-                <p className="text-sm text-muted-foreground">Войдите или создайте новый аккаунт.</p>
+                <Text.Heading as="h1" variant="04">
+                    Авторизация
+                </Text.Heading>
+                <Text as="p" compact>
+                    Войдите или создайте новый аккаунт.
+                </Text>
             </Stack>
             <Stack as="nav" orientation="horizontal" gap={4} className="flex-wrap">
-                <Link
-                    to="/auth/login"
-                    className="text-sm font-medium text-muted-foreground data-[status=active]:text-foreground"
-                >
-                    Вход
+                <Link to="/auth/login">
+                    <Text as="span" compact expressive>
+                        Вход
+                    </Text>
                 </Link>
-                <Link
-                    to="/auth/register"
-                    className="text-sm font-medium text-muted-foreground data-[status=active]:text-foreground"
-                >
-                    Регистрация
+                <Link to="/auth/register">
+                    <Text as="span" compact expressive>
+                        Регистрация
+                    </Text>
                 </Link>
             </Stack>
             <Outlet />
@@ -81,7 +84,7 @@ export function LoginForm() {
 
     return (
         <Stack as="form" gap={3} onSubmit={(e) => { e.preventDefault(); login(); }}>
-            {isError && <p className="text-sm text-destructive">Ошибка: {error.message}</p>}
+            {isError && <Text.Label as="p">Ошибка: {error.message}</Text.Label>}
             <Input
                 type="text"
                 placeholder="Логин"
@@ -121,7 +124,7 @@ export function RegisterForm() {
 
     return (
         <Stack as="form" gap={3} onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
-            {isError && <p className="text-sm text-destructive">Ошибка: {error.message}</p>}
+            {isError && <Text.Label as="p">Ошибка: {error.message}</Text.Label>}
             <Input
                 type="text"
                 placeholder="Логин"
