@@ -1,0 +1,71 @@
+{
+  "color": {
+    "indicator": {
+      "failed": {
+        "$value": "{color.semantic.danger}",
+        "$type": "color",
+        "$description": "Иконка индикатора: ошибка / сбой."
+      },
+      "caution-major": {
+        "$value": "{color.orange.40}",
+        "$type": "color",
+        "$description": "Иконка индикатора: серьёзное предупреждение (оранжевый статус Carbon)."
+      },
+      "caution-minor": {
+        "$value": "{color.yellow.30}",
+        "$type": "color",
+        "$description": "Иконка индикатора: несерьёзное предупреждение (жёлтый статус Carbon)."
+      },
+      "undefined": {
+        "$value": "{color.purple.60}",
+        "$type": "color",
+        "$description": "Иконка индикатора: неопределённое состояние."
+      },
+      "succeeded": {
+        "$value": "{color.semantic.success}",
+        "$type": "color",
+        "$description": "Иконка индикатора: успех."
+      },
+      "normal": {
+        "$value": "{color.blue.60}",
+        "$type": "color",
+        "$description": "Иконка индикатора: норма / информация (синий статус)."
+      },
+      "in-progress": {
+        "$value": "{color.blue.60}",
+        "$type": "color",
+        "$description": "Иконка индикатора: в процессе."
+      },
+      "incomplete": {
+        "$value": "{color.blue.60}",
+        "$type": "color",
+        "$description": "Иконка индикатора: незавершено."
+      },
+      "not-started": {
+        "$value": "{color.gray.60}",
+        "$type": "color",
+        "$description": "Иконка индикатора: не начато."
+      },
+      "pending": {
+        "$value": "{color.gray.60}",
+        "$type": "color",
+        "$description": "Иконка индикатора: ожидание."
+      },
+      "unknown": {
+        "$value": "{color.gray.60}",
+        "$type": "color",
+        "$description": "Иконка индикатора: неизвестно."
+      },
+      "informative": {
+        "$value": "{color.blue.60}",
+        "$type": "color",
+        "$description": "Иконка индикатора: справочно."
+      },
+      "label": {
+        "$value": "{color.gray.70}",
+        "$type": "color",
+        "$description": "Текст подписи рядом с иконкой (аналог Carbon text-secondary)."
+      }
+    }
+  }
+}
