@@ -1,0 +1,189 @@
+/*
+  Наборы типографики в духе Carbon (продуктивный / экспрессивный через -01 / -02), только фиксированные заголовки.
+  Метрики: https://carbondesignsystem.com/elements/typography/type-sets/
+  Семейства шрифтов: var(--aramid-font-family-sans|mono) из tokens.css
+*/
+
+.aramid-text {
+  margin: 0;
+}
+
+/* Тело текста (body-compact / body) */
+
+.aramid-text-body-compact-01 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.125rem;
+  letter-spacing: 0.16px;
+}
+
+.aramid-text-body-compact-02 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.375rem;
+  letter-spacing: 0;
+}
+
+.aramid-text-body-01 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+  letter-spacing: 0.16px;
+}
+
+.aramid-text-body-02 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5rem;
+  letter-spacing: 0;
+}
+
+/* Фиксированные заголовки (productive), без fluid */
+
+.aramid-text-heading-compact-01 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.125rem;
+  letter-spacing: 0.16px;
+}
+
+.aramid-text-heading-compact-02 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.375rem;
+  letter-spacing: 0;
+}
+
+.aramid-text-heading-01 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  letter-spacing: 0.16px;
+}
+
+.aramid-text-heading-02 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+  letter-spacing: 0;
+}
+
+.aramid-text-heading-03 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.75rem;
+  letter-spacing: 0;
+}
+
+.aramid-text-heading-04 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 2.25rem;
+  letter-spacing: 0;
+}
+
+.aramid-text-heading-05 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 2.5rem;
+  letter-spacing: 0;
+}
+
+.aramid-text-heading-06 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 2.625rem;
+  font-weight: 300;
+  line-height: 3.125rem;
+  letter-spacing: 0;
+}
+
+.aramid-text-heading-07 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 3.375rem;
+  font-weight: 300;
+  line-height: 4rem;
+  letter-spacing: 0;
+}
+
+/* Утилита: код (code) */
+
+.aramid-text-code-01 {
+  font-family: var(--aramid-font-family-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+  letter-spacing: 0.32px;
+}
+
+.aramid-text-code-02 {
+  font-family: var(--aramid-font-family-mono);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+  letter-spacing: 0.32px;
+}
+
+/* Утилита: подпись (label) */
+
+.aramid-text-label-01 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+  letter-spacing: 0.32px;
+}
+
+.aramid-text-label-02 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.125rem;
+  letter-spacing: 0.16px;
+}
+
+/* Утилита: пояснение под полем (helper-text) */
+
+.aramid-text-helper-01 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+  letter-spacing: 0.32px;
+}
+
+.aramid-text-helper-02 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.125rem;
+  letter-spacing: 0.16px;
+}
+
+/* Утилита: юридический текст (legal) */
+
+.aramid-text-legal-01 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+  letter-spacing: 0.32px;
+}
+
+.aramid-text-legal-02 {
+  font-family: var(--aramid-font-family-sans);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.125rem;
+  letter-spacing: 0.16px;
+}
