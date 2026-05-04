@@ -72,7 +72,7 @@ export interface IconIndicatorProps extends React.HTMLAttributes<HTMLDivElement>
   kind: IconIndicatorKind
 
   /** Подпись рядом с иконкой (типографика `Text`, компактное тело как в Carbon). */
-  label: string
+  label?: string
 
   /** Размер иконки в px (по умолчанию 16; при 20 включается экспрессивный компактный текст `-02`). */
   size?: 16 | 20
@@ -100,9 +100,11 @@ export const IconIndicator = React.forwardRef<HTMLDivElement, IconIndicatorProps
           )}
           aria-hidden
         />
-        <Text as="span" compact expressive={size === 20} className="aramid-icon-indicator__label">
-          {label}
-        </Text>
+        {label ? (
+          <Text as="span" compact expressive={size === 20} className="aramid-icon-indicator__label">
+            {label}
+          </Text>
+        ) : null}
       </div>
     )
   }

@@ -20,7 +20,25 @@ function formatCreatedAt(unixMs: number): string {
     return new Date(unixMs).toLocaleString();
 }
 
+function getFileIndicator(file: FileWithMeta | null): { kind: 'succeeded' | 'failed' | 'unknown'; label: string } {
+    if (!file) {
+        return { kind: 'unknown', label: 'Файл не прикреплен' };
+    }
+
+    if (file.meta?.available === true) {
+        return { kind: 'succeeded', label: 'Файл доступен' };
+    }
+
+    if (file.meta?.available === false) {
+        return { kind: 'failed', label: 'Файл недоступен' };
+    }
+
+    return { kind: 'unknown', label: 'Статус файла неизвестен' };
+}
+
 function OrderListItem({ order, file }: { order: Stored<Order>; file: FileWithMeta | null }) {
+    const indicator = getFileIndicator(file);
+
     return (
         <Stack
             orientation="horizontal"
@@ -39,8 +57,8 @@ function OrderListItem({ order, file }: { order: Stored<Order>; file: FileWithMe
             {file ? (
                 <Stack orientation="horizontal" gap={2} className="min-w-0 items-center">
                     <IconIndicator
-                        kind="succeeded"
-                        label="Файл найден"
+                        kind={indicator.kind}
+                        label={indicator.label}
                         size={16}
                         className="shrink-0"
                     />
@@ -50,7 +68,7 @@ function OrderListItem({ order, file }: { order: Stored<Order>; file: FileWithMe
                 </Stack>
             ) : (
                 <Stack orientation="horizontal" gap={2} className="items-center">
-                    <IconIndicator kind="unknown" label="Файл не прикреплен" size={16} className="shrink-0" />
+                    <IconIndicator kind={indicator.kind} label={indicator.label} size={16} className="shrink-0" />
                 </Stack>
             )}
         </Stack>
@@ -66,16 +84,16 @@ function OrdersPageContent() {
         includeRequirements: true,
     });
     const createOrderMutation = useCreateOrder();
-    const { data: files, isLoading: isFilesLoading, error: filesError } = useGetFiles();
+    const { data: files, isLoading: isFilesLoading, error: filesError } = useGetFiles({
+        includeMeta: true,
+    });
     const isDirtyAnywhere = useGuard((state) => state.dirtyIds.size > 0);
-
-    const filteredOrders = useFilteredOrders(orders, { myOrdersOnly, withFileOnly });
 
     const filesById = useMemo(() => {
         return new Map((files ?? []).map((file) => [file.id, file] as const));
     }, [files]);
 
-    const selectedOrderFile = selectedOrder?.fileId ? filesById.get(selectedOrder.fileId) ?? null : null;
+    const filteredOrders = useFilteredOrders(orders, { myOrdersOnly, withFileOnly }, filesById);
 
     const handleCreateOrder = () => {
         createOrderMutation.mutate(undefined, {
@@ -182,7 +200,13 @@ function OrdersPageContent() {
 
             <Column span={COL_CARD} className="pb-8">
                 {selectedOrder ? (
-                    <OrderCard order={selectedOrder} file={selectedOrderFile} />
+                    <OrderCard
+                        order={selectedOrder}
+                        files={files ?? []}
+                        onOrderSaved={(updatedOrder) => {
+                            setSelectedOrder(updatedOrder);
+                        }}
+                    />
                 ) : (
                     <Stack className="border border-border p-4">
                         <Text as="p" compact>

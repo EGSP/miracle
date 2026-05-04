@@ -1,9 +1,11 @@
 import * as React from "react"
 import { Input as InputPrimitive } from "@base-ui/react/input"
 
+import { InputDropdown } from "@/components/ui/input-dropdown"
+import { InputSuggest } from "@/components/ui/input-suggest"
 import { cn } from "@/lib/utils"
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function InputRoot({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <InputPrimitive
       type={type}
@@ -16,5 +18,10 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
     />
   )
 }
+
+const Input = Object.assign(InputRoot, {
+  Dropdown: InputDropdown,
+  Suggest: InputSuggest,
+})
 
 export { Input }

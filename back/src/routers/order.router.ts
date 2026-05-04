@@ -9,6 +9,10 @@ type CreateOrderDTO = {
     fileId?: string;
 }
 
+type UpdateOrderDTO = {
+    fileId?: string;
+}
+
 const createOrder = route.post('/create', {
     handler: async ({ locals, body }: { locals: Record<string, unknown>, body: CreateOrderDTO }) => {
         const user = locals.user as User | undefined;
@@ -41,6 +45,33 @@ const getOrders = route.get('/', {
     },
 });
 
+const updateOrder = route.put('/:id', {
+    handler: async ({ params, body }: { params: { id: string }, body: UpdateOrderDTO }) => {
+        const existingOrder = await ordersService.get(params.id);
+        if (!existingOrder) {
+            return err.notFound('Order not found');
+        }
+
+        if (body.fileId) {
+            const file = await filesService.get(body.fileId);
+            if (!file) {
+                return err.notFound('File not found');
+            }
+        }
+
+        const updatedOrder = await ordersService.update({
+            ...existingOrder,
+            fileId: body.fileId,
+        });
+
+        if (!updatedOrder) {
+            return err.notFound('Order not found');
+        }
+
+        return updatedOrder satisfies Stored<Order>;
+    },
+});
+
 export const orderRouter = defineRouter('/order', {
     middlewares: [
         authMiddleware,
@@ -49,5 +80,6 @@ export const orderRouter = defineRouter('/order', {
         createOrder,
         getOrder,
         getOrders,
+        updateOrder,
     ],
 });

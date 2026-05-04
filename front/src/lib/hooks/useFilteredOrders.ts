@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Order } from '@miracle/types';
+import type { FileWithMeta, Order } from '@miracle/types';
 import { useAuthContext } from '@/contexts/AuthContext';
 
 export type OrderFilters = {
@@ -7,7 +7,11 @@ export type OrderFilters = {
     withFileOnly: boolean | undefined;
 };
 
-export function useFilteredOrders<T extends Order>(orders: T[] | undefined, filters: OrderFilters): T[] {
+export function useFilteredOrders<T extends Order>(
+    orders: T[] | undefined,
+    filters: OrderFilters,
+    filesById: Map<string, FileWithMeta>
+): T[] {
     const { userId } = useAuthContext();
 
     return useMemo(() => {
@@ -22,11 +26,17 @@ export function useFilteredOrders<T extends Order>(orders: T[] | undefined, filt
         }
 
         if (filters.withFileOnly === true) {
-            result = result.filter((order) => order.fileId !== undefined);
+            result = result.filter((order) => {
+                if (!order.fileId) return false;
+                return filesById.get(order.fileId)?.meta?.available === true;
+            });
         } else if (filters.withFileOnly === false) {
-            result = result.filter((order) => order.fileId === undefined);
+            result = result.filter((order) => {
+                if (!order.fileId) return true;
+                return filesById.get(order.fileId)?.meta?.available !== true;
+            });
         }
 
         return result;
-    }, [orders, filters.myOrdersOnly, filters.withFileOnly, userId]);
+    }, [orders, filters.myOrdersOnly, filters.withFileOnly, userId, filesById]);
 }

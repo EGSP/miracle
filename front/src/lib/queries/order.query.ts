@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { order } from "../generated";
-import type { OrderQuery } from "@miracle/types";
+import { customInstance } from "../api";
+import type { Order, OrderQuery, Stored } from "@miracle/types";
 
 export const ORDERS_QUERY_KEY = ["orders"] as const;
 
@@ -16,6 +17,27 @@ export const useCreateOrder = () => {
 
     return useMutation({
         mutationFn: () => order.createOrder({}),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
+        },
+    });
+};
+
+type UpdateOrderDTO = {
+    id: string;
+    fileId?: string;
+};
+
+export const useUpdateOrder = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, ...payload }: UpdateOrderDTO) =>
+            customInstance<Stored<Order>>({
+                method: "PUT",
+                url: `/order/${id}`,
+                data: payload,
+            }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
         },
