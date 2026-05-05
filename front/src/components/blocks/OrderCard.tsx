@@ -3,6 +3,7 @@ import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
 import type { FileWithMeta, Order, Stored } from '@miracle/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FileCard } from '@/components/blocks/FileCard';
 import { DirtyProvider, useDirtyStore, useField } from '@/contexts/dirty-state/DirtyStateContext';
 import { getApiErrorMessage } from '@/lib/api';
 import { useUpdateOrder } from '@/lib/queries/order.query';
@@ -154,6 +155,11 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
     const workingCopy = useDirtyStore<OrderCardDirtyState, OrderCardDirtyState>((state) => state.workingCopy);
     const commit = useDirtyStore<OrderCardDirtyState, () => void>((state) => state.commit);
     const updateOrderMutation = useUpdateOrder();
+    const selectedFile = React.useMemo(
+        () => files.find((file) => file.id === workingCopy.fileId) ?? null,
+        [files, workingCopy.fileId]
+    );
+    const shouldShowFileCard = selectedFile?.meta?.available === true;
 
     const handleSave = () => {
         updateOrderMutation.mutate(
@@ -203,6 +209,11 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
             <Column span={16}>
                 <OrderCardFile files={files} />
             </Column>
+            {shouldShowFileCard ? (
+                <Column span={16}>
+                    <FileCard file={selectedFile} />
+                </Column>
+            ) : null}
             <Column span={16}>
                 <OrderCardRequirements order={order} />
             </Column>

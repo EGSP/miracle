@@ -1,6 +1,8 @@
 import { IconIndicator, Stack, Text } from "@miracle/aramid";
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { getApiErrorMessage } from "@/lib/api";
 import { useExtractFileContent, useGetFileContent } from "@/lib/queries/file-content.query";
 
@@ -32,14 +34,16 @@ function getExtractionIndicator(
 }
 
 export function FileCard({ file }: FileCardProps) {
-    const { data: contentList, isLoading } = useGetFileContent(file.id, true);
+    const { data: contentList, isLoading, isError: isGetContentError, error: getContentError } = useGetFileContent(file.id, true);
     const extractMutation = useExtractFileContent(file.id);
     const latestContent = contentList?.[0];
     const status = latestContent?.meta?.extractionStatus as ExtractionStatus | undefined;
     const indicator = getExtractionIndicator(latestContent);
+    const isFileAvailable = file.meta?.available !== false;
 
-    const canRead = !extractMutation.isPending && !isLoading && !status;
-    const canReread = !extractMutation.isPending && !isLoading && (status === "completed" || status === "failed");
+    const canRead = isFileAvailable && !extractMutation.isPending && !isLoading && !status;
+    const canReread = isFileAvailable && !extractMutation.isPending && !isLoading && (status === "completed" || status === "failed");
+    const hasContent = status === "completed" && Boolean(latestContent?.content?.some((item) => Boolean(item.text)));
 
     const handleRead = () => {
         if (!canRead) return;
@@ -85,11 +89,60 @@ export function FileCard({ file }: FileCardProps) {
                 <Button variant="outline" size="sm" disabled={!canReread} onClick={handleReread}>
                     Перечитать
                 </Button>
+                <Dialog>
+                    <DialogTrigger
+                        render={
+                            <Button variant="outline" size="sm" disabled={!hasContent}>
+                                <Eye />
+                                Увидеть
+                            </Button>
+                        }
+                    />
+                    <DialogContent size="large" className="overflow-hidden p-0" showCloseButton={false}>
+                        <section className="flex h-[calc(100vh-4rem)] max-h-208 w-full overflow-hidden">
+                            <aside className="w-28 shrink-0 border-r border-border p-3">
+                                <Stack gap={2}>
+                                    <DialogClose
+                                        render={
+                                            <Button variant="outline" size="sm">
+                                                Закрыть
+                                            </Button>
+                                        }
+                                    />
+                                </Stack>
+                            </aside>
+                            <div className="min-h-0 min-w-0 flex-1 p-3">
+                                <Stack gap={2} className="h-full min-h-0">
+                                    <DialogTitle>{file.name}</DialogTitle>
+                                    <div className="min-h-0 flex-1 overflow-auto border border-border bg-muted/20 p-3">
+                                        <Stack gap={3}>
+                                            {latestContent?.content?.map((chunk, index) => (
+                                                <Stack key={`${index}-${chunk.page ?? "no-page"}`} gap={1}>
+                                                    {chunk.page ? (
+                                                        <Text.Label as="span">Часть {chunk.page}</Text.Label>
+                                                    ) : (
+                                                        <Text.Label as="span">Контент</Text.Label>
+                                                    )}
+                                                    <pre className="w-full overflow-x-auto whitespace-pre-wrap wrap-break-word text-xs">{chunk.text ?? ""}</pre>
+                                                </Stack>
+                                            ))}
+                                        </Stack>
+                                    </div>
+                                </Stack>
+                            </div>
+                        </section>
+                    </DialogContent>
+                </Dialog>
             </Stack>
 
             {extractMutation.isError ? (
                 <Text as="span" compact className="text-destructive">
                     {getApiErrorMessage(extractMutation.error)}
+                </Text>
+            ) : null}
+            {isGetContentError ? (
+                <Text as="span" compact className="text-destructive">
+                    Ошибка загрузки контента: {getApiErrorMessage(getContentError)}
                 </Text>
             ) : null}
         </Stack>
