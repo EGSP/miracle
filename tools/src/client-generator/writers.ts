@@ -110,7 +110,9 @@ async function writeRouterClient(
     const externalTypeNames = new Set(externalImports.map((externalImport) => externalImport.typeName));
     const typeNames = router.routes.flatMap((route) => [
         ...route.clientArgs.flatMap((arg) => arg.referencedTypeNames),
-        route.responseTypeName,
+        // Complex expressions (e.g. "Stored<Order>[]") are used inline in the client and must not
+        // appear in the named import list. Only plain identifiers are local model aliases.
+        isSimpleIdentifier(route.responseTypeName) ? route.responseTypeName : undefined,
     ])
         .filter((typeName): typeName is string => Boolean(typeName))
         .filter((typeName) => !externalTypeNames.has(typeName));
@@ -235,6 +237,10 @@ async function writeBarrelFiles(appModel: AppModel, outputDir: string): Promise<
 function getRelativeImport(fromDir: string, toPath: string): string {
     const relativePath = path.relative(fromDir, toPath);
     return toImportPath(relativePath);
+}
+
+function isSimpleIdentifier(name: string): boolean {
+    return /^[A-Za-z_$][\w$]*$/u.test(name);
 }
 
 const GENERATED_HEADER = `/* eslint-disable */

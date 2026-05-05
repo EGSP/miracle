@@ -212,6 +212,7 @@ function getRequestInfo(
     }
 
     const parameterType = parameter.getType();
+    const sourceFile = handler.getSourceFile();
     const externalTypeImports: ExternalTypeImportModel[] = [];
     const clientArgs = CLIENT_REQUEST_PROPERTIES.flatMap((propertyName) => {
         const property = parameterType.getProperty(propertyName);
@@ -226,6 +227,7 @@ function getRequestInfo(
             propertyType.getText(parameter, TypeFormatFlags.NoTruncation),
         );
         externalTypeImports.push(...normalizedType.externalTypeImports);
+        externalTypeImports.push(...collectExternalImportsFromSourceFile(normalizedType.typeText, sourceFile));
 
         return [{
             source: propertyName,
@@ -264,10 +266,13 @@ function getResponseInfo(
     if (satisfiesTypes.length > 0) {
         const normalizedTypes = satisfiesTypes.map(normalizeGeneratedTypeText);
         const typeText = unique(normalizedTypes.map((type) => type.typeText)).join(' | ');
+        // satisfies type text comes from raw source code, so normalizeGeneratedTypeText never
+        // sees import("path").TypeName patterns — look up names in the source file imports instead.
+        const sourceFileImports = satisfiesTypes.flatMap((text) => collectExternalImportsFromSourceFile(text, sourceFile));
         return createResponseInfo(
             operationTypeName,
             typeText,
-            normalizedTypes.flatMap((type) => type.externalTypeImports),
+            [...normalizedTypes.flatMap((type) => type.externalTypeImports), ...sourceFileImports],
         );
     }
 
@@ -280,10 +285,11 @@ function getResponseInfo(
             type.getText(sourceFile, TypeFormatFlags.NoTruncation),
         ));
         const typeText = unique(normalizedTypes.map((type) => type.typeText)).join(' | ');
+        const sourceFileImports = normalizedTypes.flatMap((type) => collectExternalImportsFromSourceFile(type.typeText, sourceFile));
         return createResponseInfo(
             operationTypeName,
             typeText,
-            normalizedTypes.flatMap((type) => type.externalTypeImports),
+            [...normalizedTypes.flatMap((type) => type.externalTypeImports), ...sourceFileImports],
         );
     }
 
@@ -303,18 +309,33 @@ function createResponseInfo(
     typeText?: string;
     externalTypeImports: ExternalTypeImportModel[];
 } {
-    if (isReusableTypeReference(typeText)) {
+    const deduped = uniqueExternalTypeImports(externalTypeImports);
+
+    // Simple name (e.g. "Order") or fully-external expression (e.g. "Stored<Order>[]") —
+    // use the type directly in the client without generating a redundant alias.
+    if (isReusableTypeReference(typeText) || isFullyExternalTypeExpression(typeText, deduped)) {
         return {
             typeName: typeText,
-            externalTypeImports: uniqueExternalTypeImports(externalTypeImports),
+            externalTypeImports: deduped,
         };
     }
 
     return {
         typeName: `${operationTypeName}Response`,
         typeText,
-        externalTypeImports: uniqueExternalTypeImports(externalTypeImports),
+        externalTypeImports: deduped,
     };
+}
+
+function isFullyExternalTypeExpression(typeText: string, externalTypeImports: ExternalTypeImportModel[]): boolean {
+    const typeNames = collectTypeNames([typeText]);
+
+    if (typeNames.length === 0) {
+        return false;
+    }
+
+    const externalNames = new Set(externalTypeImports.map((imp) => imp.typeName));
+    return typeNames.every((name) => externalNames.has(name));
 }
 
 function normalizeGeneratedTypeText(typeText: string): {
@@ -401,6 +422,36 @@ function uniqueExternalTypeImports(externalTypeImports: ExternalTypeImportModel[
 
         seen.add(key);
         return true;
+    });
+}
+
+// When ts-morph prints a type that is already imported in the current scope it omits the
+// import("path").TypeName prefix and returns just the bare name.  normalizeGeneratedTypeText
+// therefore finds nothing to replace and externalTypeImports stays empty.  This helper fills
+// that gap by scanning the source file's own import declarations.
+function collectExternalImportsFromSourceFile(
+    typeText: string,
+    sourceFile: SourceFile,
+): ExternalTypeImportModel[] {
+    const typeNames = collectTypeNames([typeText]);
+    return typeNames.flatMap((typeName) => {
+        for (const importDeclaration of sourceFile.getImportDeclarations()) {
+            const moduleSpecifier = importDeclaration.getModuleSpecifierValue();
+
+            if (moduleSpecifier.startsWith('.')) {
+                continue;
+            }
+
+            const isImported = importDeclaration.getNamedImports().some((importSpecifier) => (
+                (importSpecifier.getAliasNode()?.getText() ?? importSpecifier.getName()) === typeName
+            ));
+
+            if (isImported) {
+                return [{ moduleSpecifier, typeName }];
+            }
+        }
+
+        return [];
     });
 }
 
