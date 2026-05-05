@@ -3,10 +3,11 @@
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { GetContentParams, GetContentResponse, ExtractContentParams, ExtractContentResponse } from './models';
+import type { FileContent, Stored } from '@miracle/types';
+import type { GetContentParams, ExtractContentParams, ExtractContentResponse } from './models';
 
 export const filesContent = {
-    getContent: (getContentParams: GetContentParams) => customInstance<GetContentResponse>({
+    getContent: (getContentParams: GetContentParams) => customInstance<Stored<FileContent>[]>({
         method: 'GET',
         url: formatPath('/files-content/:fileId', getContentParams),
     }),
