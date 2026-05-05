@@ -3,8 +3,10 @@ export type FileContent = {
     fileId: string;
     content?: Content[];
 
-    meta?:{
+    meta?: {
         extractionType?: ExtractionType;
+        extractionStatus?: ExtractionStatus;
+        extractionFailedMessage?: string;
     }
 };
 
@@ -13,8 +15,14 @@ export type Content = {
     text?: string;
 }
 
-export enum ExtractionType{
+export enum ExtractionType {
     RAWREAD = 'rawRead',
     PARSEDOC = 'parseDoc',
     OCR = 'ocr',
+}
+
+export enum ExtractionStatus {
+    STARTED = 'started',
+    COMPLETED = 'completed',
+    FAILED = 'failed',
 }

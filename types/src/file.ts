@@ -26,6 +26,7 @@ export type FilesQuery = {
 export enum FileDomain {
     VISUAL = 'visual',
     DOCUMENT = 'document',
+    SPREADSHEET = 'spreadsheet',
     TEXT = 'text',
 }
 
@@ -43,9 +44,16 @@ export function getFileDomain(extension: string): FileDomain | undefined {
             return FileDomain.VISUAL;
         case 'doc':
         case 'docx':
+        case 'odt':
+        case 'rtf':
+            return FileDomain.DOCUMENT;
         case 'xls':
         case 'xlsx':
-            return FileDomain.DOCUMENT;
+        case 'ods':
+        case 'csv':
+        case 'tsv':
+            return FileDomain.SPREADSHEET;
+        case 'md':
         case 'txt':
             return FileDomain.TEXT;
     }

@@ -1,7 +1,7 @@
-import { ExtractionType, FileContent, FileDomain, getFileDomain } from "@miracle/types";
+import { FileContent, FileDomain, FileModel, getFileDomain, Stored } from "@miracle/types";
 import { registerDb, JsonCollection, CreateEntityInput } from "./db.js";
 import { filesService, getFilePath } from "./file.db.js";
-import fs from 'fs/promises';
+import { extractDocumentContent, extractSpreadsheetContent, extractTextContent } from "../lib/extraction/index.js";
 
 export const filesContentDb = registerDb('file-content', await JsonCollection.create<FileContent>('file-content'));
 
@@ -43,48 +43,45 @@ export const filesContentService = {
 
         const domain = getFileDomain(file.extension);
         if (!domain)
-            throw new Error('File domain for file with extension "${file.extension}" not supported');
+            throw new Error(`File domain for file with extension "${file.extension}" not supported`);
+
+        const pathToFile = getFilePath(file);
+        let extractor: ((
+            dbFile: Stored<FileModel>,
+            filePath: string
+        ) => AsyncGenerator<Omit<FileContent, 'id'>, void, void>) | undefined;
 
         switch (domain) {
             case FileDomain.VISUAL:
-                const content = await extractVisualContent(fileId);
-                return content ? true : false;
+                // extractor = extractVisualContent;
+                return;
             case FileDomain.DOCUMENT:
-                const content = await extractDocumentContent(fileId);
-                return content ? true : false;
-            case FileDomain.TEXT: {
-                const content = await extractTextContent(fileId);
-                return content ? true : false;
-            }
-                return false;
+                extractor = extractDocumentContent;
+                break;
+            case FileDomain.SPREADSHEET:
+                extractor = extractSpreadsheetContent;
+                break;
+            case FileDomain.TEXT:
+                extractor = extractTextContent;
+                break;
         }
-        return false;
+
+        if (!extractor) {
+            return;
+        }
+
+        let createdContent: Stored<FileContent> | undefined = undefined;
+        // Сразу создаём первое состояние извлечения
+        // Чтобы на эту операцию в базе сразу записалось состояние извлечения
+        // И повторное извлечение не началось пока не закончится первое
+        for await (const content of extractor(file, pathToFile)) {
+            if (!createdContent)
+                createdContent = await filesContentService.create(content);
+            else
+                createdContent = await filesContentService.update({
+                    id: createdContent.id,
+                    ...content,
+                });
+        }
     },
 };
-
-/**
- * Читает содержимое текстового файла
- * @param fileId 
- */
-async function extractTextContent(fileId: string) {
-    const file = await filesService.get(fileId);
-    if (!file)
-        throw new Error('File not found');
-
-    const text = await fs.readFile(getFilePath(file), 'utf8');
-
-    const content: Omit<FileContent, 'id'> = {
-        fileId,
-        meta: {
-            extractionType: ExtractionType.RAWREAD,
-        },
-        content: [
-            {
-                text,
-            }
-        ]
-    }
-
-    const createdContent = await filesContentService.create(content);
-    return createdContent;
-}
