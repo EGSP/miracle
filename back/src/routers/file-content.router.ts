@@ -30,10 +30,6 @@ type ExtractContentParams = {
     fileId: string;
 }
 
-type ExtractContentResponse = {
-    whatToDo: 'get' | 'wait';
-}
-
 const extractContent = route.post('/:fileId/extract', {
     validate: { params: true },
     handler: async ({ params }: { params: ExtractContentParams }) => {
@@ -47,9 +43,9 @@ const extractContent = route.post('/:fileId/extract', {
 
         const others = await filesContentService.getContent(fileId);
         if (others.length > 0)
-            return { whatToDo: 'get' } satisfies ExtractContentResponse;
+            return err.badRequest('Content already extracted');
 
-        const result = await filesContentService.extractContent(fileId);
+        await filesContentService.extract(fileId);
     },
 });
 

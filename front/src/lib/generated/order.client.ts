@@ -3,7 +3,7 @@
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { CreateOrderDTO, CreateOrderResponse, GetOrderResponse, OrderQuery, GetOrdersResponse } from './models';
+import type { CreateOrderDTO, CreateOrderResponse, GetOrderResponse, OrderQuery, GetOrdersResponse, UpdateOrderDTO, UpdateOrderResponse } from './models';
 
 export const order = {
     createOrder: (createOrderDTO: CreateOrderDTO) => customInstance<CreateOrderResponse>({
@@ -19,5 +19,10 @@ export const order = {
         method: 'GET',
         url: '/order',
         params: orderQuery,
+    }),
+    updateOrder: (params: { id: string; }, updateOrderDTO: UpdateOrderDTO) => customInstance<UpdateOrderResponse>({
+        method: 'PUT',
+        url: formatPath('/order/:id', params),
+        data: updateOrderDTO,
     }),
 };

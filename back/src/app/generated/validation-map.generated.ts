@@ -3,6 +3,8 @@
 
 import {
     parseGetUserParams,
+    parseGetContentParams,
+    parseExtractContentParams,
     parseGetFilesQuery,
     parseStreamFileContentParams,
     parseGetOrderParams,
@@ -14,6 +16,8 @@ export const validationMap: Record<string, {
     params?: (raw: Record<string, unknown>) => unknown;
 }> = {
     'GET /user/user/:id': { params: parseGetUserParams },
+    'GET /files-content/:fileId': { params: parseGetContentParams },
+    'POST /files-content/:fileId/extract': { params: parseExtractContentParams },
     'GET /files': { query: parseGetFilesQuery },
     'GET /files/:id/content': { params: parseStreamFileContentParams },
     'GET /order/:id': { params: parseGetOrderParams },

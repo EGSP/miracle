@@ -14,6 +14,7 @@ import { userRouter } from './routers/user.router.js';
 import { fileRouter } from './routers/file.router.js';
 import { logger } from './logger/logger.js';
 import { orderRouter } from './routers/order.router.js';
+import { filesContentRouter } from './routers/file-content.router.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +33,7 @@ const appDefinition = defineApp([
   authRouter,
   sessionRouter,
   userRouter,
+  filesContentRouter,
   fileRouter,
   orderRouter,
 ] as const);
