@@ -1,5 +1,4 @@
-import { Stored } from "@miracle/types";
-import { FileContent } from "../../../types/src/file-content.js";
+import { FileContent, Stored } from "@miracle/types";
 import { err } from "../app/index.js";
 import { defineRouter, route } from "../app/router.js";
 import { filesContentService } from "../databases/file-content.db.js";
