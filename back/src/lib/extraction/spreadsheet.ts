@@ -1,7 +1,7 @@
 import { ExtractionStatus, ExtractionType, FileContent, FileModel, Stored } from "@miracle/types";
 import Papa from "papaparse";
 import fs from "fs/promises";
-import { readFile, utils } from "xlsx";
+import * as XLSX from "xlsx";
 
 function toMarkdownTable(rows: Record<string, unknown>[], fields: string[]): string {
     const escapeCell = (value: unknown) => String(value ?? "").replaceAll("|", "\\|");
@@ -27,10 +27,10 @@ export async function* extractSpreadsheetContent(
         const extension = dbFile.extension.toLowerCase();
 
         if (extension === "xlsx" || extension === "xls" || extension === "ods") {
-            const workbook = readFile(pathToFile);
+            const workbook = XLSX.readFile(pathToFile);
             const content = workbook.SheetNames.map((sheetName, index) => {
                 const worksheet = workbook.Sheets[sheetName];
-                const csv = utils.sheet_to_csv(worksheet);
+                const csv = XLSX.utils.sheet_to_csv(worksheet);
                 return {
                     page: index + 1,
                     text: `${sheetName}\n${csv}`,

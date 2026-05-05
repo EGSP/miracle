@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation/tri-state-checkbox';
 import { ListBox } from '@/components/ui/listbox';
 import { FileContentPreview } from '@/components/ui/file-content-preview';
+import { FileCard } from '@/components/blocks/FileCard';
 import { useGetFiles, useUploadFile } from '@/lib/queries/file.query';
 import { useFilteredFiles } from '@/lib/hooks/useFilteredFiles';
 import type { FileWithMeta } from '@miracle/types';
@@ -192,6 +193,17 @@ export default function FilesPage() {
                         <Upload />
                         {uploadMutation.isPending ? 'Загрузка...' : 'Загрузить'}
                     </Button>
+
+                    <Stack as="section" gap={2}>
+                        <Text.Heading as="h3" variant="compact-01">
+                            Карточка файла
+                        </Text.Heading>
+                        {!selectedFileInList ? (
+                            <Text.Label as="p">Выберите файл в списке слева</Text.Label>
+                        ) : (
+                            <FileCard file={selectedFileInList} />
+                        )}
+                    </Stack>
                 </Stack>
             </Column>
         </Grid>

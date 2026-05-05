@@ -3,24 +3,25 @@
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { CreateOrderDTO, CreateOrderResponse, GetOrderResponse, OrderQuery, GetOrdersResponse, UpdateOrderDTO, UpdateOrderResponse } from './models';
+import type { Order, OrderQuery, Stored } from '@miracle/types';
+import type { CreateOrderDTO, UpdateOrderDTO } from './models';
 
 export const order = {
-    createOrder: (createOrderDTO: CreateOrderDTO) => customInstance<CreateOrderResponse>({
+    createOrder: (createOrderDTO: CreateOrderDTO) => customInstance<Stored<Order>>({
         method: 'POST',
         url: '/order/create',
         data: createOrderDTO,
     }),
-    getOrder: (params: { id: string; }) => customInstance<GetOrderResponse>({
+    getOrder: (params: { id: string; }) => customInstance<Stored<Order>>({
         method: 'GET',
         url: formatPath('/order/:id', params),
     }),
-    getOrders: (orderQuery: OrderQuery) => customInstance<GetOrdersResponse>({
+    getOrders: (orderQuery: OrderQuery) => customInstance<Stored<Order>[]>({
         method: 'GET',
         url: '/order',
         params: orderQuery,
     }),
-    updateOrder: (params: { id: string; }, updateOrderDTO: UpdateOrderDTO) => customInstance<UpdateOrderResponse>({
+    updateOrder: (params: { id: string; }, updateOrderDTO: UpdateOrderDTO) => customInstance<Stored<Order>>({
         method: 'PUT',
         url: formatPath('/order/:id', params),
         data: updateOrderDTO,
