@@ -5,8 +5,6 @@ export type CreateOrderDTO = {
     fileId?: string;
 }
 
-export type CreateOrderResponse = Stored<Order>;
-
-export type GetOrderResponse = Stored<Order>;
-
-export type GetOrdersResponse = Stored<Order>[];
+export type UpdateOrderDTO = {
+    fileId?: string;
+}

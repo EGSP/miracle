@@ -80,6 +80,67 @@ export function parseGetUserParams(raw: Record<string, unknown>) {
     return result;
 }
 
+export function parseGetContentParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_fileId = readSingleValue(raw, "fileId");
+    if (raw_fileId.missing) {
+        errors.push({ field: "fileId", message: 'is required' });
+    } else if (raw_fileId.multi) {
+        errors.push({ field: "fileId", message: 'expected single value' });
+    } else {
+        if (typeof raw_fileId.value !== 'string') {
+            errors.push({ field: "fileId", message: 'expected string' });
+        } else {
+            result["fileId"] = raw_fileId.value;
+        }
+    }
+    const raw_onlyLast = readSingleValue(raw, "onlyLast");
+    if (raw_onlyLast.missing) {
+        result["onlyLast"] = undefined;
+    } else if (raw_onlyLast.multi) {
+        errors.push({ field: "onlyLast", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_onlyLast.value, [false,true]);
+        if (parsed === undefined) {
+            errors.push({ field: "onlyLast", message: "expected one of: false, true" });
+        } else {
+            result["onlyLast"] = parsed;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
+export function parseExtractContentParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_fileId = readSingleValue(raw, "fileId");
+    if (raw_fileId.missing) {
+        errors.push({ field: "fileId", message: 'is required' });
+    } else if (raw_fileId.multi) {
+        errors.push({ field: "fileId", message: 'expected single value' });
+    } else {
+        if (typeof raw_fileId.value !== 'string') {
+            errors.push({ field: "fileId", message: 'expected string' });
+        } else {
+            result["fileId"] = raw_fileId.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
 export function parseGetFilesQuery(raw: Record<string, unknown>) {
     const errors: Array<{ field: string; message: string }> = [];
     const result: Record<string, unknown> = {};

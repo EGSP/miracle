@@ -3,7 +3,8 @@
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { FilesQuery, GetFilesResponse, UploadFileResponse, StreamFileContentResponse } from './models';
+import type { FilesQuery } from '@miracle/types';
+import type { GetFilesResponse, UploadFileResponse, StreamFileContentResponse } from './models';
 
 export const file = {
     getFiles: (filesQuery: FilesQuery) => customInstance<GetFilesResponse>({
