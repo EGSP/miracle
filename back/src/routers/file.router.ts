@@ -3,6 +3,7 @@ import fs from 'fs';
 import multer from 'multer';
 import type { Request, Response } from 'express';
 import type { FileModel, FileWithMeta, FilesQuery, User } from '@miracle/types';
+import { getAllowedMimeTypes, getContentType } from '@miracle/types';
 import { route, defineRouter, err } from '../app/index.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { filesService, getFilePath, getUploadsDir } from '../databases/file.db.js';
@@ -21,18 +22,7 @@ type GetFilesResponse = FileWithMeta[];
 
 export const FILE_UPLOAD_CONFIG = {
     maxSizeBytes: 50 * 1024 * 1024,
-    allowedMimeTypes: [
-        'application/pdf',
-        'image/jpeg',
-        'image/png',
-        // Office documents
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    ],
+    allowedMimeTypes: getAllowedMimeTypes(),
 } as const;
 
 const storage = multer.diskStorage({
@@ -96,15 +86,6 @@ const getFiles = route.get('/', {
     },
 });
 
-const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
-    pdf: 'application/pdf',
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    webp: 'image/webp',
-    gif: 'image/gif',
-};
-
 const streamFileContent = route.get('/:id/content', {
     validate: { params: true },
     handler: async ({ params, req, res }: { params: { id: string }; req: Request; res: Response }) => {
@@ -122,7 +103,7 @@ const streamFileContent = route.get('/:id/content', {
             return err.notFound('File content is not available');
         }
 
-        const contentType = CONTENT_TYPE_BY_EXTENSION[file.extension.toLowerCase()] ?? 'application/octet-stream';
+        const contentType = getContentType(file.extension);
         const filename = encodeURIComponent(file.name);
         const stat = fs.statSync(filePath);
         const range = req.headers.range;

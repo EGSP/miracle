@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link } from '@tanstack/react-router';
 import { FileIcon, ArrowLeft, Upload } from 'lucide-react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
@@ -11,7 +11,7 @@ import { FileContentPreview } from '@/components/ui/file-content-preview';
 import { FileCard } from '@/components/blocks/FileCard';
 import { useGetFiles, useUploadFile } from '@/lib/queries/file.query';
 import { useFilteredFiles } from '@/lib/hooks/useFilteredFiles';
-import type { FileWithMeta } from '@miracle/types';
+import { getAllowedExtensions, type FileWithMeta } from '@miracle/types';
 import { frontConfig } from '@/lib/config';
 
 function formatBytes(bytes: number): string {
@@ -64,6 +64,7 @@ export default function FilesPage() {
     });
     const filteredFiles = useFilteredFiles(files, { myFilesOnly, availableOnly });
     const uploadMutation = useUploadFile();
+    const allowedExtensionsAccept = useMemo(() => getAllowedExtensions().map((extension) => `.${extension}`).join(','), []);
     const resolvePreviewUrl = useCallback((file: FileWithMeta) => {
         return `${frontConfig.API_URL}/files/${encodeURIComponent(file.id)}/content`;
     }, []);
@@ -170,7 +171,7 @@ export default function FilesPage() {
                     <FileDropZone
                         value={selectedFile}
                         onChange={setSelectedFile}
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/jpeg,image/png"
+                        accept={allowedExtensionsAccept}
                         disabled={uploadMutation.isPending}
                     />
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { FileWithMeta } from '@miracle/types';
+import { isImageExtension, type FileWithMeta } from '@miracle/types';
 import { cn } from '@/lib/utils';
 
 type FileKind = 'image' | 'pdf' | 'unknown';
@@ -26,11 +26,9 @@ type FallbackProps = PreviewSlotProps & {
     message?: string;
 };
 
-const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
-
 function resolveKind(file: FileWithMeta): FileKind {
     const extension = file.extension.toLowerCase();
-    if (IMAGE_EXTENSIONS.has(extension)) return 'image';
+    if (isImageExtension(extension)) return 'image';
     if (extension === 'pdf') return 'pdf';
     return 'unknown';
 }
