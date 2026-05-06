@@ -12,6 +12,7 @@
   "dependencies": {
     "@miracle/types": "*",
     "@types/papaparse": "^5.5.2",
+    "@yandex-cloud/nodejs-sdk": "^3.1.0",
     "argon2": "^0.44.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

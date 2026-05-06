@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(gh api *)",
+      "WebFetch(domain:yandex.cloud)",
+      "WebFetch(domain:aistudio.yandex.ru)",
+      "WebFetch(domain:cloud.yandex.ru)"
     ]
   }
 }
