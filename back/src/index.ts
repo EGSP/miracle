@@ -15,6 +15,7 @@ import { fileRouter } from './routers/file.router.js';
 import { logger } from './logger/logger.js';
 import { orderRouter } from './routers/order.router.js';
 import { filesContentRouter } from './routers/file-content.router.js';
+import { workerPool } from './workers/worker-pool.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,8 +42,14 @@ const appDefinition = defineApp([
 registerApp(app, appDefinition);
 app.use(errorMiddleware);
 
-app.listen(PORT, () => {
-  logger.info(`[back] Server running on http://localhost:${PORT}`);
-  logger.info(`Access token lifetime: ${serverConfig.ACCESS_TOKEN_LIFETIME} (ms: ${serverConfig.ACCESS_TOKEN_LIFETIME_MS})`);
-  logger.info(`Refresh token lifetime: ${serverConfig.REFRESH_TOKEN_LIFETIME} (ms: ${serverConfig.REFRESH_TOKEN_LIFETIME_MS})`);
-});
+try {
+  await workerPool.restore();
+  app.listen(PORT, () => {
+    logger.info(`[back] Сервер запущен на http://localhost:${PORT}`);
+    logger.info(`Время жизни access-токена: ${serverConfig.ACCESS_TOKEN_LIFETIME} (мс: ${serverConfig.ACCESS_TOKEN_LIFETIME_MS})`);
+    logger.info(`Время жизни refresh-токена: ${serverConfig.REFRESH_TOKEN_LIFETIME} (мс: ${serverConfig.REFRESH_TOKEN_LIFETIME_MS})`);
+  });
+} catch (error) {
+  logger.error(`[back] Не удалось запустить сервер: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}

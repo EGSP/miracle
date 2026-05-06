@@ -3,6 +3,7 @@ export * from './session.js';
 export * from './user.js';
 export * from './file.js';
 export * from './file-types.js';
+export * from './worker.js';
 export * from './order.js';
 export * from './db.js';
 export * from './file-content.js';
