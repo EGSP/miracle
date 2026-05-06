@@ -1,260 +1,204 @@
-# План: БД операций и система воркеров
+# План: инфраструктура воркеров и персистентное восстановление
 
 ## Контекст
 
-Нужна инфраструктура для фоновых задач с персистентностью — чтобы при рестарте сервера незавершённые задачи восстанавливались. Первый конкретный воркер — ожидание Yandex OCR.
+Нужна система фоновых задач, которая:
+- не теряет состояние при рестарте сервера;
+- восстанавливает незавершённые задачи;
+- хранит технические данные выполнения прямо в записи воркера.
 
-Используемая БД: LowDB через `JsonCollection<TItem>` из `back/src/databases/db.ts`.
+Отдельная сущность `Operation` не используется.  
+Состояние облачной OCR-операции хранится в `WorkerData`.
 
 ---
 
-## Часть 1: БД операций (`operations.db.ts`)
+## Цель
 
-### Концепция
+Реализовать:
+1. Типы воркеров в `@miracle/types`.
+2. БД воркеров (`workers.db.ts`) c CRUD + `query(predicate)`.
+3. Базовый класс воркера с фазами `mount()` и `run()`.
+4. `YandexOcrWorker` как первый конкретный воркер.
+5. `WorkerPool` (singleton) с `restore()` при старте сервера.
 
-Операция — запись о взаимодействии с внешним сервисом (Яндекс, другие). Хранит:
-- Связь с доменными объектами (через `meta`)
-- ID внешней облачной операции (для восстановления)
-- Статус и результат
+---
 
-### Полиморфизм через discriminated union
+## Типы (`types/src/worker.ts`)
 
-`JsonCollection<TItem>` не поддерживает полиморфизм нативно — `TItem` фиксирован.  
-Решение: одна коллекция с дискриминированным объединением в поле `meta`.
+Файл должен содержать типы с нуля:
 
-```typescript
-// Мета для конкретного типа операции
-type YandexOcrOperationMeta = {
-  type: 'yandex-ocr';
+```ts
+type WorkerType = 'yandex-ocr-worker';
+type WorkerStatus = 'active' | 'stopped' | 'failed';
+
+type BaseWorkerData = {
+  type: WorkerType;
+  status: WorkerStatus;
+};
+
+type YandexOcrWorkerData = BaseWorkerData & {
+  type: 'yandex-ocr-worker';
   fileId: string;
   fileContentId: string;
   mimeType: string;
+  cloudOperationId?: string;
+  operationDone: boolean;
+  operationErrorMessage?: string;
+  operationResult?: string;
 };
 
-// Объединение расширяется по мере добавления новых типов операций
-type OperationMeta = YandexOcrOperationMeta; // | SomeFutureOperationMeta
-
-// Запись в БД
-type OperationRecord = {
-  cloudOperationId?: string;  // ID операции в Яндексе (undefined до момента запуска)
-  done: boolean;
-  errorMessage?: string;      // Operation.error.message, если failed
-  result?: string;            // декодированный текст (только для успешных)
-  meta: OperationMeta;        // дискриминант — meta.type
-};
+type WorkerData = YandexOcrWorkerData;
 ```
 
-**Сужение типа при чтении:**
-```typescript
-const ops = operationsDb.list();
-const ocrOps = ops.filter(op => op.meta.type === 'yandex-ocr');
-// TypeScript сужает: ocrOps[n].meta — это YandexOcrOperationMeta
-```
-
-**Альтернатива** (отдельные коллекции): если типы операций сильно расходятся по полям или нужен отдельный индексированный поиск — завести `JsonCollection` на каждый тип. Но для старта одна коллекция с union проще.
-
-### Файл: `back/src/databases/operations.db.ts`
-
-```typescript
-export { OperationRecord, OperationMeta, YandexOcrOperationMeta } from '@miracle/types'; // или локально
-
-export const operationsDb = registerDb('operations',
-  await JsonCollection.create<OperationRecord>('operations')
-);
-
-export const operationsService = {
-  create: (data: CreateEntityInput<OperationRecord>) => operationsDb.create(data),
-  get: (id: string) => operationsDb.getById(id),
-  update: (id: string, patch: UpdateEntityInput<OperationRecord>) => operationsDb.update(id, patch),
-  listActive: () => operationsDb.ref().filter(op => !op.done),
-};
-```
+Экспортировать эти типы через `types/src/index.ts`.
 
 ---
 
-## Часть 2: БД воркеров (`workers.db.ts`)
+## База воркеров (`back/src/databases/workers.db.ts`)
 
-### Концепция
+Одна коллекция:
 
-Воркер — запись о фоновой задаче. Не привязан к Яндексу и не предполагает polling. Это любая задача, которую нужно восстановить после рестарта.
-
-```typescript
-type WorkerStatus = 'active' | 'stopped' | 'failed';
-
-// Мета конкретного типа воркера
-type YandexOcrPollerMeta = {
-  type: 'yandex-ocr-poller';
-  operationId: string;     // ссылка на OperationRecord.id в operations.db
-  fileContentId: string;
-};
-
-// Расширяется union-ом для новых типов воркеров
-type WorkerMeta = YandexOcrPollerMeta; // | AnotherWorkerMeta
-
-// Запись в БД
-type WorkerRecord = {
-  status: WorkerStatus;
-  meta: WorkerMeta; // дискриминант — meta.type
-};
+```ts
+JsonCollection<WorkerData>('workers')
 ```
 
-### Файл: `back/src/databases/workers.db.ts`
+Сервис:
+- `create(data)`
+- `get(id)`
+- `update(id, patch)`
+- `query(predicate)`
 
-```typescript
-export const workersDb = registerDb('workers',
-  await JsonCollection.create<WorkerRecord>('workers')
-);
-
-export const workersService = {
-  create: (data: CreateEntityInput<WorkerRecord>) => workersDb.create(data),
-  get: (id: string) => workersDb.getById(id),
-  update: (id: string, patch: UpdateEntityInput<WorkerRecord>) => workersDb.update(id, patch),
-  listActive: () => workersDb.ref().filter(w => w.status === 'active'),
-};
-```
+`query(predicate)` — единственный способ выборки через `filter`.
 
 ---
 
-## Часть 3: Классы воркеров
+## Базовый воркер (`back/src/workers/base-worker.ts`)
 
-### Абстрактный базовый класс
+```ts
+abstract class BaseWorker {
+  abstract readonly type: WorkerType;
 
-**Файл:** `back/src/workers/base-worker.ts`
+  // Подготовка состояния перед запуском (создание/синхронизация DB-записей)
+  abstract mount(): Promise<void>;
 
-```typescript
-export abstract class BaseWorker {
-  abstract readonly type: string;
-
-  // Полный жизненный цикл воркера: инициализация → работа → завершение
-  // Воркер сам создаёт/обновляет свои записи в БД через сервисы
+  // Основной рабочий цикл
   abstract run(): Promise<void>;
 
   protected shouldStop = false;
-  stop(): void { this.shouldStop = true; }
+  stop(): void;
 }
 ```
 
-`run()` — единственный точка входа. Воркер сам управляет своей персистентностью.  
-Поля специфичные для типа воркера (например, счётчик попыток) — внутри конкретного класса.
+`mount()` всегда вызывается пулом перед `run()`.
 
-### YandexOcrWorker
+---
+
+## Реализация `YandexOcrWorker`
 
 **Файл:** `back/src/workers/yandex-ocr-worker.ts`
 
-Параметры конструктора:
-- `fileContentId` — для обновления FileContent по завершении
-- `fileId`, `mimeType` — для создания OperationRecord и запуска OCR
-- `existingOperationId?`, `existingCloudOperationId?` — для восстановления после рестарта (передаются из WorkerPool при restore)
+### Ответственность
 
-Фазы `run()`:
+`YandexOcrWorker` полностью владеет данными OCR-операции:
+- запуск cloud OCR;
+- ожидание завершения;
+- чтение результата;
+- фиксация статуса и результата в `WorkerData`.
 
-1. **Создать OperationRecord** (или взять существующий при restore)
-2. **Запустить OCR** через `TextRecognitionAsyncServiceClient.recognize()` → получить `cloudOperationId`
-3. **Обновить OperationRecord** с `cloudOperationId`
-4. **Создать WorkerRecord** `{ status: 'active', meta: { type: 'yandex-ocr-poller', operationId, fileContentId } }`
-5. **Получить текущее состояние** через `OperationServiceClient.get({ operationId: cloudOperationId })` — работает и для свежих и для восстановленных операций
-6. **Если не done** — `waitForOperation(op, session)` (SDK-метод, не кастомный polling)
-7. **Получить текст** через `asyncClient.getRecognition({ operationId: cloudOperationId })` — стриминг страниц
-8. **Обновить FileContent**: `{ status: COMPLETED, content: [{ page, text }] }`
-9. **Обновить OperationRecord**: `{ done: true, result: text }`
-10. **Обновить WorkerRecord**: `{ status: 'stopped' }` (или `'failed'` при ошибке)
+### Источник состояния
 
-При ошибке на любой фазе: обновить FileContent/OperationRecord/WorkerRecord в статус FAILED.
+Только `workers.db`:
+- `cloudOperationId`
+- `operationDone`
+- `operationErrorMessage`
+- `operationResult`
+
+### Фаза `mount()`
+
+1. Если записи воркера ещё нет — создать `WorkerData` со статусом `active` и `operationDone: false`.
+2. Если запись уже есть — перевести в `status: 'active'` и синхронизировать текущие поля (например `cloudOperationId`).
+
+### Фаза `run()`
+
+1. Проверить, что `mount()` уже отработал (есть `workerId`).
+2. Если `cloudOperationId` отсутствует:
+   - запустить `recognize()`;
+   - сохранить `cloudOperationId` в `workers.db`.
+3. Дождаться завершения через `waitForOperation(...)`.
+4. Получить страницы через `getRecognition(...)`.
+5. Обновить `FileContent`:
+   - `content: [{ page, text }]`
+   - `meta.extractionStatus = COMPLETED`
+6. Обновить `WorkerData`:
+   - `operationDone = true`
+   - `operationResult = joinedText`
+   - `status = 'stopped'`
+
+При ошибке:
+- `FileContent.meta.extractionStatus = FAILED`
+- `FileContent.meta.extractionFailedMessage = error`
+- `WorkerData.operationDone = true`
+- `WorkerData.operationErrorMessage = error`
+- `WorkerData.status = 'failed'`
 
 ---
 
-## Часть 4: WorkerPool
-
-**Файл:** `back/src/workers/worker-pool.ts`
+## WorkerPool (`back/src/workers/worker-pool.ts`)
 
 ### Интерфейс
 
-```typescript
-class WorkerPool {
-  // Вызывается при старте сервера — восстанавливает active воркеры из workers.db
-  async restore(): Promise<void>;
+- `restore(): Promise<void>`
+- `launch(worker: BaseWorker): void`
+- `find(type, predicate?): T[]`
 
-  // Запускает воркер асинхронно (не ждёт завершения)
-  launch(worker: BaseWorker): void;
+### Поведение
 
-  // Поиск активных воркеров по типу и опциональному предикату
-  // Сервисы используют этот метод — не знают о конкретных классах воркеров
-  find<T extends BaseWorker>(type: string, predicate?: (worker: T) => boolean): T[];
-}
+- `launch()`:
+  1. добавляет воркер в `active`;
+  2. вызывает `await worker.mount()`;
+  3. вызывает `await worker.run()`;
+  4. удаляет воркер из `active` в `finally`.
 
-export const workerPool = new WorkerPool(); // синглтон
-```
+- `restore()`:
+  - читает `workersService.query(w => w.status === 'active')`;
+  - по `type` поднимает конкретный класс воркера;
+  - запускает через `launch()`.
 
-### Внутренняя реализация
+---
 
-```typescript
-private active = new Map<string, BaseWorker>(); // ephemeralKey → worker
+## Инициализация при старте сервера
 
-launch(worker: BaseWorker): void {
-  const key = randomUUID(); // in-memory ключ, не связан с DB id
-  this.active.set(key, worker);
-  worker.run()
-    .catch(err => console.error(`[WorkerPool] ${worker.type} failed:`, err))
-    .finally(() => this.active.delete(key));
-}
-```
+До `app.listen()`:
 
-### restore() — логика восстановления
-
-```typescript
-async restore(): Promise<void> {
-  const activeRecords = workersService.listActive();
-  for (const record of activeRecords) {
-    const worker = this.createWorkerFromRecord(record);
-    if (worker) this.launch(worker);
-  }
-}
-
-private createWorkerFromRecord(record: Stored<WorkerRecord>): BaseWorker | null {
-  switch (record.meta.type) {
-    case 'yandex-ocr-poller': {
-      const op = operationsService.get(record.meta.operationId);
-      if (!op || op.done) return null; // уже завершена, пропускаем
-      const meta = op.meta as YandexOcrOperationMeta;
-      return new YandexOcrWorker(
-        meta.fileContentId, meta.fileId, meta.mimeType,
-        op.id, op.cloudOperationId // existingOperationId, existingCloudOperationId
-      );
-    }
-    default: return null;
-  }
-}
-```
-
-### Инициализация при старте сервера
-
-В точке старта (где-то рядом с `app.listen()`):
-```typescript
+```ts
 await workerPool.restore();
 ```
 
+Если восстановление не удалось — логировать ошибку и завершать процесс.
+
 ---
 
-## Файловая структура
+## Файлы
 
 ```
+types/src/
+└── worker.ts
+
 back/src/
 ├── databases/
-│   ├── db.ts                     (существующий)
-│   ├── operations.db.ts          (новый)
-│   └── workers.db.ts             (новый)
+│   └── workers.db.ts
 ├── workers/
-│   ├── base-worker.ts            (новый)
-│   ├── worker-pool.ts            (новый)
-│   └── yandex-ocr-worker.ts     (новый)
-types/src/
-└── operations.ts                 (новый — OperationRecord, WorkerRecord и мета-типы)
+│   ├── base-worker.ts
+│   ├── worker-pool.ts
+│   └── yandex-ocr-worker.ts
+└── lib/yandex/
+    └── yandex.ts
 ```
 
 ---
 
-## Решённые вопросы
+## Технические договорённости
 
-1. **Типы в `@miracle/types`**: `OperationRecord`, `WorkerRecord`, все мета-типы (`OperationMeta`, `WorkerMeta`, и конкретные `YandexOcrOperationMeta`, `YandexOcrPollerMeta`) — в `types/src/`. Файл: `types/src/workers.ts`.
-
-2. **`workersService.listActive()` использует `.ref()`**: нормально, LowDB однопоточный.
+- Логи и комментарии — на русском.
+- Для выборок в БД использовать `query(predicate)`.
+- Данные OCR-операции не дублировать в отдельных коллекциях.
