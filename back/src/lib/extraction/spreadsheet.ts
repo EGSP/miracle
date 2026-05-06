@@ -57,7 +57,7 @@ export async function* extractSpreadsheetContent(
             });
 
             if (parseResult.errors.length > 0) {
-                throw new Error(parseResult.errors[0]?.message ?? "CSV/TSV parse error");
+                throw new Error(parseResult.errors[0]?.message ?? "Ошибка разбора CSV/TSV");
             }
 
             const fields = parseResult.meta.fields ?? Object.keys(parseResult.data[0] ?? {});
@@ -78,7 +78,7 @@ export async function* extractSpreadsheetContent(
             return;
         }
 
-        throw new Error(`Unsupported spreadsheet extension: ${extension}`);
+        throw new Error(`Неподдерживаемое расширение электронной таблицы: ${extension}`);
     } catch (error) {
         yield {
             fileId: dbFile.id,

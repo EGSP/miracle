@@ -20,7 +20,7 @@ const getContent = route.get('/:fileId', {
         const fileId = params.fileId;
         const onlyLast = query.onlyLast ?? false;
         if (!fileId)
-            return err.validation('File ID is required');
+            return err.validation('Не указан идентификатор файла');
 
         const content = await filesContentService.getContent(fileId);
         if (onlyLast)
@@ -44,11 +44,11 @@ const extractContent = route.post('/:fileId/extract', {
         logger.info(`Извлечение содержимого файла "${fileId}"`);
         logger.info(`Параметры запроса: ${JSON.stringify({ params, query })}`);
         if (!fileId)
-            return err.validation('File ID is required');
+            return err.validation('Не указан идентификатор файла');
 
         const file = await filesService.get(fileId);
         if (!file)
-            return err.notFound(`File with id "${fileId}" not found`);
+            return err.notFound(`Файл с идентификатором «${fileId}» не найден`);
 
         const others = await filesContentService.getContent(fileId);
         if (others.length > 0) {
@@ -60,7 +60,7 @@ const extractContent = route.post('/:fileId/extract', {
                     return;
                 }
             }
-            return err.badRequest('Content already extracted');
+            return err.badRequest('Содержимое файла уже извлечено');
         }
 
         await filesContentService.extract(fileId);

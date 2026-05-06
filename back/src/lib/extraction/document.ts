@@ -34,10 +34,10 @@ export async function* extractDocumentContent(
         }
 
         if (extension === "doc" || extension === "odt" || extension === "rtf") {
-            throw new Error("Not implemented: LibreOffice extraction");
+            throw new Error("Не реализовано: извлечение через LibreOffice");
         }
 
-        throw new Error(`Unsupported document extension: ${extension}`);
+        throw new Error(`Неподдерживаемое расширение документа: ${extension}`);
     } catch (error) {
         yield {
             fileId: dbFile.id,

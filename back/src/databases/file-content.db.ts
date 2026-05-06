@@ -27,7 +27,7 @@ export const filesContentService = {
     update: async (data: FileContent) => {
         const existingContent = await filesContentService.get(data.id);
         if (!existingContent)
-            throw new Error('Content not found');
+            throw new Error('Содержимое не найдено');
 
         return filesContentDb.update(data.id, data);
     },
@@ -39,11 +39,11 @@ export const filesContentService = {
     extract: async (fileId: string) => {
         const file = await filesService.get(fileId);
         if (!file)
-            throw new Error('File not found');
+            throw new Error('Файл не найден');
 
         const domain = getFileDomain(file.extension);
         if (!domain)
-            throw new Error(`File domain for file with extension "${file.extension}" not supported`);
+            throw new Error(`Тип файла с расширением «${file.extension}» не поддерживается`);
 
         const pathToFile = getFilePath(file);
         let extractor: ((

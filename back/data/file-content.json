@@ -67,6 +67,17 @@
       "id": "2d5fabfd-30a8-484e-9a0e-a9c8e615e986",
       "createdAt": 1778043808109,
       "updatedAt": 1778043808110
+    },
+    {
+      "fileId": "b30e7208-21ad-46c9-91d7-8d1045f257c1",
+      "meta": {
+        "extractionType": "parseDoc",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "Не реализовано: извлечение через LibreOffice"
+      },
+      "id": "ac76ccec-9f16-4d59-b58d-5ae64178bf35",
+      "createdAt": 1778044520472,
+      "updatedAt": 1778044520474
     }
   ]
 }
