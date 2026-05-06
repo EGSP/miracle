@@ -80,6 +80,31 @@ export function parseGetUserParams(raw: Record<string, unknown>) {
     return result;
 }
 
+export function parseGetContentQuery(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_onlyLast = readSingleValue(raw, "onlyLast");
+    if (raw_onlyLast.missing) {
+        result["onlyLast"] = undefined;
+    } else if (raw_onlyLast.multi) {
+        errors.push({ field: "onlyLast", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_onlyLast.value, [false,true]);
+        if (parsed === undefined) {
+            errors.push({ field: "onlyLast", message: "expected one of: false, true" });
+        } else {
+            result["onlyLast"] = parsed;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
 export function parseGetContentParams(raw: Record<string, unknown>) {
     const errors: Array<{ field: string; message: string }> = [];
     const result: Record<string, unknown> = {};
@@ -96,17 +121,29 @@ export function parseGetContentParams(raw: Record<string, unknown>) {
             result["fileId"] = raw_fileId.value;
         }
     }
-    const raw_onlyLast = readSingleValue(raw, "onlyLast");
-    if (raw_onlyLast.missing) {
-        result["onlyLast"] = undefined;
-    } else if (raw_onlyLast.multi) {
-        errors.push({ field: "onlyLast", message: 'expected single value' });
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
+export function parseExtractContentQuery(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_retryIfLastFailed = readSingleValue(raw, "retryIfLastFailed");
+    if (raw_retryIfLastFailed.missing) {
+        result["retryIfLastFailed"] = undefined;
+    } else if (raw_retryIfLastFailed.multi) {
+        errors.push({ field: "retryIfLastFailed", message: 'expected single value' });
     } else {
-        const parsed = parseLiteral(raw_onlyLast.value, [false,true]);
+        const parsed = parseLiteral(raw_retryIfLastFailed.value, [false,true]);
         if (parsed === undefined) {
-            errors.push({ field: "onlyLast", message: "expected one of: false, true" });
+            errors.push({ field: "retryIfLastFailed", message: "expected one of: false, true" });
         } else {
-            result["onlyLast"] = parsed;
+            result["retryIfLastFailed"] = parsed;
         }
     }
 

@@ -3,11 +3,18 @@
 
 export type GetContentParams = {
     fileId: string;
+};
+
+export type GetContentQuery = {
     onlyLast?: boolean;
-}
+};
 
 export type ExtractContentParams = {
     fileId: string;
-}
+};
+
+export type ExtractContentQuery = {
+    retryIfLastFailed?: boolean;
+};
 
 export type ExtractContentResponse = null;

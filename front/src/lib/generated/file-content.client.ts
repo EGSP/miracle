@@ -4,15 +4,17 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { FileContent, Stored } from '@miracle/types';
-import type { GetContentParams, ExtractContentParams, ExtractContentResponse } from './models';
+import type { GetContentParams, GetContentQuery, ExtractContentParams, ExtractContentQuery, ExtractContentResponse } from './models';
 
 export const filesContent = {
-    getContent: (getContentParams: GetContentParams) => customInstance<Stored<FileContent>[]>({
+    getContent: (getContentParams: GetContentParams, getContentQuery: GetContentQuery) => customInstance<Stored<FileContent>[]>({
         method: 'GET',
         url: formatPath('/files-content/:fileId', getContentParams),
+        params: getContentQuery,
     }),
-    extractContent: (extractContentParams: ExtractContentParams) => customInstance<ExtractContentResponse>({
+    extractContent: (extractContentParams: ExtractContentParams, extractContentQuery: ExtractContentQuery) => customInstance<ExtractContentResponse>({
         method: 'POST',
         url: formatPath('/files-content/:fileId/extract', extractContentParams),
+        params: extractContentQuery,
     }),
 };

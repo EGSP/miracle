@@ -1,7 +1,7 @@
 import { ExtractionStatus, ExtractionType, FileContent, FileModel, Stored } from "@miracle/types";
 import Papa from "papaparse";
 import fs from "fs/promises";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 
 function toMarkdownTable(rows: Record<string, unknown>[], fields: string[]): string {
     const escapeCell = (value: unknown) => String(value ?? "").replaceAll("|", "\\|");
