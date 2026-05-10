@@ -2,6 +2,7 @@ import { createRouter, createRootRoute, createRoute, Outlet } from '@tanstack/re
 import HomePage from './pages/HomePage';
 import FilesPage from './pages/FilesPage';
 import OrdersPage from './pages/OrdersPage';
+import WorkersPage from './pages/WorkersPage';
 import { AuthPage, LoginForm, RegisterForm } from './pages/Auth';
 import { App } from './App';
 
@@ -45,10 +46,17 @@ const ordersRoute = createRoute({
   component: OrdersPage,
 });
 
+const workersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workers',
+  component: WorkersPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   filesRoute,
   ordersRoute,
+  workersRoute,
   authRoute.addChildren([ loginRoute, registerRoute]),
 ]);
 

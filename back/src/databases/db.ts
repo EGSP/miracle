@@ -8,12 +8,42 @@ import { merge } from 'ts-deepmerge';
 
 export type JsonDb<TData extends object> = Low<TData>;
 
-export type StoredEntity<TItem extends object> = Omit<TItem, keyof DbEntity> & DbEntity;
+/**
+ * Сущность с полями БД (`id`, `createdAt`, `updatedAt`).
+ *
+ * Использует дистрибутивный условный тип вместо прямого `Omit<TItem, keyof DbEntity> & DbEntity`,
+ * потому что `Omit` не сохраняет union-структуру: `keyof (A | B | C)` вычисляется как
+ * *пересечение* ключей всех членов, и `Omit` оставляет лишь поля, общие для каждого из них.
+ *
+ * Форма `TItem extends object ? ... : never` с *naked type parameter* заставляет TypeScript
+ * применять преобразование к каждому члену union независимо:
+ * `StoredEntity<A | B | C>` → `StoredEntity<A> | StoredEntity<B> | StoredEntity<C>`.
+ *
+ * @example
+ * // WorkerData = YandexOcrWorkerData | ServerHealthWorkerData | YandexPingWorkerData
+ * // Без дистрибутивности поле diskTotalBytes (есть только у ServerHealthWorkerData)
+ * // было бы потеряно, и дискриминант type перестал бы работать для narrowing.
+ * type W = StoredEntity<WorkerData>; // → StoredEntity<YandexOcrWorkerData> | StoredEntity<ServerHealthWorkerData> | ...
+ */
+export type StoredEntity<TItem extends object> =
+    TItem extends object ? Omit<TItem, keyof DbEntity> & DbEntity : never;
 
+/**
+ * Входные данные для создания сущности: все поля кроме системных полей БД,
+ * плюс опциональный `id` (если не передан — генерируется автоматически).
+ *
+ * Дистрибутивный по той же причине, что {@link StoredEntity}.
+ */
 export type CreateEntityInput<TItem extends object> =
-    Omit<TItem, keyof DbEntity> & Partial<Pick<DbEntity, 'id'>>;
+    TItem extends object ? Omit<TItem, keyof DbEntity> & Partial<Pick<DbEntity, 'id'>> : never;
 
-export type UpdateEntityInput<TItem extends object> = Partial<Omit<TItem, keyof DbEntity>>;
+/**
+ * Входные данные для обновления сущности: все поля кроме системных — опциональны.
+ *
+ * Дистрибутивный по той же причине, что {@link StoredEntity}.
+ */
+export type UpdateEntityInput<TItem extends object> =
+    TItem extends object ? Partial<Omit<TItem, keyof DbEntity>> : never;
 
 export type CreateJsonDbOptions<TData extends object> = {
     name: string;

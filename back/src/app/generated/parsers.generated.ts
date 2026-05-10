@@ -348,3 +348,27 @@ export function parseGetOrdersQuery(raw: Record<string, unknown>) {
 
     return result;
 }
+
+export function parseGetWorkersQuery(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_type = readSingleValue(raw, "type");
+    if (raw_type.missing) {
+        result["type"] = undefined;
+    } else if (raw_type.multi) {
+        errors.push({ field: "type", message: 'expected single value' });
+    } else {
+        if (typeof raw_type.value !== 'string') {
+            errors.push({ field: "type", message: 'expected string' });
+        } else {
+            result["type"] = raw_type.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}

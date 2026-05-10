@@ -3,7 +3,9 @@ import type { Stored, WorkerData } from '@miracle/types';
 import { workersService } from '../databases/workers.db.js';
 import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
+import { ServerHealthWorker } from './server-health-worker.js';
 import { YandexOcrWorker } from './yandex-ocr-worker.js';
+import { YandexPingWorker } from './yandex-ping-worker.js';
 
 export class WorkerPool {
     /** Карта запущенных воркеров: ключ только для памяти процесса. */
@@ -51,6 +53,12 @@ export class WorkerPool {
                     existingCloudOperationId: record.cloudOperationId,
                     existingWorkerId: record.id,
                 });
+            }
+            case 'server-health-worker': {
+                return new ServerHealthWorker({ existingWorkerId: record.id });
+            }
+            case 'yandex-ping-worker': {
+                return new YandexPingWorker({ existingWorkerId: record.id });
             }
             default:
                 return null;

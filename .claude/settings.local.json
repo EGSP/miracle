@@ -12,7 +12,9 @@
       "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\" -Depth 0)",
       "Bash(Select-Object Name, PSIsContainer)",
       "Bash(Format-Table -AutoSize)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(dir front\\\\src -Recurse)",
+      "Bash(npm run *)"
     ]
   }
 }

@@ -1,3 +1,24 @@
 {
-  "items": []
+  "items": [
+    {
+      "type": "server-health-worker",
+      "status": "active",
+      "id": "c9fa72af-2854-4c4f-89cc-dd5d828688ab",
+      "createdAt": 1778419959448,
+      "updatedAt": 1778420322949,
+      "diskTotalBytes": 479437250560,
+      "diskUsedBytes": 366062661632,
+      "diskAvailableBytes": 113374588928,
+      "diskUsedPercent": 76
+    },
+    {
+      "type": "yandex-ping-worker",
+      "status": "active",
+      "id": "00674198-95c5-4d96-bb27-897d47fc90ac",
+      "createdAt": 1778419959448,
+      "updatedAt": 1778420319195,
+      "latencyMs": 330,
+      "lastPingedAt": 1778420319195
+    }
+  ]
 }

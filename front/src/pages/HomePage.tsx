@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { FileIcon, ListOrdered } from 'lucide-react';
+import { WorkerIcon } from '@/components/ui/WorkerIcon';
 import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -88,6 +89,12 @@ export default function HomePage() {
                                     <ListOrdered className="size-3.5" />
                                     <Text as="span" compact expressive>
                                         Перейти к заказам
+                                    </Text>
+                                </Link>
+                                <Link to="/workers" className="inline-flex items-center gap-1.5">
+                                    <WorkerIcon className="size-3.5" />
+                                    <Text as="span" compact expressive>
+                                        Воркеры
                                     </Text>
                                 </Link>
                             </Stack>

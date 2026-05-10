@@ -1,4 +1,4 @@
-export type WorkerType = 'yandex-ocr-worker';
+export type WorkerType = 'yandex-ocr-worker' | 'server-health-worker' | 'yandex-ping-worker';
 
 export type WorkerStatus = 'active' | 'stopped' | 'failed';
 
@@ -18,4 +18,24 @@ export type YandexOcrWorkerData = BaseWorkerData & {
     operationResult?: string;
 };
 
-export type WorkerData = YandexOcrWorkerData;
+export type ServerHealthWorkerData = BaseWorkerData & {
+    type: 'server-health-worker';
+    /** Общий объём диска в байтах */
+    diskTotalBytes?: number;
+    /** Занятое место в байтах */
+    diskUsedBytes?: number;
+    /** Доступное место в байтах */
+    diskAvailableBytes?: number;
+    /** Занятое место в процентах (0–100) */
+    diskUsedPercent?: number;
+};
+
+export type YandexPingWorkerData = BaseWorkerData & {
+    type: 'yandex-ping-worker';
+    /** Задержка последнего пинга в миллисекундах. null — пинг не удался */
+    latencyMs?: number | null;
+    /** Unix-timestamp последнего пинга */
+    lastPingedAt?: number;
+};
+
+export type WorkerData = YandexOcrWorkerData | ServerHealthWorkerData | YandexPingWorkerData;

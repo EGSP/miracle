@@ -11,6 +11,7 @@ import {
     parseStreamFileContentParams,
     parseGetOrderParams,
     parseGetOrdersQuery,
+    parseGetWorkersQuery,
 } from './parsers.generated.js';
 
 export const validationMap: Record<string, {
@@ -24,4 +25,5 @@ export const validationMap: Record<string, {
     'GET /files/:id/content': { params: parseStreamFileContentParams },
     'GET /order/:id': { params: parseGetOrderParams },
     'GET /order': { query: parseGetOrdersQuery },
+    'GET /workers': { query: parseGetWorkersQuery },
 };
