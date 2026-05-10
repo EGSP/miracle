@@ -4,6 +4,7 @@ import path from 'path';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import { DbEntity } from '@miracle/types';
+import { merge } from 'ts-deepmerge';
 
 export type JsonDb<TData extends object> = Low<TData>;
 
@@ -127,7 +128,7 @@ export class JsonCollection<TItem extends object> {
             return undefined;
         }
 
-        Object.assign(item, patch);
+        Object.assign(item, merge(item, patch));
         this.middlewares.forEach((middleware) => middleware.beforeUpdate?.(item, patch));
         await this.db.write();
 

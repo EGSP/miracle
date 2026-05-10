@@ -11,7 +11,8 @@
       "WebFetch(domain:cloud.yandex.ru)",
       "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\" -Depth 0)",
       "Bash(Select-Object Name, PSIsContainer)",
-      "Bash(Format-Table -AutoSize)"
+      "Bash(Format-Table -AutoSize)",
+      "Bash(npm install *)"
     ]
   }
 }
