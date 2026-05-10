@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import { waitForOperation } from '@yandex-cloud/nodejs-sdk';
 import { ocrService } from '@yandex-cloud/nodejs-sdk/ai-ocr-v1';
-import { ExtractionStatus, type Content } from '@miracle/types';
+import { ExtractionStatus, ExtractionType, type Content } from '@miracle/types';
 import type { WorkerData } from '@miracle/types';
 import { yandex } from '../lib/yandex/yandex.js';
 import { filesContentService } from '../databases/file-content.db.js';
@@ -97,6 +97,7 @@ export class YandexOcrWorker extends BaseWorker {
                 fileId: this.fileId,
                 content: pages,
                 meta: {
+                    extractionType: ExtractionType.OCR,
                     extractionStatus: ExtractionStatus.COMPLETED,
                 },
             });
@@ -116,6 +117,7 @@ export class YandexOcrWorker extends BaseWorker {
                 id: this.fileContentId,
                 fileId: this.fileId,
                 meta: {
+                    extractionType: ExtractionType.OCR,
                     extractionStatus: ExtractionStatus.FAILED,
                     extractionFailedMessage: message,
                 },

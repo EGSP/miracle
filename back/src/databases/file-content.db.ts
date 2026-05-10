@@ -1,7 +1,7 @@
-import { FileContent, FileDomain, FileModel, getFileDomain, Stored } from "@miracle/types";
+import { ExtractionStatus, FileContent, FileDomain, FileModel, getFileDomain, Stored } from "@miracle/types";
 import { registerDb, JsonCollection, CreateEntityInput } from "./db.js";
 import { filesService, getFilePath } from "./file.db.js";
-import { extractDocumentContent, extractSpreadsheetContent, extractTextContent } from "../lib/extraction/index.js";
+import { extractDocumentContent, extractSpreadsheetContent, extractTextContent, extractVisualContent } from "../lib/extraction/index.js";
 
 export const filesContentDb = registerDb('file-content', await JsonCollection.create<FileContent>('file-content'));
 
@@ -36,7 +36,7 @@ export const filesContentService = {
         return filesContentDb.delete(id);
     },
 
-    extract: async (fileId: string) => {
+    extract: async (fileId: string): Promise<void> => {
         const file = await filesService.get(fileId);
         if (!file)
             throw new Error('Файл не найден');
@@ -45,43 +45,55 @@ export const filesContentService = {
         if (!domain)
             throw new Error(`Тип файла с расширением «${file.extension}» не поддерживается`);
 
-        const pathToFile = getFilePath(file);
-        let extractor: ((
-            dbFile: Stored<FileModel>,
-            filePath: string
-        ) => AsyncGenerator<Omit<FileContent, 'id'>, void, void>) | undefined;
-
-        switch (domain) {
-            case FileDomain.VISUAL:
-                // extractor = extractVisualContent;
-                return;
-            case FileDomain.DOCUMENT:
-                extractor = extractDocumentContent;
-                break;
-            case FileDomain.SPREADSHEET:
-                extractor = extractSpreadsheetContent;
-                break;
-            case FileDomain.TEXT:
-                extractor = extractTextContent;
-                break;
-        }
-
-        if (!extractor) {
+        // Защита от дублирующего запуска: если уже идёт извлечение — выходим без действий.
+        // Статус FAILED не блокирует — повторная попытка разрешена.
+        const alreadyInProgress = filesContentDb.ref().some(
+            (c) => c.fileId === fileId && c.meta?.extractionStatus === ExtractionStatus.STARTED,
+        );
+        if (alreadyInProgress)
             return;
-        }
 
-        let createdContent: Stored<FileContent> | undefined = undefined;
-        // Сразу создаём первое состояние извлечения
-        // Чтобы на эту операцию в базе сразу записалось состояние извлечения
-        // И повторное извлечение не началось пока не закончится первое
-        for await (const content of extractor(file, pathToFile)) {
-            if (!createdContent)
-                createdContent = await filesContentService.create(content);
-            else
-                createdContent = await filesContentService.update({
-                    id: createdContent.id,
-                    ...content,
-                });
+        const pathToFile = getFilePath(file);
+
+        // VISUAL — асинхронный OCR через воркер, не generator-паттерн
+        if (domain === FileDomain.VISUAL) {
+            await extractVisualContent(file);
+            return;
+        } else {
+            let extractor: ((
+                dbFile: Stored<FileModel>,
+                filePath: string
+            ) => AsyncGenerator<Omit<FileContent, 'id'>, void, void>) | undefined;
+
+            switch (domain) {
+                case FileDomain.DOCUMENT:
+                    extractor = extractDocumentContent;
+                    break;
+                case FileDomain.SPREADSHEET:
+                    extractor = extractSpreadsheetContent;
+                    break;
+                case FileDomain.TEXT:
+                    extractor = extractTextContent;
+                    break;
+            }
+
+            if (!extractor) {
+                return;
+            }
+
+            let createdContent: Stored<FileContent> | undefined = undefined;
+            // Сразу создаём первое состояние извлечения
+            // Чтобы на эту операцию в базе сразу записалось состояние извлечения
+            // И повторное извлечение не началось пока не закончится первое
+            for await (const content of extractor(file, pathToFile)) {
+                if (!createdContent)
+                    createdContent = await filesContentService.create(content);
+                else
+                    createdContent = await filesContentService.update({
+                        id: createdContent.id,
+                        ...content,
+                    });
+            }
         }
     },
 };

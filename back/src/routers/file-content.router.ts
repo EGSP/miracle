@@ -41,17 +41,17 @@ const extractContent = route.post('/:fileId/extract', {
     validate: { params: true, query: true },
     handler: async ({ params, query }: { params: ExtractContentParams; query: ExtractContentQuery }) => {
         const fileId = params.fileId;
-        logger.info(`Извлечение содержимого файла "${fileId}"`);
-        logger.info(`Параметры запроса: ${JSON.stringify({ params, query })}`);
+
         if (!fileId)
             return err.validation('Не указан идентификатор файла');
 
-        const file = await filesService.get(fileId);
-        if (!file)
-            return err.notFound(`Файл с идентификатором «${fileId}» не найден`);
-
         const others = await filesContentService.getContent(fileId);
         if (others.length > 0) {
+            /**
+             * Можно ли повторить попытку извлечения содержимого файла, 
+             * если предыдущая попытка завершилась с ошибкой?
+             * Если да, то повторить попытку.
+             */
             if (query.retryIfLastFailed === true) {
                 const last = others.slice(-1)[0];
                 if (last?.meta?.extractionStatus === ExtractionStatus.FAILED) {
