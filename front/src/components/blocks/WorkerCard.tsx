@@ -1,6 +1,6 @@
 import { IconIndicator, Stack, Text } from '@miracle/aramid';
 import type { Stored, WorkerData, WorkerStatus } from '@miracle/types';
-import { WorkerIcon } from '@/components/ui/WorkerIcon';
+import { WorkerIcon } from '@/components/blocks/WorkerIcon';
 
 type WorkerCardProps = {
     worker: Stored<WorkerData>;

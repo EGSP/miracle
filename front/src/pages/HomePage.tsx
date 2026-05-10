@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { FileIcon, ListOrdered } from 'lucide-react';
-import { WorkerIcon } from '@/components/ui/WorkerIcon';
+import { WorkerIcon } from '@/components/blocks/WorkerIcon';
 import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { useAuthContext } from '@/contexts/AuthContext';

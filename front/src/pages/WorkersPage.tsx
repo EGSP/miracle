@@ -1,7 +1,7 @@
 import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Link } from '@tanstack/react-router';
 import { WorkerCard } from '@/components/blocks/WorkerCard';
-import { WorkerIcon } from '@/components/ui/WorkerIcon';
+import { WorkerIcon } from '@/components/blocks/WorkerIcon';
 import { useGetWorkers } from '@/lib/queries/workers.query';
 
 const PAGE_CONTENT = { span: 12 as const, offset: 2 as const };
