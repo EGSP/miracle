@@ -47,6 +47,29 @@
 - *«This is for inline code snippets and smaller code elements.»* — продуктивный (`code-01`).
 - *«This is for large code snippets and larger code elements.»* — экспрессивный (`code-02`).
 
+Проп **`language`** включает подсветку синтаксиса (highlight.js, тема `ascetic`). Поддерживаемые значения: `json`, `typescript`, `javascript`, `bash`, `xml`, `html`. При использовании `language` `children` должен быть строкой; для блочного кода передавайте `as="pre"`.
+
+```tsx
+<Text.Code language="json" as="pre" expressive>{'{ "key": "value" }'}</Text.Code>
+```
+
+### `Text.Area` — текстовая область
+
+Прокручиваемый read-only контейнер для отображения текстового содержимого: лог-вьюверы, блоки документа, многострочный вывод. Принимает только строку. **Не является полем ввода.**
+
+- **`variant="md"`** — фиксированная высота 160px (`--aramid-spacing-13`).
+- **`variant="lg"`** — фиксированная высота 320px (`--aramid-spacing-13 * 2`).
+- **`resizable`** — добавляет ручку resize; заданный `variant` становится минимальной высотой. Пользователь может увеличить область, но не уменьшить ниже начального размера.
+- **`expressive`** — переключает типографику: `body-01` (продуктивный, по умолчанию) / `body-02` (экспрессивный).
+
+```tsx
+// Фиксированная высота со скроллом
+<Text.Area variant="md">{longText}</Text.Area>
+
+// Растягиваемая от lg-высоты
+<Text.Area variant="lg" resizable>{documentText}</Text.Area>
+```
+
 ## Подключение стилей
 
 Импорт пакета `Text` подтягивает `aramid-text.css`. Чтобы сработали `var(--aramid-font-family-*)`, подключите собранные токены (например `@miracle/aramid/css/tokens`) **до** или вместе с приложением, как описано в документации пакета.
@@ -60,4 +83,5 @@
 | `Text.Label` | Лейблы, ошибки, captions — не body copy. |
 | `Text.Helper` | Текст под заголовком поля. |
 | `Text.Legal` | Юридический мелкий текст (продукт vs веб — через `expressive`). |
-| `Text.Code` | Инлайн и блоки кода; крупнее — `expressive`. |
+| `Text.Code` | Инлайн и блоки кода; `language` включает подсветку; крупнее — `expressive`. |
+| `Text.Area` | Read-only прокручиваемый блок текста; `variant` — высота; `resizable` — растяжка вверх. |

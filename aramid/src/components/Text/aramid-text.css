@@ -170,6 +170,38 @@
   letter-spacing: 0.16px;
 }
 
+/* Контейнер: текстовая область (area) */
+
+.aramid-text-area {
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: var(--aramid-spacing-3); /* 8px */
+  height: var(--_size, auto);
+}
+
+/* md: 160px (spacing-13) */
+.aramid-text-area--md {
+  --_size: var(--aramid-spacing-13);
+}
+
+/* lg: 320px (spacing-13 * 2) */
+.aramid-text-area--lg {
+  --_size: calc(var(--aramid-spacing-13) * 2);
+}
+
+/* Ручка resize — только вверх: пользователь может увеличить, но не уменьшить ниже --_size */
+.aramid-text-area--resizable {
+  resize: vertical;
+}
+
+/* При комбинации variant + resizable: высота становится минимальной, не фиксированной */
+.aramid-text-area--md.aramid-text-area--resizable,
+.aramid-text-area--lg.aramid-text-area--resizable {
+  height: auto;
+  min-height: var(--_size);
+}
+
 /* Утилита: юридический текст (legal) */
 
 .aramid-text-legal-01 {

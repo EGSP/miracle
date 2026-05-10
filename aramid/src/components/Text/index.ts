@@ -14,14 +14,16 @@ import { TextLabel } from './Text.Label'
 import { TextHelper } from './Text.Helper'
 import { TextLegal } from './Text.Legal'
 import { TextCode } from './Text.Code'
+import { TextArea } from './Text.Area'
 
-/** Корневой `Text` с подкомпонентами `Heading`, `Label`, `Helper`, `Legal`, `Code`. */
+/** Корневой `Text` с подкомпонентами `Heading`, `Label`, `Helper`, `Legal`, `Code`, `Area`. */
 export const Text = Object.assign(TextRoot, {
   Heading: TextHeading,
   Label: TextLabel,
   Helper: TextHelper,
   Legal: TextLegal,
   Code: TextCode,
+  Area: TextArea,
 })
 
 export type { TextBaseProps } from './Text'
@@ -31,5 +33,6 @@ export type { TextLabelBaseProps } from './Text.Label'
 export type { TextHelperBaseProps } from './Text.Helper'
 export type { TextLegalBaseProps } from './Text.Legal'
 export type { TextCodeBaseProps } from './Text.Code'
+export type { TextAreaBaseProps } from './Text.Area'
 
 export { aramidTextBaseClass, textBodyVariantClass, textHeadingVariantClass, textUtilitySuffix } from './textClassNames'
