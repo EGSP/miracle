@@ -33,7 +33,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": "tsx",
-          "endsPattern": "running on http"
+          "endsPattern": "\\[VSCode Hook\\] Attach Debugger"
         }
       }
     },

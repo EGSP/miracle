@@ -61,6 +61,7 @@ try {
     logger.info(`[back] Сервер запущен на http://localhost:${PORT}`);
     logger.info(`Время жизни access-токена: ${serverConfig.ACCESS_TOKEN_LIFETIME} (мс: ${serverConfig.ACCESS_TOKEN_LIFETIME_MS})`);
     logger.info(`Время жизни refresh-токена: ${serverConfig.REFRESH_TOKEN_LIFETIME} (мс: ${serverConfig.REFRESH_TOKEN_LIFETIME_MS})`);
+    console.log('[VSCode Hook] Attach Debugger');
   });
 } catch (error) {
   logger.error(`[back] Не удалось запустить сервер: ${error instanceof Error ? error.message : String(error)}`);
