@@ -38,6 +38,9 @@ const filesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/files',
   component: FilesPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    fileId: typeof search.fileId === 'string' ? search.fileId : undefined,
+  }),
 });
 
 const ordersRoute = createRoute({

@@ -1,4 +1,6 @@
 import { IconIndicator, Stack, Text } from '@miracle/aramid';
+import { Link } from '@tanstack/react-router';
+import { FileIcon } from 'lucide-react';
 import { WorkerStatus, getHumanReadableWorkerData } from '@miracle/types';
 import type { Stored, WorkerData } from '@miracle/types';
 import { WorkerIcon } from '@/components/blocks/WorkerIcon';
@@ -58,10 +60,16 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                 <Text.Label as="span" className="text-muted-foreground">
                     ID: {worker.id}
                 </Text.Label>
+                {worker.type === 'yandex-ocr-worker' && (
+                    <Link to="/files" search={{ fileId: worker.fileId }} className="inline-flex items-center gap-1">
+                        <FileIcon className="size-3 shrink-0" />
+                        <Text as="span" compact>Файл</Text>
+                    </Link>
+                )}
             </Stack>
 
             <div className="border border-border bg-muted/20 p-2">
-                <Text.Code as="pre" language="json" className="whitespace-pre-wrap break-all">
+                <Text.Code as="pre" language="json" variant="md">
                     {JSON.stringify(hrData, null, 2)}
                 </Text.Code>
             </div>

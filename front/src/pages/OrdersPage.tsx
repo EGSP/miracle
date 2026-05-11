@@ -1,6 +1,5 @@
-import { useMemo, useState, type MouseEventHandler } from 'react';
-import { Link } from '@tanstack/react-router';
-import { ArrowLeft, FileIcon, ListOrdered, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ListOrdered, Plus } from 'lucide-react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
 import type { FileWithMeta, Order, Stored } from '@miracle/types';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -112,11 +111,6 @@ function OrdersPageContent() {
         setSelectedOrder(next);
     };
 
-    const handleNavClick: MouseEventHandler<HTMLAnchorElement> = (event) => {
-        if (isDirtyAnywhere) {
-            event.preventDefault();
-        }
-    };
 
     return (
         <Grid
@@ -124,27 +118,13 @@ function OrdersPageContent() {
             fullWidth
             withRowGap
         >
-            <Column span={16} className="pt-8">
-                <Stack orientation="horizontal" gap={3} className="flex-wrap items-center">
-                    <Link to="/" onClick={handleNavClick} className="inline-flex items-center gap-1.5">
-                        <ArrowLeft className="size-3.5" />
-                        <Text as="span" compact expressive>
-                            На главную
-                        </Text>
-                    </Link>
-                    <Link to="/files" onClick={handleNavClick} className="inline-flex items-center gap-1.5">
-                        <FileIcon className="size-3.5" />
-                        <Text as="span" compact expressive>
-                            Список файлов
-                        </Text>
-                    </Link>
-                    <Text.Heading as="h1" variant="02">
-                        Заказы
-                    </Text.Heading>
-                </Stack>
+            <Column span={16}>
+                <Text.Heading as="h1" variant="02">
+                    Заказы
+                </Text.Heading>
             </Column>
 
-            <Column span={COL_LIST} className="min-w-0 pb-8">
+            <Column span={COL_LIST}>
                 <Stack as="section" gap={4}>
                     <Stack orientation="horizontal" gap={3} className="flex-wrap items-center justify-between">
                         <Text.Heading as="h2" variant="compact-01">
@@ -200,7 +180,7 @@ function OrdersPageContent() {
                 </Stack>
             </Column>
 
-            <Column span={COL_CARD} className="pb-8">
+            <Column span={COL_CARD}>
                 {selectedOrder ? (
                     <OrderCard
                         order={selectedOrder}

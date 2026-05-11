@@ -1,13 +1,9 @@
 import { useState } from 'react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
-import { Link } from '@tanstack/react-router';
 import type { IconIndicatorKind } from '@miracle/aramid';
 import { WorkerStatus } from '@miracle/types';
 import { WorkerCard } from '@/components/blocks/WorkerCard';
-import { WorkerIcon } from '@/components/blocks/WorkerIcon';
 import { useGetWorkers } from '@/lib/queries/workers.query';
-
-const PAGE_CONTENT = { span: 14 as const, offset: 1 as const };
 
 type WorkerGroup = {
     status: WorkerStatus;
@@ -93,53 +89,35 @@ export default function WorkersPage() {
     const selectedGroup = WORKER_GROUPS.find((g) => g.status === selectedStatus)!;
 
     return (
-        <Grid as="main" className="min-h-screen">
-            <Column span={PAGE_CONTENT} className="min-w-0 py-8">
-                <Stack gap={6} className="w-full">
-                    {/* Шапка страницы */}
-                    <Stack orientation="horizontal" gap={3} className="items-center">
-                        <WorkerIcon className="size-6" />
-                        <Stack gap={1}>
-                            <Text.Heading as="h1" variant="04">
-                                Воркеры
-                            </Text.Heading>
-                            <Text as="p" compact>
-                                Фоновые задачи сервера
-                            </Text>
-                            <Link to="/">
-                                <Text as="span" compact expressive>
-                                    На главную
-                                </Text>
-                            </Link>
-                        </Stack>
-                    </Stack>
+        <Grid as="main" withRowGap>
+            {/* Шапка */}
+            <Column span={16}>
+                <Text.Heading as="h1" variant="02">
+                    Воркеры
+                </Text.Heading>
+            </Column>
 
-                    {/* Основной контент: сайдбар + карточки */}
-                    <div className="flex min-w-0 gap-6">
-                        {/* Левый сайдбар: группы воркеров */}
-                        <div className="w-44 shrink-0">
-                            <Stack gap={1}>
-                                {WORKER_GROUPS.map((group) => (
-                                    <WorkerGroupSidebarItem
-                                        key={group.status}
-                                        {...group}
-                                        isSelected={selectedStatus === group.status}
-                                        onSelect={() => setSelectedStatus(group.status)}
-                                    />
-                                ))}
-                            </Stack>
-                        </div>
+            {/* Левый сайдбар: группы воркеров */}
+            <Column span={3}>
+                <Stack gap={1}>
+                    {WORKER_GROUPS.map((group) => (
+                        <WorkerGroupSidebarItem
+                            key={group.status}
+                            {...group}
+                            isSelected={selectedStatus === group.status}
+                            onSelect={() => setSelectedStatus(group.status)}
+                        />
+                    ))}
+                </Stack>
+            </Column>
 
-                        {/* Карточки выбранной группы */}
-                        <div className="min-w-0 flex-1">
-                            <Stack gap={3}>
-                                <Text.Heading as="h2" variant="compact-01">
-                                    {selectedGroup.label}
-                                </Text.Heading>
-                                <WorkerGroupContent status={selectedStatus} />
-                            </Stack>
-                        </div>
-                    </div>
+            {/* Карточки выбранной группы */}
+            <Column span={13}>
+                <Stack gap={3}>
+                    <Text.Heading as="h2" variant="compact-01">
+                        {selectedGroup.label}
+                    </Text.Heading>
+                    <WorkerGroupContent status={selectedStatus} />
                 </Stack>
             </Column>
         </Grid>

@@ -16,7 +16,8 @@
       "Bash(dir front\\\\src -Recurse)",
       "Bash(npm run *)",
       "Bash(npx tsc *)",
-      "Bash(node -e \"const m = require\\('./node_modules/@yandex-cloud/nodejs-sdk/dist/ai-ocr-v1'\\); console.log\\(Object.keys\\(m\\)\\)\")"
+      "Bash(node -e \"const m = require\\('./node_modules/@yandex-cloud/nodejs-sdk/dist/ai-ocr-v1'\\); console.log\\(Object.keys\\(m\\)\\)\")",
+      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\(json.dumps\\({**p.get\\('dependencies',{}\\), **p.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")"
     ]
   }
 }

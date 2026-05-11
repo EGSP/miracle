@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Link } from '@tanstack/react-router';
-import { FileIcon, ArrowLeft, Upload } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { FileIcon, Upload } from 'lucide-react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { FileDropZone } from '@/components/ui/file-dropzone';
@@ -55,6 +55,9 @@ const COL_LIST = 11 as const;
 const COL_UPLOAD = 5 as const;
 
 export default function FilesPage() {
+    const { fileId: fileIdParam } = useSearch({ from: '/files' });
+    const navigate = useNavigate({ from: '/files' });
+
     const [selectedFileInList, setSelectedFileInList] = useState<FileWithMeta | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [myFilesOnly, setMyFilesOnly] = useState(false);
@@ -64,6 +67,11 @@ export default function FilesPage() {
     });
     const filteredFiles = useFilteredFiles(files, { myFilesOnly, availableOnly });
     const uploadMutation = useUploadFile();
+
+    const handleSelectFileInList = useCallback((file: FileWithMeta | null) => {
+        setSelectedFileInList(file);
+        void navigate({ search: (prev) => ({ ...prev, fileId: file?.id }) });
+    }, [navigate]);
     const allowedExtensionsAccept = useMemo(() => getAllowedExtensions().map((extension) => `.${extension}`).join(','), []);
     const resolvePreviewUrl = useCallback((file: FileWithMeta) => {
         return `${frontConfig.API_URL}/files/${encodeURIComponent(file.id)}/content`;
@@ -79,34 +87,30 @@ export default function FilesPage() {
         });
     };
 
+    // Sync URL param → selection when files load
+    useEffect(() => {
+        if (!fileIdParam || !files) return;
+        const match = files.find((f) => f.id === fileIdParam);
+        if (match) setSelectedFileInList(match);
+    }, [fileIdParam, files]);
+
+    // Clear selection if selected file disappears from filtered list
     useEffect(() => {
         if (!selectedFileInList) return;
         if (!filteredFiles.some((file) => file.id === selectedFileInList.id)) {
-            setSelectedFileInList(null);
+            handleSelectFileInList(null);
         }
-    }, [filteredFiles, selectedFileInList]);
+    }, [filteredFiles, selectedFileInList, handleSelectFileInList]);
 
     return (
-        <Grid
-            as="main"
-            withRowGap
-            style={{ '--grid-max-width': '64rem' } as CSSProperties}
-        >
-            <Column span={16} className="pt-8">
-                <Stack orientation="horizontal" gap={3} className="flex-wrap items-center">
-                    <Link to="/" className="inline-flex items-center gap-1.5">
-                        <ArrowLeft className="size-3.5" />
-                        <Text as="span" compact expressive>
-                            На главную
-                        </Text>
-                    </Link>
-                    <Text.Heading as="h1" variant="02">
-                        Файлы
-                    </Text.Heading>
-                </Stack>
+        <Grid as="main" withRowGap>
+            <Column span={16}>
+                <Text.Heading as="h1" variant="02">
+                    Файлы
+                </Text.Heading>
             </Column>
 
-            <Column span={COL_LIST} className="min-w-0 pb-8">
+            <Column span={COL_LIST}>
                 <Stack as="section" gap={4}>
                     <Text.Heading as="h2" variant="compact-01">
                         Загруженные файлы
@@ -133,7 +137,7 @@ export default function FilesPage() {
                             <ListBox
                                 items={filteredFiles}
                                 value={selectedFileInList}
-                                onChange={setSelectedFileInList}
+                                onChange={handleSelectFileInList}
                                 getKey={(item) => item.id}
                                 className="flex flex-col gap-1 outline-none"
                             >
@@ -162,7 +166,7 @@ export default function FilesPage() {
                 </Stack>
             </Column>
 
-            <Column span={COL_UPLOAD} className="pb-8">
+            <Column span={COL_UPLOAD}>
                 <Stack as="aside" gap={4}>
                     <Text.Heading as="h2" variant="compact-01">
                         Загрузить файл

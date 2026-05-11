@@ -6,14 +6,13 @@ import { Input } from '@/components/ui/input';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useLogin, useLogout, useRegister } from '@/lib/queries/auth.query';
 
-/** Узкая колонка формы по центру сетки: 8 из 16, отступы 4+4. */
-const AUTH_CONTENT = { span: 8 as const, offset: 4 as const };
+const AUTH_CONTENT = { span: 16 as const };
 
 function authShell(children: ReactNode) {
     return (
-        <Grid as="main" className="min-h-screen">
-            <Column span={AUTH_CONTENT} className="min-w-0 py-8">
-                <Stack gap={4} className="w-full">
+        <Grid as="main">
+            <Column span={AUTH_CONTENT}>
+                <Stack gap={4}>
                     {children}
                 </Stack>
             </Column>

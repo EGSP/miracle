@@ -32,6 +32,19 @@ export interface TextCodeBaseProps {
    */
   language?: 'json' | 'typescript' | 'javascript' | 'bash' | 'xml' | 'html'
 
+  /**
+   * Ограничивает высоту блока и включает вертикальный скролл.
+   * `'md'` — 160 px, `'lg'` — 320 px (те же токены, что у `Text.Area`).
+   * Без варианта высота не ограничена.
+   */
+  variant?: 'md' | 'lg'
+
+  /**
+   * Включает горизонтальный скролл и отключает перенос строк.
+   * По умолчанию `false` — длинные строки обрезаются.
+   */
+  scrollX?: boolean
+
   /** Дочерний контент. При использовании `language` должен быть строкой. */
   children?: React.ReactNode
 
@@ -54,9 +67,15 @@ export interface TextCodeBaseProps {
 export const TextCode = React.forwardRef<
   HTMLElement,
   TextCodeBaseProps & { as?: React.ElementType } & React.HTMLAttributes<HTMLElement>
->(({ as: BaseComponent = 'code', expressive = false, language, className, children, ...rest }, ref) => {
+>(({ as: BaseComponent = 'code', expressive = false, language, variant, scrollX = false, className, children, ...rest }, ref) => {
   const suffix = textUtilitySuffix(expressive)
-  const baseClass = clsx(aramidTextBaseClass, `aramid-text-code-${suffix}`, className)
+  const baseClass = clsx(
+    aramidTextBaseClass,
+    `aramid-text-code-${suffix}`,
+    variant && `aramid-text-code--${variant}`,
+    scrollX && 'aramid-text-code--scroll-x',
+    className,
+  )
 
   if (language && typeof children === 'string') {
     const highlighted = hljs.highlight(children, { language })
