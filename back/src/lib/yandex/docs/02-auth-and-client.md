@@ -14,22 +14,19 @@ Session (учётные данные)
 
 ## Уровень 1 — API-ключ через Bearer (текущий подход проекта)
 
-API-ключ Yandex Cloud передаётся как `Authorization: Api-Key <ключ>` через параметр `headers`. Это не IAM-токен, поэтому стандартный `iamToken` здесь не подходит.
+API-ключ передаётся напрямую как значение `iamToken`. SDK отправляет `Authorization: Bearer <iamToken>` при каждом gRPC-запросе. Yandex Cloud различает тип токена по префиксу: IAM-токены начинаются с `t1.`, API-ключи — с `AQVN`. Оба формата принимаются в Bearer-заголовке.
 
 ```typescript
 import { Session } from '@yandex-cloud/nodejs-sdk';
 
 const session = new Session({
-    // Пустой IAM-токен — аутентификация через header
-    iamToken: '',
-    headers: {
-        Authorization: `Api-Key ${process.env.YANDEX_CLOUD_API_KEY}`,
-    },
+    iamToken: process.env.YANDEX_CLOUD_API_KEY,
 });
 ```
 
-> **Почему так:** SDK не имеет встроенного типа для API-ключей.
-> При каждом gRPC-запросе заголовок `Authorization` подставляется автоматически.
+> **Почему не `headers: { Authorization: 'Api-Key ...' }`:** SDK явно пропускает ключ
+> `authorization` при обработке кастомных `headers` (см. `session.js`, метод
+> `newChannelCredentials`), поэтому такой подход не работает.
 
 ---
 

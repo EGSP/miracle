@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
+import type { WorkersQuery } from '@miracle/types';
 import { workers } from '../generated';
 
-export const WORKERS_QUERY_KEY = ['workers'] as const;
+export const workersQueryKey = (params: WorkersQuery) => ['workers', params] as const;
 
-/** Список всех воркеров, обновляется каждые 3 секунды */
-export const useGetWorkers = () => {
+/** Список воркеров с фильтрацией по статусу и сортировкой. Обновляется каждые 3 секунды. */
+export const useGetWorkers = (params: WorkersQuery = {}) => {
     return useQuery({
-        queryKey: WORKERS_QUERY_KEY,
-        queryFn: () => workers.getWorkers({}),
+        queryKey: workersQueryKey(params),
+        queryFn: () => workers.getWorkers(params),
         refetchInterval: 3_000,
     });
 };

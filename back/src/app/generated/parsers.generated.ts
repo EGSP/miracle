@@ -353,16 +353,30 @@ export function parseGetWorkersQuery(raw: Record<string, unknown>) {
     const errors: Array<{ field: string; message: string }> = [];
     const result: Record<string, unknown> = {};
 
-    const raw_type = readSingleValue(raw, "type");
-    if (raw_type.missing) {
-        result["type"] = undefined;
-    } else if (raw_type.multi) {
-        errors.push({ field: "type", message: 'expected single value' });
+    const raw_status = readSingleValue(raw, "status");
+    if (raw_status.missing) {
+        result["status"] = undefined;
+    } else if (raw_status.multi) {
+        errors.push({ field: "status", message: 'expected single value' });
     } else {
-        if (typeof raw_type.value !== 'string') {
-            errors.push({ field: "type", message: 'expected string' });
+        const parsed = parseLiteral(raw_status.value, ["active","success","stopped","failed"]);
+        if (parsed === undefined) {
+            errors.push({ field: "status", message: "expected one of: active, success, stopped, failed" });
         } else {
-            result["type"] = raw_type.value;
+            result["status"] = parsed;
+        }
+    }
+    const raw_sort = readSingleValue(raw, "sort");
+    if (raw_sort.missing) {
+        result["sort"] = undefined;
+    } else if (raw_sort.multi) {
+        errors.push({ field: "sort", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_sort.value, ["asc","desc"]);
+        if (parsed === undefined) {
+            errors.push({ field: "sort", message: "expected one of: asc, desc" });
+        } else {
+            result["sort"] = parsed;
         }
     }
 

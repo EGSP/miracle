@@ -18,6 +18,9 @@ export function getYandexConfig(): YandexConfig {
         logger.warn(`Конфиг Yandex Cloud: ${JSON.stringify(config)}`);
         
         throw new Error('Yandex Cloud API-ключ или идентификатор папки не задан');
+    }else{
+        logger.env('YANDEX_CLOUD_API_KEY', apiKey);
+        logger.env('YANDEX_CLOUD_FOLDER_ID', folderId);
     }
 
     return config;

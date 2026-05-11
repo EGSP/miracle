@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import type { ServerHealthWorkerData, WorkerData } from '@miracle/types';
+import { WorkerStatus } from '@miracle/types';
 import { workersService } from '../databases/workers.db.js';
 import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
@@ -32,11 +33,11 @@ export class ServerHealthWorker extends BaseWorker {
     async mount(): Promise<void> {
         if (this.workerId) {
             // Восстановление после рестарта — повторно активируем запись
-            await workersService.update(this.workerId, { status: 'active' });
+            await workersService.update(this.workerId, { status: WorkerStatus.Active });
         } else {
             const record = await workersService.create({
                 type: this.type,
-                status: 'active',
+                status: WorkerStatus.Active,
             } satisfies WorkerData);
             this.workerId = record.id;
         }
@@ -73,7 +74,7 @@ export class ServerHealthWorker extends BaseWorker {
             await sleep(POLL_INTERVAL_MS);
         }
 
-        await workersService.update(this.workerId, { status: 'stopped' });
+        await workersService.update(this.workerId, { status: WorkerStatus.Stopped });
         logger.info('[ServerHealthWorker] Остановлен');
     }
 }

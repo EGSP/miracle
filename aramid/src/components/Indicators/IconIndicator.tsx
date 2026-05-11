@@ -9,7 +9,7 @@ import {
   Clock,
   HelpCircle,
   Info,
-  Loader2,
+  Loader,
   XCircle,
 } from 'lucide-react'
 import { Text } from '../Text'
@@ -38,7 +38,7 @@ const iconByKind: Record<(typeof IconIndicatorKinds)[number], LucideIcon> = {
   undefined: HelpCircle,
   succeeded: CircleCheck,
   normal: Circle,
-  'in-progress': Loader2,
+  'in-progress': Loader,
   incomplete: CircleDashed,
   'not-started': CircleDashed,
   pending: Clock,
@@ -92,14 +92,7 @@ export const IconIndicator = React.forwardRef<HTMLDivElement, IconIndicatorProps
 
     return (
       <div ref={ref} className={clsx('aramid-icon-indicator', className)} style={rootStyle} {...rest}>
-        <Icon
-          size={size}
-          className={clsx(
-            'aramid-icon-indicator__icon',
-            kind === 'in-progress' && 'aramid-icon-indicator__icon--spin'
-          )}
-          aria-hidden
-        />
+        <Icon size={size} className="aramid-icon-indicator__icon" aria-hidden />
         {label ? (
           <Text as="span" compact expressive={size === 20} className="aramid-icon-indicator__label">
             {label}

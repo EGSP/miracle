@@ -6,4 +6,3 @@ export * from './session.models';
 export * from './file-content.models';
 export * from './file.models';
 export * from './order.models';
-export * from './workers.models';

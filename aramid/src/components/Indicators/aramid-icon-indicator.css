@@ -3,12 +3,6 @@
  * (`--indicator-*` с fallback на токены `--aramid-color-indicator-*`).
  */
 
-@keyframes aramid-icon-indicator-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .aramid-icon-indicator {
   display: flex;
   align-items: center;
@@ -19,11 +13,6 @@
   flex-shrink: 0;
   align-self: center;
   color: var(--indicator-icon-color, var(--aramid-color-indicator-normal));
-}
-
-.aramid-icon-indicator__icon--spin {
-  transform-origin: center;
-  animation: aramid-icon-indicator-spin 0.85s linear infinite;
 }
 
 .aramid-icon-indicator__label {

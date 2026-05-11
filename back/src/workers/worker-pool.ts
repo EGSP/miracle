@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { WorkerStatus } from '@miracle/types';
 import type { Stored, WorkerData } from '@miracle/types';
 import { workersService } from '../databases/workers.db.js';
 import { logger } from '../logger/logger.js';
@@ -12,7 +13,7 @@ export class WorkerPool {
     private readonly active = new Map<string, BaseWorker>();
 
     async restore(): Promise<void> {
-        const activeRecords = workersService.query((worker) => worker.status === 'active');
+        const activeRecords = workersService.query((worker) => worker.status === WorkerStatus.Active);
 
         for (const record of activeRecords) {
             const worker = await this.createWorkerFromRecord(record);

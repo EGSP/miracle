@@ -2,7 +2,14 @@ import type { Stored } from './db.js';
 
 export type WorkerType = 'yandex-ocr-worker' | 'server-health-worker' | 'yandex-ping-worker';
 
-export type WorkerStatus = 'active' | 'stopped' | 'failed';
+export const WorkerStatus = {
+    Active: 'active',
+    Success: 'success',
+    Stopped: 'stopped',
+    Failed: 'failed',
+} as const;
+
+export type WorkerStatus = typeof WorkerStatus[keyof typeof WorkerStatus];
 
 export type BaseWorkerData = {
     type: WorkerType;
@@ -45,6 +52,12 @@ export type WorkerData = YandexOcrWorkerData | ServerHealthWorkerData | YandexPi
 /** Человекочитаемое представление данных воркера — плоский объект без заранее известной схемы. */
 export type HumanReadableWorkerData = Record<string, unknown>;
 
+export type WorkersQuery = {
+    status?: WorkerStatus;
+    /** Порядок сортировки по дате создания. По умолчанию — без сортировки (порядок хранения). */
+    sort?: 'asc' | 'desc';
+};
+
 function formatBytes(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -54,6 +67,23 @@ function formatBytes(bytes: number): string {
 
 function formatTimestamp(ts: number): string {
     return new Date(ts).toLocaleString();
+}
+
+/**
+ * Пробует распарсить строку как JSON.
+ * Если строка является валидным JSON — возвращает распарсенное значение (объект/массив/число и т.д.),
+ * иначе возвращает исходную строку.
+ *
+ * Используется чтобы избежать двойного экранирования: если в БД хранится JSON-строка
+ * (например, сериализованный объект ошибки), то при финальном JSON.stringify в UI
+ * она не превратится в строку со слешами, а останется нормальным вложенным объектом.
+ */
+function tryParseJson(value: string): unknown {
+    try {
+        return JSON.parse(value);
+    } catch {
+        return value;
+    }
 }
 
 /**
@@ -94,7 +124,7 @@ export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanRea
                 'Файл': worker.fileId,
                 'Тип файла': worker.mimeType,
                 'Операция завершена': worker.operationDone ? 'да' : 'нет',
-                ...(worker.operationErrorMessage != null && { 'Ошибка': worker.operationErrorMessage }),
+                ...(worker.operationErrorMessage != null && { 'Ошибка': tryParseJson(worker.operationErrorMessage) }),
                 ...(worker.operationResult != null && { 'Результат': worker.operationResult }),
             };
 

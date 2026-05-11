@@ -5,10 +5,10 @@
       "status": "active",
       "id": "c9fa72af-2854-4c4f-89cc-dd5d828688ab",
       "createdAt": 1778419959448,
-      "updatedAt": 1778496946481,
+      "updatedAt": 1778505694476,
       "diskTotalBytes": 479437250560,
-      "diskUsedBytes": 370790363136,
-      "diskAvailableBytes": 108646887424,
+      "diskUsedBytes": 367668031488,
+      "diskAvailableBytes": 111769219072,
       "diskUsedPercent": 77
     },
     {
@@ -16,9 +16,110 @@
       "status": "active",
       "id": "00674198-95c5-4d96-bb27-897d47fc90ac",
       "createdAt": 1778419959448,
-      "updatedAt": 1778496942338,
-      "latencyMs": 206,
-      "lastPingedAt": 1778496942338
+      "updatedAt": 1778505690842,
+      "latencyMs": 1394,
+      "lastPingedAt": 1778505690842
+    },
+    {
+      "type": "yandex-ocr-worker",
+      "status": "failed",
+      "fileId": "30be2045-ca82-4f6a-8a6c-f02d93505ae1",
+      "fileContentId": "b3545e69-5d48-41a7-a826-de504adb8076",
+      "mimeType": "image/png",
+      "operationDone": true,
+      "id": "cd8a4f3e-31e0-4732-a86d-7baf8088d8e9",
+      "createdAt": 1778501907052,
+      "updatedAt": 1778501909476,
+      "operationErrorMessage": "/yandex.cloud.ai.ocr.v1.TextRecognitionAsyncService/Recognize UNAUTHENTICATED: IAM token or API key has to be passed in request"
+    },
+    {
+      "type": "yandex-ocr-worker",
+      "status": "failed",
+      "fileId": "30be2045-ca82-4f6a-8a6c-f02d93505ae1",
+      "fileContentId": "5fe5d32b-c88f-4000-a8ab-feea5e090cef",
+      "mimeType": "image/png",
+      "operationDone": true,
+      "id": "37ba6774-aa86-401d-a552-861324198c06",
+      "createdAt": 1778501970511,
+      "updatedAt": 1778501975701,
+      "operationErrorMessage": "/yandex.cloud.ai.ocr.v1.TextRecognitionAsyncService/Recognize UNAUTHENTICATED: IAM token or API key has to be passed in request"
+    },
+    {
+      "type": "yandex-ocr-worker",
+      "status": "failed",
+      "fileId": "30be2045-ca82-4f6a-8a6c-f02d93505ae1",
+      "fileContentId": "a4dc401f-d70a-47dd-bdf0-7943102f5866",
+      "mimeType": "image/png",
+      "operationDone": true,
+      "id": "9a4f55ba-0f79-41cc-8a12-e2ebaf5e0ea6",
+      "createdAt": 1778502418638,
+      "updatedAt": 1778502420096,
+      "operationErrorMessage": "/yandex.cloud.ai.ocr.v1.TextRecognitionAsyncService/Recognize UNAUTHENTICATED: IAM token or API key has to be passed in request"
+    },
+    {
+      "type": "yandex-ocr-worker",
+      "status": "failed",
+      "fileId": "30be2045-ca82-4f6a-8a6c-f02d93505ae1",
+      "fileContentId": "d6ab9c52-8f77-4e9c-936f-8733e190d5cb",
+      "mimeType": "image/png",
+      "cloudOperationId": "cfr7p9k40h1s80kmh2rm",
+      "operationDone": true,
+      "id": "7842581e-b26f-4a25-a1b7-3e0f3d4021b7",
+      "createdAt": 1778503016408,
+      "updatedAt": 1778503019241,
+      "operationErrorMessage": "[object Object]"
+    },
+    {
+      "type": "yandex-ocr-worker",
+      "status": "failed",
+      "fileId": "30be2045-ca82-4f6a-8a6c-f02d93505ae1",
+      "fileContentId": "ce5ed001-4762-4910-ac66-02402fd10d78",
+      "mimeType": "image/png",
+      "cloudOperationId": "cfrgonuvq2ao66rmdnc4",
+      "operationDone": true,
+      "id": "38a0b205-9cf6-4bba-be30-36795b085667",
+      "createdAt": 1778503165682,
+      "updatedAt": 1778503168517,
+      "operationErrorMessage": "{\"id\":\"cfrgonuvq2ao66rmdnc4\",\"description\":\"OCR async recognition\",\"createdBy\":\"aje9ootmkmqotsqfsfa1\",\"done\":true,\"createdAt\":\"2026-05-11T12:39:26.000Z\",\"modifiedAt\":\"2026-05-11T12:39:27.000Z\",\"error\":{\"code\":3,\"message\":\"Incorrect number of language codes: 0\",\"details\":[]}}"
+    },
+    {
+      "type": "yandex-ocr-worker",
+      "status": "success",
+      "fileId": "30be2045-ca82-4f6a-8a6c-f02d93505ae1",
+      "fileContentId": "993bd1c8-5870-4d92-80e6-e49e362d982b",
+      "mimeType": "image/png",
+      "cloudOperationId": "cfrk6em7rrdqof28eorh",
+      "operationDone": true,
+      "id": "3fb97bc9-c06b-4e9a-91e1-aa1c5c10fd20",
+      "createdAt": 1778505556999,
+      "updatedAt": 1778505560373,
+      "operationResult": "<MINDUSTRY\nСделать\nпиздатый мод\nна Java\n77 рублей\nСделать донейшн\nаккаунт\nBuyly occasity\nСделать\nклассную карту\nЗавести расчетный\nсчет в банке (зеленый)\nПопросить денег в\nдискорде игры\nСподвигнуть кого-то\nорганизовать турнир\nВыиграть турнир с призовым\nфондом из человека >77рублой\nЗарегаться на площадке\nпродажи цифровых вещей\nПродать копию игры\n(скачанную бесплатно)\nза 77+ рублей\nУслуги\nХудожник\nМузыкант\nПрограммист\nДруг на час\nВернуть деньги за игру\nРеклама\nНабрать 10.000 просмотров\nper\\video\nДонаты\n"
+    },
+    {
+      "type": "yandex-ocr-worker",
+      "status": "success",
+      "fileId": "85ddedc4-f933-4fe6-b93a-935594a31921",
+      "fileContentId": "10f03bd8-6ac4-420d-bcd2-6f4e14c46306",
+      "mimeType": "image/png",
+      "cloudOperationId": "cfrr6h6fmuq9c94h8gqu",
+      "operationDone": true,
+      "id": "7b32b0c3-3973-4bff-af3a-fe06d0a55dc2",
+      "createdAt": 1778505605141,
+      "updatedAt": 1778505610022,
+      "operationResult": "58...\nВыберите модуль!\n3s 3s\nСканер брони Х7\nвенный чип\nБОЖЕСТВЕННЫЙ ЧИП 19000\nФормшейпер X-Mold\nli ловальној System: Пытаюсь переподключиться к\nчату...\n5% шанс нанести колоссальный\nурон.\n72\n|\nСистема: Присоединился к каналу GLOBAL\n308\n[Глобально] System: Пытаюсь переподключиться к\nчату...\n5000 Урона\n145\n[Глобально] System: Пытаюсь переподключиться к\nчату...\nМОДИФИКАЦИЯ ОРУЖИЯ\nГлобально Пишите здесь...\n3497\n1900\nДва-Z\nShift\nBack\nRMB\n35 |\n"
+    },
+    {
+      "type": "yandex-ocr-worker",
+      "status": "success",
+      "fileId": "312f784d-7414-4805-bdf7-aaf96ccb040d",
+      "fileContentId": "c22c8c46-9281-495b-884d-74bad8704a7e",
+      "mimeType": "application/pdf",
+      "cloudOperationId": "cfrpvvvck9val7lv5h4a",
+      "operationDone": true,
+      "id": "42fc2f97-e889-43af-bde2-f1a173c82e27",
+      "createdAt": 1778505612654,
+      "updatedAt": 1778505618556,
+      "operationResult": "hh\n|\nВасечкин Сергей Валерьевич\nМужчина, 24 вода, родился 17 апреля 2000\n+7 (958) 0620776 —  предпочитаемый способ связи • Telegram, WhatsApp\ncergeyvaltep@mail.ru\nПроживает: Челябинск\nГражданство: Россия, есть разрешение на работу: Россия\nНе готов к переезду, готов к редким командировкам\nЖелаемая должность и зарплата\nАналитик\n100 000\nСпециализации:\nP\n—\nБизнес-аналитик\n—\nФинансовый аналитик, инвестиционный аналитик\n—\nЭкономист\nЗанятость: полная занятость\nГрафик работы: полный день, сменный график, гибкий график, удаленная работа\nЖелательное время в пути до работы: не более часа\nОпыт работы — 2 года 5 месяцев\nАвгуст 2024 —\nнастоящее время\n8 месяцев\nПервый БИТ\nЧелябинск, www.1cbit.ru/\nИнформационные технологии, системная интеграция, интернет\n• Системная интеграция, автоматизации технологических и бизнес-процессов\nпредприятия, ИТ-консалтинг\nКонсультан-аналитик 1С\n- Проектная деятельность\n-\nФормирование ТЗ на разработку ПО\n-\nВнедрение ПО\n-\nПоддержка и развитие уже внедренного продукта\n-\nСбор,систематизация и согласование бизнес и функциональных требований.\n-\nАнализировал и требования клиентов к ПО\n-\nРазрабатывал архитектурные модели решений\n-\nСоставлял технические задания и формулировал задани для разработчиков\n-\nОказывать поддержку разработчикам и разъяснять сложные моменты в задачах;\n-\nПроводил тестирование созданного функционала\n- Организовывать обучение и демонстрации разработанных решений для клиентов на\nпримерах.\n-\nОписание бизнесс-пооцессов BPMN нотации.\n- Описание функциональных возможностейпрограммного продукта, интеграций, мэппинга\nданных, правил миграции данных.\n-Администрирую проект Jira и Confluence (вики), ведение документации.\n- Администрирование в рамках сопровождения SD.\nИюль 2023 —\nИюль 2024\nЭкм\nЧелябинск, ekm174.ru\n1 под 1 месяц\nЭнергетика\n• Передача, распределение электроэнергии\nЭкономист\nРезюме обновлено 6 марта 2025 в 10:18\n\n\n- Взаимодействие с Министерством тарифного регули ро ва ния и энерге ти ки Че ля бин ской\nобласти, УФАС\n-Формирование управленческой отчётности\n-Контроль работы отдела, регламентация и оптимизация процессов\n- Расчет и ведение договоров технологического присоединение к электрическим сетям\nМарт 2023 —\nИюль 2023\n5 месяцев\nВнешЭкономАудит\nЧелябинск, vea74.ru\nФинансовый сектор\n• Аудит, управленческий учет, финансово-юридический консалтинг\nАссистент аудитора\nПомощь в проведении аудиторской проверки.\nСентябрь 2022 —\nДекабрь 2022\n4 месяца\nСоюз «Южно-Уральская Торгово-промышленная палата»\nЧелябинск, tpp74.ru\nПомощник оценщика\nОценочная деятельность в сфере недвижимости и оборудования.\nОбразование\nМагистр\n2023\nЮжно-Уральский государственный университет (Национальный\nисследовательский университет), Челябинск\nВысшая школа экономики и управления, Экономическая безопасность,\nСудебно-экономическая экспертиза\nНавыки\nЗнание языков\nРусский — Родной\nАнглийский — А2 — Элементарный\nНавыки\nЭкономический анализ\nФинансовая отчетность\nФормирование бюджета\nCRM\nMS Office\nОптимизация бизнес-процессов\nАвтоматизация\nАналитическое мышление\nАвтоматизация управленческой отчетности\nАнализ финансовых показателей\nРасчет себестоимости\nРазработка бизнес-плана\nБизнес-анализ\nMS Excel\nВедение переговоров\n1С: Предприятие 8\nERP-системы на базе 1С\nВасечкин Сергей • Резюме обновлено 6 марта 2025 в 10:18\n"
     }
   ]
 }

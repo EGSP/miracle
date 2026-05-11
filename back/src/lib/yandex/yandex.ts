@@ -26,12 +26,10 @@ class Yandex {
     getSession(): Session {
         if (!this.session) {
             const { apiKey } = this.getConfig();
-            this.session = new Session({
-                iamToken: '',
-                headers: {
-                    Authorization: `Api-Key ${apiKey}`,
-                },
-            });
+            // SDK всегда посылает `Authorization: Bearer <iamToken>`.
+            // Yandex Cloud различает тип токена по префиксу: IAM-токены начинаются с `t1.`,
+            // API-ключи — с `AQVN`. Оба формата принимаются в Bearer-заголовке.
+            this.session = new Session({ iamToken: apiKey });
         }
 
         return this.session;

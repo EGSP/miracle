@@ -1,23 +1,27 @@
 import { IconIndicator, Stack, Text } from '@miracle/aramid';
-import type { Stored, WorkerData, WorkerStatus } from '@miracle/types';
-import { getHumanReadableWorkerData } from '@miracle/types';
+import { WorkerStatus, getHumanReadableWorkerData } from '@miracle/types';
+import type { Stored, WorkerData } from '@miracle/types';
 import { WorkerIcon } from '@/components/blocks/WorkerIcon';
 
 type WorkerCardProps = {
     worker: Stored<WorkerData>;
 };
 
-function getStatusIndicator(status: WorkerStatus): {
+function getStatusIndicator(status: string): {
     kind: 'succeeded' | 'failed' | 'in-progress';
     label: string;
 } {
     switch (status) {
-        case 'active':
+        case WorkerStatus.Active:
             return { kind: 'in-progress', label: 'Выполняется' };
-        case 'stopped':
+        case WorkerStatus.Success:
+            return { kind: 'succeeded', label: 'Выполнен' };
+        case WorkerStatus.Stopped:
             return { kind: 'succeeded', label: 'Остановлен' };
-        case 'failed':
+        case WorkerStatus.Failed:
             return { kind: 'failed', label: 'Ошибка' };
+        default:
+            return { kind: 'in-progress', label: status };
     }
 }
 

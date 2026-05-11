@@ -2,9 +2,10 @@ import fs from 'fs/promises';
 import { waitForOperation } from '@yandex-cloud/nodejs-sdk';
 import { ocrService } from '@yandex-cloud/nodejs-sdk/ai-ocr-v1';
 import { operation } from '@yandex-cloud/nodejs-sdk/operation';
-import { ExtractionStatus, ExtractionType, type Content } from '@miracle/types';
+import { ExtractionStatus, ExtractionType, WorkerStatus, type Content } from '@miracle/types';
 import type { WorkerData } from '@miracle/types';
 import { yandex } from '../lib/yandex/yandex.js';
+import type { AsyncOcrClient } from '../lib/yandex/yandex-sdk.types.js';
 import { filesContentService } from '../databases/file-content.db.js';
 import { filesService, getFilePath } from '../databases/file.db.js';
 import { workersService } from '../databases/workers.db.js';
@@ -17,25 +18,6 @@ type YandexOcrWorkerParams = {
     mimeType: string;
     existingCloudOperationId?: string;
     existingWorkerId?: string;
-};
-
-/**
- * Минимальный интерфейс async OCR-клиента с промисифицированными вызовами.
- *
- * Yandex SDK промисифицирует gRPC unary-вызовы в рантайме, однако TypeScript-типы
- * из `@grpc/grpc-js` описывают только callback-API. Этот тип отражает
- * фактическое runtime-поведение методов, которые мы используем.
- *
- * Отдельно: поле `folderId` не описано в proto-контракте `RecognizeTextRequest`,
- * но принимается gRPC-сервисом через механизм неизвестных полей proto3.
- */
-type AsyncOcrClient = {
-    recognize(
-        request: ocrService.RecognizeTextRequest & { folderId?: string },
-    ): Promise<operation.Operation>;
-    getRecognition(
-        request: ocrService.GetRecognitionRequest,
-    ): AsyncIterable<ocrService.RecognizeTextResponse>;
 };
 
 export class YandexOcrWorker extends BaseWorker {
@@ -60,7 +42,7 @@ export class YandexOcrWorker extends BaseWorker {
         if (!this.workerId) {
             const worker = await workersService.create({
                 type: this.type,
-                status: 'active',
+                status: WorkerStatus.Active,
                 fileId: this.fileId,
                 fileContentId: this.fileContentId,
                 mimeType: this.mimeType,
@@ -72,7 +54,7 @@ export class YandexOcrWorker extends BaseWorker {
         }
 
         await workersService.update(this.workerId, {
-            status: 'active',
+            status: WorkerStatus.Active,
             cloudOperationId: this.cloudOperationId,
         });
     }
@@ -85,7 +67,7 @@ export class YandexOcrWorker extends BaseWorker {
 
             if (!this.cloudOperationId) {
                 this.cloudOperationId = await this.startRecognition();
-                await workersService.update(this.workerId, { status: 'active', cloudOperationId: this.cloudOperationId });
+                await workersService.update(this.workerId, { status: WorkerStatus.Active, cloudOperationId: this.cloudOperationId });
             }
 
             const session = yandex.getSession();
@@ -124,9 +106,9 @@ export class YandexOcrWorker extends BaseWorker {
                 operationErrorMessage: undefined,
             });
 
-            await this.markStopped();
+            await this.markSuccess();
         } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
+            const message = YandexOcrWorker.extractErrorMessage(error);
             logger.error(`[YandexOcrWorker] Ошибка обработки файла "${this.fileId}": ${message}`);
 
             await filesContentService.update({
@@ -143,7 +125,7 @@ export class YandexOcrWorker extends BaseWorker {
                 await workersService.update(this.workerId, {
                     operationDone: true,
                     operationErrorMessage: message,
-                    status: 'failed',
+                    status: WorkerStatus.Failed,
                 });
             }
         }
@@ -166,7 +148,9 @@ export class YandexOcrWorker extends BaseWorker {
             mimeType: this.mimeType,
             content: fileData,
             folderId: yandexConfig.folderId,
-            languageCodes: [],
+            languageCodes: [
+                'ru',
+            ],
             model: '',
         });
 
@@ -191,13 +175,13 @@ export class YandexOcrWorker extends BaseWorker {
         return pages;
     }
 
-    private async markStopped(): Promise<void> {
-        if (!this.workerId) {
-            return;
-        }
+    private async markSuccess(): Promise<void> {
+        if (!this.workerId) return;
+        await workersService.update(this.workerId, { status: WorkerStatus.Success });
+    }
 
-        await workersService.update(this.workerId, {
-            status: 'stopped',
-        });
+    private async markStopped(): Promise<void> {
+        if (!this.workerId) return;
+        await workersService.update(this.workerId, { status: WorkerStatus.Stopped });
     }
 }
