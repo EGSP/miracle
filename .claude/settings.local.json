@@ -15,7 +15,8 @@
       "Bash(npm install *)",
       "Bash(dir front\\\\src -Recurse)",
       "Bash(npm run *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(node -e \"const m = require\\('./node_modules/@yandex-cloud/nodejs-sdk/dist/ai-ocr-v1'\\); console.log\\(Object.keys\\(m\\)\\)\")"
     ]
   }
 }

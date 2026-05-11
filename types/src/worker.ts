@@ -1,4 +1,4 @@
-import type { Stored } from './db';
+import type { Stored } from './db.js';
 
 export type WorkerType = 'yandex-ocr-worker' | 'server-health-worker' | 'yandex-ping-worker';
 

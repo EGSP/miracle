@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import { waitForOperation } from '@yandex-cloud/nodejs-sdk';
 import { ocrService } from '@yandex-cloud/nodejs-sdk/ai-ocr-v1';
+import { operation } from '@yandex-cloud/nodejs-sdk/operation';
 import { ExtractionStatus, ExtractionType, type Content } from '@miracle/types';
 import type { WorkerData } from '@miracle/types';
 import { yandex } from '../lib/yandex/yandex.js';
@@ -16,6 +17,25 @@ type YandexOcrWorkerParams = {
     mimeType: string;
     existingCloudOperationId?: string;
     existingWorkerId?: string;
+};
+
+/**
+ * Минимальный интерфейс async OCR-клиента с промисифицированными вызовами.
+ *
+ * Yandex SDK промисифицирует gRPC unary-вызовы в рантайме, однако TypeScript-типы
+ * из `@grpc/grpc-js` описывают только callback-API. Этот тип отражает
+ * фактическое runtime-поведение методов, которые мы используем.
+ *
+ * Отдельно: поле `folderId` не описано в proto-контракте `RecognizeTextRequest`,
+ * но принимается gRPC-сервисом через механизм неизвестных полей proto3.
+ */
+type AsyncOcrClient = {
+    recognize(
+        request: ocrService.RecognizeTextRequest & { folderId?: string },
+    ): Promise<operation.Operation>;
+    getRecognition(
+        request: ocrService.GetRecognitionRequest,
+    ): AsyncIterable<ocrService.RecognizeTextResponse>;
 };
 
 export class YandexOcrWorker extends BaseWorker {
@@ -65,18 +85,14 @@ export class YandexOcrWorker extends BaseWorker {
 
             if (!this.cloudOperationId) {
                 this.cloudOperationId = await this.startRecognition();
-                await workersService.update(this.workerId, { status: 'active' });
-                await workersService.update(this.workerId, { cloudOperationId: this.cloudOperationId });
+                await workersService.update(this.workerId, { status: 'active', cloudOperationId: this.cloudOperationId });
             }
 
             const session = yandex.getSession();
-            const asyncClient = session.client(ocrService.TextRecognitionAsyncServiceClient);
+            const asyncClient = session.client(ocrService.TextRecognitionAsyncServiceClient) as unknown as AsyncOcrClient;
 
             const finished = await waitForOperation(
-                {
-                    id: this.cloudOperationId,
-                    done: false,
-                } as any,
+                operation.Operation.fromPartial({ id: this.cloudOperationId, done: false }),
                 session,
             );
 
@@ -144,28 +160,31 @@ export class YandexOcrWorker extends BaseWorker {
 
         const yandexConfig = yandex.getConfig();
         const session = yandex.getSession();
-        const asyncClient = session.client(ocrService.TextRecognitionAsyncServiceClient);
-        const operation = await asyncClient.recognize({
+        const asyncClient = session.client(ocrService.TextRecognitionAsyncServiceClient) as unknown as AsyncOcrClient;
+
+        const op = await asyncClient.recognize({
             mimeType: this.mimeType,
             content: fileData,
             folderId: yandexConfig.folderId,
-        } as any);
+            languageCodes: [],
+            model: '',
+        });
 
-        if (!operation.id) {
+        if (!op.id) {
             throw new Error('Yandex OCR не вернул идентификатор операции');
         }
 
-        return operation.id;
+        return op.id;
     }
 
-    private async readPages(asyncClient: any): Promise<Content[]> {
-        const stream = asyncClient.getRecognition({ operationId: this.cloudOperationId } as any);
+    private async readPages(asyncClient: AsyncOcrClient): Promise<Content[]> {
+        const stream = asyncClient.getRecognition({ operationId: this.cloudOperationId ?? '' });
         const pages: Content[] = [];
 
-        for await (const page of stream as AsyncIterable<any>) {
+        for await (const page of stream) {
             pages.push({
-                page: page?.page,
-                text: page?.textAnnotation?.fullText,
+                page: page.page,
+                text: page.textAnnotation?.fullText,
             });
         }
 
