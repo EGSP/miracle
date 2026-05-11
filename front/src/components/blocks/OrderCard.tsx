@@ -127,28 +127,6 @@ function OrderCardFile({ files }: { files: FileWithMeta[] }) {
     );
 }
 
-function OrderCardRequirements({ order }: { order: Stored<Order> }) {
-    return (
-        <Stack gap={1}>
-            <Text.Label as="span">Требования</Text.Label>
-            {order.requirements && order.requirements.length > 0 ? (
-                <ul className="list-disc pl-5">
-                    {order.requirements.map((requirement, index) => (
-                        <li key={`${requirement.name}-${index}`}>
-                            <Text as="span" compact>
-                                {requirement.name}: {requirement.value}
-                            </Text>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <Text as="span" compact>
-                    Требования не указаны
-                </Text>
-            )}
-        </Stack>
-    );
-}
 
 function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
     const isDirty = useDirtyStore<OrderCardDirtyState, boolean>((state) => state.isDirty);
@@ -214,9 +192,6 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
                     <FileCard file={selectedFile} />
                 </Column>
             ) : null}
-            <Column span={16}>
-                <OrderCardRequirements order={order} />
-            </Column>
             {updateOrderMutation.isError ? (
                 <Column span={16}>
                     <Text as="p" compact className="text-destructive">
@@ -230,7 +205,7 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
 
 export function OrderCard({ order, files, onOrderSaved }: OrderCardProps) {
     return (
-        <DirtyProvider<OrderCardDirtyState> id="order-card" initial={{ orderId: order.id, fileId: order.fileId }} key={order.id}>
+        <DirtyProvider<OrderCardDirtyState> id="order-card" initial={{ orderId: order.id, fileId: order.fileId ?? undefined }} key={order.id}>
             <OrderCardBody order={order} files={files} onOrderSaved={onOrderSaved} />
         </DirtyProvider>
     );

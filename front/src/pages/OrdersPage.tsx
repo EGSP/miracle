@@ -81,9 +81,7 @@ function OrdersPageContent() {
     const [myOrdersOnly, setMyOrdersOnly] = useState(false);
     const [withFileOnly, setWithFileOnly] = useState<TriStateValue>(undefined);
 
-    const { data: orders, isLoading: isOrdersLoading, error: ordersError } = useGetOrders({
-        includeRequirements: true,
-    });
+    const { data: orders, isLoading: isOrdersLoading, error: ordersError } = useGetOrders();
     const createOrderMutation = useCreateOrder();
     const { data: files, isLoading: isFilesLoading, error: filesError } = useGetFiles({
         includeMeta: true,

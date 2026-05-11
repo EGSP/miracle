@@ -1,30 +1,29 @@
+export const ProductCategory = {
+    NEMS: 'НЭМС',
+    Bushing: 'Втулка',
+} as const;
+export type ProductCategory = typeof ProductCategory[keyof typeof ProductCategory];
+
+export type OrderRequirement = {
+    point: string;
+    description: string;
+};
+
+export type OrderDetails = {
+    clientCompanyName?: string;
+    productCategory?: ProductCategory;
+    requirements?: OrderRequirement[];
+};
+
 export type Order = {
     authorId: string;
-    fileId?: string;
-
-    requirements?: OrderRequirement[];
-}
-
-/**
- * Требования к заказу. 
- * Например:
- * - "Материал: дерево"
- * - "Цвет: красный"
- * - "Размер: 100x100"
- * - "Количество: 10"
- * - "Цена: 1000"
- * - "Срок выполнения: 10 дней"
- * - "Статус: в работе"
- * - "Статус: выполнен"
- */
-export type OrderRequirement = {
-    name: string;
-    value: string;
-}
+    fileId?: string | null;
+    analysedDetails?: OrderDetails | null;
+    redactedDetails?: OrderDetails | null;
+};
 
 export type OrderQuery = {
     id?: string;
     authorId?: string;
     fileId?: string;
-    includeRequirements?: boolean;
 }

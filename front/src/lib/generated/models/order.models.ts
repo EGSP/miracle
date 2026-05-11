@@ -3,8 +3,4 @@
 
 export type CreateOrderDTO = {
     fileId?: string;
-}
-
-export type UpdateOrderDTO = {
-    fileId?: string;
-}
+};

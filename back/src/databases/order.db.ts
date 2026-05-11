@@ -23,7 +23,7 @@ export const ordersService = {
                 throw new Error('File not found');
         }
 
-        return await orderDb.create({ authorId, fileId });
+        return await orderDb.create({ authorId, fileId, analysedDetails: null, redactedDetails: null });
     },
 
     get: async (id: string): Promise<Stored<Order> | undefined> => {
@@ -45,24 +45,15 @@ export const ordersService = {
             }
 
             return true;
-        }).map((order) => {
-            if (query.includeRequirements) {
-                return order;
-            }
-
-            return {
-                ...order,
-                requirements: undefined,
-            };
         });
     },
 
-    update: async (order: Stored<Order>) => {
-        const existingOrder = await ordersService.get(order.id);
-        if(!existingOrder)
+    update: async (id: string, patch: Partial<Omit<Order, 'authorId'>>) => {
+        const existing = await ordersService.get(id);
+        if (!existing)
             throw new Error('Order not found');
 
-        return await orderDb.update(order.id, order);
+        return await orderDb.update(id, { ...existing, ...patch });
     }
 
 

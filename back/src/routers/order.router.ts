@@ -7,11 +7,9 @@ import { ordersService } from "../databases/order.db.js";
 
 type CreateOrderDTO = {
     fileId?: string;
-}
+};
 
-type UpdateOrderDTO = {
-    fileId?: string;
-}
+type UpdateOrderDTO = Partial<Pick<Order, 'fileId' | 'redactedDetails'>>;
 
 const createOrder = route.post('/create', {
     handler: async ({ locals, body }: { locals: Record<string, unknown>, body: CreateOrderDTO }) => {
@@ -52,23 +50,23 @@ const updateOrder = route.put('/:id', {
             return err.notFound('Order not found');
         }
 
-        if (body.fileId) {
+        if (body.fileId != null) {
             const file = await filesService.get(body.fileId);
             if (!file) {
                 return err.notFound('File not found');
             }
         }
 
-        const updatedOrder = await ordersService.update({
-            ...existingOrder,
+        const updated = await ordersService.update(params.id, {
             fileId: body.fileId,
+            redactedDetails: body.redactedDetails,
         });
 
-        if (!updatedOrder) {
+        if (!updated) {
             return err.notFound('Order not found');
         }
 
-        return updatedOrder satisfies Stored<Order>;
+        return updated satisfies Stored<Order>;
     },
 });
 

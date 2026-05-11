@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { Order, OrderQuery, Stored } from '@miracle/types';
-import type { CreateOrderDTO, UpdateOrderDTO } from './models';
+import type { CreateOrderDTO } from './models';
 
 export const order = {
     createOrder: (createOrderDTO: CreateOrderDTO) => customInstance<Stored<Order>>({
@@ -21,9 +21,9 @@ export const order = {
         url: '/order',
         params: orderQuery,
     }),
-    updateOrder: (params: { id: string; }, updateOrderDTO: UpdateOrderDTO) => customInstance<Stored<Order>>({
+    updateOrder: (params: { id: string; }, body: Partial<Pick<Order, "fileId" | "redactedDetails">>) => customInstance<Stored<Order>>({
         method: 'PUT',
         url: formatPath('/order/:id', params),
-        data: updateOrderDTO,
+        data: body,
     }),
 };
