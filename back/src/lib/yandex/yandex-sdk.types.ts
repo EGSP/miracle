@@ -29,6 +29,7 @@
  */
 
 import { ocrService } from '@yandex-cloud/nodejs-sdk/ai-ocr-v1';
+import { textGenerationService } from '@yandex-cloud/nodejs-sdk/ai-foundation_models-v1';
 import { operation } from '@yandex-cloud/nodejs-sdk/operation';
 
 /**
@@ -45,6 +46,31 @@ import { operation } from '@yandex-cloud/nodejs-sdk/operation';
  * Отдельно: `folderId` не описан в proto-контракте `RecognizeTextRequest`,
  * но принимается gRPC-сервисом через механизм неизвестных полей proto3.
  */
+/**
+ * Промисифицированный клиент асинхронной генерации текста (YandexGPT).
+ *
+ * Оригинал: `textGenerationService.TextGenerationAsyncServiceClient`
+ *
+ * Unary-методы:
+ * - `completion` — запускает генерацию, возвращает `Operation`
+ */
+export type AsyncLlmClient = {
+    completion(
+        request: textGenerationService.CompletionRequest,
+    ): Promise<operation.Operation>;
+};
+
+/**
+ * Промисифицированный клиент сервиса операций Yandex Cloud.
+ *
+ * Оригинал: `operationService.OperationServiceClient`
+ *
+ * Используется для однократной проверки статуса операции без блокирующего polling.
+ */
+export type AsyncOperationClient = {
+    get(request: { operationId: string }): Promise<operation.Operation>;
+};
+
 export type AsyncOcrClient = {
     recognize(
         request: ocrService.RecognizeTextRequest & { folderId?: string },
