@@ -13,6 +13,68 @@
       "id": "be9cf280-0c2a-4af6-b107-4b2e99615cf3",
       "createdAt": 1777985445252,
       "updatedAt": 1778043788563
+    },
+    {
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "fileId": "312f784d-7414-4805-bdf7-aaf96ccb040d",
+      "analysedDetails": {
+        "clientCompanyName": "",
+        "productCategory": "НЭМС",
+        "requirements": [
+          {
+            "point": "100 000",
+            "description": "Аналитик"
+          }
+        ]
+      },
+      "id": "aca2e242-da66-45ee-8ecc-56b9ea3861ec",
+      "createdAt": 1778530094776,
+      "updatedAt": 1778530538626
+    },
+    {
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "fileId": "5db9f8f0-93c9-4226-8c5f-ea209264f868",
+      "analysedDetails": null,
+      "id": "69952e8e-f066-4683-92b1-57955f81062b",
+      "createdAt": 1778530564156,
+      "updatedAt": 1778530569642
+    },
+    {
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "fileId": "0981f2f6-696e-40d7-888b-5bf14ccd15a8",
+      "analysedDetails": {
+        "clientCompanyName": "ООО ОБИС ЭНЕРГОМОНТАЖ",
+        "productCategory": "НЭМС",
+        "requirements": [
+          {
+            "point": "D*s, мм",
+            "description": "Размеры стального трубопровода"
+          },
+          {
+            "point": "В-10",
+            "description": "Марка стали трубопровода"
+          },
+          {
+            "point": "D*s, мм",
+            "description": "Размеры полиэтиленовой трубы"
+          },
+          {
+            "point": "ПЭ100 ГАЗ SDR11",
+            "description": "SDR и марка полиэтиленового трубопровода"
+          },
+          {
+            "point": "1 шт.",
+            "description": "Количество"
+          },
+          {
+            "point": "В случае отсутствия данных Заказчика значения должны соответствовать расчётным данным изготовителя и ТУ 22.21.29-026-05608841-2021",
+            "description": "Дополнительные условия"
+          }
+        ]
+      },
+      "id": "f2a58625-3f6e-43b8-a67e-69a3a790cb4a",
+      "createdAt": 1778530758947,
+      "updatedAt": 1778530817774
     }
   ]
 }

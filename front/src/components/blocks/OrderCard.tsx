@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { FileCard } from '@/components/blocks/FileCard';
 import { DirtyProvider, useDirtyStore, useField } from '@/contexts/dirty-state/DirtyStateContext';
 import { getApiErrorMessage } from '@/lib/api';
-import { useUpdateOrder } from '@/lib/queries/order.query';
+import { useAnalyseOrderDetails, useUpdateOrder } from '@/lib/queries/order.query';
 import { useGetUser } from '@/lib/queries/user.query';
 
 type OrderCardProps = {
@@ -133,11 +133,17 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
     const workingCopy = useDirtyStore<OrderCardDirtyState, OrderCardDirtyState>((state) => state.workingCopy);
     const commit = useDirtyStore<OrderCardDirtyState, () => void>((state) => state.commit);
     const updateOrderMutation = useUpdateOrder();
+    const analyseDetailsMutation = useAnalyseOrderDetails(order.id);
     const selectedFile = React.useMemo(
         () => files.find((file) => file.id === workingCopy.fileId) ?? null,
         [files, workingCopy.fileId]
     );
+    const savedFile = React.useMemo(
+        () => files.find((file) => file.id === order.fileId) ?? null,
+        [files, order.fileId]
+    );
     const shouldShowFileCard = selectedFile?.meta?.available === true;
+    const canAnalyse = savedFile?.meta?.available === true;
 
     const handleSave = () => {
         updateOrderMutation.mutate(
@@ -192,6 +198,33 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
                     <FileCard file={selectedFile} />
                 </Column>
             ) : null}
+            <Column span={16}>
+                <Stack gap={2} className="border border-border p-3">
+                    <Text.Heading as="h4" variant="compact-01">
+                        Анализ
+                    </Text.Heading>
+                    <div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!canAnalyse || analyseDetailsMutation.isPending}
+                            onClick={() => analyseDetailsMutation.mutate()}
+                        >
+                            {analyseDetailsMutation.isPending ? 'Запуск...' : 'Вывести требования'}
+                        </Button>
+                    </div>
+                    {analyseDetailsMutation.isError ? (
+                        <Text as="p" compact className="text-destructive">
+                            {getApiErrorMessage(analyseDetailsMutation.error)}
+                        </Text>
+                    ) : null}
+                    {analyseDetailsMutation.isSuccess ? (
+                        <Text as="p" compact className="text-muted-foreground">
+                            Воркер запущен
+                        </Text>
+                    ) : null}
+                </Stack>
+            </Column>
             {updateOrderMutation.isError ? (
                 <Column span={16}>
                     <Text as="p" compact className="text-destructive">

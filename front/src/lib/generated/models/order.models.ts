@@ -4,3 +4,5 @@
 export type CreateOrderDTO = {
     fileId?: string;
 };
+
+export type AnalyseOrderDetailsResponse = null;

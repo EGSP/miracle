@@ -1,6 +1,7 @@
 import type { Stored } from './db.js';
+import type { OrderDetails } from './order.js';
 
-export type WorkerType = 'yandex-ocr-worker' | 'server-health-worker' | 'yandex-ping-worker';
+export type WorkerType = 'yandex-ocr-worker' | 'server-health-worker' | 'yandex-ping-worker' | 'order-details-worker';
 
 export const WorkerStatus = {
     Active: 'active',
@@ -47,7 +48,15 @@ export type YandexPingWorkerData = BaseWorkerData & {
     lastPingedAt?: number;
 };
 
-export type WorkerData = YandexOcrWorkerData | ServerHealthWorkerData | YandexPingWorkerData;
+export type OrderDetailsWorkerData = BaseWorkerData & {
+    type: 'order-details-worker';
+    orderId: string;
+    cloudOperationId?: string;
+    orderDetails?: OrderDetails;
+    errorMessage?: string;
+};
+
+export type WorkerData = YandexOcrWorkerData | ServerHealthWorkerData | YandexPingWorkerData | OrderDetailsWorkerData;
 
 /** Человекочитаемое представление данных воркера — плоский объект без заранее известной схемы. */
 export type HumanReadableWorkerData = Record<string, unknown>;
@@ -126,6 +135,14 @@ export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanRea
                 'Операция завершена': worker.operationDone ? 'да' : 'нет',
                 ...(worker.operationErrorMessage != null && { 'Ошибка': tryParseJson(worker.operationErrorMessage) }),
                 ...(worker.operationResult != null && { 'Результат': worker.operationResult }),
+            };
+
+        case 'order-details-worker':
+            return {
+                'Заказ': worker.orderId,
+                ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),
+                ...(worker.orderDetails != null && { 'Результат': worker.orderDetails }),
+                ...(worker.errorMessage != null && { 'Ошибка': worker.errorMessage }),
             };
 
         default: {

@@ -4,6 +4,7 @@ import type { Stored, WorkerData } from '@miracle/types';
 import { workersService } from '../databases/workers.db.js';
 import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
+import { OrderDetailsWorker } from './order-details-worker.js';
 import { ServerHealthWorker } from './server-health-worker.js';
 import { YandexOcrWorker } from './yandex-ocr-worker.js';
 import { YandexPingWorker } from './yandex-ping-worker.js';
@@ -60,6 +61,13 @@ export class WorkerPool {
             }
             case 'yandex-ping-worker': {
                 return new YandexPingWorker({ existingWorkerId: record.id });
+            }
+            case 'order-details-worker': {
+                return new OrderDetailsWorker({
+                    orderId: record.orderId,
+                    existingWorkerId: record.id,
+                    existingCloudOperationId: record.cloudOperationId,
+                });
             }
             default:
                 return null;

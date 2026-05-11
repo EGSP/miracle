@@ -35,6 +35,8 @@ function getWorkerLabel(type: WorkerData['type']): string {
             return 'Мониторинг диска';
         case 'yandex-ping-worker':
             return 'Ping Яндекса';
+        case 'order-details-worker':
+            return 'Анализ заказа';
     }
 }
 

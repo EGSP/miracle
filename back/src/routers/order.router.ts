@@ -70,6 +70,13 @@ const updateOrder = route.put('/:id', {
     },
 });
 
+const analyseOrderDetails = route.post('/:id/analyse-details', {
+    validate: { params: true },
+    handler: async ({ params }: { params: { id: string } }) => {
+        await ordersService.analyseOrderDetails(params.id);
+    },
+});
+
 export const orderRouter = defineRouter('/order', {
     middlewares: [
         authMiddleware,
@@ -79,5 +86,6 @@ export const orderRouter = defineRouter('/order', {
         getOrder,
         getOrders,
         updateOrder,
+        analyseOrderDetails,
     ],
 });

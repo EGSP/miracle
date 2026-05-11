@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { Order, OrderQuery, Stored } from '@miracle/types';
-import type { CreateOrderDTO } from './models';
+import type { CreateOrderDTO, AnalyseOrderDetailsResponse } from './models';
 
 export const order = {
     createOrder: (createOrderDTO: CreateOrderDTO) => customInstance<Stored<Order>>({
@@ -25,5 +25,9 @@ export const order = {
         method: 'PUT',
         url: formatPath('/order/:id', params),
         data: body,
+    }),
+    analyseOrderDetails: (params: { id: string; }) => customInstance<AnalyseOrderDetailsResponse>({
+        method: 'POST',
+        url: formatPath('/order/:id/analyse-details', params),
     }),
 };

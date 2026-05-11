@@ -1,7 +1,10 @@
-import { Order, OrderQuery, Stored } from "@miracle/types";
+import { Order, OrderQuery, Stored, WorkerStatus } from "@miracle/types";
 import { JsonCollection, registerDb } from "./db.js";
 import { userService } from "./user.db.js";
 import { filesService } from "./file.db.js";
+import { workersService } from "./workers.db.js";
+import { workerPool } from "../workers/worker-pool.js";
+import { OrderDetailsWorker } from "../workers/order-details-worker.js";
 
 const orderDb = registerDb('orders', await JsonCollection.create<Order>('orders'));
 
@@ -54,7 +57,24 @@ export const ordersService = {
             throw new Error('Order not found');
 
         return await orderDb.update(id, { ...existing, ...patch });
-    }
+    },
 
+    analyseOrderDetails: async (id: string): Promise<void> => {
+        const order = await ordersService.get(id);
+        if (!order)
+            throw new Error('Order not found');
 
+        if (!order.fileId)
+            throw new Error('Order has no file attached');
+
+        const existing = workersService.query(
+            (w) => w.type === 'order-details-worker'
+                && w.status === WorkerStatus.Active
+                && w.orderId === id,
+        );
+        if (existing.length > 0)
+            throw new Error('Analysis worker already running for this order');
+
+        workerPool.launch(new OrderDetailsWorker({ orderId: id }));
+    },
 }

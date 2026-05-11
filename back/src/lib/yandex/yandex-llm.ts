@@ -5,7 +5,7 @@ import { yandex } from './yandex.js';
 import type { AsyncLlmClient, AsyncOperationClient } from './yandex-sdk.types.js';
 import type { LlmRequest, LlmPollResult } from './yandex-llm.types.js';
 
-const MODEL_SUFFIX = 'yandexgpt/latest';
+const MODEL_SUFFIX = 'yandexgpt-5-lite';
 
 /** Удаляет markdown-обёртку ```json ... ``` если модель добавила её вопреки инструкциям. */
 function stripMarkdownFences(raw: string): string {

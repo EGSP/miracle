@@ -22,6 +22,17 @@ export const useCreateOrder = () => {
     });
 };
 
+export const useAnalyseOrderDetails = (orderId: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => order.analyseOrderDetails({ id: orderId }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
+        },
+    });
+};
+
 export const useUpdateOrder = () => {
     const queryClient = useQueryClient();
 
