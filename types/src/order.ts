@@ -5,8 +5,8 @@ export const ProductCategory = {
 export type ProductCategory = typeof ProductCategory[keyof typeof ProductCategory];
 
 export type OrderRequirement = {
-    point: string;
-    description: string;
+    parameterName: string;
+    requiredValue: string;
 };
 
 export type OrderDetails = {

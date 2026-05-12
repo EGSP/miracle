@@ -5,10 +5,10 @@
       "status": "active",
       "id": "c9fa72af-2854-4c4f-89cc-dd5d828688ab",
       "createdAt": 1778419959448,
-      "updatedAt": 1778563599924,
+      "updatedAt": 1778564433493,
       "diskTotalBytes": 238720761856,
-      "diskUsedBytes": 196072067072,
-      "diskAvailableBytes": 42648694784,
+      "diskUsedBytes": 196161765376,
+      "diskAvailableBytes": 42558996480,
       "diskUsedPercent": 82
     },
     {
@@ -16,9 +16,9 @@
       "status": "active",
       "id": "00674198-95c5-4d96-bb27-897d47fc90ac",
       "createdAt": 1778419959448,
-      "updatedAt": 1778563596459,
-      "latencyMs": 849,
-      "lastPingedAt": 1778563596459
+      "updatedAt": 1778564432264,
+      "latencyMs": 1064,
+      "lastPingedAt": 1778564432264
     },
     {
       "type": "yandex-ocr-worker",
