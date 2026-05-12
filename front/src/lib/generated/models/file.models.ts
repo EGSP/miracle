@@ -8,4 +8,6 @@ export type GetFilesResponse = FileWithMeta[];
 
 export type UploadFileResponse = FileModel;
 
+export type RestoreFileResponse = FileModel;
+
 export type StreamFileContentResponse = null;

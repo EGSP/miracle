@@ -8,9 +8,11 @@ import {
     parseExtractContentQuery,
     parseExtractContentParams,
     parseGetFilesQuery,
+    parseRestoreFileParams,
     parseStreamFileContentParams,
     parseGetOrderParams,
     parseGetOrdersQuery,
+    parseAnalyseOrderDetailsParams,
     parseGetWorkersQuery,
 } from './parsers.generated.js';
 
@@ -22,8 +24,10 @@ export const validationMap: Record<string, {
     'GET /files-content/:fileId': { query: parseGetContentQuery, params: parseGetContentParams },
     'POST /files-content/:fileId/extract': { query: parseExtractContentQuery, params: parseExtractContentParams },
     'GET /files': { query: parseGetFilesQuery },
+    'POST /files/:id/restore': { params: parseRestoreFileParams },
     'GET /files/:id/content': { params: parseStreamFileContentParams },
     'GET /order/:id': { params: parseGetOrderParams },
     'GET /order': { query: parseGetOrdersQuery },
+    'POST /order/:id/analyse-details': { params: parseAnalyseOrderDetailsParams },
     'GET /workers': { query: parseGetWorkersQuery },
 };

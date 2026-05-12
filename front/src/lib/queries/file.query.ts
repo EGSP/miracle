@@ -25,3 +25,18 @@ export const useUploadFile = () => {
         },
     });
 };
+
+export const useRestoreFile = (fileId: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (fileToRestore: File) => {
+            const formData = new FormData();
+            formData.append('file', fileToRestore);
+            return file.restoreFile({ id: fileId }, formData);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEY });
+        },
+    });
+};

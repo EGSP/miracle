@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { IconIndicator, Stack, Text } from "@miracle/aramid";
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types";
-import { Eye } from "lucide-react";
+import { Eye, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { FileDropZone } from "@/components/ui/file-dropzone";
 import { getApiErrorMessage } from "@/lib/api";
 import { useExtractFileContent, useGetFileContent } from "@/lib/queries/file-content.query";
+import { useRestoreFile } from "@/lib/queries/file.query";
 
 type FileCardProps = {
     file: FileWithMeta;
@@ -36,10 +39,19 @@ function getExtractionIndicator(
 export function FileCard({ file }: FileCardProps) {
     const { data: contentList, isLoading, isError: isGetContentError, error: getContentError } = useGetFileContent(file.id, true);
     const extractMutation = useExtractFileContent(file.id);
+    const restoreMutation = useRestoreFile(file.id);
+    const [restoreFile, setRestoreFile] = useState<File | null>(null);
     const latestContent = contentList?.[0];
     const status = latestContent?.meta?.extractionStatus as ExtractionStatus | undefined;
     const indicator = getExtractionIndicator(latestContent);
     const isFileAvailable = file.meta?.available !== false;
+
+    const handleRestore = () => {
+        if (!restoreFile) return;
+        restoreMutation.mutate(restoreFile, {
+            onSuccess: () => setRestoreFile(null),
+        });
+    };
 
     const canRead = isFileAvailable && !extractMutation.isPending && !isLoading && !status;
     const canReread = isFileAvailable && !extractMutation.isPending && !isLoading && (status === "completed" || status === "failed");
@@ -68,6 +80,37 @@ export function FileCard({ file }: FileCardProps) {
                 <Text.Label as="span">Размер: {formatBytes(file.bytes)}</Text.Label>
                 <Text.Label as="span">Доступность: {file.meta?.available === false ? "Недоступен" : "Доступен"}</Text.Label>
             </Stack>
+
+            {!isFileAvailable && (
+                <Stack gap={2} className="border border-border bg-muted/20 p-2">
+                    <Text.Label as="span">Физический файл отсутствует — загрузите его</Text.Label>
+                    <FileDropZone
+                        value={restoreFile}
+                        onChange={setRestoreFile}
+                        accept={`.${file.extension}`}
+                        disabled={restoreMutation.isPending}
+                    />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!restoreFile || restoreMutation.isPending}
+                        onClick={handleRestore}
+                    >
+                        <Upload />
+                        {restoreMutation.isPending ? 'Загрузка...' : 'Восстановить файл'}
+                    </Button>
+                    {restoreMutation.isError && (
+                        <Text as="span" compact className="text-destructive">
+                            {getApiErrorMessage(restoreMutation.error)}
+                        </Text>
+                    )}
+                    {restoreMutation.isSuccess && (
+                        <Text as="span" compact className="text-green-600">
+                            Файл успешно восстановлен
+                        </Text>
+                    )}
+                </Stack>
+            )}
 
             <Stack gap={1} className="border border-border bg-muted/20 p-2">
                 <Text.Label as="span">Контент</Text.Label>

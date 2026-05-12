@@ -86,6 +86,48 @@ const getFiles = route.get('/', {
     },
 });
 
+/**
+ * Type hint for the client generator.
+ * The generated client will send this type as FormData (multipart/form-data).
+ * At runtime the handler does not use body — the file is available via req.file (multer).
+ */
+type RestoreBody = FormData;
+
+type RestoreFileResponse = FileModel;
+
+const restoreFile = route.post('/:id/restore', {
+    middlewares: [upload.single('file')],
+    validate: { params: true },
+    handler: async ({ req, params, locals }: { req: Request; body: RestoreBody; params: { id: string }; locals: Record<string, unknown> }) => {
+        const uploadedFile = req.file;
+        if (!uploadedFile) {
+            return err.validation('No file provided');
+        }
+
+        const user = locals.user as User | undefined;
+        if (!user?.id) {
+            return err.unauthorized('Authenticated user is missing');
+        }
+
+        const existing = await filesService.get(params.id);
+        if (!existing) {
+            fs.unlinkSync(uploadedFile.path);
+            return err.notFound(`File with id "${params.id}" not found`);
+        }
+
+        const uploadedExt = path.extname(fixFileNameEncoding(uploadedFile.originalname)).slice(1).toLowerCase();
+        if (uploadedExt !== existing.extension.toLowerCase()) {
+            fs.unlinkSync(uploadedFile.path);
+            return err.validation(`Extension mismatch: expected .${existing.extension}, got .${uploadedExt}`);
+        }
+
+        const targetPath = getFilePath(existing);
+        fs.renameSync(uploadedFile.path, targetPath);
+
+        return existing satisfies RestoreFileResponse;
+    },
+});
+
 const streamFileContent = route.get('/:id/content', {
     validate: { params: true },
     handler: async ({ params, req, res }: { params: { id: string }; req: Request; res: Response }) => {
@@ -160,5 +202,5 @@ function pipeFileToResponse(filePath: string, res: Response, options?: { start: 
 
 export const fileRouter = defineRouter('/files', {
     middlewares: [authMiddleware],
-    routes: [getFiles, uploadFile, streamFileContent],
+    routes: [getFiles, uploadFile, restoreFile, streamFileContent],
 } as const);

@@ -240,6 +240,30 @@ export function parseGetFilesQuery(raw: Record<string, unknown>) {
     return result;
 }
 
+export function parseRestoreFileParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        errors.push({ field: "id", message: 'is required' });
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
+    } else {
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
+        } else {
+            result["id"] = raw_id.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
 export function parseStreamFileContentParams(raw: Record<string, unknown>) {
     const errors: Array<{ field: string; message: string }> = [];
     const result: Record<string, unknown> = {};
@@ -328,17 +352,28 @@ export function parseGetOrdersQuery(raw: Record<string, unknown>) {
             result["fileId"] = raw_fileId.value;
         }
     }
-    const raw_includeRequirements = readSingleValue(raw, "includeRequirements");
-    if (raw_includeRequirements.missing) {
-        result["includeRequirements"] = undefined;
-    } else if (raw_includeRequirements.multi) {
-        errors.push({ field: "includeRequirements", message: 'expected single value' });
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
+export function parseAnalyseOrderDetailsParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        errors.push({ field: "id", message: 'is required' });
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
     } else {
-        const parsed = parseLiteral(raw_includeRequirements.value, [false,true]);
-        if (parsed === undefined) {
-            errors.push({ field: "includeRequirements", message: "expected one of: false, true" });
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
         } else {
-            result["includeRequirements"] = parsed;
+            result["id"] = raw_id.value;
         }
     }
 
