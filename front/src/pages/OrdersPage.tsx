@@ -111,12 +111,20 @@ function OrdersPageContent() {
         void navigate({ search: (prev) => ({ ...prev, orderId: next?.id }) });
     }, [isDirtyAnywhere, navigate]);
 
-    // Sync URL param → selection when orders load
+    // Sync URL param → selection when orders load (без лишнего setState при том же снимке сущности)
     useEffect(() => {
         if (!orderIdParam || !orders) return;
         const match = orders.find((o) => o.id === orderIdParam);
-        if (match) setSelectedOrder(match);
+        if (!match) return;
+        setSelectedOrder((prev) => {
+            if (prev?.id === match.id && prev.updatedAt === match.updatedAt) {
+                return prev;
+            }
+            return match;
+        });
     }, [orderIdParam, orders]);
+
+    const getOrderListKey = useCallback((item: Stored<Order>) => item.id, []);
 
 
     return (
@@ -168,7 +176,7 @@ function OrdersPageContent() {
                             items={filteredOrders}
                             value={selectedOrder}
                             onChange={handleSelectedOrderChange}
-                            getKey={(item) => item.id}
+                            getKey={getOrderListKey}
                             className="flex flex-col gap-1 outline-none"
                         >
                             <ListBox.Items>

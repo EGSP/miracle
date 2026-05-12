@@ -1,5 +1,6 @@
 ﻿import { Stack, Text } from '@miracle/aramid';
-import type { OrderDetails, OrderRequirement } from '@miracle/types';
+import type { Order, OrderRequirement, Stored } from '@miracle/types';
+import { flattenRequirementsForDisplay, orderDetailsHasRequirementRows } from '@miracle/types';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api';
 import { useClearAnalysedDetails } from '@/lib/queries/order.query';
@@ -18,18 +19,17 @@ function AnalysedRequirementItem({ requirement }: { requirement: OrderRequiremen
 }
 
 type OrderCardDetailsProps = {
-    orderId: string;
-    analysedDetails?: OrderDetails | null;
-    hasDetails: boolean;
+    order: Stored<Order>;
 };
 
-export function OrderCardDetails({ orderId, analysedDetails, hasDetails }: OrderCardDetailsProps) {
-    const clearAnalysedDetailsMutation = useClearAnalysedDetails(orderId);
-    const requirements = analysedDetails?.requirements ?? [];
+function orderHasRequirements(order: Stored<Order>): boolean {
+    return orderDetailsHasRequirementRows(order.details);
+}
 
-    if (!hasDetails) {
-        return null;
-    }
+export function OrderCardDetails({ order }: OrderCardDetailsProps) {
+    const clearAnalysedDetailsMutation = useClearAnalysedDetails(order.id);
+    const hasRequirements = orderHasRequirements(order);
+    const requirements = flattenRequirementsForDisplay(order.details);
 
     return (
         <Stack gap={3} className="border border-border p-3">
@@ -40,7 +40,7 @@ export function OrderCardDetails({ orderId, analysedDetails, hasDetails }: Order
                 <Button
                     variant="outline"
                     size="sm"
-                    disabled={clearAnalysedDetailsMutation.isPending}
+                    disabled={!hasRequirements || clearAnalysedDetailsMutation.isPending}
                     onClick={() => clearAnalysedDetailsMutation.mutate()}
                 >
                     {clearAnalysedDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
@@ -53,7 +53,10 @@ export function OrderCardDetails({ orderId, analysedDetails, hasDetails }: Order
                 {requirements.length > 0 ? (
                     <Stack gap={2}>
                         {requirements.map((requirement, index) => (
-                            <AnalysedRequirementItem key={requirement.index ?? index} requirement={requirement} />
+                            <AnalysedRequirementItem
+                                key={`${order.id}-req-${index}`}
+                                requirement={requirement}
+                            />
                         ))}
                     </Stack>
                 ) : (

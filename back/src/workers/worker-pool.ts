@@ -1,13 +1,18 @@
 import { randomUUID } from 'crypto';
 import { WorkerStatus } from '@miracle/types';
-import type { Stored, WorkerData } from '@miracle/types';
+import type {
+    LlmVisionWorkerData,
+    OrderDetailsWorkerData,
+    Stored,
+    WorkerData,
+    YandexOcrWorkerData,
+} from '@miracle/types';
 import { workersService } from '../databases/workers.db.js';
 import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
+import { LlmVisionWorker } from './llm-vision-worker.js';
 import { OrderDetailsWorker } from './order-details-worker.js';
-import { ServerHealthWorker } from './server-health-worker.js';
 import { YandexOcrWorker } from './yandex-ocr-worker.js';
-import { YandexPingWorker } from './yandex-ping-worker.js';
 
 export class WorkerPool {
     /** Карта запущенных воркеров: ключ только для памяти процесса. */
@@ -17,7 +22,7 @@ export class WorkerPool {
         const activeRecords = workersService.query((worker) => worker.status === WorkerStatus.Active);
 
         for (const record of activeRecords) {
-            const worker = await this.createWorkerFromRecord(record);
+            const worker = this.createWorkerFromRecord(record);
             if (!worker) {
                 continue;
             }
@@ -32,6 +37,19 @@ export class WorkerPool {
 
         void worker.mount()
             .then(() => worker.run())
+            .then(async () => {
+                const wid = worker.getWorkerRecordId();
+                if (!wid) return;
+                const rec = workersService.get(wid);
+                if (rec?.status !== WorkerStatus.Success) return;
+                try {
+                    await worker.apply();
+                } catch (error) {
+                    logger.error(
+                        `[WorkerPool] apply для воркера "${wid}": ${error instanceof Error ? error.message : String(error)}`,
+                    );
+                }
+            })
             .catch((error) => {
                 logger.error(`[WorkerPool] Воркер "${worker.type}" завершился с ошибкой: ${error instanceof Error ? error.message : String(error)}`);
             })
@@ -45,33 +63,45 @@ export class WorkerPool {
         return predicate ? workers.filter(predicate) : workers;
     }
 
-    private async createWorkerFromRecord(record: Stored<WorkerData>): Promise<BaseWorker | null> {
+    private createWorkerFromRecord(record: Stored<WorkerData>): BaseWorker | null {
         switch (record.type) {
-            case 'yandex-ocr-worker': {
-                return new YandexOcrWorker({
-                    fileContentId: record.fileContentId,
-                    fileId: record.fileId,
-                    mimeType: record.mimeType,
-                    existingCloudOperationId: record.cloudOperationId,
-                    existingWorkerId: record.id,
-                });
-            }
-            case 'server-health-worker': {
-                return new ServerHealthWorker({ existingWorkerId: record.id });
-            }
-            case 'yandex-ping-worker': {
-                return new YandexPingWorker({ existingWorkerId: record.id });
-            }
-            case 'order-details-worker': {
-                return new OrderDetailsWorker({
-                    orderId: record.orderId,
-                    existingWorkerId: record.id,
-                    existingCloudOperationId: record.cloudOperationId,
-                });
-            }
+            case 'yandex-ocr-worker':
+                return new YandexOcrWorker({ data: structuredClone(record) as Stored<YandexOcrWorkerData> });
+            case 'order-details-worker':
+                return new OrderDetailsWorker({ data: structuredClone(record) as Stored<OrderDetailsWorkerData> });
+            case 'llm-vision-worker':
+                return new LlmVisionWorker({ data: structuredClone(record) as Stored<LlmVisionWorkerData> });
             default:
                 return null;
         }
+    }
+
+    /**
+     * По id записи в workers: загрузка, проверка `success`, создание воркера, `apply()`.
+     */
+    async applyByWorkerId(workerId: string): Promise<void> {
+        const record = workersService.get(workerId);
+        if (!record) {
+            throw new Error('Воркер не найден');
+        }
+        if (record.status !== WorkerStatus.Success) {
+            throw new Error('Применение возможно только для воркера в статусе success');
+        }
+        for (const worker of this.active.values()) {
+            /** 
+             * Если воркер уже запущен, то не нужно создавать новый
+             * и вызывать метод apply.
+            */
+            if (worker.getWorkerRecordId() === workerId) {
+                return;
+            }
+        }
+        const worker = this.createWorkerFromRecord(record);
+        if (!worker) {
+            throw new Error('Тип воркера не поддерживает применение результата');
+        }
+        
+        await worker.apply();
     }
 }
 

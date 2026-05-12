@@ -3,7 +3,7 @@ import { waitForOperation } from '@yandex-cloud/nodejs-sdk';
 import { ocrService } from '@yandex-cloud/nodejs-sdk/ai-ocr-v1';
 import { operation } from '@yandex-cloud/nodejs-sdk/operation';
 import { ExtractionStatus, ExtractionType, WorkerStatus, type Content } from '@miracle/types';
-import type { WorkerData } from '@miracle/types';
+import type { Stored, YandexOcrWorkerData } from '@miracle/types';
 import { yandex } from '../lib/yandex/yandex.js';
 import type { AsyncOcrClient } from '../lib/yandex/yandex-sdk.types.js';
 import { filesContentService } from '../databases/file-content.db.js';
@@ -12,74 +12,77 @@ import { workersService } from '../databases/workers.db.js';
 import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
 
-type YandexOcrWorkerParams = {
-    fileContentId: string;
-    fileId: string;
-    mimeType: string;
-    existingCloudOperationId?: string;
-    existingWorkerId?: string;
-};
+export type YandexOcrWorkerOptions =
+    | { data: null; fileContentId: string; fileId: string; mimeType: string }
+    | { data: Stored<YandexOcrWorkerData> };
 
 export class YandexOcrWorker extends BaseWorker {
-    readonly type = 'yandex-ocr-worker';
+    readonly type = 'yandex-ocr-worker' as const;
 
-    private readonly fileContentId: string;
-    private readonly fileId: string;
-    private readonly mimeType: string;
-    private cloudOperationId?: string;
-    private workerId?: string;
+    private data: Partial<Stored<YandexOcrWorkerData>>;
 
-    constructor(params: YandexOcrWorkerParams) {
+    constructor(options: YandexOcrWorkerOptions) {
         super();
-        this.fileContentId = params.fileContentId;
-        this.fileId = params.fileId;
-        this.mimeType = params.mimeType;
-        this.cloudOperationId = params.existingCloudOperationId;
-        this.workerId = params.existingWorkerId;
+        if (options.data === null) {
+            this.data = {
+                type: this.type,
+                fileContentId: options.fileContentId,
+                fileId: options.fileId,
+                mimeType: options.mimeType,
+            };
+        } else {
+            this.data = { ...options.data };
+        }
     }
 
     async mount(): Promise<void> {
-        if (!this.workerId) {
-            const worker = await workersService.create({
+        if (!this.data.id) {
+            const row = await workersService.create({
                 type: this.type,
                 status: WorkerStatus.Active,
-                fileId: this.fileId,
-                fileContentId: this.fileContentId,
-                mimeType: this.mimeType,
-                cloudOperationId: this.cloudOperationId,
+                fileId: this.data.fileId!,
+                fileContentId: this.data.fileContentId!,
+                mimeType: this.data.mimeType!,
+                cloudOperationId: this.data.cloudOperationId,
                 operationDone: false,
-            } satisfies WorkerData);
-            this.workerId = worker.id;
+            } satisfies YandexOcrWorkerData);
+            Object.assign(this.data, row);
             return;
         }
 
-        await workersService.update(this.workerId, {
+        const row = await workersService.update(this.data.id, {
             status: WorkerStatus.Active,
-            cloudOperationId: this.cloudOperationId,
+            cloudOperationId: this.data.cloudOperationId,
         });
+        if (row) Object.assign(this.data, row);
     }
 
     async run(): Promise<void> {
         try {
-            if (!this.workerId) {
+            if (!this.data.id) {
                 throw new Error('Воркер не инициализирован: ожидается вызов mount() перед run()');
             }
 
-            if (!this.cloudOperationId) {
-                this.cloudOperationId = await this.startRecognition();
-                await workersService.update(this.workerId, { status: WorkerStatus.Active, cloudOperationId: this.cloudOperationId });
+            if (!this.data.cloudOperationId) {
+                const opId = await this.startRecognition();
+                this.data.cloudOperationId = opId;
+                const row = await workersService.update(this.data.id, {
+                    status: WorkerStatus.Active,
+                    cloudOperationId: opId,
+                });
+                if (row) Object.assign(this.data, row);
             }
 
             const session = yandex.getSession();
             const asyncClient = session.client(ocrService.TextRecognitionAsyncServiceClient) as unknown as AsyncOcrClient;
 
             const finished = await waitForOperation(
-                operation.Operation.fromPartial({ id: this.cloudOperationId, done: false }),
+                operation.Operation.fromPartial({ id: this.data.cloudOperationId, done: false }),
                 session,
             );
 
             if (!finished.done) {
-                throw new Error(`Операция Yandex OCR "${this.cloudOperationId}" не завершилась`);
+                throw new Error(`Операция Yandex OCR "${this.data.cloudOperationId}" не завершилась`);
             }
 
             if (this.shouldStop) {
@@ -90,30 +93,22 @@ export class YandexOcrWorker extends BaseWorker {
             const pages = await this.readPages(asyncClient);
             const aggregatedText = pages.map((page) => page.text ?? '').filter(Boolean).join('\n\n');
 
-            await filesContentService.update({
-                id: this.fileContentId,
-                fileId: this.fileId,
-                content: pages,
-                meta: {
-                    extractionType: ExtractionType.OCR,
-                    extractionStatus: ExtractionStatus.COMPLETED,
-                },
-            });
-
-            await workersService.update(this.workerId, {
+            const row = await workersService.update(this.data.id, {
                 operationDone: true,
                 operationResult: aggregatedText,
                 operationErrorMessage: undefined,
+                ocrPages: pages,
             });
+            if (row) Object.assign(this.data, row);
 
             await this.markSuccess();
         } catch (error) {
             const message = YandexOcrWorker.extractErrorMessage(error);
-            logger.error(`[YandexOcrWorker] Ошибка обработки файла "${this.fileId}": ${message}`);
+            logger.error(`[YandexOcrWorker] Ошибка обработки файла "${this.data.fileId}": ${message}`);
 
             await filesContentService.update({
-                id: this.fileContentId,
-                fileId: this.fileId,
+                id: this.data.fileContentId!,
+                fileId: this.data.fileId!,
                 meta: {
                     extractionType: ExtractionType.OCR,
                     extractionStatus: ExtractionStatus.FAILED,
@@ -121,20 +116,61 @@ export class YandexOcrWorker extends BaseWorker {
                 },
             });
 
-            if (this.workerId) {
-                await workersService.update(this.workerId, {
+            if (this.data.id) {
+                const row = await workersService.update(this.data.id, {
                     operationDone: true,
                     operationErrorMessage: message,
                     status: WorkerStatus.Failed,
                 });
+                if (row) Object.assign(this.data, row);
             }
         }
     }
 
+    getWorkerRecordId(): string | undefined {
+        return this.data.id;
+    }
+
+    async apply(): Promise<void> {
+        if (!this.data.id) {
+            throw new Error('Воркер не инициализирован');
+        }
+        if (this.data.type !== 'yandex-ocr-worker') {
+            throw new Error('Неверный тип воркера');
+        }
+        const pages = this.data.ocrPages;
+        if (pages !== undefined && pages.length > 0) {
+            await filesContentService.update({
+                id: this.data.fileContentId!,
+                fileId: this.data.fileId!,
+                content: pages,
+                meta: {
+                    extractionType: ExtractionType.OCR,
+                    extractionStatus: ExtractionStatus.COMPLETED,
+                },
+            });
+            return;
+        }
+        const fallbackText = this.data.operationResult?.trim();
+        if (fallbackText !== undefined && fallbackText !== '') {
+            await filesContentService.update({
+                id: this.data.fileContentId!,
+                fileId: this.data.fileId!,
+                content: [{ text: fallbackText }],
+                meta: {
+                    extractionType: ExtractionType.OCR,
+                    extractionStatus: ExtractionStatus.COMPLETED,
+                },
+            });
+            return;
+        }
+        throw new Error('Нет сохранённых страниц OCR и агрегированного текста для применения');
+    }
+
     private async startRecognition(): Promise<string> {
-        const file = await filesService.get(this.fileId);
+        const file = await filesService.get(this.data.fileId!);
         if (!file) {
-            throw new Error(`Файл "${this.fileId}" не найден`);
+            throw new Error(`Файл "${this.data.fileId}" не найден`);
         }
 
         const filePath = getFilePath(file);
@@ -145,7 +181,7 @@ export class YandexOcrWorker extends BaseWorker {
         const asyncClient = session.client(ocrService.TextRecognitionAsyncServiceClient) as unknown as AsyncOcrClient;
 
         const op = await asyncClient.recognize({
-            mimeType: this.mimeType,
+            mimeType: this.data.mimeType!,
             content: fileData,
             folderId: yandexConfig.folderId,
             languageCodes: [
@@ -162,7 +198,7 @@ export class YandexOcrWorker extends BaseWorker {
     }
 
     private async readPages(asyncClient: AsyncOcrClient): Promise<Content[]> {
-        const stream = asyncClient.getRecognition({ operationId: this.cloudOperationId ?? '' });
+        const stream = asyncClient.getRecognition({ operationId: this.data.cloudOperationId ?? '' });
         const pages: Content[] = [];
 
         for await (const page of stream) {
@@ -176,12 +212,14 @@ export class YandexOcrWorker extends BaseWorker {
     }
 
     private async markSuccess(): Promise<void> {
-        if (!this.workerId) return;
-        await workersService.update(this.workerId, { status: WorkerStatus.Success });
+        if (!this.data.id) return;
+        const row = await workersService.update(this.data.id, { status: WorkerStatus.Success });
+        if (row) Object.assign(this.data, row);
     }
 
     private async markStopped(): Promise<void> {
-        if (!this.workerId) return;
-        await workersService.update(this.workerId, { status: WorkerStatus.Stopped });
+        if (!this.data.id) return;
+        const row = await workersService.update(this.data.id, { status: WorkerStatus.Stopped });
+        if (row) Object.assign(this.data, row);
     }
 }

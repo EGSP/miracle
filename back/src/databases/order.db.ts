@@ -1,11 +1,11 @@
-import { Order, OrderQuery, Stored, WorkerStatus } from "@miracle/types";
+import { Order, OrderQuery, Stored, WorkerStatus, orderDetailsHasAiLayer } from "@miracle/types";
 import { JsonCollection, registerDb } from "./db.js";
 import { userService } from "./user.db.js";
 import { filesService } from "./file.db.js";
 import { workersService } from "./workers.db.js";
 import { workerPool } from "../workers/worker-pool.js";
 import { OrderDetailsWorker } from "../workers/order-details-worker.js";
-import { runOrderRequirementIndexFix } from "./runners/order.run.js";
+// import { runOrderRequirementIndexFix } from "./runners/order.run.js";
 
 export type CanAnalyseOrderDetailsResult = {
     canAnalyse: boolean;
@@ -21,7 +21,7 @@ declare module './db.js' {
     }
 }
 
-await runOrderRequirementIndexFix(orderDb);
+// await runOrderRequirementIndexFix(orderDb);
 
 export const ordersService = {
     // Создаёт новый заказ
@@ -36,7 +36,7 @@ export const ordersService = {
                 throw new Error('Файл не найден');
         }
 
-        return await orderDb.create({ authorId, fileId, analysedDetails: null, redactedDetails: null });
+        return await orderDb.create({ authorId, fileId, details: null });
     },
 
     // Получает заказ по id
@@ -69,7 +69,9 @@ export const ordersService = {
         if (!existing)
             throw new Error('Заказ не найден');
 
-        return await orderDb.update(id, { ...existing, ...patch });
+        const merged: Stored<Order> = { ...existing, ...patch };
+
+        return await orderDb.update(id, merged);
     },
 
     // Очищает результаты анализа деталей заказа
@@ -79,11 +81,9 @@ export const ordersService = {
             throw new Error('Заказ не найден');
         }
 
-        const updated = await orderDb.update(id, {
-            ...existing,
-            analysedDetails: null,
-            redactedDetails: null,
-        });
+        const next: Stored<Order> = { ...existing, details: null };
+
+        const updated = await orderDb.update(id, next);
 
         if (!updated) {
             throw new Error('Заказ не найден');
@@ -113,13 +113,20 @@ export const ordersService = {
             return { canAnalyse: false, errorMessage: 'Файл заказа недоступен' };
         }
 
-        const existing = workersService.query(
+        if (orderDetailsHasAiLayer(order.details)) {
+            return {
+                canAnalyse: false,
+                errorMessage: 'Сначала очистите детали заказа, чтобы запустить анализ снова',
+            };
+        }
+
+        const activeOrderDetailsWorkers = workersService.query(
             (w) => w.type === 'order-details-worker'
-                && w.status !== WorkerStatus.Failed
+                && w.status === WorkerStatus.Active
                 && w.orderId === id,
         );
-        if (existing.length > 0) {
-            return { canAnalyse: false, errorMessage: 'Для заказа уже запускался анализ' };
+        if (activeOrderDetailsWorkers.length > 0) {
+            return { canAnalyse: false, errorMessage: 'Для заказа уже выполняется анализ' };
         }
 
         return { canAnalyse: true };
@@ -132,6 +139,6 @@ export const ordersService = {
             throw new Error(availability.errorMessage ?? 'Анализ заказа недоступен');
         }
 
-        workerPool.launch(new OrderDetailsWorker({ orderId: id }));
+        workerPool.launch(new OrderDetailsWorker({ data: null, orderId: id }));
     },
 }

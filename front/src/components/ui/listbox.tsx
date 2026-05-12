@@ -1,4 +1,16 @@
-import { createContext, Fragment, useContext, useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  createContext,
+  Fragment,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import { cn } from '@/lib/utils';
 
 type ListBoxProps<T> = {
@@ -64,21 +76,33 @@ function ListBoxRoot<T>({
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const currentValue = isControlled ? value ?? null : internalValue;
 
+  const getKeyRef = useRef(getKey);
+  getKeyRef.current = getKey;
+
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   const selectedKey = currentValue ? getKey(currentValue) : null;
   const activeItem = activeIndex !== null ? items[activeIndex] : null;
   const activeKey = activeItem ? getKey(activeItem) : null;
 
-  const setValue = (next: T | null) => {
-    if (!isControlled) {
-      setInternalValue(next);
-    }
-    onChange?.(next);
-  };
+  const setValue = useCallback(
+    (next: T | null) => {
+      if (!isControlled) {
+        setInternalValue(next);
+      }
+      onChangeRef.current?.(next);
+    },
+    [isControlled],
+  );
 
-  const select = (item: T) => {
-    if (disabled || readonly) return;
-    setValue(item);
-  };
+  const select = useCallback(
+    (item: T) => {
+      if (disabled || readonly) return;
+      setValue(item);
+    },
+    [disabled, readonly, setValue],
+  );
 
   const move = (delta: number) => {
     if (!items.length) return;
@@ -127,11 +151,21 @@ function ListBoxRoot<T>({
   useEffect(() => {
     if (!currentValue) return;
 
-    const exists = items.some((item) => getKey(item) === getKey(currentValue));
+    const keyFn = getKeyRef.current;
+    const selectedKeyValue = keyFn(currentValue);
+    const exists = items.some((item) => keyFn(item) === selectedKeyValue);
     if (!exists) {
-      setValue(null);
+      if (!isControlled) {
+        setInternalValue(null);
+      }
+      onChangeRef.current?.(null);
     }
-  }, [currentValue, items, getKey]);
+  }, [currentValue, items, isControlled]);
+
+  const getItemId = useCallback(
+    (item: T) => `${listBoxId}-option-${encodeURIComponent(getKeyRef.current(item))}`,
+    [listBoxId],
+  );
 
   const contextValue = useMemo<ListBoxContextValue<T>>(
     () => ({
@@ -141,11 +175,11 @@ function ListBoxRoot<T>({
       activeIndex,
       setActiveIndex,
       select,
-      getItemId: (item: T) => `${listBoxId}-option-${encodeURIComponent(getKey(item))}`,
+      getItemId,
       disabled,
       readonly,
     }),
-    [items, getKey, selectedKey, activeIndex, disabled, readonly, listBoxId],
+    [items, getKey, selectedKey, activeIndex, setActiveIndex, select, getItemId, disabled, readonly],
   );
 
   return (

@@ -158,7 +158,7 @@ export class JsonCollection<TItem extends object> {
             return undefined;
         }
 
-        Object.assign(item, merge(item, patch));
+        Object.assign(item, merge.withOptions({ mergeArrays: false }, item, patch));
         this.middlewares.forEach((middleware) => middleware.beforeUpdate?.(item, patch));
         await this.db.write();
 

@@ -13,20 +13,20 @@ import type { OrderCardDirtyState, OrderCardProps } from './OrderCard.types';
 
 function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
     const isDirty = useDirtyStore<OrderCardDirtyState, boolean>((s) => s.isDirty);
-    const workingCopy = useDirtyStore<OrderCardDirtyState, OrderCardDirtyState>((s) => s.workingCopy);
+    const workingCopyFileId = useDirtyStore<OrderCardDirtyState, string | undefined>((s) => s.workingCopy.fileId);
     const commit = useDirtyStore<OrderCardDirtyState, () => void>((s) => s.commit);
 
     const updateOrderMutation = useUpdateOrder();
 
     const selectedFile = React.useMemo(
-        () => files.find((f) => f.id === workingCopy.fileId) ?? null,
-        [files, workingCopy.fileId],
+        () => files.find((f) => f.id === workingCopyFileId) ?? null,
+        [files, workingCopyFileId],
     );
     const shouldShowFileCard = selectedFile?.meta?.available === true;
 
     const handleSave = () => {
         updateOrderMutation.mutate(
-            { id: order.id, fileId: workingCopy.fileId },
+            { id: order.id, fileId: workingCopyFileId },
             {
                 onSuccess: (updatedOrder) => {
                     commit();
@@ -67,14 +67,10 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
             )}
 
             <Column span={16}>
-                <OrderCardDetails
-                    orderId={order.id}
-                    analysedDetails={order.analysedDetails}
-                    hasDetails={order.analysedDetails != null || order.redactedDetails != null}
-                />
+                <OrderCardDetails order={order} />
             </Column>
             <Column span={16}>
-                <OrderCardAnalyse orderId={order.id} hasUnsavedChanges={isDirty} />
+                <OrderCardAnalyse order={order} />
             </Column>
 
             {updateOrderMutation.isError && (

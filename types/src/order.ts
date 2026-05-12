@@ -1,3 +1,5 @@
+import { Dual } from "./ai.js";
+
 export const ProductCategory = {
     NEMS: 'НЭМС',
     Bushing: 'Втулка',
@@ -10,7 +12,7 @@ export type OrderRequirement = {
     parameterName: string;
     requiredValue: string;
     /**
-     * Только для ИИ-требований в `analysedDetails`.
+     * Только для требований в слое `details.requirements[*].ai`.
      * false = пользователь скрыл требование (отображается серым, не участвует в обработке).
      * По умолчанию true.
      */
@@ -18,16 +20,15 @@ export type OrderRequirement = {
 };
 
 export type OrderDetails = {
-    clientCompanyName?: string;
-    productCategory?: ProductCategory;
-    requirements?: OrderRequirement[];
+    clientCompanyName?: Dual<string>;
+    productCategory?: Dual<ProductCategory>;
+    requirements?: Dual<OrderRequirement>[];
 };
 
 export type Order = {
     authorId: string;
     fileId?: string | null;
-    analysedDetails?: OrderDetails | null;
-    redactedDetails?: OrderDetails | null;
+    details?: OrderDetails | null;
 };
 
 export type OrderQuery = {

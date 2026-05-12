@@ -21,7 +21,7 @@ export const order = {
         url: '/order',
         params: orderQuery,
     }),
-    updateOrder: (params: { id: string; }, body: Partial<Pick<Order, "fileId" | "analysedDetails" | "redactedDetails">>) => customInstance<Stored<Order>>({
+    updateOrder: (params: { id: string; }, body: Partial<Pick<Order, "fileId" | "details">>) => customInstance<Stored<Order>>({
         method: 'PUT',
         url: formatPath('/order/:id', params),
         data: body,

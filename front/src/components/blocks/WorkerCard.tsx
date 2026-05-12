@@ -4,6 +4,9 @@ import { FileIcon } from 'lucide-react';
 import { WorkerStatus, getHumanReadableWorkerData } from '@miracle/types';
 import type { Stored, WorkerData } from '@miracle/types';
 import { WorkerIcon } from '@/components/blocks/WorkerIcon';
+import { Button } from '@/components/ui/button';
+import { getApiErrorMessage } from '@/lib/api';
+import { useApplyWorkerData } from '@/lib/queries/workers.query';
 
 type WorkerCardProps = {
     worker: Stored<WorkerData>;
@@ -31,10 +34,6 @@ function getWorkerLabel(type: WorkerData['type']): string {
     switch (type) {
         case 'yandex-ocr-worker':
             return 'Yandex OCR';
-        case 'server-health-worker':
-            return 'Мониторинг диска';
-        case 'yandex-ping-worker':
-            return 'Ping Яндекса';
         case 'order-details-worker':
             return 'Анализ заказа';
         case 'llm-vision-worker':
@@ -45,6 +44,8 @@ function getWorkerLabel(type: WorkerData['type']): string {
 export function WorkerCard({ worker }: WorkerCardProps) {
     const indicator = getStatusIndicator(worker.status);
     const hrData = getHumanReadableWorkerData(worker);
+    const applyMutation = useApplyWorkerData();
+    const showApplyButton = worker.status === WorkerStatus.Success;
 
     return (
         <Stack gap={3} className="border border-border p-3">
@@ -55,6 +56,27 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                 </Text.Heading>
                 <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />
             </Stack>
+
+            {showApplyButton ? (
+                <Stack gap={2}>
+                    <div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={applyMutation.isPending}
+                            onClick={() => applyMutation.mutate(worker.id)}
+                        >
+                            {applyMutation.isPending ? 'Применение...' : 'Применить результат'}
+                        </Button>
+                    </div>
+                    {applyMutation.isError ? (
+                        <Text as="p" compact className="text-destructive">
+                            {getApiErrorMessage(applyMutation.error)}
+                        </Text>
+                    ) : null}
+                </Stack>
+            ) : null}
 
             <Stack gap={1}>
                 <Stack orientation="horizontal" gap={2} className="items-center">

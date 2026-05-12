@@ -1,7 +1,8 @@
 import type { Stored } from './db.js';
+import type { Content } from './file-content.js';
 import type { OrderDetails } from './order.js';
 
-export type WorkerType = 'yandex-ocr-worker' | 'llm-vision-worker' | 'server-health-worker' | 'yandex-ping-worker' | 'order-details-worker';
+export type WorkerType = 'yandex-ocr-worker' | 'llm-vision-worker' | 'order-details-worker';
 
 export const WorkerStatus = {
     Active: 'active',
@@ -26,33 +27,15 @@ export type YandexOcrWorkerData = BaseWorkerData & {
     operationDone: boolean;
     operationErrorMessage?: string;
     operationResult?: string;
-};
-
-export type ServerHealthWorkerData = BaseWorkerData & {
-    type: 'server-health-worker';
-    /** Общий объём диска в байтах */
-    diskTotalBytes?: number;
-    /** Занятое место в байтах */
-    diskUsedBytes?: number;
-    /** Доступное место в байтах */
-    diskAvailableBytes?: number;
-    /** Занятое место в процентах (0–100) */
-    diskUsedPercent?: number;
-};
-
-export type YandexPingWorkerData = BaseWorkerData & {
-    type: 'yandex-ping-worker';
-    /** Задержка последнего пинга в миллисекундах. null — пинг не удался */
-    latencyMs?: number | null;
-    /** Unix-timestamp последнего пинга */
-    lastPingedAt?: number;
+    /** Страницы OCR после `run`; в целевой file-content попадают в `apply`. */
+    ocrPages?: Content[];
 };
 
 export type OrderDetailsWorkerData = BaseWorkerData & {
     type: 'order-details-worker';
     orderId: string;
     cloudOperationId?: string;
-    orderDetails?: OrderDetails;
+    orderDetails?: OrderDetails | null;
     errorMessage?: string;
 };
 
@@ -68,7 +51,7 @@ export type LlmVisionWorkerData = BaseWorkerData & {
     errorMessage?: string;
 };
 
-export type WorkerData = YandexOcrWorkerData | LlmVisionWorkerData | ServerHealthWorkerData | YandexPingWorkerData | OrderDetailsWorkerData;
+export type WorkerData = YandexOcrWorkerData | LlmVisionWorkerData | OrderDetailsWorkerData;
 
 /** Человекочитаемое представление данных воркера — плоский объект без заранее известной схемы. */
 export type HumanReadableWorkerData = Record<string, unknown>;
@@ -78,17 +61,6 @@ export type WorkersQuery = {
     /** Порядок сортировки по дате создания. По умолчанию — без сортировки (порядок хранения). */
     sort?: 'asc' | 'desc';
 };
-
-function formatBytes(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
-function formatTimestamp(ts: number): string {
-    return new Date(ts).toLocaleString();
-}
 
 /**
  * Пробует распарсить строку как JSON.
@@ -114,7 +86,7 @@ function tryParseJson(value: string): unknown {
  * они уже присутствуют в шапке карточки воркера и дублировать их в теле нет смысла.
  *
  * Для каждого типа воркера определён свой обработчик, который преобразует сырые значения
- * в читаемый вид (байты → «1.2 GB», timestamp → локализованная строка и т.д.).
+ * в читаемый вид при необходимости.
  * Если обработчик для типа не определён — возвращаются доменные поля воркера как есть,
  * без форматирования. Это гарантирует, что новый тип воркера не сломает UI до тех пор,
  * пока для него не будет написан обработчик.
@@ -126,20 +98,6 @@ function tryParseJson(value: string): unknown {
  */
 export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanReadableWorkerData {
     switch (worker.type) {
-        case 'server-health-worker':
-            return {
-                'Диск занято': worker.diskUsedPercent != null ? `${worker.diskUsedPercent}%` : '—',
-                'Занято': worker.diskUsedBytes != null ? formatBytes(worker.diskUsedBytes) : '—',
-                'Свободно': worker.diskAvailableBytes != null ? formatBytes(worker.diskAvailableBytes) : '—',
-                'Всего': worker.diskTotalBytes != null ? formatBytes(worker.diskTotalBytes) : '—',
-            };
-
-        case 'yandex-ping-worker':
-            return {
-                'Задержка': worker.latencyMs != null ? `${worker.latencyMs} мс` : '—',
-                'Последний пинг': worker.lastPingedAt != null ? formatTimestamp(worker.lastPingedAt) : '—',
-            };
-
         case 'yandex-ocr-worker':
             return {
                 'Файл': worker.fileId,
@@ -147,6 +105,7 @@ export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanRea
                 'Операция завершена': worker.operationDone ? 'да' : 'нет',
                 ...(worker.operationErrorMessage != null && { 'Ошибка': tryParseJson(worker.operationErrorMessage) }),
                 ...(worker.operationResult != null && { 'Результат': worker.operationResult }),
+                ...(worker.ocrPages != null && worker.ocrPages.length > 0 && { 'Страниц OCR (к apply)': worker.ocrPages.length }),
             };
 
         case 'llm-vision-worker':

@@ -17,6 +17,7 @@ import {
     parseAnalyseOrderDetailsParams,
     parseClearAnalysedDetailsParams,
     parseGetWorkersQuery,
+    parseApplyWorkerDataParams,
 } from './parsers.generated.js';
 
 export const validationMap: Record<string, {
@@ -36,4 +37,5 @@ export const validationMap: Record<string, {
     'POST /order/:id/analyse-details': { params: parseAnalyseOrderDetailsParams },
     'POST /order/:id/clear-analysed-details': { params: parseClearAnalysedDetailsParams },
     'GET /workers': { query: parseGetWorkersQuery },
+    'POST /workers/:id/apply-worker-data': { params: parseApplyWorkerDataParams },
 };

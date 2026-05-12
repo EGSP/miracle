@@ -1,20 +1,36 @@
 import { Stack, Text } from '@miracle/aramid';
+import type { Order, Stored } from '@miracle/types';
+import { orderDetailsHasAiLayer } from '@miracle/types';
 import { Button } from '@/components/ui/button';
+import { useDirtyStore } from '@/contexts/dirty-state/DirtyStateContext';
 import { getApiErrorMessage } from '@/lib/api';
 import { useAnalyseOrderDetails, useCanAnalyseOrderDetails } from '@/lib/queries/order.query';
+import type { OrderCardDirtyState } from './OrderCard.types';
 
 type OrderCardAnalyseProps = {
-    orderId: string;
-    hasUnsavedChanges: boolean;
+    order: Stored<Order>;
 };
 
-export function OrderCardAnalyse({ orderId, hasUnsavedChanges }: OrderCardAnalyseProps) {
-    const analyseDetailsMutation = useAnalyseOrderDetails(orderId);
-    const analyseAvailabilityQuery = useCanAnalyseOrderDetails(orderId);
-    const canAnalyse = !hasUnsavedChanges && analyseAvailabilityQuery.data?.canAnalyse === true;
+const detailsBlockMessage = 'Сначала очистите детали заказа, чтобы запустить анализ снова';
+
+function orderHasPersistedDetails(order: Stored<Order>): boolean {
+    return orderDetailsHasAiLayer(order.details);
+}
+
+export function OrderCardAnalyse({ order }: OrderCardAnalyseProps) {
+    const hasUnsavedChanges = useDirtyStore<OrderCardDirtyState, boolean>((s) => s.isDirty);
+    const hasDetails = orderHasPersistedDetails(order);
+    const analyseDetailsMutation = useAnalyseOrderDetails(order.id);
+    const analyseAvailabilityQuery = useCanAnalyseOrderDetails(order.id);
+    const canAnalyse =
+        !hasUnsavedChanges
+        && !hasDetails
+        && analyseAvailabilityQuery.data?.canAnalyse === true;
     const analyseDisabledMessage = hasUnsavedChanges
         ? 'Сохраните изменения перед запуском анализа'
-        : analyseAvailabilityQuery.data?.errorMessage;
+        : hasDetails
+            ? detailsBlockMessage
+            : analyseAvailabilityQuery.data?.errorMessage;
 
     return (
         <Stack gap={2} className="border border-border p-3">

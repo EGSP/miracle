@@ -17,8 +17,6 @@ import { orderRouter } from './routers/order.router.js';
 import { filesContentRouter } from './routers/file-content.router.js';
 import { workerPool } from './workers/worker-pool.js';
 import { workersRouter } from './routers/workers.router.js';
-import { ServerHealthWorker } from './workers/server-health-worker.js';
-import { YandexPingWorker } from './workers/yandex-ping-worker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,14 +46,6 @@ app.use(errorMiddleware);
 
 try {
   await workerPool.restore();
-
-  // Singleton-воркеры: запускаем один раз при старте, если ещё не восстановлены
-  if (workerPool.find('server-health-worker').length === 0) {
-    workerPool.launch(new ServerHealthWorker());
-  }
-  if (workerPool.find('yandex-ping-worker').length === 0) {
-    workerPool.launch(new YandexPingWorker());
-  }
 
   app.listen(PORT, () => {
     logger.info(`[back] Сервер запущен на http://localhost:${PORT}`);

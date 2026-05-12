@@ -1,6 +1,7 @@
 import type { WorkerData } from '@miracle/types';
 import { JsonCollection, registerDb } from './db.js';
 import type { CreateEntityInput, StoredEntity, UpdateEntityInput } from './db.js';
+import { workerPool } from '../workers/worker-pool.js';
 
 export const workersDb = registerDb('workers', await JsonCollection.create<WorkerData>('workers'));
 
@@ -25,5 +26,13 @@ export const workersService = {
 
     query: (predicate: (worker: StoredEntity<WorkerData>) => boolean) => {
         return workersDb.ref().filter(predicate);
+    },
+
+    /**
+     * Применяет сохранённые в записи воркера данные к связанным сущностям.
+     * Создание экземпляра воркера и вызов `apply()` выполняет пул (`applyByWorkerId`).
+     */
+    applyWorkerData: async (id: string): Promise<void> => {
+        await workerPool.applyByWorkerId(id);
     },
 };

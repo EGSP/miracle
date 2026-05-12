@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import { ExtractionStatus, ExtractionType, WorkerStatus } from '@miracle/types';
-import type { LlmVisionWorkerData } from '@miracle/types';
+import type { LlmVisionWorkerData, Stored } from '@miracle/types';
 import { filesContentService } from '../databases/file-content.db.js';
 import { filesService, getFilePath } from '../databases/file.db.js';
 import { workersService } from '../databases/workers.db.js';
@@ -12,47 +12,57 @@ import { BaseWorker } from './base-worker.js';
 const SYSTEM_PROMPT = `Ты — ассистент для извлечения содержимого из документов со сложной структурой.
 Тебе передаются страницы документа в виде изображений.
 Извлеки весь текст и структурированные данные: таблицы, списки, поля форм.
-Для каждого чекбокса, переключателя или поля с отметкой укажи его метку и состояние: отмечен / не отмечен.
+
+Чекбоксы, радиокнопки и строки с взаимоисключающим выбором:
+- Для каждого элемента с отметкой укажи полную текстовую метку (подпись) рядом с полем, а не только факт отметки.
+- Если в группе несколько вариантов и отмечен один, явно выпиши, какой вариант выбран: дословно текст этой строки/пункта (как в документе). Не ограничивайся формулировками вроде «галочка у второго» или «отмечен крестик» — по извлечённому тексту должен читаться сам выбранный смысл, без отсылок только к позиции отметки.
+- Для неотмеченных альтернатив в той же группе достаточно кратко «не выбрано» или опусти их, если это не мешает восстановить контекст; главное — однозначно зафиксировать выбранный вариант текстом.
+- Независимые чекбоксы (несколько может быть отмечено): перечисли все отмеченные пункты с их полными подписями.
+
 Сохраняй исходный порядок элементов. Не добавляй комментариев от себя.`;
 
-type LlmVisionWorkerParams = {
-    fileId: string;
-    fileContentId: string;
-    existingWorkerId?: string;
-};
+export type LlmVisionWorkerOptions =
+    | { data: null; fileId: string; fileContentId: string }
+    | { data: Stored<LlmVisionWorkerData> };
 
 export class LlmVisionWorker extends BaseWorker {
     readonly type = 'llm-vision-worker' as const;
 
-    private readonly fileId: string;
-    private readonly fileContentId: string;
-    private workerId?: string;
+    /** Состояние строки воркера; после create/update совпадает с тем, что в БД. */
+    private data: Partial<Stored<LlmVisionWorkerData>>;
 
-    constructor(params: LlmVisionWorkerParams) {
+    constructor(options: LlmVisionWorkerOptions) {
         super();
-        this.fileId = params.fileId;
-        this.fileContentId = params.fileContentId;
-        this.workerId = params.existingWorkerId;
+        if (options.data === null) {
+            this.data = {
+                type: this.type,
+                fileId: options.fileId,
+                fileContentId: options.fileContentId,
+            };
+        } else {
+            this.data = { ...options.data };
+        }
     }
 
     async mount(): Promise<void> {
-        if (!this.workerId) {
-            const worker = await workersService.create({
+        if (!this.data.id) {
+            const row = await workersService.create({
                 type: this.type,
                 status: WorkerStatus.Active,
-                fileId: this.fileId,
-                fileContentId: this.fileContentId,
+                fileId: this.data.fileId!,
+                fileContentId: this.data.fileContentId!,
             } satisfies LlmVisionWorkerData);
-            this.workerId = worker.id;
+            Object.assign(this.data, row);
             return;
         }
 
-        await workersService.update(this.workerId, { status: WorkerStatus.Active });
+        const row = await workersService.update(this.data.id, { status: WorkerStatus.Active });
+        if (row) Object.assign(this.data, row);
     }
 
     async run(): Promise<void> {
         try {
-            if (!this.workerId) {
+            if (!this.data.id) {
                 throw new Error('Воркер не инициализирован: ожидается вызов mount() перед run()');
             }
 
@@ -76,26 +86,17 @@ export class LlmVisionWorker extends BaseWorker {
                 ],
             });
 
-            await workersService.update(this.workerId, { operationResult: result });
-
-            await filesContentService.update({
-                id: this.fileContentId,
-                fileId: this.fileId,
-                content: [{ text: result }],
-                meta: {
-                    extractionType: ExtractionType.LLM,
-                    extractionStatus: ExtractionStatus.COMPLETED,
-                },
-            });
+            const row = await workersService.update(this.data.id, { operationResult: result });
+            if (row) Object.assign(this.data, row);
 
             await this.markSuccess();
         } catch (error) {
             const message = LlmVisionWorker.extractErrorMessage(error);
-            logger.error(`[LlmVisionWorker] Ошибка обработки файла "${this.fileId}": ${message}`);
+            logger.error(`[LlmVisionWorker] Ошибка обработки файла "${this.data.fileId}": ${message}`);
 
             await filesContentService.update({
-                id: this.fileContentId,
-                fileId: this.fileId,
+                id: this.data.fileContentId!,
+                fileId: this.data.fileId!,
                 meta: {
                     extractionType: ExtractionType.LLM,
                     extractionStatus: ExtractionStatus.FAILED,
@@ -103,18 +104,45 @@ export class LlmVisionWorker extends BaseWorker {
                 },
             });
 
-            if (this.workerId) {
-                await workersService.update(this.workerId, {
+            if (this.data.id) {
+                const row = await workersService.update(this.data.id, {
                     status: WorkerStatus.Failed,
                     errorMessage: message,
                 });
+                if (row) Object.assign(this.data, row);
             }
         }
     }
 
+    getWorkerRecordId(): string | undefined {
+        return this.data.id;
+    }
+
+    async apply(): Promise<void> {
+        if (!this.data.id) {
+            throw new Error('Воркер не инициализирован');
+        }
+        if (this.data.type !== 'llm-vision-worker') {
+            throw new Error('Неверный тип воркера');
+        }
+        const text = this.data.operationResult?.trim();
+        if (text === undefined || text === '') {
+            throw new Error('Нет сохранённого текста LLM для применения');
+        }
+        await filesContentService.update({
+            id: this.data.fileContentId!,
+            fileId: this.data.fileId!,
+            content: [{ text }],
+            meta: {
+                extractionType: ExtractionType.LLM,
+                extractionStatus: ExtractionStatus.COMPLETED,
+            },
+        });
+    }
+
     private async renderPages() {
-        const file = await filesService.get(this.fileId);
-        if (!file) throw new Error(`Файл "${this.fileId}" не найден`);
+        const file = await filesService.get(this.data.fileId!);
+        if (!file) throw new Error(`Файл "${this.data.fileId}" не найден`);
 
         const filePath = getFilePath(file);
         const ext = file.extension.toLowerCase();
@@ -131,12 +159,8 @@ export class LlmVisionWorker extends BaseWorker {
     }
 
     private async markSuccess(): Promise<void> {
-        if (!this.workerId) return;
-        await workersService.update(this.workerId, { status: WorkerStatus.Success });
-    }
-
-    private async markStopped(): Promise<void> {
-        if (!this.workerId) return;
-        await workersService.update(this.workerId, { status: WorkerStatus.Stopped });
+        if (!this.data.id) return;
+        const row = await workersService.update(this.data.id, { status: WorkerStatus.Success });
+        if (row) Object.assign(this.data, row);
     }
 }

@@ -1,26 +1,6 @@
 {
   "items": [
     {
-      "type": "server-health-worker",
-      "status": "active",
-      "id": "c9fa72af-2854-4c4f-89cc-dd5d828688ab",
-      "createdAt": 1778419959448,
-      "updatedAt": 1778590936840,
-      "diskTotalBytes": 238720761856,
-      "diskUsedBytes": 199134851072,
-      "diskAvailableBytes": 39585910784,
-      "diskUsedPercent": 83
-    },
-    {
-      "type": "yandex-ping-worker",
-      "status": "active",
-      "id": "00674198-95c5-4d96-bb27-897d47fc90ac",
-      "createdAt": 1778419959448,
-      "updatedAt": 1778590935708,
-      "latencyMs": 877,
-      "lastPingedAt": 1778590935708
-    },
-    {
       "type": "yandex-ocr-worker",
       "status": "failed",
       "fileId": "30be2045-ca82-4f6a-8a6c-f02d93505ae1",

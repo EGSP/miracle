@@ -39,6 +39,7 @@ export async function extractVisualContentWithOCR(dbFile: Stored<FileModel>): Pr
     });
 
     const worker = new YandexOcrWorker({
+        data: null,
         fileId: dbFile.id,
         fileContentId: fileContent.id,
         mimeType,
@@ -69,8 +70,11 @@ export async function extractVisualContentWithLLM(dbFile: Stored<FileModel>): Pr
         },
     });
 
-    workerPool.launch(new LlmVisionWorker({
-        fileId: dbFile.id,
-        fileContentId: fileContent.id,
-    }));
+    workerPool.launch(
+        new LlmVisionWorker({
+            data: null,
+            fileId: dbFile.id,
+            fileContentId: fileContent.id,
+        }),
+    );
 }

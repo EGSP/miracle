@@ -21,7 +21,14 @@ const getWorkers = route.get('/', {
     },
 });
 
+const applyWorkerData = route.post('/:id/apply-worker-data', {
+    validate: { params: true },
+    handler: async ({ params }: { params: { id: string } }) => {
+        await workersService.applyWorkerData(params.id);
+    },
+});
+
 export const workersRouter = defineRouter('/workers', {
     middlewares: [authMiddleware],
-    routes: [getWorkers],
+    routes: [getWorkers, applyWorkerData],
 } as const);

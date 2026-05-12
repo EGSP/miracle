@@ -14,6 +14,15 @@ export abstract class BaseWorker {
 
     abstract run(): Promise<void>;
 
+    /**
+     * После успешного `run()` (запись в workers со статусом success) — переносит
+     * сохранённые в воркере данные в связанные сущности (заказ, file-content и т.д.).
+     */
+    abstract apply(): Promise<void>;
+
+    /** Идентификатор строки в workers.db после `mount()`. */
+    abstract getWorkerRecordId(): string | undefined;
+
     stop(): void {
         this.shouldStop = true;
     }

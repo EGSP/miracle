@@ -9,7 +9,7 @@ type CreateOrderDTO = {
     fileId?: string;
 };
 
-type UpdateOrderDTO = Partial<Pick<Order, 'fileId' | 'analysedDetails' | 'redactedDetails'>>;
+type UpdateOrderDTO = Partial<Pick<Order, 'fileId' | 'details'>>;
 
 type CanAnalyseOrderDetailsResponse = {
     canAnalyse: boolean;
@@ -64,8 +64,7 @@ const updateOrder = route.put('/:id', {
 
         const updated = await ordersService.update(params.id, {
             fileId: body.fileId,
-            analysedDetails: body.analysedDetails,
-            redactedDetails: body.redactedDetails,
+            details: body.details,
         });
 
         if (!updated) {
