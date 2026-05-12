@@ -4,6 +4,8 @@ import type { ZodSchema } from 'zod';
 import { yandex } from './yandex.js';
 import type { AsyncLlmClient, AsyncOperationClient } from './yandex-sdk.types.js';
 import type { LlmRequest, LlmPollResult } from './yandex-llm.types.js';
+import { callVisionCompletion } from './yandex-vision-llm.js';
+export type { VisionRequest, VisionMessage, VisionUserContent } from './yandex-vision-llm.js';
 
 const MODEL_SUFFIX = 'yandexgpt-5-lite';
 
@@ -44,6 +46,14 @@ class YandexLlm {
         }
 
         return op.id;
+    }
+
+    /**
+     * Синхронный вызов мультимодальной модели (текст + изображения).
+     * Возвращает текст ответа напрямую — Responses API не требует polling.
+     */
+    async callVisionCompletion(request: Parameters<typeof callVisionCompletion>[0]): Promise<string> {
+        return callVisionCompletion(request);
     }
 
     /**

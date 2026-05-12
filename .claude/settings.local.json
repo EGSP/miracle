@@ -19,7 +19,26 @@
       "Bash(node -e \"const m = require\\('./node_modules/@yandex-cloud/nodejs-sdk/dist/ai-ocr-v1'\\); console.log\\(Object.keys\\(m\\)\\)\")",
       "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\(json.dumps\\({**p.get\\('dependencies',{}\\), **p.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")",
       "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\(p['version']\\)\")",
-      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); [print\\(k,':',v\\) for k,v in p.get\\('scripts',{}\\).items\\(\\)]\")"
+      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); [print\\(k,':',v\\) for k,v in p.get\\('scripts',{}\\).items\\(\\)]\")",
+      "WebSearch",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(node -e \"const p = require\\('/c/workroot/Разработка/Программы/js/miracle/back/node_modules/pdfjs-dist/package.json'\\); console.log\\(p.version\\); console.log\\(Object.keys\\(p.exports || {}\\).slice\\(0,10\\)\\)\")",
+      "Bash(npm view *)",
+      "Bash(npm pack *)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/mozilla/pdf.js/v5.7.284/examples/node/pdf2png/pdf2png.mjs\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/yandex-cloud/docs/master/ru/foundation-models/operations/yandexgpt/vision.md\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/yandex-cloud/docs/master/ru/foundation-models/operations/multimodal/multimodal-request.md\")",
+      "Bash(curl -s \"https://api.github.com/repos/yandex-cloud/docs/git/trees/master?recursive=1\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/yandex-cloud/docs/master/ru/foundation-models/concepts/yandexgpt/multimodal.md\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/yandex-cloud/docs/master/en/foundation-models/operations/yandexgpt/multimodal.md\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/yandex-cloud/docs/master/ru/foundation-models/operations/yandexgpt/yandexgpt-vision.md\")",
+      "Bash(curl -s \"https://api.github.com/repos/yandex-cloud/docs/contents/ru/foundation-models/operations\")",
+      "Bash(python3 -c \"import json,sys; [print\\(x['name']\\) for x in json.load\\(sys.stdin\\) if isinstance\\(x,dict\\)]\")",
+      "Bash(curl -s \"https://api.github.com/repos/yandex-cloud/docs/contents/ru/foundation-models/operations/yandexgpt\")",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(x.get\\('name',''\\)\\) for x in \\(data if isinstance\\(data,list\\) else []\\)]\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/yandex-cloud/docs/master/ru/foundation-models/operations/yandexgpt/async-request.md\")",
+      "Bash(node -e \"require\\('openai'\\)\")",
+      "Bash(grep -v \"//\")"
     ]
   }
 }

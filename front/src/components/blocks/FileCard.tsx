@@ -7,7 +7,9 @@ import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "
 import { FileDropZone } from "@/components/ui/file-dropzone";
 import { getApiErrorMessage } from "@/lib/api";
 import { useExtractFileContent, useGetFileContent } from "@/lib/queries/file-content.query";
-import { useRestoreFile } from "@/lib/queries/file.query";
+import { usePatchFile, useRestoreFile } from "@/lib/queries/file.query";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getFileDomain, FileDomain } from "@miracle/types";
 
 type FileCardProps = {
     file: FileWithMeta;
@@ -40,7 +42,10 @@ export function FileCard({ file }: FileCardProps) {
     const { data: contentList, isLoading, isError: isGetContentError, error: getContentError } = useGetFileContent(file.id, true);
     const extractMutation = useExtractFileContent(file.id);
     const restoreMutation = useRestoreFile(file.id);
+    const patchMutation = usePatchFile(file.id);
     const [restoreFile, setRestoreFile] = useState<File | null>(null);
+    const isVisual = getFileDomain(file.extension) === FileDomain.VISUAL;
+    const isComplexLayout = file.settings?.complexLayout ?? false;
     const latestContent = contentList?.[0];
     const status = latestContent?.meta?.extractionStatus as ExtractionStatus | undefined;
     const indicator = getExtractionIndicator(latestContent);
@@ -80,6 +85,19 @@ export function FileCard({ file }: FileCardProps) {
                 <Text.Label as="span">Размер: {formatBytes(file.bytes)}</Text.Label>
                 <Text.Label as="span">Доступность: {file.meta?.available === false ? "Недоступен" : "Доступен"}</Text.Label>
             </Stack>
+
+            {isVisual && (
+                <label className="inline-flex items-center gap-2">
+                    <Checkbox
+                        checked={isComplexLayout}
+                        disabled={patchMutation.isPending}
+                        onCheckedChange={(checked) =>
+                            patchMutation.mutate({ settings: { complexLayout: checked === true } })
+                        }
+                    />
+                    <Text.Label as="span">Сложная структура (LLM вместо OCR)</Text.Label>
+                </label>
+            )}
 
             {!isFileAvailable && (
                 <Stack gap={2} className="border border-border bg-muted/20 p-2">

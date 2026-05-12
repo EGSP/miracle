@@ -1,8 +1,5 @@
-import { createCanvas, type Canvas } from 'canvas';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-
-// В Node.js нет web-воркеров — pdf.js падает обратно на main thread
-GlobalWorkerOptions.workerSrc = '';
+// legacy build не требует DOM API (DOMMatrix и др.) — обязателен для Node.js
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 export type PdfPageImage = {
     /** Номер страницы (начиная с 1) */
@@ -23,25 +20,9 @@ type PdfToImagesOptions = {
     quality?: number;
 };
 
-type CanvasEntry = { canvas: Canvas };
-
-// CanvasFactory — plain object, т.к. DocumentInitParameters.CanvasFactory типизирован как Object
-const nodeCanvasFactory = {
-    create(width: number, height: number): CanvasEntry {
-        return { canvas: createCanvas(width, height) };
-    },
-    reset({ canvas }: CanvasEntry, width: number, height: number): void {
-        canvas.width = width;
-        canvas.height = height;
-    },
-    destroy({ canvas }: CanvasEntry): void {
-        canvas.width = 0;
-        canvas.height = 0;
-    },
-};
-
 /**
  * Конвертирует PDF-буфер в массив JPEG-изображений (по одному на страницу).
+ * Паттерн взят из официального примера pdfjs-dist/examples/node/pdf2png/pdf2png.mjs.
  *
  * @example
  * const images = await pdfToImages(buffer, { scale: 3.0 });
@@ -58,28 +39,44 @@ export async function pdfToImages(
 
     const doc = await getDocument({
         data: new Uint8Array(pdfBuffer),
-        CanvasFactory: nodeCanvasFactory,
         disableFontFace: true,
         useSystemFonts: true,
     }).promise;
 
+    type NodeCanvas = { toBuffer(format: string, options?: { quality?: number }): Buffer };
+    type CanvasAndContext = { canvas: NodeCanvas; context: CanvasRenderingContext2D };
+    type NodeCanvasFactory = {
+        create(w: number, h: number): CanvasAndContext;
+        destroy(cc: CanvasAndContext): void;
+    };
+
+    // canvasFactory берётся из документа — legacy build предоставляет Node.js реализацию.
+    // Тип в d.ts — Object, поэтому кастуем к runtime-интерфейсу.
+    const canvasFactory = doc.canvasFactory as unknown as NodeCanvasFactory;
     const pages: PdfPageImage[] = [];
 
     for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
         const page = await doc.getPage(pageNum);
         const viewport = page.getViewport({ scale });
 
-        const canvas = createCanvas(viewport.width, viewport.height);
+        const canvasAndContext = canvasFactory.create(viewport.width, viewport.height);
 
+        // canvas: null — документировано: если передан canvasContext, canvas должен быть null.
+        // RenderParameters типизирует canvas как required, но это расхождение с реальностью
+        // (официальный пример node/pdf2png тоже не передаёт canvas).
         await page.render({
-            canvas: canvas as unknown as HTMLCanvasElement,
+            canvas: null as unknown as HTMLCanvasElement,
+            canvasContext: canvasAndContext.context,
             viewport,
         }).promise;
 
         page.cleanup();
 
+        const { canvas } = canvasAndContext;
         const buffer = canvas.toBuffer('image/jpeg', { quality });
         const base64 = buffer.toString('base64');
+
+        canvasFactory.destroy(canvasAndContext);
 
         pages.push({
             page: pageNum,

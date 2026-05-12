@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { file } from "../generated";
+import type { PatchFileDTO } from "../generated/models/file.models";
 import type { FilesQuery } from "@miracle/types";
 
 export const FILES_QUERY_KEY = ['files'] as const;
@@ -20,6 +21,17 @@ export const useUploadFile = () => {
             formData.append('file', fileToUpload);
             return file.uploadFile(formData);
         },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEY });
+        },
+    });
+};
+
+export const usePatchFile = (fileId: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (dto: PatchFileDTO) => file.patchFile({ id: fileId }, dto),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEY });
         },

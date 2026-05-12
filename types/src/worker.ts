@@ -1,7 +1,7 @@
 import type { Stored } from './db.js';
 import type { OrderDetails } from './order.js';
 
-export type WorkerType = 'yandex-ocr-worker' | 'server-health-worker' | 'yandex-ping-worker' | 'order-details-worker';
+export type WorkerType = 'yandex-ocr-worker' | 'llm-vision-worker' | 'server-health-worker' | 'yandex-ping-worker' | 'order-details-worker';
 
 export const WorkerStatus = {
     Active: 'active',
@@ -56,7 +56,19 @@ export type OrderDetailsWorkerData = BaseWorkerData & {
     errorMessage?: string;
 };
 
-export type WorkerData = YandexOcrWorkerData | ServerHealthWorkerData | YandexPingWorkerData | OrderDetailsWorkerData;
+export type LlmVisionWorkerData = BaseWorkerData & {
+    type: 'llm-vision-worker';
+    fileId: string;
+    fileContentId: string;
+    /** ID асинхронной операции Yandex — сохраняется для восстановления после перезапуска. */
+    cloudOperationId?: string;
+    /** Текстовый ответ LLM после завершения операции. */
+    operationResult?: string;
+    /** Сообщение об ошибке при неуспешном завершении. */
+    errorMessage?: string;
+};
+
+export type WorkerData = YandexOcrWorkerData | LlmVisionWorkerData | ServerHealthWorkerData | YandexPingWorkerData | OrderDetailsWorkerData;
 
 /** Человекочитаемое представление данных воркера — плоский объект без заранее известной схемы. */
 export type HumanReadableWorkerData = Record<string, unknown>;
@@ -135,6 +147,14 @@ export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanRea
                 'Операция завершена': worker.operationDone ? 'да' : 'нет',
                 ...(worker.operationErrorMessage != null && { 'Ошибка': tryParseJson(worker.operationErrorMessage) }),
                 ...(worker.operationResult != null && { 'Результат': worker.operationResult }),
+            };
+
+        case 'llm-vision-worker':
+            return {
+                'Файл': worker.fileId,
+                ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),
+                ...(worker.operationResult != null && { 'Результат': worker.operationResult }),
+                ...(worker.errorMessage != null && { 'Ошибка': tryParseJson(worker.errorMessage) }),
             };
 
         case 'order-details-worker':

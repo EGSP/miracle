@@ -14,6 +14,12 @@ import { fixFileNameEncoding } from '../databases/runners/file.run.js';
  * The generated client will send this type as FormData (multipart/form-data).
  * At runtime the handler does not use body — the file is available via req.file (multer).
  */
+type PatchFileDTO = {
+    settings?: FileModel['settings'];
+};
+
+type PatchFileResponse = FileModel;
+
 type UploadBody = FormData;
 
 type UploadFileResponse = FileModel;
@@ -75,6 +81,17 @@ const uploadFile = route.post('/upload', {
         });
 
         return created satisfies UploadFileResponse;
+    },
+});
+
+const patchFile = route.patch('/:id', {
+    validate: { params: true },
+    handler: async ({ params, body }: { params: { id: string }; body: PatchFileDTO }) => {
+        const updated = await filesService.patch(params.id, body.settings);
+        if (!updated) {
+            return err.notFound(`File with id "${params.id}" not found`);
+        }
+        return updated satisfies PatchFileResponse;
     },
 });
 
@@ -202,5 +219,5 @@ function pipeFileToResponse(filePath: string, res: Response, options?: { start: 
 
 export const fileRouter = defineRouter('/files', {
     middlewares: [authMiddleware],
-    routes: [getFiles, uploadFile, restoreFile, streamFileContent],
+    routes: [getFiles, uploadFile, patchFile, restoreFile, streamFileContent],
 } as const);

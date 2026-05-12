@@ -19,6 +19,7 @@ export enum ExtractionType {
     RAWREAD = 'rawRead',
     PARSEDOC = 'parseDoc',
     OCR = 'ocr',
+    LLM = 'llm',
 }
 
 export enum ExtractionStatus {

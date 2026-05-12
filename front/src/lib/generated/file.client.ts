@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { FilesQuery } from '@miracle/types';
-import type { GetFilesResponse, UploadFileResponse, RestoreFileResponse, StreamFileContentResponse } from './models';
+import type { GetFilesResponse, UploadFileResponse, PatchFileDTO, PatchFileResponse, RestoreFileResponse, StreamFileContentResponse } from './models';
 
 export const file = {
     getFiles: (filesQuery: FilesQuery) => customInstance<GetFilesResponse>({
@@ -16,6 +16,11 @@ export const file = {
         method: 'POST',
         url: '/files/upload',
         data: formData,
+    }),
+    patchFile: (params: { id: string; }, patchFileDTO: PatchFileDTO) => customInstance<PatchFileResponse>({
+        method: 'PATCH',
+        url: formatPath('/files/:id', params),
+        data: patchFileDTO,
     }),
     restoreFile: (params: { id: string; }, formData: FormData) => customInstance<RestoreFileResponse>({
         method: 'POST',

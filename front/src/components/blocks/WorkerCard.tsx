@@ -37,6 +37,8 @@ function getWorkerLabel(type: WorkerData['type']): string {
             return 'Ping Яндекса';
         case 'order-details-worker':
             return 'Анализ заказа';
+        case 'llm-vision-worker':
+            return 'LLM Vision извлечение';
     }
 }
 
@@ -62,10 +64,19 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                 <Text.Label as="span" className="text-muted-foreground">
                     ID: {worker.id}
                 </Text.Label>
-                {worker.type === 'yandex-ocr-worker' && (
+                <Text.Label as="span" className="text-muted-foreground">
+                    Обновлён: {new Date(worker.updatedAt).toLocaleString()}
+                </Text.Label>
+                {(worker.type === 'yandex-ocr-worker' || worker.type === 'llm-vision-worker') && (
                     <Link to="/files" search={{ fileId: worker.fileId }} className="inline-flex items-center gap-1">
                         <FileIcon className="size-3 shrink-0" />
                         <Text as="span" compact>Файл</Text>
+                    </Link>
+                )}
+                {worker.type === 'order-details-worker' && (
+                    <Link to="/orders" search={{ orderId: worker.orderId }} className="inline-flex items-center gap-1">
+                        <FileIcon className="size-3 shrink-0" />
+                        <Text as="span" compact>Заказ</Text>
                     </Link>
                 )}
             </Stack>

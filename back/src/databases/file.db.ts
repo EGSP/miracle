@@ -81,6 +81,12 @@ export const filesService = {
         });
     },
 
+    patch: async (id: string, settings: FileModel['settings']) => {
+        const existing = await filesDb.getById(id);
+        if (!existing) return undefined;
+        return filesDb.update(id, { ...existing, settings });
+    },
+
     /**
      * Проверяет, действительно ли файл существует в файловой системе
      * @param id - ID файла

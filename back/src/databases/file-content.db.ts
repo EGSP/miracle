@@ -1,7 +1,7 @@
 import { ExtractionStatus, FileContent, FileDomain, FileModel, getFileDomain, Stored } from "@miracle/types";
 import { registerDb, JsonCollection, CreateEntityInput } from "./db.js";
 import { filesService, getFilePath } from "./file.db.js";
-import { extractDocumentContent, extractSpreadsheetContent, extractTextContent, extractVisualContent } from "../lib/extraction/index.js";
+import { extractDocumentContent, extractSpreadsheetContent, extractTextContent, extractVisualContentWithLLM, extractVisualContentWithOCR } from "../lib/extraction/index.js";
 
 export const filesContentDb = registerDb('file-content', await JsonCollection.create<FileContent>('file-content'));
 
@@ -55,9 +55,14 @@ export const filesContentService = {
 
         const pathToFile = getFilePath(file);
 
-        // VISUAL — асинхронный OCR через воркер, не generator-паттерн
+        // VISUAL — асинхронный воркер, не generator-паттерн.
+        // complexLayout → LLM Vision (лучше с чекбоксами/формами), иначе → Yandex OCR.
         if (domain === FileDomain.VISUAL) {
-            await extractVisualContent(file);
+            if (file.settings?.complexLayout) {
+                await extractVisualContentWithLLM(file);
+            } else {
+                await extractVisualContentWithOCR(file);
+            }
             return;
         } else {
             let extractor: ((

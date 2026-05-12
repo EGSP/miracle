@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { ListOrdered, Plus } from 'lucide-react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
 import type { FileWithMeta, Order, Stored } from '@miracle/types';
@@ -77,6 +78,8 @@ function OrderListItem({ order, file }: { order: Stored<Order>; file: FileWithMe
 }
 
 function OrdersPageContent() {
+    const { orderId: orderIdParam } = useSearch({ from: '/orders' });
+    const navigate = useNavigate({ from: '/orders' });
     const [selectedOrder, setSelectedOrder] = useState<Stored<Order> | null>(null);
     const [myOrdersOnly, setMyOrdersOnly] = useState(false);
     const [withFileOnly, setWithFileOnly] = useState<TriStateValue>(undefined);
@@ -102,12 +105,18 @@ function OrdersPageContent() {
         });
     };
 
-    const handleSelectedOrderChange = (next: Stored<Order> | null) => {
-        if (isDirtyAnywhere) {
-            return;
-        }
+    const handleSelectedOrderChange = useCallback((next: Stored<Order> | null) => {
+        if (isDirtyAnywhere) return;
         setSelectedOrder(next);
-    };
+        void navigate({ search: (prev) => ({ ...prev, orderId: next?.id }) });
+    }, [isDirtyAnywhere, navigate]);
+
+    // Sync URL param → selection when orders load
+    useEffect(() => {
+        if (!orderIdParam || !orders) return;
+        const match = orders.find((o) => o.id === orderIdParam);
+        if (match) setSelectedOrder(match);
+    }, [orderIdParam, orders]);
 
 
     return (

@@ -20,7 +20,7 @@ export function NavBar() {
                 <FileIcon className="size-3.5 shrink-0" />
                 <Text.Label as="span">Файлы</Text.Label>
             </Link>
-            <Link to="/orders" className={navLinkClass}>
+            <Link to="/orders" search={{ orderId: undefined }} className={navLinkClass}>
                 <ListOrdered className="size-3.5 shrink-0" />
                 <Text.Label as="span">Заказы</Text.Label>
             </Link>

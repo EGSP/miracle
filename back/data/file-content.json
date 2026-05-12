@@ -265,6 +265,120 @@
           "text": "\n\nОбщество с ограниченной ответственностью\n\nИНЖЕНЕРНО-ПРОИЗВОДСТВЕННЫЙ ЦЕНТР\n\n(ООО «ИПЦ»)\n\n\n\n423236, РФ, Республика Татарстан, \n\nг. Бугульма, ул. Ивана Гончарова, д.12\n\n                                                             Тел.: 8 800 551 59 55, (85594) 3-90-63\n\nE-mail: sales@ipc-bugulma.ru, info@ipc-bugulma.ru\n\nСайт: http://www. ipc-bugulma.com \n\n\n\n\n\nИзготавливаются в соответствии с Техническими Условиями \n\n14-41 ТУ 22.21.29-026-05608841-2021 \n\n \n\n\n\n\n\n\n\n\n\n\n\nОпросный лист \n\nдля заказа и изготовления Устройства выхода газопроводов из земли (Неразъемное  соединение «Полиэтилен-сталь») \n\nТУ 22.21.29-026-05608841-2021 \n\n№____ от «___»___________20__г.\n\nПредприятие-заказчик: ООО ОБИС ЭНЕРГОМОНТАЖ\n\n ФИО:        Митько Виждана                                                                                                                                                          \n\nКонтакты: тел.(факс), e-mail vizhdan.mitko@obis-energo.ru\n\nПараметры неразъемное соединение «Полиэтилен-сталь»\n\nРазмеры стального трубопровода D*s, мм\n\n∅159х4,5 \n\nМарка стали трубопровода\n\nВ-10\n\nРазмеры полиэтиленовой трубы D*s, мм\n\n160x14,6\n\nSDR и марка полиэтиленового трубопровода\n\nПЭ100 ГАЗ SDR11\n\nКоличество, шт.\n\n1\n\nДополнительные условия: \n\n\n\nВ случае отсутствия данных Заказчика значения должны соответствовать расчетным данным изготовителя и ТУ 22.21.29-026-05608841-2021 \n\n\n\n\n\n"
         }
       ]
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "CanvasFactory is not a constructor"
+      },
+      "id": "8df9d065-722a-4a20-a8e9-e145f837acb1",
+      "createdAt": 1778572102489,
+      "updatedAt": 1778572102495
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "Setting up fake worker failed: \"No \"GlobalWorkerOptions.workerSrc\" specified.\"."
+      },
+      "id": "8dd04edc-3d1d-4e2a-a61b-d9c4d1c08db9",
+      "createdAt": 1778572182548,
+      "updatedAt": 1778572182560
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "Yandex Vision LLM вернул ошибку 401: {\"error\":\"The apikey has expired 2026-05-07T21:00:00Z. Now 2026-05-12T07:54:07.043393985Z, which is more than PT10M later\",\"code\":16,\"message\":\"The apikey has expired 2026-05-07T21:00:00Z. Now 2026-05-12T07:54:07.043393985Z, which is more than PT10M later\",\"details\":[]}"
+      },
+      "id": "a399ec79-dc02-4cac-837c-784455d65da9",
+      "createdAt": 1778572440647,
+      "updatedAt": 1778572447004
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "Yandex Vision LLM вернул ошибку 401: {\"error\":\"The apikey has expired 2026-05-07T21:00:00Z. Now 2026-05-12T07:54:54.053183118Z, which is more than PT10M later\",\"code\":16,\"message\":\"The apikey has expired 2026-05-07T21:00:00Z. Now 2026-05-12T07:54:54.053183118Z, which is more than PT10M later\",\"details\":[]}"
+      },
+      "id": "e7874280-c870-4a9b-97f4-effa74120e86",
+      "createdAt": 1778572490022,
+      "updatedAt": 1778572494007
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "Yandex Vision LLM вернул ошибку 401: {\"error\":\"The apikey has expired 2026-05-07T21:00:00Z. Now 2026-05-12T08:01:43.209247668Z, which is more than PT10M later\",\"code\":16,\"message\":\"The apikey has expired 2026-05-07T21:00:00Z. Now 2026-05-12T08:01:43.209247668Z, which is more than PT10M later\",\"details\":[]}"
+      },
+      "id": "5ba0676f-94d5-409c-806d-f686f7db00fc",
+      "createdAt": 1778572898615,
+      "updatedAt": 1778572903163
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "{\"httpStatus\":401,\"error\":\"The apikey has expired 2026-05-07T21:00:00Z. Now 2026-05-12T08:05:07.978053934Z, which is more than PT10M later\",\"code\":16,\"message\":\"The apikey has expired 2026-05-07T21:00:00Z. Now 2026-05-12T08:05:07.978053934Z, which is more than PT10M later\",\"details\":[]}"
+      },
+      "id": "6ee6608a-afd5-4cbb-bff9-5f3af428d7a3",
+      "createdAt": 1778573102955,
+      "updatedAt": 1778573107923
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "Операция LLM \"d7qkqh9qnkdceva81l0g\" завершилась с ошибкой: Error in session internal_id=73ebe19e-6aa4b338-43f4d8b8-8b218f66&request_id=8bed379f-192b-48d2-9917-9bd8df6924ab&client_request_id=undefined&client_id=b1gojojef5kc786v3hgp: empty message text"
+      },
+      "id": "53a75d27-694d-469f-afea-6c085cdabd83",
+      "createdAt": 1778574141058,
+      "updatedAt": 1778574148908
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "{\"status\":\"failed\",\"response\":{\"id\":\"32abfc6c-3a11-4065-935e-de488cb7abc4\",\"created_at\":1778575342,\"error\":{\"code\":\"model_call_error\",\"message\":\"Error while calling model: 200: rpc error: code = InvalidArgument desc = Error in session internal_id=c81d945b-8a58f810-8b880974-77a4246e&request_id=7af7752a-9105-4ddc-978f-5b4a6d55bc81&client_request_id=undefined&client_id=b1gojojef5kc786v3hgp: empty message text\",\"valid\":false},\"incomplete_details\":null,\"instructions\":null,\"metadata\":{},\"model\":\"gpt://b1g5ivgmoife8m1kkvf3/yandexgpt-5-lite/latest\",\"object\":\"response\",\"output\":[],\"parallel_tool_calls\":false,\"temperature\":0.1,\"tool_choice\":\"auto\",\"tools\":[],\"top_p\":1,\"background\":false,\"max_output_tokens\":null,\"max_tool_calls\":null,\"previous_response_id\":null,\"prompt\":null,\"reasoning\":null,\"service_tier\":\"default\",\"status\":\"failed\",\"text\":null,\"top_logprobs\":null,\"truncation\":null,\"usage\":{\"input_tokens\":0,\"input_tokens_details\":{\"cached_tokens\":0,\"valid\":true,\"tool_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"reasoning_tokens\":0,\"valid\":true},\"total_tokens\":0,\"valid\":true},\"user\":null,\"valid\":true}}"
+      },
+      "id": "59b22e7a-2c6a-414c-bac3-40495ce280f6",
+      "createdAt": 1778575334238,
+      "updatedAt": 1778575342829
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "{\"status\":\"failed\",\"response\":{\"id\":\"b975a130-181a-461c-be64-aa160990a850\",\"created_at\":1778575485,\"error\":{\"code\":\"model_call_error\",\"message\":\"Error while calling model: 200: rpc error: code = InvalidArgument desc = Error in session internal_id=fb0e0916-7d0d3150-75aab21e-fa2a2693&request_id=7a777c29-ee8e-4bd4-9955-112497d99884&client_request_id=undefined&client_id=b1gojojef5kc786v3hgp: empty message text\",\"valid\":false},\"incomplete_details\":null,\"instructions\":\"Ты — ассистент для извлечения содержимого из документов со сложной структурой.\\nТебе передаются страницы документа в виде изображений.\\nИзвлеки весь текст и структурированные данные: таблицы, списки, поля форм.\\nДля каждого чекбокса, переключателя или поля с отметкой укажи его метку и состояние: отмечен / не отмечен.\\nСохраняй исходный порядок элементов. Не добавляй комментариев от себя.\",\"metadata\":{},\"model\":\"gpt://b1g5ivgmoife8m1kkvf3/yandexgpt-5-lite/latest\",\"object\":\"response\",\"output\":[],\"parallel_tool_calls\":false,\"temperature\":0.1,\"tool_choice\":\"auto\",\"tools\":[],\"top_p\":1,\"background\":false,\"max_output_tokens\":4000,\"max_tool_calls\":null,\"previous_response_id\":null,\"prompt\":null,\"reasoning\":null,\"service_tier\":\"default\",\"status\":\"failed\",\"text\":null,\"top_logprobs\":null,\"truncation\":null,\"usage\":{\"input_tokens\":0,\"input_tokens_details\":{\"cached_tokens\":0,\"valid\":true,\"tool_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"reasoning_tokens\":0,\"valid\":true},\"total_tokens\":0,\"valid\":true},\"user\":null,\"valid\":true}}"
+      },
+      "id": "82973372-e344-4553-b18f-dc3333ea16ef",
+      "createdAt": 1778575475592,
+      "updatedAt": 1778575486337
+    },
+    {
+      "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "completed"
+      },
+      "id": "9a7b2187-6083-4273-98b5-7de83b4749e4",
+      "createdAt": 1778576194133,
+      "updatedAt": 1778576218240,
+      "content": [
+        {
+          "text": "Организация проектировщик\nФакс:\nТел.:\nE-mail:\n\nВставка электроизолирующая\nОпросный лист\n\nЗаказчик: ООО «Черноморнефтегаз» (ООО «ЧМНГ»)\nГенпроектировщик: ООО «Ижстрой инвест»\nПроектная организация: ООО «ГазЭнергоКомплект» (ООО «ГЭК»)\nСубподрядная проектная организация: ООО «Центр комплексного проектирования» (ООО «ЦКП»)\nОбъект: Капитальный ремонт ГРС-2 г. Донецк\n\n| № п.п. | Параметр | Значение |\n| :--- | :--- | :--- |\n| 1. | Характеристики окружающей среды. | |\n| 1.1. | Абсолютная максимальная температура района эксплуатации изделия, °С | плюс 39 |\n| 1.2. | Абсолютная минимальная температура района эксплуатации изделия, °С | минус 35 |\n| 1.3. | Температура воздуха самой холодной пятидневки с обеспеченностью 0,92/0,98, °С. | минус 22 |\n| 1.4. | Климатическое исполнение и категория размещения по ГОСТ 15150-69. | климатическое исполнение – У (от -40°C до +60°C); категория размещения – I |\n| 1.5. | Сейсмичность района эксплуатации (баллы по шкале MSK64). | 7 |\n| 2. | Общие требования. | |\n| 2.1. | Срок службы изделия | 30 лет |\n| 2.2. | Разделка сварных кромок концевых патрубков. | С2 ГОСТ 16037-80 |\n| 2.3. | Типоразмер муфты по номенклатурному перечню завода-изготовителя | DN80, P=1.6 МПа |\n| 2.4. | Тип наружного покрытия | [ ] полиуретановое PROTEGOL UR-Coating 32-60 или UR-Coating 32-55H, толщиной не менее 2000 мкм (для подземной установки)<br>[X] Система защитного покрытия «СпецПротект 007/109» толщиной не менее 160 мкм (для надземной установки)<br>[ ] без наружного покрытия (наносится консервационный состав) |\n\nОЛ.503.ИММ.06.1\nКапитальный ремонт ГРС-2 г. Донецк\n\n| Изм. | Кол.уч. | Лист | №док. | Подпись | Дата |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n| Разраб. | Красников | | | | |\n| Проверил | Земляков | | | | |\n| Н.контр. | Земляков | | | | |\n| ГИП | | | | | |\n\nТехнологические решения\nСтадия:\nЛист: 1\nЛистов: 3\n\nОпросный лист на муфту изолирующую монолитную DN80, P=1.6 МПа\nФормат А4\n\n---\n\n| 2.5. | Тип внутреннего покрытия | [ ] толщиной не менее 50 мкм<br>[X] без внутреннего покрытия |\n| :--- | :--- | :--- |\n| 2.6. | Классификация муфты по допустимым механическим нагрузкам | Категория А - для вставок (муфт) электроизолирующих, выдерживающих повышенные механические нагрузки. |\n| 2.7. | Устройство молниезащиты: | [ ] Искрогаситель HGS100 Ex (ГСП 100Ex)<br>[ ] УМК 2Р.Г10В2х6<br>[ ] УМК 2Р.0<br>[X] Не требуется |\n| 2.8. | Контрольно-измерительный пункт: | [ ] Контрольно-измерительный пункт КИП.ТСТ-8.1.8/0.7-XXX*.Сx17. БСЗ(Р)1/25.ЭС2 в комплекте с двумя электродами сравнения<br>[ ] Контрольно-измерительный пункт КИП.ТСТ-8.1.8/0.7-XXX*.Сx22. БСЗ(Р)1/10.ЭС2 в комплекте с двумя электродами сравнения и модулем контроля искрогасителя (МКИ)<br>[ ] Контрольно-измерительный пункт с дистанционной передачей данных<br>[X] не требуется |\n| 2.9. | XXX - цвет крышки клеммного терминала КИП (в соответствии с СТО Газпром 2.3.5-454-2010 и Типовой книгой фирменного стиля ПАО «Газпром») (нужное отметить) | [ ] «Жлт» желтый - для магистральных трубопроводов<br>[ ] «Крс» красный - для газораспределительных трубопроводов<br>[ ] «Син» синий - для трубопроводов объектов добычи<br>[ ] «Зел» зеленый - для трубопроводов подземного хранения газа |\n| 3. | Характеристики трубопровода. | |\n| 3.1. | Характеристики трубопровода (диаметр, толщина стенки, класс прочности). | Ø89x3,5, сталь 20 |\n| 3.2. | Номинальное давление трубопровода, МПа. | 1,6 |\n| 3.3. | Рабочее давление, МПа. | 0,3 |\n| 3.4. | Тип установки. | надземно |\n| 3.5. | Транспортируемая среда. | Вода; Этиленгликоль |\n| 4. | Виды испытаний. | |\n| 4.1. | Неразрушающий контроль сварных соединений. | 100% |\n| 4.2. | Испытание внутренним гидравлическим давлением на прочность (гидростатическое испытание). | давлением, равным 1,5 рабочего давления в течение 120 мин. (100%) |\n| 4.3. | Проверка электрического сопротивления. | при напряжении 1000 В постоянного тока на сухом воздухе электрическое сопротивление не менее 5 МОм (100%) |\n\nОЛ.503.ИММ.06.1\nЛист 2\nФормат А4\n\n---\n\n| 4.4. | Испытание на электрическую прочность. | напряжением 5 кВ переменного тока в течение 1 мин. (100%) |\n| :--- | :--- | :--- |\n| 4.5. | Испытание внутренним пневматическим давлением. | давлением, равным 2,4±0,2 МПа в течение 30 мин. (100%) |\n| 4.6. | Проверка толщины и диэлектрической сплошности защитного покрытия. | 100% |\n| 4.7. | Дополнительные виды испытаний (указать при необходимости). | - |\n| 5. | Перечень необходимой разрешительной и эксплуатационной документации. | паспорт, руководство по монтажу, эксплуатации и техническому обслуживанию на русском языке |\n| 6. | Дополнительные требования. | - |\n\nОЛ.503.ИММ.06.1\nЛист 3\nФормат А4"
+        }
+      ]
     }
   ]
 }

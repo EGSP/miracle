@@ -3,6 +3,7 @@ import type { FileModel, Stored } from '@miracle/types';
 import { filesContentService } from '../../databases/file-content.db.js';
 import { workerPool } from '../../workers/worker-pool.js';
 import { YandexOcrWorker } from '../../workers/yandex-ocr-worker.js';
+import { LlmVisionWorker } from '../../workers/llm-vision-worker.js';
 
 /**
  * MIME-типы, поддерживаемые Yandex OCR в асинхронном режиме.
@@ -18,19 +19,8 @@ function isYandexOcrMimeType(mime: string): mime is YandexOcrMimeType {
 
 /**
  * Запускает асинхронное OCR-распознавание для файлов домена VISUAL.
- *
- * В отличие от других экстракторов, функция не является генератором:
- * она создаёт стартовую запись FileContent, запускает YandexOcrWorker
- * в фоне и немедленно возвращает управление.
- *
- * Результат распознавания появится в FileContent позже —
- * когда воркер получит ответ от Yandex Cloud.
- *
- * @param dbFile  Запись файла из БД.
  */
-export async function extractVisualContent(
-    dbFile: Stored<FileModel>,
-): Promise<void> {
+export async function extractVisualContentWithOCR(dbFile: Stored<FileModel>): Promise<void> {
     const mimeType = getMimeType(dbFile.extension);
 
     if (!mimeType || !isYandexOcrMimeType(mimeType)) {
@@ -40,7 +30,6 @@ export async function extractVisualContent(
         );
     }
 
-    // Создаём начальную запись — сигнализирует о запуске OCR
     const fileContent = await filesContentService.create({
         fileId: dbFile.id,
         meta: {
@@ -55,6 +44,33 @@ export async function extractVisualContent(
         mimeType,
     });
 
-    // Запускаем воркер без ожидания — он работает полностью в фоне
     workerPool.launch(worker);
+}
+
+/**
+ * Запускает LLM Vision извлечение для файлов со сложной структурой (чекбоксы, формы).
+ * Использует мультимодальную LLM вместо OCR — лучше справляется с нестандартными элементами.
+ */
+export async function extractVisualContentWithLLM(dbFile: Stored<FileModel>): Promise<void> {
+    const mimeType = getMimeType(dbFile.extension);
+
+    if (!mimeType || !isYandexOcrMimeType(mimeType)) {
+        throw new Error(
+            `Расширение «${dbFile.extension}» не поддерживается LLM Vision. ` +
+            `Допустимые форматы: jpeg, png, pdf`,
+        );
+    }
+
+    const fileContent = await filesContentService.create({
+        fileId: dbFile.id,
+        meta: {
+            extractionType: ExtractionType.LLM,
+            extractionStatus: ExtractionStatus.STARTED,
+        },
+    });
+
+    workerPool.launch(new LlmVisionWorker({
+        fileId: dbFile.id,
+        fileContentId: fileContent.id,
+    }));
 }

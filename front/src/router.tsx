@@ -47,6 +47,9 @@ const ordersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/orders',
   component: OrdersPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    orderId: typeof search.orderId === 'string' ? search.orderId : undefined,
+  }),
 });
 
 const workersRoute = createRoute({

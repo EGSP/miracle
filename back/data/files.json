@@ -142,7 +142,10 @@
       "bytes": 567283,
       "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
       "createdAt": 1778513200949,
-      "updatedAt": 1778513200949
+      "updatedAt": 1778571992918,
+      "settings": {
+        "complexLayout": true
+      }
     },
     {
       "id": "f24a3c71-8019-4bf2-b3a9-15d5f84bb2e5",
@@ -161,6 +164,18 @@
       "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
       "createdAt": 1778530795611,
       "updatedAt": 1778530795611
+    },
+    {
+      "id": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
+      "name": "ГЭК_ОЛ.503.ИММ.06.1 (ЕСТ 16м3).pdf",
+      "extension": "pdf",
+      "bytes": 567441,
+      "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
+      "createdAt": 1778572095869,
+      "updatedAt": 1778572100824,
+      "settings": {
+        "complexLayout": true
+      }
     }
   ]
 }
