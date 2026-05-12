@@ -10,6 +10,7 @@
     "types"
   ],
   "scripts": {
+    "refresh": "npm run install:all && npm run build:aramid && npm run build:back && npm run generate:all",
     "install:all": "npm install --workspaces --include-workspace-root",
     
     "build:aramid": "npm run build --workspace=aramid",

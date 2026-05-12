@@ -5,20 +5,20 @@
       "status": "active",
       "id": "c9fa72af-2854-4c4f-89cc-dd5d828688ab",
       "createdAt": 1778419959448,
-      "updatedAt": 1778530850320,
-      "diskTotalBytes": 479437250560,
-      "diskUsedBytes": 369198411776,
-      "diskAvailableBytes": 110238838784,
-      "diskUsedPercent": 77
+      "updatedAt": 1778560629182,
+      "diskTotalBytes": 238720761856,
+      "diskUsedBytes": 195282219008,
+      "diskAvailableBytes": 43438542848,
+      "diskUsedPercent": 82
     },
     {
       "type": "yandex-ping-worker",
       "status": "active",
       "id": "00674198-95c5-4d96-bb27-897d47fc90ac",
       "createdAt": 1778419959448,
-      "updatedAt": 1778530846036,
-      "latencyMs": 837,
-      "lastPingedAt": 1778530846036
+      "updatedAt": 1778560628511,
+      "latencyMs": 996,
+      "lastPingedAt": 1778560628511
     },
     {
       "type": "yandex-ocr-worker",
