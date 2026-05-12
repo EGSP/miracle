@@ -13,7 +13,9 @@ import {
     parseStreamFileContentParams,
     parseGetOrderParams,
     parseGetOrdersQuery,
+    parseCanAnalyseOrderDetailsParams,
     parseAnalyseOrderDetailsParams,
+    parseClearAnalysedDetailsParams,
     parseGetWorkersQuery,
 } from './parsers.generated.js';
 
@@ -30,6 +32,8 @@ export const validationMap: Record<string, {
     'GET /files/:id/content': { params: parseStreamFileContentParams },
     'GET /order/:id': { params: parseGetOrderParams },
     'GET /order': { query: parseGetOrdersQuery },
+    'GET /order/:id/can-analyse-details': { params: parseCanAnalyseOrderDetailsParams },
     'POST /order/:id/analyse-details': { params: parseAnalyseOrderDetailsParams },
+    'POST /order/:id/clear-analysed-details': { params: parseClearAnalysedDetailsParams },
     'GET /workers': { query: parseGetWorkersQuery },
 };

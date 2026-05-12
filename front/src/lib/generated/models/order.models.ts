@@ -5,4 +5,9 @@ export type CreateOrderDTO = {
     fileId?: string;
 };
 
+export type CanAnalyseOrderDetailsResponse = {
+    canAnalyse: boolean;
+    errorMessage?: string;
+};
+
 export type AnalyseOrderDetailsResponse = null;

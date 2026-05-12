@@ -9,7 +9,12 @@ type CreateOrderDTO = {
     fileId?: string;
 };
 
-type UpdateOrderDTO = Partial<Pick<Order, 'fileId' | 'redactedDetails'>>;
+type UpdateOrderDTO = Partial<Pick<Order, 'fileId' | 'analysedDetails' | 'redactedDetails'>>;
+
+type CanAnalyseOrderDetailsResponse = {
+    canAnalyse: boolean;
+    errorMessage?: string;
+};
 
 const createOrder = route.post('/create', {
     handler: async ({ locals, body }: { locals: Record<string, unknown>, body: CreateOrderDTO }) => {
@@ -59,6 +64,7 @@ const updateOrder = route.put('/:id', {
 
         const updated = await ordersService.update(params.id, {
             fileId: body.fileId,
+            analysedDetails: body.analysedDetails,
             redactedDetails: body.redactedDetails,
         });
 
@@ -77,6 +83,22 @@ const analyseOrderDetails = route.post('/:id/analyse-details', {
     },
 });
 
+const clearAnalysedDetails = route.post('/:id/clear-analysed-details', {
+    validate: { params: true },
+    handler: async ({ params }: { params: { id: string } }) => {
+        const updated = await ordersService.clearAnalysedDetails(params.id);
+        return updated satisfies Stored<Order>;
+    },
+});
+
+const canAnalyseOrderDetails = route.get('/:id/can-analyse-details', {
+    validate: { params: true },
+    handler: async ({ params }: { params: { id: string } }) => {
+        const result = await ordersService.canAnalyseOrderDetails(params.id);
+        return result satisfies CanAnalyseOrderDetailsResponse;
+    },
+});
+
 export const orderRouter = defineRouter('/order', {
     middlewares: [
         authMiddleware,
@@ -86,6 +108,8 @@ export const orderRouter = defineRouter('/order', {
         getOrder,
         getOrders,
         updateOrder,
+        canAnalyseOrderDetails,
         analyseOrderDetails,
+        clearAnalysedDetails,
     ],
 });

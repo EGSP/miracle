@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation/tri-state-checkbox';
 import { ListBox } from '@/components/ui/listbox';
 import { Button } from '@/components/ui/button';
-import { OrderCard } from '@/components/blocks/OrderCard';
+import { OrderCard } from '@/components/blocks/order-card/OrderCard';
 import { DirtyGuardProvider, useGuard } from '@/contexts/dirty-state/DirtyGuardContext';
 import { useFilteredOrders } from '@/lib/hooks/useFilteredOrders';
 import { useGetFiles } from '@/lib/queries/file.query';

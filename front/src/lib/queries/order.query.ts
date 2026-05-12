@@ -3,6 +3,7 @@ import { order } from "../generated";
 import type { OrderQuery } from "@miracle/types";
 
 export const ORDERS_QUERY_KEY = ["orders"] as const;
+export const ORDER_ANALYSE_AVAILABILITY_QUERY_KEY = ["order-analyse-availability"] as const;
 
 export const useGetOrders = (query: OrderQuery = {}) => {
     return useQuery({
@@ -29,7 +30,27 @@ export const useAnalyseOrderDetails = (orderId: string) => {
         mutationFn: () => order.analyseOrderDetails({ id: orderId }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
+            queryClient.invalidateQueries({ queryKey: [...ORDER_ANALYSE_AVAILABILITY_QUERY_KEY, orderId] });
         },
+    });
+};
+
+export const useClearAnalysedDetails = (orderId: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => order.clearAnalysedDetails({ id: orderId }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
+            queryClient.invalidateQueries({ queryKey: [...ORDER_ANALYSE_AVAILABILITY_QUERY_KEY, orderId] });
+        },
+    });
+};
+
+export const useCanAnalyseOrderDetails = (orderId: string) => {
+    return useQuery({
+        queryKey: [...ORDER_ANALYSE_AVAILABILITY_QUERY_KEY, orderId] as const,
+        queryFn: () => order.canAnalyseOrderDetails({ id: orderId }),
     });
 };
 
@@ -41,6 +62,7 @@ export const useUpdateOrder = () => {
             order.updateOrder({ id }, body),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
+            queryClient.invalidateQueries({ queryKey: ORDER_ANALYSE_AVAILABILITY_QUERY_KEY });
         },
     });
 };

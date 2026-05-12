@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ExtractionStatus, ProductCategory, WorkerStatus } from '@miracle/types';
-import type { OrderDetails, OrderDetailsWorkerData } from '@miracle/types';
+import type { OrderDetails, OrderRequirement, OrderDetailsWorkerData } from '@miracle/types';
 import { ordersService } from '../databases/order.db.js';
 import { filesContentService } from '../databases/file-content.db.js';
 import { workersService } from '../databases/workers.db.js';
@@ -58,6 +58,31 @@ const SYSTEM_PROMPT = `Ты — ассистент для анализа зак�
 Если какое-либо поле не удаётся определить из текста — пропусти его (не включай в ответ).
 Категорию продукта выбирай только из допустимых значений схемы.
 Отвечай ТОЛЬКО валидным JSON без markdown-обёртки.`;
+
+/** Сырое требование из ответа ИИ — без index/used, которые ИИ не знает. */
+type RawRequirement = { parameterName: string; requiredValue: string };
+
+/** Ответ ИИ до обогащения. */
+type RawOrderDetails = Omit<OrderDetails, 'requirements'> & {
+    requirements?: RawRequirement[];
+};
+
+/**
+ * Присваивает индексы требованиям после получения ответа от ИИ.
+ * ИИ не знает об индексах — это внутренняя механика связи ИИ/human слоёв.
+ */
+function assignRequirementIndices(details: RawOrderDetails): OrderDetails {
+    if (!details.requirements?.length) return details as OrderDetails;
+    return {
+        ...details,
+        requirements: details.requirements.map((req, i): OrderRequirement => ({
+            index: i,
+            parameterName: req.parameterName,
+            requiredValue: req.requiredValue,
+            used: true,
+        })),
+    };
+}
 
 type OrderDetailsWorkerParams = {
     orderId: string;
@@ -121,7 +146,7 @@ export class OrderDetailsWorker extends BaseWorker {
                 const poll = await yandexLlm.pollCompletionJson(this.cloudOperationId, OrderDetailsSchema);
 
                 if (poll.done) {
-                    const orderDetails: OrderDetails = poll.result;
+                    const orderDetails: OrderDetails = assignRequirementIndices(poll.result);
                     await ordersService.update(this.orderId, { analysedDetails: orderDetails });
                     await workersService.update(this.workerId, { orderDetails });
                     await this.markSuccess();
