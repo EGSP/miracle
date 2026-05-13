@@ -237,7 +237,7 @@ export class OrderDetailsWorker extends BaseWorker {
         if(!this.data.orderDetails){
             throw new Error('Воркер не получил данные из заказа');
         }
-        logger.info(JSON.stringify(this.data.orderDetails, null, 2));
+        // logger.info(JSON.stringify(this.data.orderDetails, null, 2));
         await ordersService.update(this.data.orderId, { details: this.data.orderDetails });
     }
 

@@ -1,3 +1,241 @@
 {
-  "items": []
+  "items": [
+    {
+      "type": "order-details-worker",
+      "status": "failed",
+      "orderId": "1c5cae5c-f809-40a6-8ea5-9a03d820ad80",
+      "id": "cf55d479-ba23-4ef6-8d52-52b7aa5d8806",
+      "createdAt": 1778664586116,
+      "updatedAt": 1778664600477,
+      "cloudOperationId": "d7qpntii6ue0ij7610b6",
+      "errorMessage": "/yandex.cloud.operation.OperationService/Get UNAVAILABLE: Connection dropped"
+    },
+    {
+      "type": "order-details-worker",
+      "status": "success",
+      "orderId": "1c5cae5c-f809-40a6-8ea5-9a03d820ad80",
+      "id": "10594da1-1486-4311-9d8c-aae7a1774b7c",
+      "createdAt": 1778664617363,
+      "updatedAt": 1778664631768,
+      "cloudOperationId": "d7q0kquam05l65qr5dbo",
+      "orderDetails": {
+        "clientCompanyName": {
+          "ai": "ООО «Черноморнефтегаз»"
+        },
+        "productCategory": {
+          "ai": "Втулка"
+        },
+        "requirements": [
+          {
+            "ai": {
+              "index": 0,
+              "parameterName": "Абсолютная максимальная температура района эксплуатации изделия, °С",
+              "requiredValue": "плюс 39",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 1,
+              "parameterName": "Абсолютная минимальная температура района эксплуатации изделия, °С",
+              "requiredValue": "минус 35",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 2,
+              "parameterName": "Температура воздуха самой холодной пятидневки с обеспеченностью 0,92/0,98, °С",
+              "requiredValue": "минус 22",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 3,
+              "parameterName": "Климатическое исполнение и категория размещения по ГОСТ 15150-69",
+              "requiredValue": "климатическое исполнение – У (от -40°C до +60°C); категория размещения – I",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 4,
+              "parameterName": "Сейсмичность района эксплуатации (баллы по шкале MSK64)",
+              "requiredValue": "7",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 5,
+              "parameterName": "Срок службы изделия",
+              "requiredValue": "30 лет",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 6,
+              "parameterName": "Разделка сварных кромок концевых патрубков",
+              "requiredValue": "С2 ГОСТ 16037-80",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 7,
+              "parameterName": "Типоразмер муфты по номенклатурному перечню завода-изготовителя",
+              "requiredValue": "DN80, P=1.6 МПа",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 8,
+              "parameterName": "Тип наружного покрытия",
+              "requiredValue": "Система защитного покрытия «СпецПротект 007/109» толщиной не менее 160 мкм (для надземной установки)",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 9,
+              "parameterName": "Тип внутреннего покрытия",
+              "requiredValue": "без внутреннего покрытия",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 10,
+              "parameterName": "Классификация муфты по допустимым механическим нагрузкам",
+              "requiredValue": "Категория А - для вставок (муфт) электроизолирующих, выдерживающих повышенные механические нагрузки",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 11,
+              "parameterName": "Устройство молниезащиты",
+              "requiredValue": "Не требуется",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 12,
+              "parameterName": "Контрольно-измерительный пункт",
+              "requiredValue": "не требуется",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 13,
+              "parameterName": "Цвет крышки клеммного терминала КИП",
+              "requiredValue": "-",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 14,
+              "parameterName": "Характеристики трубопровода (диаметр, толщина стенки, класс прочности)",
+              "requiredValue": "Ø89x3,5, сталь 20",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 15,
+              "parameterName": "Номинальное давление трубопровода, МПа",
+              "requiredValue": "1,6",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 16,
+              "parameterName": "Рабочее давление, МПа",
+              "requiredValue": "0,3",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 17,
+              "parameterName": "Тип установки",
+              "requiredValue": "надземно",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 18,
+              "parameterName": "Транспортируемая среда",
+              "requiredValue": "Вода; Этиленгликоль",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 19,
+              "parameterName": "Неразрушающий контроль сварных соединений",
+              "requiredValue": "100%",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 20,
+              "parameterName": "Испытание внутренним гидравлическим давлением на прочность (гидростатическое испытание)",
+              "requiredValue": "давлением, равным 1,5 рабочего давления в течение 120 мин. (100%)",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 21,
+              "parameterName": "Проверка электрического сопротивления",
+              "requiredValue": "при напряжении 1000 В постоянного тока на сухом воздухе электрическое сопротивление не менее 5 МОм (100%)",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 22,
+              "parameterName": "Испытание на электрическую прочность",
+              "requiredValue": "напряжением 5 кВ переменного тока в течение 1 мин. (100%)",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 23,
+              "parameterName": "Испытание внутренним пневматическим давлением",
+              "requiredValue": "давлением, равным 2,4±0,2 МПа в течение 30 мин. (100%)",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 24,
+              "parameterName": "Проверка толщины и диэлектрической сплошности защитного покрытия",
+              "requiredValue": "100%",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 25,
+              "parameterName": "Перечень необходимой разрешительной и эксплуатационной документации",
+              "requiredValue": "паспорт, руководство по монтажу, эксплуатации и техническому обслуживанию на русском языке",
+              "used": true
+            }
+          }
+        ]
+      }
+    }
+  ]
 }

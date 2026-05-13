@@ -25,16 +25,16 @@ function OrderRequirementItem({ requirement }: { requirement: Dual<OrderRequirem
         </Grid>
     );
 
-    function OrderRequirementHalf({ requirement, label }: { requirement: OrderRequirement, label: string }) {
+    function OrderRequirementHalf({ requirement, label }: { requirement: OrderRequirement, label: 'AI' | 'Human' }) {
         return (
             <Stack gap={1}>
-                <Stack orientation="horizontal" gap={1}>
-                    <Text.Label as="span">{requirement.parameterName}</Text.Label>
+                <Stack orientation="horizontal" gap={3}>
+                    <Text.Label as="span" expressive>{requirement.parameterName}</Text.Label>
                     <Text.Label as="span">{label}</Text.Label>
                 </Stack>
-                <Text as="p" compact>
+                <Text.Code as="p">
                     {requirement.requiredValue}
-                </Text>
+                </Text.Code>
             </Stack>
         );
     }
@@ -73,7 +73,7 @@ export function OrderCardDetails() {
                     Требования
                 </Text.Heading>
                 {requirements.length > 0 ? (
-                    <Stack gap={2}>
+                    <Stack gap={5}>
                         {requirements.map((requirement, index) => (
                             requirement.ai || requirement.human ? (
                                 <OrderRequirementItem
