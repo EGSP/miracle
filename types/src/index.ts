@@ -5,7 +5,6 @@ export * from './file.js';
 export * from './file-types.js';
 export * from './worker.js';
 export * from './order.js';
-export * from './order-details-helpers.js';
 export * from './db.js';
 export * from './file-content.js';
 export * from './ai.js'

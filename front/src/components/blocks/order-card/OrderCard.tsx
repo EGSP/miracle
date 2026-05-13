@@ -10,8 +10,38 @@ import { OrderCardDetails } from './OrderCardDetails';
 import { OrderCardFile } from './OrderCardFile';
 import { OrderCardInfo } from './OrderCardInfo';
 import type { OrderCardDirtyState, OrderCardProps } from './OrderCard.types';
+import { FileWithMeta, Order, Stored } from '@miracle/types';
+import { createContext, useContext } from 'react';
 
-function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
+type OrderCardContextType = {
+    order: Stored<Order> | null;
+    files: FileWithMeta[];
+    onOrderSaved: (order: Stored<Order>) => void;
+};
+
+const OrderCardContext = createContext<OrderCardContextType>({
+    order: null,
+    files: [],
+    onOrderSaved: () => {},
+});
+
+function OrderCardProvider({ order, files, onOrderSaved, children }: OrderCardContextType & { children: React.ReactNode }) {
+    return (
+        <OrderCardContext.Provider value={{ order, files, onOrderSaved }}>
+            {children}
+        </OrderCardContext.Provider>
+    );
+}
+
+export function useOrderCardContext() {
+    const context = useContext(OrderCardContext);
+    if (!context) {
+        throw new Error('useOrderCardContext must be used within an OrderCardProvider');
+    }
+    return context;
+}
+
+function OrderCardBody({ order, files, onOrderSaved }: OrderCardContextType) {
     const isDirty = useDirtyStore<OrderCardDirtyState, boolean>((s) => s.isDirty);
     const workingCopyFileId = useDirtyStore<OrderCardDirtyState, string | undefined>((s) => s.workingCopy.fileId);
     const commit = useDirtyStore<OrderCardDirtyState, () => void>((s) => s.commit);
@@ -24,6 +54,7 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
     );
     const shouldShowFileCard = selectedFile?.meta?.available === true;
 
+    if (!order) return null;
     const handleSave = () => {
         updateOrderMutation.mutate(
             { id: order.id, fileId: workingCopyFileId },
@@ -67,10 +98,10 @@ function OrderCardBody({ order, files, onOrderSaved }: OrderCardProps) {
             )}
 
             <Column span={16}>
-                <OrderCardDetails order={order} />
+                <OrderCardDetails/>
             </Column>
             <Column span={16}>
-                <OrderCardAnalyse order={order} />
+                <OrderCardAnalyse />
             </Column>
 
             {updateOrderMutation.isError && (
@@ -91,7 +122,9 @@ export function OrderCard({ order, files, onOrderSaved }: OrderCardProps) {
             initial={{ orderId: order.id, fileId: order.fileId ?? undefined }}
             key={order.id}
         >
-            <OrderCardBody order={order} files={files} onOrderSaved={onOrderSaved} />
+            <OrderCardProvider order={order} files={files} onOrderSaved={onOrderSaved}>
+                <OrderCardBody order={order} files={files} onOrderSaved={onOrderSaved} />
+            </OrderCardProvider>
         </DirtyProvider>
     );
 }

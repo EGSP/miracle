@@ -1,35 +1,57 @@
-﻿import { Stack, Text } from '@miracle/aramid';
-import type { Order, OrderRequirement, Stored } from '@miracle/types';
-import { flattenRequirementsForDisplay, orderDetailsHasRequirementRows } from '@miracle/types';
+﻿import { Column, Grid, Stack, Text } from '@miracle/aramid';
+import type { Dual, Order, OrderDetails, OrderRequirement, Stored } from '@miracle/types';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api';
-import { useClearAnalysedDetails } from '@/lib/queries/order.query';
+import { useClearAnalysedDetails as useClearDetailsMutation } from '@/lib/queries/order.query';
+import { useOrderCardContext } from './OrderCard';
+import { useMemo } from 'react';
 
-function AnalysedRequirementItem({ requirement }: { requirement: OrderRequirement }) {
+
+
+function OrderRequirementItem({ requirement }: { requirement: Dual<OrderRequirement> }) {
+
     return (
-        <Stack gap={1} className="border border-border p-2">
-            <Text.Label as="span" className="text-muted-foreground">
-                {requirement.parameterName}
-            </Text.Label>
-            <Text as="p" compact>
-                {requirement.requiredValue}
-            </Text>
-        </Stack>
+        <Grid condensed fullWidth>
+            <Column span={8}>
+                {requirement.ai ? (
+                    <OrderRequirementHalf requirement={requirement.ai} label="AI" />
+                ) : null}
+            </Column>
+            <Column span={8}>
+                {requirement.human ? (
+                    <OrderRequirementHalf requirement={requirement.human} label="Human" />
+                ) : null}
+            </Column>
+        </Grid>
     );
+
+    function OrderRequirementHalf({ requirement, label }: { requirement: OrderRequirement, label: string }) {
+        return (
+            <Stack gap={1}>
+                <Stack orientation="horizontal" gap={1}>
+                    <Text.Label as="span">{requirement.parameterName}</Text.Label>
+                    <Text.Label as="span">{label}</Text.Label>
+                </Stack>
+                <Text as="p" compact>
+                    {requirement.requiredValue}
+                </Text>
+            </Stack>
+        );
+    }
 }
 
-type OrderCardDetailsProps = {
-    order: Stored<Order>;
-};
+export function OrderCardDetails() {
+    const { order } = useOrderCardContext();
+    const details = useMemo(() => order?.details, [order?.id]);
+    const clearDetailsMutation = useClearDetailsMutation(order?.id);
 
-function orderHasRequirements(order: Stored<Order>): boolean {
-    return orderDetailsHasRequirementRows(order.details);
-}
+    const requirements = useMemo(() => {
+        if (!details || !details.requirements) return [];
+        return details.requirements;
+    }, [details])
 
-export function OrderCardDetails({ order }: OrderCardDetailsProps) {
-    const clearAnalysedDetailsMutation = useClearAnalysedDetails(order.id);
-    const hasRequirements = orderHasRequirements(order);
-    const requirements = flattenRequirementsForDisplay(order.details);
+    if (!details || order === null)
+        return null;
 
     return (
         <Stack gap={3} className="border border-border p-3">
@@ -40,10 +62,10 @@ export function OrderCardDetails({ order }: OrderCardDetailsProps) {
                 <Button
                     variant="outline"
                     size="sm"
-                    disabled={!hasRequirements || clearAnalysedDetailsMutation.isPending}
-                    onClick={() => clearAnalysedDetailsMutation.mutate()}
+                    disabled={!details || clearDetailsMutation.isPending}
+                    onClick={() => clearDetailsMutation.mutate()}
                 >
-                    {clearAnalysedDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
+                    {clearDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
                 </Button>
             </Stack>
             <Stack gap={2}>
@@ -53,10 +75,12 @@ export function OrderCardDetails({ order }: OrderCardDetailsProps) {
                 {requirements.length > 0 ? (
                     <Stack gap={2}>
                         {requirements.map((requirement, index) => (
-                            <AnalysedRequirementItem
-                                key={`${order.id}-req-${index}`}
-                                requirement={requirement}
-                            />
+                            requirement.ai || requirement.human ? (
+                                <OrderRequirementItem
+                                    key={`${order.id}-req-${index}`}
+                                    requirement={requirement}
+                                />
+                            ) : null
                         ))}
                     </Stack>
                 ) : (
@@ -65,9 +89,10 @@ export function OrderCardDetails({ order }: OrderCardDetailsProps) {
                     </Text.Label>
                 )}
             </Stack>
-            {clearAnalysedDetailsMutation.isError ? (
+
+            {clearDetailsMutation.isError ? (
                 <Text as="p" compact className="text-destructive">
-                    Ошибка очистки анализа: {getApiErrorMessage(clearAnalysedDetailsMutation.error)}
+                    Ошибка очистки анализа: {getApiErrorMessage(clearDetailsMutation.error)}
                 </Text>
             ) : null}
         </Stack>

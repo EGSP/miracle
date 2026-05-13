@@ -23,11 +23,14 @@ export const useCreateOrder = () => {
     });
 };
 
-export const useAnalyseOrderDetails = (orderId: string) => {
+export const useAnalyseOrderDetails = (orderId: string | undefined) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: () => order.analyseOrderDetails({ id: orderId }),
+        mutationFn: () => {
+            if (!orderId) throw new Error('Order ID is required');
+            return order.analyseOrderDetails({ id: orderId });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: [...ORDER_ANALYSE_AVAILABILITY_QUERY_KEY, orderId] });
@@ -35,11 +38,14 @@ export const useAnalyseOrderDetails = (orderId: string) => {
     });
 };
 
-export const useClearAnalysedDetails = (orderId: string) => {
+export const useClearAnalysedDetails = (orderId: string | undefined) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: () => order.clearAnalysedDetails({ id: orderId }),
+        mutationFn: () => {
+            if (!orderId) throw new Error('Order ID is required');
+            return order.clearAnalysedDetails({ id: orderId });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: [...ORDER_ANALYSE_AVAILABILITY_QUERY_KEY, orderId] });
@@ -47,10 +53,13 @@ export const useClearAnalysedDetails = (orderId: string) => {
     });
 };
 
-export const useCanAnalyseOrderDetails = (orderId: string) => {
+export const useCanAnalyseOrderDetails = (orderId: string | undefined) => {
     return useQuery({
         queryKey: [...ORDER_ANALYSE_AVAILABILITY_QUERY_KEY, orderId] as const,
-        queryFn: () => order.canAnalyseOrderDetails({ id: orderId }),
+        queryFn: () => {
+            if (!orderId) throw new Error('Order ID is required');
+            return order.canAnalyseOrderDetails({ id: orderId });
+        },
     });
 };
 

@@ -1,4 +1,4 @@
-import { Order, OrderQuery, Stored, WorkerStatus, orderDetailsHasAiLayer } from "@miracle/types";
+import { Order, OrderQuery, Stored, WorkerStatus } from "@miracle/types";
 import { JsonCollection, registerDb } from "./db.js";
 import { userService } from "./user.db.js";
 import { filesService } from "./file.db.js";
@@ -113,7 +113,7 @@ export const ordersService = {
             return { canAnalyse: false, errorMessage: 'Файл заказа недоступен' };
         }
 
-        if (orderDetailsHasAiLayer(order.details)) {
+        if (order.details?.requirements && order.details.requirements.length > 0) {
             return {
                 canAnalyse: false,
                 errorMessage: 'Сначала очистите детали заказа, чтобы запустить анализ снова',
