@@ -4,9 +4,14 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { FileContent, Stored } from '@miracle/types';
-import type { GetContentParams, GetContentQuery, ExtractContentParams, ExtractContentQuery, ExtractContentResponse } from './models';
+import type { SoftDeleteParams, SoftDeleteQuery, SoftDeleteResponse, GetContentParams, GetContentQuery, ExtractContentParams, ExtractContentQuery, ExtractContentResponse } from './models';
 
 export const filesContent = {
+    softDelete: (softDeleteParams: SoftDeleteParams, softDeleteQuery: SoftDeleteQuery) => customInstance<SoftDeleteResponse>({
+        method: 'POST',
+        url: formatPath('/files-content/records/:contentId', softDeleteParams),
+        params: softDeleteQuery,
+    }),
     getContent: (getContentParams: GetContentParams, getContentQuery: GetContentQuery) => customInstance<Stored<FileContent>[]>({
         method: 'GET',
         url: formatPath('/files-content/:fileId', getContentParams),

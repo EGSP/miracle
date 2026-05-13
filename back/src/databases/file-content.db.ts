@@ -1,7 +1,12 @@
 import { ExtractionStatus, FileContent, FileDomain, FileModel, getFileDomain, Stored } from "@miracle/types";
-import { registerDb, JsonCollection, CreateEntityInput } from "./db.js";
+import { registerDb, JsonCollection, CreateEntityInput, StoredEntity } from "./db.js";
 import { filesService, getFilePath } from "./file.db.js";
 import { extractDocumentContent, extractSpreadsheetContent, extractTextContent, extractVisualContentWithLLM, extractVisualContentWithOCR } from "../lib/extraction/index.js";
+
+/** Запись контента считается активной, если нет мягкого удаления (`deletedAt`). */
+function isActiveFileContent(content: StoredEntity<FileContent>): boolean {
+    return content.deletedAt == null;
+}
 
 export const filesContentDb = registerDb('file-content', await JsonCollection.create<FileContent>('file-content'));
 
@@ -20,8 +25,35 @@ export const filesContentService = {
         return filesContentDb.getById(id);
     },
 
-    getContent: async (fileId: string) => {
-        return filesContentDb.ref().filter((content) => content.fileId === fileId);
+    /**
+     * Записи контента по `fileId`.
+     * По умолчанию только активные (без мягкого удаления); при `includeDeleted: true` — все.
+     * Сортировка: от новых к старым по `updatedAt`.
+     */
+    getContent: async (fileId: string, options?: { includeDeleted?: boolean }): Promise<Stored<FileContent>[]> => {
+        const includeDeleted = options?.includeDeleted === true;
+        const rows = filesContentDb.ref().filter((content) => {
+            if (content.fileId !== fileId) {
+                return false;
+            }
+            if (!includeDeleted && !isActiveFileContent(content)) {
+                return false;
+            }
+            return true;
+        });
+        return [...rows].sort((a, b) => b.updatedAt - a.updatedAt);
+    },
+
+    /**
+     * Как {@link JsonCollection.softDelete}: `mark=true` — пометить, `mark=false` — снять пометку.
+     * @returns `false`, если записи с таким id нет.
+     */
+    softDelete: async (contentId: string, mark: boolean): Promise<void> => {
+        const fileContent = await filesContentService.get(contentId);
+        if (!fileContent)
+            throw new Error('Запись контента не найдена');
+
+        await filesContentDb.softDelete(contentId, mark);
     },
 
     update: async (data: FileContent) => {
@@ -48,7 +80,10 @@ export const filesContentService = {
         // Защита от дублирующего запуска: если уже идёт извлечение — выходим без действий.
         // Статус FAILED не блокирует — повторная попытка разрешена.
         const alreadyInProgress = filesContentDb.ref().some(
-            (c) => c.fileId === fileId && c.meta?.extractionStatus === ExtractionStatus.STARTED,
+            (c) =>
+                c.fileId === fileId
+                && isActiveFileContent(c)
+                && c.meta?.extractionStatus === ExtractionStatus.STARTED,
         );
         if (alreadyInProgress)
             return;

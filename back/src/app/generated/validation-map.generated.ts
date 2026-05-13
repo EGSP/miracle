@@ -3,6 +3,8 @@
 
 import {
     parseGetUserParams,
+    parseSoftDeleteQuery,
+    parseSoftDeleteParams,
     parseGetContentQuery,
     parseGetContentParams,
     parseExtractContentQuery,
@@ -18,6 +20,7 @@ import {
     parseClearAnalysedDetailsParams,
     parseGetWorkersQuery,
     parseApplyWorkerDataParams,
+    parseDeleteWorkerParams,
 } from './parsers.generated.js';
 
 export const validationMap: Record<string, {
@@ -25,6 +28,7 @@ export const validationMap: Record<string, {
     params?: (raw: Record<string, unknown>) => unknown;
 }> = {
     'GET /user/user/:id': { params: parseGetUserParams },
+    'POST /files-content/records/:contentId': { query: parseSoftDeleteQuery, params: parseSoftDeleteParams },
     'GET /files-content/:fileId': { query: parseGetContentQuery, params: parseGetContentParams },
     'POST /files-content/:fileId/extract': { query: parseExtractContentQuery, params: parseExtractContentParams },
     'GET /files': { query: parseGetFilesQuery },
@@ -38,4 +42,5 @@ export const validationMap: Record<string, {
     'POST /order/:id/clear-analysed-details': { params: parseClearAnalysedDetailsParams },
     'GET /workers': { query: parseGetWorkersQuery },
     'POST /workers/:id/apply-worker-data': { params: parseApplyWorkerDataParams },
+    'DELETE /workers/:id': { params: parseDeleteWorkerParams },
 };

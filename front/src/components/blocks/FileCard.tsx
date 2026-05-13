@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { IconIndicator, Stack, Text } from "@miracle/aramid";
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types";
-import { Eye, Upload } from "lucide-react";
+import { Eye, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileDropZone } from "@/components/ui/file-dropzone";
 import { getApiErrorMessage } from "@/lib/api";
-import { useExtractFileContent, useGetFileContent } from "@/lib/queries/file-content.query";
+import { useExtractFileContent, useGetFileContent, useSoftDeleteFileContent } from "@/lib/queries/file-content.query";
 import { usePatchFile, useRestoreFile } from "@/lib/queries/file.query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getFileDomain, FileDomain } from "@miracle/types";
@@ -41,6 +41,7 @@ function getExtractionIndicator(
 export function FileCard({ file }: FileCardProps) {
     const { data: contentList, isLoading, isError: isGetContentError, error: getContentError } = useGetFileContent(file.id, true);
     const extractMutation = useExtractFileContent(file.id);
+    const softDeleteMutation = useSoftDeleteFileContent(file.id);
     const restoreMutation = useRestoreFile(file.id);
     const patchMutation = usePatchFile(file.id);
     const [restoreFile, setRestoreFile] = useState<File | null>(null);
@@ -58,9 +59,25 @@ export function FileCard({ file }: FileCardProps) {
         });
     };
 
-    const canRead = isFileAvailable && !extractMutation.isPending && !isLoading && !status;
-    const canReread = isFileAvailable && !extractMutation.isPending && !isLoading && (status === "completed" || status === "failed");
+    const canRead =
+        isFileAvailable
+        && !extractMutation.isPending
+        && !softDeleteMutation.isPending
+        && !isLoading
+        && !status;
+    const canReread =
+        isFileAvailable
+        && !extractMutation.isPending
+        && !softDeleteMutation.isPending
+        && !isLoading
+        && (status === "completed" || status === "failed");
     const hasContent = status === "completed" && Boolean(latestContent?.content?.some((item) => Boolean(item.text)));
+    /** Пометка доступна для любой записи контента, кроме ещё идущего извлечения (`started`). */
+    const canMarkContentDeleted =
+        Boolean(latestContent?.id)
+        && status !== "started"
+        && !softDeleteMutation.isPending
+        && !extractMutation.isPending;
 
     const handleRead = () => {
         if (!canRead) return;
@@ -70,6 +87,11 @@ export function FileCard({ file }: FileCardProps) {
     const handleReread = () => {
         if (!canReread) return;
         extractMutation.mutate();
+    };
+
+    const handleMarkContentDeleted = () => {
+        if (!latestContent?.id || !canMarkContentDeleted) return;
+        softDeleteMutation.mutate({ contentId: latestContent.id, mark: true });
     };
 
     return (
@@ -150,6 +172,16 @@ export function FileCard({ file }: FileCardProps) {
                 <Button variant="outline" size="sm" disabled={!canReread} onClick={handleReread}>
                     Перечитать
                 </Button>
+                <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={!canMarkContentDeleted}
+                    onClick={handleMarkContentDeleted}
+                >
+                    <Trash2 />
+                    {softDeleteMutation.isPending ? "Пометка..." : "Скрыть контент"}
+                </Button>
                 <Dialog>
                     <DialogTrigger
                         render={
@@ -199,6 +231,11 @@ export function FileCard({ file }: FileCardProps) {
             {extractMutation.isError ? (
                 <Text as="span" compact className="text-destructive">
                     {getApiErrorMessage(extractMutation.error)}
+                </Text>
+            ) : null}
+            {softDeleteMutation.isError ? (
+                <Text as="span" compact className="text-destructive">
+                    {getApiErrorMessage(softDeleteMutation.error)}
                 </Text>
             ) : null}
             {isGetContentError ? (

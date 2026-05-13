@@ -3,7 +3,6 @@ import { err } from "../app/index.js";
 import { defineRouter, route } from "../app/router.js";
 import { filesContentService } from "../databases/file-content.db.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { filesService } from "../databases/file.db.js";
 import { logger } from "../logger/logger.js";
 
 type GetContentParams = {
@@ -12,6 +11,7 @@ type GetContentParams = {
 
 type GetContentQuery = {
     onlyLast?: boolean;
+    includeDeleted?: boolean;
 };
 
 const getContent = route.get('/:fileId', {
@@ -22,10 +22,32 @@ const getContent = route.get('/:fileId', {
         if (!fileId)
             return err.validation('Не указан идентификатор файла');
 
-        const content = await filesContentService.getContent(fileId);
+        const content = await filesContentService.getContent(fileId, {
+            includeDeleted: query.includeDeleted === true,
+        });
         if (onlyLast)
-            return content.slice(-1) satisfies Stored<FileContent>[];
+            return (content.length > 0 ? [content[0]] : []) satisfies Stored<FileContent>[];
         return content satisfies Stored<FileContent>[];
+    },
+});
+
+type SoftDeleteParams = {
+    contentId: string;
+};
+
+type SoftDeleteQuery = {
+    mark: boolean;
+};
+
+/** POST `/records/:contentId?mark=true|false` — как {@link filesContentService.softDelete}. */
+const softDelete = route.post('/records/:contentId', {
+    validate: { params: true, query: true },
+    handler: async ({ params, query }: { params: SoftDeleteParams; query: SoftDeleteQuery }) => {
+        const contentId = params.contentId;
+        if (!contentId)
+            return err.validation('Не указан идентификатор записи контента');
+
+        await filesContentService.softDelete(contentId, query.mark);
     },
 });
 
@@ -53,7 +75,7 @@ const extractContent = route.post('/:fileId/extract', {
              * Если да, то повторить попытку.
              */
             if (query.retryIfLastFailed === true) {
-                const last = others.slice(-1)[0];
+                const last = others[0]
                 if (last?.meta?.extractionStatus === ExtractionStatus.FAILED) {
                     logger.info(`Повторная попытка извлечения содержимого файла "${fileId}", так как предыдущее извлечение завершилось с ошибкой`);
                     await filesContentService.extract(fileId);
@@ -69,5 +91,5 @@ const extractContent = route.post('/:fileId/extract', {
 
 export const filesContentRouter = defineRouter('/files-content', {
     middlewares: [authMiddleware],
-    routes: [getContent, extractContent],
+    routes: [softDelete, getContent, extractContent],
 } as const);

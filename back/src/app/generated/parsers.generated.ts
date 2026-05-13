@@ -80,6 +80,55 @@ export function parseGetUserParams(raw: Record<string, unknown>) {
     return result;
 }
 
+export function parseSoftDeleteQuery(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_mark = readSingleValue(raw, "mark");
+    if (raw_mark.missing) {
+        errors.push({ field: "mark", message: 'is required' });
+    } else if (raw_mark.multi) {
+        errors.push({ field: "mark", message: 'expected single value' });
+    } else {
+        const parsed = parseBoolean(raw_mark.value);
+        if (parsed === undefined) {
+            errors.push({ field: "mark", message: 'expected boolean' });
+        } else {
+            result["mark"] = parsed;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
+export function parseSoftDeleteParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_contentId = readSingleValue(raw, "contentId");
+    if (raw_contentId.missing) {
+        errors.push({ field: "contentId", message: 'is required' });
+    } else if (raw_contentId.multi) {
+        errors.push({ field: "contentId", message: 'expected single value' });
+    } else {
+        if (typeof raw_contentId.value !== 'string') {
+            errors.push({ field: "contentId", message: 'expected string' });
+        } else {
+            result["contentId"] = raw_contentId.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
 export function parseGetContentQuery(raw: Record<string, unknown>) {
     const errors: Array<{ field: string; message: string }> = [];
     const result: Record<string, unknown> = {};
@@ -95,6 +144,19 @@ export function parseGetContentQuery(raw: Record<string, unknown>) {
             errors.push({ field: "onlyLast", message: "expected one of: false, true" });
         } else {
             result["onlyLast"] = parsed;
+        }
+    }
+    const raw_includeDeleted = readSingleValue(raw, "includeDeleted");
+    if (raw_includeDeleted.missing) {
+        result["includeDeleted"] = undefined;
+    } else if (raw_includeDeleted.multi) {
+        errors.push({ field: "includeDeleted", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_includeDeleted.value, [false,true]);
+        if (parsed === undefined) {
+            errors.push({ field: "includeDeleted", message: "expected one of: false, true" });
+        } else {
+            result["includeDeleted"] = parsed;
         }
     }
 
@@ -495,6 +557,30 @@ export function parseGetWorkersQuery(raw: Record<string, unknown>) {
 }
 
 export function parseApplyWorkerDataParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        errors.push({ field: "id", message: 'is required' });
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
+    } else {
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
+        } else {
+            result["id"] = raw_id.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
+export function parseDeleteWorkerParams(raw: Record<string, unknown>) {
     const errors: Array<{ field: string; message: string }> = [];
     const result: Record<string, unknown> = {};
 
