@@ -39,6 +39,7 @@ export type CreateEntityInput<TItem extends object> =
 
 /**
  * Входные данные для обновления сущности: все поля кроме системных — опциональны.
+ * `deletedAt` намеренно исключён — используй {@link JsonCollection.softDelete}.
  *
  * Дистрибутивный по той же причине, что {@link StoredEntity}.
  */
@@ -57,6 +58,7 @@ export type CollectionData<TItem extends object> = {
 export type CollectionMiddleware<TItem extends object> = {
     beforeCreate?: (item: StoredEntity<TItem>) => void;
     beforeUpdate?: (item: StoredEntity<TItem>, patch: UpdateEntityInput<TItem>) => void;
+    beforeSoftDelete?: (item: StoredEntity<TItem>, mark: boolean) => void;
 };
 
 export interface DbRegistry { }
@@ -75,6 +77,10 @@ const timestampsMiddleware: CollectionMiddleware<object> = {
         item.updatedAt = now;
     },
     beforeUpdate(item) {
+        item.updatedAt = Date.now();
+    },
+    beforeSoftDelete(item, mark) {
+        item.deletedAt = mark ? Date.now() : null;
         item.updatedAt = Date.now();
     },
 };
@@ -160,6 +166,19 @@ export class JsonCollection<TItem extends object> {
 
         Object.assign(item, merge.withOptions({ mergeArrays: false }, item, patch));
         this.middlewares.forEach((middleware) => middleware.beforeUpdate?.(item, patch));
+        await this.db.write();
+
+        return structuredClone(item);
+    }
+
+    async softDelete(id: string, mark: boolean): Promise<StoredEntity<TItem> | undefined> {
+        const item = this.getItemById(id);
+
+        if (!item) {
+            return undefined;
+        }
+
+        this.middlewares.forEach((middleware) => middleware.beforeSoftDelete?.(item, mark));
         await this.db.write();
 
         return structuredClone(item);
