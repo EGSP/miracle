@@ -37,7 +37,7 @@ export class YandexOcrWorker extends BaseWorker {
 
     async mount(): Promise<void> {
         if (!this.data.id) {
-            const row = await workersService.create({
+            const createdWD = await workersService.create({
                 type: this.type,
                 status: WorkerStatus.Active,
                 fileId: this.data.fileId!,
@@ -46,15 +46,15 @@ export class YandexOcrWorker extends BaseWorker {
                 cloudOperationId: this.data.cloudOperationId,
                 operationDone: false,
             } satisfies YandexOcrWorkerData);
-            Object.assign(this.data, row);
+            this.data = createdWD as Stored<YandexOcrWorkerData>;
             return;
         }
 
-        const row = await workersService.update(this.data.id, {
+        const updatedWD = await workersService.update(this.data.id, {
             status: WorkerStatus.Active,
             cloudOperationId: this.data.cloudOperationId,
         });
-        if (row) Object.assign(this.data, row);
+        this.data = updatedWD as Stored<YandexOcrWorkerData>;
     }
 
     async run(): Promise<void> {
@@ -65,12 +65,15 @@ export class YandexOcrWorker extends BaseWorker {
 
             if (!this.data.cloudOperationId) {
                 const opId = await this.startRecognition();
-                this.data.cloudOperationId = opId;
-                const row = await workersService.update(this.data.id, {
+                const updatedWD = await workersService.update(this.data.id, {
                     status: WorkerStatus.Active,
                     cloudOperationId: opId,
                 });
-                if (row) Object.assign(this.data, row);
+                this.data = updatedWD as Stored<YandexOcrWorkerData>;
+            }
+
+            if (!this.data.id) {
+                throw new Error('Воркер не инициализирован: ожидается вызов mount() перед run()');
             }
 
             const session = yandex.getSession();
@@ -93,13 +96,13 @@ export class YandexOcrWorker extends BaseWorker {
             const pages = await this.readPages(asyncClient);
             const aggregatedText = pages.map((page) => page.text ?? '').filter(Boolean).join('\n\n');
 
-            const row = await workersService.update(this.data.id, {
+            const updatedWD = await workersService.update(this.data.id, {
                 operationDone: true,
                 operationResult: aggregatedText,
                 operationErrorMessage: undefined,
                 ocrPages: pages,
             });
-            if (row) Object.assign(this.data, row);
+            this.data = updatedWD as Stored<YandexOcrWorkerData>;
 
             await this.markSuccess();
         } catch (error) {
@@ -117,12 +120,12 @@ export class YandexOcrWorker extends BaseWorker {
             });
 
             if (this.data.id) {
-                const row = await workersService.update(this.data.id, {
+                const updatedWD = await workersService.update(this.data.id, {
                     operationDone: true,
                     operationErrorMessage: message,
                     status: WorkerStatus.Failed,
                 });
-                if (row) Object.assign(this.data, row);
+                this.data = updatedWD as Stored<YandexOcrWorkerData>;
             }
         }
     }
@@ -213,13 +216,13 @@ export class YandexOcrWorker extends BaseWorker {
 
     private async markSuccess(): Promise<void> {
         if (!this.data.id) return;
-        const row = await workersService.update(this.data.id, { status: WorkerStatus.Success });
-        if (row) Object.assign(this.data, row);
+        const updatedWD = await workersService.update(this.data.id, { status: WorkerStatus.Success });
+        this.data = updatedWD as Stored<YandexOcrWorkerData>;
     }
 
     private async markStopped(): Promise<void> {
         if (!this.data.id) return;
-        const row = await workersService.update(this.data.id, { status: WorkerStatus.Stopped });
-        if (row) Object.assign(this.data, row);
+        const updatedWD = await workersService.update(this.data.id, { status: WorkerStatus.Stopped });
+        this.data = updatedWD as Stored<YandexOcrWorkerData>;
     }
 }

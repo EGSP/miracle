@@ -46,18 +46,18 @@ export class LlmVisionWorker extends BaseWorker {
 
     async mount(): Promise<void> {
         if (!this.data.id) {
-            const row = await workersService.create({
+            const createdWD = await workersService.create({
                 type: this.type,
                 status: WorkerStatus.Active,
                 fileId: this.data.fileId!,
                 fileContentId: this.data.fileContentId!,
             } satisfies LlmVisionWorkerData);
-            Object.assign(this.data, row);
+            this.data = createdWD as Stored<LlmVisionWorkerData>;
             return;
         }
 
-        const row = await workersService.update(this.data.id, { status: WorkerStatus.Active });
-        if (row) Object.assign(this.data, row);
+        const updatedWD = await workersService.update(this.data.id, { status: WorkerStatus.Active });
+        this.data = updatedWD as Stored<LlmVisionWorkerData>;
     }
 
     async run(): Promise<void> {
@@ -86,8 +86,8 @@ export class LlmVisionWorker extends BaseWorker {
                 ],
             });
 
-            const row = await workersService.update(this.data.id, { operationResult: result });
-            if (row) Object.assign(this.data, row);
+            const updatedWD = await workersService.update(this.data.id, { operationResult: result });
+            this.data = updatedWD as Stored<LlmVisionWorkerData>;
 
             await this.markSuccess();
         } catch (error) {
@@ -105,11 +105,11 @@ export class LlmVisionWorker extends BaseWorker {
             });
 
             if (this.data.id) {
-                const row = await workersService.update(this.data.id, {
+                const updatedWD = await workersService.update(this.data.id, {
                     status: WorkerStatus.Failed,
                     errorMessage: message,
                 });
-                if (row) Object.assign(this.data, row);
+                this.data = updatedWD as Stored<LlmVisionWorkerData>;
             }
         }
     }
@@ -160,7 +160,7 @@ export class LlmVisionWorker extends BaseWorker {
 
     private async markSuccess(): Promise<void> {
         if (!this.data.id) return;
-        const row = await workersService.update(this.data.id, { status: WorkerStatus.Success });
-        if (row) Object.assign(this.data, row);
+        const updatedWD = await workersService.update(this.data.id, { status: WorkerStatus.Success });
+        this.data = updatedWD as Stored<LlmVisionWorkerData>;
     }
 }

@@ -18,7 +18,7 @@ function sleep(ms: number): Promise<void> {
 // Значения перечисления вынесены отдельно — в будущем ожидается расширение до 4–6 категорий
 const productCategoryValues = Object.values(ProductCategory) as [ProductCategory, ...ProductCategory[]];
 
-const LlmFlatOrderDetailsSchema = z.object({
+const FlatOrderDetailsZodSchema = z.object({
     clientCompanyName: z
         .string()
         .describe('Полное или сокращённое название компании-заказчика')
@@ -41,8 +41,8 @@ const LlmFlatOrderDetailsSchema = z.object({
         .describe('Список технических и коммерческих требований к заказу в виде пар "название параметра" → "требуемое значение"')
         .optional(),
 });
-
-const llmFlatOrderDetailsJsonSchema = zodToJsonSchema(LlmFlatOrderDetailsSchema);
+type FlatOrderDetails = z.infer<typeof FlatOrderDetailsZodSchema>;
+const flatOrderDetailsJsonSchema = zodToJsonSchema(FlatOrderDetailsZodSchema);
 
 /*
 const SYSTEM_PROMPT = `Ты — ассистент для анализа заказов на промышленную продукцию.
@@ -84,22 +84,30 @@ const SYSTEM_PROMPT = `Ты — ассистент для анализа зак�
 Категорию продукта выбирай только из допустимых значений схемы.
 Отвечай ТОЛЬКО валидным JSON без markdown-обёртки.`;
 
-type LlmFlatOrderDetails = z.infer<typeof LlmFlatOrderDetailsSchema>;
+
 
 /**
  * Ответ LLM (плоский JSON по схеме выше) → доменный `OrderDetails`: только слой `ai`,
  * полностью заменяет прежние `details` заказа.
  */
-function parsedToOrderDetailsAiOnly(parsed: LlmFlatOrderDetails): OrderDetails | null {
+function flatToDualOrderDetails(flat: FlatOrderDetails): OrderDetails | null {
+    if (
+        flat.clientCompanyName === undefined
+        && flat.productCategory === undefined
+        && (flat.requirements === undefined || flat.requirements.length === 0)
+    ) {
+        return null;
+    }
+
     const out: OrderDetails = {};
-    if (parsed.clientCompanyName !== undefined) {
-        out.clientCompanyName = { ai: parsed.clientCompanyName };
+    if (flat.clientCompanyName !== undefined) {
+        out.clientCompanyName = { ai: flat.clientCompanyName };
     }
-    if (parsed.productCategory !== undefined) {
-        out.productCategory = { ai: parsed.productCategory };
+    if (flat.productCategory !== undefined) {
+        out.productCategory = { ai: flat.productCategory };
     }
-    if (parsed.requirements !== undefined) {
-        out.requirements = parsed.requirements.map((req, i): { ai: OrderRequirement } => ({
+    if (flat.requirements !== undefined) {
+        out.requirements = flat.requirements.map((req, i): { ai: OrderRequirement } => ({
             ai: {
                 index: i,
                 parameterName: req.parameterName,
@@ -107,13 +115,6 @@ function parsedToOrderDetailsAiOnly(parsed: LlmFlatOrderDetails): OrderDetails |
                 used: true,
             },
         }));
-    }
-    if (
-        out.clientCompanyName === undefined
-        && out.productCategory === undefined
-        && (out.requirements === undefined || out.requirements.length === 0)
-    ) {
-        return null;
     }
     return out;
 }
@@ -138,22 +139,26 @@ export class OrderDetailsWorker extends BaseWorker {
     }
 
     async mount(): Promise<void> {
+        if (!this.data.orderId) {
+            throw new Error('Воркер не получил идентификатор заказа');
+        }
+
         if (!this.data.id) {
-            const row = await workersService.create({
+            const createdWD = await workersService.create({
                 type: this.type,
                 status: WorkerStatus.Active,
-                orderId: this.data.orderId!,
-                cloudOperationId: this.data.cloudOperationId,
+                orderId: this.data.orderId,
             } satisfies OrderDetailsWorkerData);
-            Object.assign(this.data, row);
+
+            this.data = createdWD as Stored<OrderDetailsWorkerData>;
             return;
         }
 
-        const row = await workersService.update(this.data.id, {
+        const updatedWD = await workersService.update(this.data.id, {
             status: WorkerStatus.Active,
             cloudOperationId: this.data.cloudOperationId,
         });
-        if (row) Object.assign(this.data, row);
+        this.data = updatedWD as Stored<OrderDetailsWorkerData>;
     }
 
     async run(): Promise<void> {
@@ -170,22 +175,30 @@ export class OrderDetailsWorker extends BaseWorker {
                         { role: 'user', text },
                     ],
                     temperature: 0.1,
-                    jsonSchema: llmFlatOrderDetailsJsonSchema,
+                    jsonSchema: flatOrderDetailsJsonSchema,
                 });
                 this.data.cloudOperationId = cloudOperationId;
-                const row = await workersService.update(this.data.id, { cloudOperationId });
-                if (row) Object.assign(this.data, row);
-                logger.info(`[OrderDetailsWorker] LLM операция запущена: ${cloudOperationId}`);
+
+                const updatedWD = await workersService.update(this.data.id, { cloudOperationId });
+                this.data = updatedWD as Stored<OrderDetailsWorkerData>;
+            }
+
+            if(!this.data.id){
+                throw new Error('Воркер не инициализирован: ожидается вызов mount() перед run()');
             }
 
             while (!this.shouldStop) {
-                const poll = await yandexLlm.pollCompletionJson(this.data.cloudOperationId!, LlmFlatOrderDetailsSchema);
+                const poll = await yandexLlm.pollCompletionJson(this.data.cloudOperationId!, FlatOrderDetailsZodSchema);
 
                 if (poll.done) {
-                    const parsed = LlmFlatOrderDetailsSchema.parse(poll.result);
-                    const details = parsedToOrderDetailsAiOnly(parsed);
-                    const row = await workersService.update(this.data.id, { orderDetails: details });
-                    if (row) Object.assign(this.data, row);
+                    const parsed = FlatOrderDetailsZodSchema.parse(poll.result);
+                    const details = flatToDualOrderDetails(parsed);
+                    if(!details){
+                        throw new Error(`Не удалось извлечь данные из заказа: ${JSON.stringify(parsed)}`);
+                    }
+
+                    const updatedWD = await workersService.update(this.data.id, { orderDetails: details });
+                    this.data = updatedWD as Stored<OrderDetailsWorkerData>;
                     await this.markSuccess();
                     return;
                 }
@@ -196,14 +209,13 @@ export class OrderDetailsWorker extends BaseWorker {
             await this.markStopped();
         } catch (error) {
             const message = OrderDetailsWorker.extractErrorMessage(error);
-            logger.error(`[OrderDetailsWorker] Ошибка для заказа "${this.data.orderId}": ${message}`);
-
+            
             if (this.data.id) {
-                const row = await workersService.update(this.data.id, {
+                const updatedWD = await workersService.update(this.data.id, {
                     status: WorkerStatus.Failed,
                     errorMessage: message,
                 });
-                if (row) Object.assign(this.data, row);
+                this.data = updatedWD as Stored<OrderDetailsWorkerData>;
             }
         }
     }
@@ -219,11 +231,21 @@ export class OrderDetailsWorker extends BaseWorker {
         if (this.data.type !== 'order-details-worker') {
             throw new Error('Неверный тип воркера');
         }
-        await ordersService.update(this.data.orderId!, { details: this.data.orderDetails ?? null });
+        if(!this.data.orderId){
+            throw new Error('Воркер не получил идентификатор заказа');
+        }
+        if(!this.data.orderDetails){
+            throw new Error('Воркер не получил данные из заказа');
+        }
+        await ordersService.update(this.data.orderId, { details: this.data.orderDetails });
     }
 
     private async getFileText(): Promise<string> {
-        const order = await ordersService.get(this.data.orderId!);
+        if(!this.data.orderId){
+            throw new Error('Воркер не получил идентификатор заказа');
+        }
+
+        const order = await ordersService.get(this.data.orderId);
         if (!order) {
             throw new Error(`Заказ "${this.data.orderId}" не найден`);
         }
@@ -254,13 +276,13 @@ export class OrderDetailsWorker extends BaseWorker {
 
     private async markSuccess(): Promise<void> {
         if (!this.data.id) return;
-        const row = await workersService.update(this.data.id, { status: WorkerStatus.Success });
-        if (row) Object.assign(this.data, row);
+        const updatedWD = await workersService.update(this.data.id, { status: WorkerStatus.Success });
+        this.data = updatedWD as Stored<OrderDetailsWorkerData>;
     }
 
     private async markStopped(): Promise<void> {
         if (!this.data.id) return;
-        const row = await workersService.update(this.data.id, { status: WorkerStatus.Stopped });
-        if (row) Object.assign(this.data, row);
+        const updatedWD = await workersService.update(this.data.id, { status: WorkerStatus.Stopped });
+        this.data = updatedWD as Stored<OrderDetailsWorkerData>;
     }
 }
