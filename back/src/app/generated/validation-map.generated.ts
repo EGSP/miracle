@@ -3,6 +3,7 @@
 
 import {
     parseGetUserParams,
+    parseGetTokensParams,
     parseSoftDeleteQuery,
     parseSoftDeleteParams,
     parseGetContentQuery,
@@ -28,6 +29,7 @@ export const validationMap: Record<string, {
     params?: (raw: Record<string, unknown>) => unknown;
 }> = {
     'GET /user/user/:id': { params: parseGetUserParams },
+    'GET /files-content/records/:contentId/tokens': { params: parseGetTokensParams },
     'POST /files-content/records/:contentId': { query: parseSoftDeleteQuery, params: parseSoftDeleteParams },
     'GET /files-content/:fileId': { query: parseGetContentQuery, params: parseGetContentParams },
     'POST /files-content/:fileId/extract': { query: parseExtractContentQuery, params: parseExtractContentParams },

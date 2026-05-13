@@ -80,6 +80,30 @@ export function parseGetUserParams(raw: Record<string, unknown>) {
     return result;
 }
 
+export function parseGetTokensParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_contentId = readSingleValue(raw, "contentId");
+    if (raw_contentId.missing) {
+        errors.push({ field: "contentId", message: 'is required' });
+    } else if (raw_contentId.multi) {
+        errors.push({ field: "contentId", message: 'expected single value' });
+    } else {
+        if (typeof raw_contentId.value !== 'string') {
+            errors.push({ field: "contentId", message: 'expected string' });
+        } else {
+            result["contentId"] = raw_contentId.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
 export function parseSoftDeleteQuery(raw: Record<string, unknown>) {
     const errors: Array<{ field: string; message: string }> = [];
     const result: Record<string, unknown> = {};

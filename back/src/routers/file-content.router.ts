@@ -2,6 +2,7 @@ import { ExtractionStatus, FileContent, Stored } from "@miracle/types";
 import { err } from "../app/index.js";
 import { defineRouter, route } from "../app/router.js";
 import { filesContentService } from "../databases/file-content.db.js";
+import { countTokens } from "../lib/tokens/tokens.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { logger } from "../logger/logger.js";
 
@@ -38,6 +39,34 @@ type SoftDeleteParams = {
 type SoftDeleteQuery = {
     mark: boolean;
 };
+
+type GetTokensParams = {
+    contentId: string;
+};
+
+type GetTokensResponse = {
+    tokens: number;
+};
+
+/** GET `/records/:contentId/tokens` — оценка числа токенов по сохранённому контенту записи. */
+const getTokens = route.get('/records/:contentId/tokens', {
+    validate: { params: true },
+    handler: async ({ params }: { params: GetTokensParams }) => {
+        const contentId = params.contentId;
+        if (!contentId)
+            return err.validation('Не указан идентификатор записи контента');
+
+        const record = await filesContentService.get(contentId);
+        if (!record)
+            return err.notFound('Запись контента не найдена');
+
+        const content = record.content;
+        if (!content?.length)
+            return { tokens: 0 } satisfies GetTokensResponse;
+
+        return { tokens: countTokens(content) } satisfies GetTokensResponse;
+    },
+});
 
 /** POST `/records/:contentId?mark=true|false` — как {@link filesContentService.softDelete}. */
 const softDelete = route.post('/records/:contentId', {
@@ -91,5 +120,5 @@ const extractContent = route.post('/:fileId/extract', {
 
 export const filesContentRouter = defineRouter('/files-content', {
     middlewares: [authMiddleware],
-    routes: [softDelete, getContent, extractContent],
+    routes: [getTokens, softDelete, getContent, extractContent],
 } as const);

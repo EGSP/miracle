@@ -264,6 +264,15 @@
       "createdAt": 1778673021385,
       "updatedAt": 1778673021723,
       "errorMessage": "/yandex.cloud.ai.foundation_models.v1.TextGenerationAsyncService/Completion INVALID_ARGUMENT: Я не могу обсуждать эту тему. Давайте поговорим о чём-нибудь ещё."
+    },
+    {
+      "type": "order-details-worker",
+      "status": "failed",
+      "orderId": "1c5cae5c-f809-40a6-8ea5-9a03d820ad80",
+      "id": "c8ddc380-d544-414f-a7f2-d6278318b26d",
+      "createdAt": 1778674964049,
+      "updatedAt": 1778674964468,
+      "errorMessage": "/yandex.cloud.ai.foundation_models.v1.TextGenerationAsyncService/Completion INVALID_ARGUMENT: Я не могу обсуждать эту тему. Давайте поговорим о чём-нибудь ещё."
     }
   ]
 }

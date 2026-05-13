@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileDropZone } from "@/components/ui/file-dropzone";
 import { getApiErrorMessage } from "@/lib/api";
-import { useExtractFileContent, useGetFileContent, useSoftDeleteFileContent } from "@/lib/queries/file-content.query";
+import { useExtractFileContent, useGetFileContent, useGetFileContentTokens, useSoftDeleteFileContent } from "@/lib/queries/file-content.query";
 import { usePatchFile, useRestoreFile } from "@/lib/queries/file.query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getFileDomain, FileDomain } from "@miracle/types";
@@ -40,6 +40,10 @@ function getExtractionIndicator(
 
 export function FileCard({ file }: FileCardProps) {
     const { data: contentList, isLoading, isError: isGetContentError, error: getContentError } = useGetFileContent(file.id, true);
+    const { data: tokensData, isLoading: isTokensLoading, isError: isTokensError, error: tokensError } = useGetFileContentTokens(
+        file.id,
+        contentList?.[0]?.id,
+    );
     const extractMutation = useExtractFileContent(file.id);
     const softDeleteMutation = useSoftDeleteFileContent(file.id);
     const restoreMutation = useRestoreFile(file.id);
@@ -162,6 +166,15 @@ export function FileCard({ file }: FileCardProps) {
                     <Text as="span" compact className="text-destructive">
                         {latestContent.meta.extractionFailedMessage}
                     </Text>
+                ) : null}
+                {contentList?.[0]?.id ? (
+                    <Text.Helper as="span">
+                        {isTokensLoading
+                            ? "Подсчёт токенов…"
+                            : isTokensError
+                                ? `Токены: ошибка (${getApiErrorMessage(tokensError)})`
+                                : `Токенов (оценка): ${tokensData?.tokens ?? "—"}`}
+                    </Text.Helper>
                 ) : null}
             </Stack>
 

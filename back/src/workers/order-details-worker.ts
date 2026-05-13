@@ -175,6 +175,7 @@ export class OrderDetailsWorker extends BaseWorker {
                         { role: 'user', text },
                     ],
                     temperature: 0.1,
+                    
                     jsonSchema: flatOrderDetailsJsonSchema,
                 });
                 this.data.cloudOperationId = cloudOperationId;

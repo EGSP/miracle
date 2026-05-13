@@ -11,6 +11,14 @@ export const useGetFileContent = (fileId: string, onlyLast = true, includeDelete
     });
 };
 
+export const useGetFileContentTokens = (fileId: string, contentId: string | undefined) => {
+    return useQuery({
+        queryKey: [...FILE_CONTENT_QUERY_KEY, fileId, 'tokens', contentId] as const,
+        queryFn: () => filesContent.getTokens({ contentId: contentId! }),
+        enabled: Boolean(fileId && contentId),
+    });
+};
+
 export const useExtractFileContent = (fileId: string, retryIfLastFailed = true) => {
     const queryClient = useQueryClient();
 
