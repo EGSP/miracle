@@ -28,7 +28,14 @@ const applyWorkerData = route.post('/:id/apply-worker-data', {
     },
 });
 
+const deleteWorker = route.delete('/:id', {
+    validate: { params: true },
+    handler: async ({ params }: { params: { id: string } }) => {
+        await workersService.delete(params.id);
+    },
+});
+
 export const workersRouter = defineRouter('/workers', {
     middlewares: [authMiddleware],
-    routes: [getWorkers, applyWorkerData],
+    routes: [getWorkers, applyWorkerData, deleteWorker],
 } as const);

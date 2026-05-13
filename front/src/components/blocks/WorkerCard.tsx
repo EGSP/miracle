@@ -6,7 +6,7 @@ import type { Stored, WorkerData } from '@miracle/types';
 import { WorkerIcon } from '@/components/blocks/WorkerIcon';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage } from '@/lib/api';
-import { useApplyWorkerData } from '@/lib/queries/workers.query';
+import { useApplyWorkerData, useDeleteWorker } from '@/lib/queries/workers.query';
 
 type WorkerCardProps = {
     worker: Stored<WorkerData>;
@@ -45,7 +45,9 @@ export function WorkerCard({ worker }: WorkerCardProps) {
     const indicator = getStatusIndicator(worker.status);
     const hrData = getHumanReadableWorkerData(worker);
     const applyMutation = useApplyWorkerData();
+    const deleteMutation = useDeleteWorker();
     const showApplyButton = worker.status === WorkerStatus.Success;
+    const showDeleteButton = worker.status !== WorkerStatus.Active;
 
     return (
         <Stack gap={3} className="border border-border p-3">
@@ -57,22 +59,40 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                 <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />
             </Stack>
 
-            {showApplyButton ? (
+            {showApplyButton || showDeleteButton ? (
                 <Stack gap={2}>
-                    <div>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={applyMutation.isPending}
-                            onClick={() => applyMutation.mutate(worker.id)}
-                        >
-                            {applyMutation.isPending ? 'Применение...' : 'Применить результат'}
-                        </Button>
-                    </div>
+                    <Stack orientation="horizontal" gap={2}>
+                        {showApplyButton ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={applyMutation.isPending || deleteMutation.isPending}
+                                onClick={() => applyMutation.mutate(worker.id)}
+                            >
+                                {applyMutation.isPending ? 'Применение...' : 'Применить результат'}
+                            </Button>
+                        ) : null}
+                        {showDeleteButton ? (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                disabled={deleteMutation.isPending || applyMutation.isPending}
+                                onClick={() => deleteMutation.mutate(worker.id)}
+                            >
+                                {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
+                            </Button>
+                        ) : null}
+                    </Stack>
                     {applyMutation.isError ? (
                         <Text as="p" compact className="text-destructive">
                             {getApiErrorMessage(applyMutation.error)}
+                        </Text>
+                    ) : null}
+                    {deleteMutation.isError ? (
+                        <Text as="p" compact className="text-destructive">
+                            {getApiErrorMessage(deleteMutation.error)}
                         </Text>
                     ) : null}
                 </Stack>

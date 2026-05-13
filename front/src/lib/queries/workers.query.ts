@@ -30,3 +30,15 @@ export const useApplyWorkerData = () => {
         },
     });
 };
+
+/** DELETE `/workers/:id` — удаляет воркера (кроме active). */
+export const useDeleteWorker = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (workerId: string) => workers.deleteWorker({ id: workerId }),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['workers'] });
+        },
+    });
+};

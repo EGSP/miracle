@@ -1,4 +1,4 @@
-import type { WorkerData } from '@miracle/types';
+import { WorkerStatus, type WorkerData } from '@miracle/types';
 import { JsonCollection, registerDb } from './db.js';
 import type { CreateEntityInput, StoredEntity, UpdateEntityInput } from './db.js';
 import { workerPool } from '../workers/worker-pool.js';
@@ -26,6 +26,24 @@ export const workersService = {
 
     query: (predicate: (worker: StoredEntity<WorkerData>) => boolean) => {
         return workersDb.ref().filter(predicate);
+    },
+
+    delete: async (id: string): Promise<void> => {
+        const worker = workersDb.getById(id);
+
+        if (!worker) {
+            throw new Error('Воркер не найден');
+        }
+
+        if (worker.status === WorkerStatus.Active) {
+            throw new Error('Нельзя удалить активный воркер');
+        }
+
+        const isDeleted = await workersDb.delete(id);
+
+        if (!isDeleted) {
+            throw new Error('Не удалось удалить воркер');
+        }
     },
 
     /**

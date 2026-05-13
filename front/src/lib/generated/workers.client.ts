@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { Stored, WorkerData, WorkersQuery } from '@miracle/types';
-import type { ApplyWorkerDataResponse } from './models';
+import type { ApplyWorkerDataResponse, DeleteWorkerResponse } from './models';
 
 export const workers = {
     getWorkers: (workersQuery: WorkersQuery) => customInstance<Stored<WorkerData>[]>({
@@ -15,5 +15,9 @@ export const workers = {
     applyWorkerData: (params: { id: string; }) => customInstance<ApplyWorkerDataResponse>({
         method: 'POST',
         url: formatPath('/workers/:id/apply-worker-data', params),
+    }),
+    deleteWorker: (params: { id: string; }) => customInstance<DeleteWorkerResponse>({
+        method: 'DELETE',
+        url: formatPath('/workers/:id', params),
     }),
 };
