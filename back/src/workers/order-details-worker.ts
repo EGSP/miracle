@@ -8,6 +8,7 @@ import { workersService } from '../databases/workers.db.js';
 import { yandexLlm } from '../lib/yandex/yandex-llm.js';
 import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
+import { countTokens } from '../lib/tokens/tokens.js';
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -175,7 +176,7 @@ export class OrderDetailsWorker extends BaseWorker {
                         { role: 'user', text },
                     ],
                     temperature: 0.1,
-                    
+                    maxTokens: countTokens(SYSTEM_PROMPT+text) * 10,
                     jsonSchema: flatOrderDetailsJsonSchema,
                 });
                 this.data.cloudOperationId = cloudOperationId;
