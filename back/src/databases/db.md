@@ -15,7 +15,8 @@
   - `updatedAt`
 - При обновлении записи база всегда обновляет `updatedAt`.
 - Чтение (`list`, `getById`, `create`, `update`) возвращает `structuredClone(...)`, чтобы внешний код не мутировал внутренний state коллекции напрямую.
-- Физическое удаление делает `delete(id)` по индексу в `items`.
+- Мягкое удаление: `softDelete(id, true)` — помечает запись (`deletedAt = now`), `softDelete(id, false)` — снимает метку (`deletedAt = null`). В обоих случаях обновляется `updatedAt`. Запись при этом остаётся в `items`.
+- Жёсткое удаление: `delete(id)` физически удаляет запись из `items`.
 
 ## Модель служебных полей
 
@@ -26,10 +27,13 @@ type DbEntity = {
     id: string;
     createdAt: number;
     updatedAt: number;
+    deletedAt?: number | null;
 };
 ```
 
 Это обязательная "базовая надстройка" поверх доменной модели.
+
+`deletedAt` — поле мягкого удаления: `undefined` — никогда не трогалось, `null` — метка снята, `number` — Unix-timestamp момента пометки.
 
 ## Поток данных в коллекции
 
@@ -48,6 +52,22 @@ type DbEntity = {
 3. Middleware обновляет `updatedAt`.
 4. Данные сохраняются.
 5. Возвращается клон обновленной сущности (или `undefined`, если запись не найдена).
+
+> `deletedAt` намеренно исключён из `UpdateEntityInput` — управляй им через `softDelete`.
+
+### softDelete
+
+1. Ищется запись по `id`.
+2. Middleware (`beforeSoftDelete`) выставляет `deletedAt = mark ? Date.now() : null` и обновляет `updatedAt`.
+3. Данные сохраняются.
+4. Возвращается клон обновленной сущности (или `undefined`, если запись не найдена).
+
+### delete
+
+1. Ищется индекс записи по `id`.
+2. Запись физически удаляется из `items` через `splice`.
+3. Данные сохраняются.
+4. Возвращается `true` (удалено) или `false` (не найдено).
 
 ## Разница между `Stored<T>` и `StoredEntity<T>`
 
@@ -126,13 +146,27 @@ await collection.update('1', { tags: ['c'] });
 
 Если внешний код вручную строит патч через `Object.assign`, он может случайно собрать плоский объект с полным вложенным деревом — тогда защита deep merge не поможет. Всегда передавай в `update()` только **изменённую часть** объекта.
 
+## Middleware
+
+`CollectionMiddleware<TItem>` — хук-интерфейс для коллекции:
+
+| Хук | Когда вызывается | Параметры |
+|---|---|---|
+| `beforeCreate` | перед добавлением новой записи | `item` |
+| `beforeUpdate` | перед сохранением патча | `item`, `patch` |
+| `beforeSoftDelete` | перед мягким удалением/восстановлением | `item`, `mark: boolean` |
+
+Встроенный `timestampsMiddleware` реализует все три хука и управляет `createdAt`, `updatedAt`, `deletedAt`.
+
+Кастомные middleware передаются в `JsonCollection.create(name, [...middlewares])` и выполняются **после** `timestampsMiddleware`.
+
 ## Важно про runtime
 
 Разница между `Stored<T>` и `StoredEntity<T>` — только в типовой безопасности TypeScript.
 
 В рантайме:
 
-- поля `createdAt` и `updatedAt` реально присутствуют в данных;
+- поля `createdAt`, `updatedAt` и `deletedAt` реально присутствуют в данных;
 - база сама ими управляет через middleware;
 - если вы их только читаете на фронте, конфликтов не возникает.
 
