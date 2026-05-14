@@ -192,9 +192,10 @@ function NavigationGuard() {
 
 ```tsx
 function TitleField() {
+    const { contribute } = useDocumentCardContext()
     const field = useField<string>('title', doc.title)
 
-    useContribute(DocumentCardContext, 'title', (draft) => ({
+    useContribute(contribute, 'title', (draft) => ({
         ...draft,
         title: field.value,
     }))

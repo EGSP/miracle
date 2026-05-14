@@ -16,7 +16,7 @@
  *   useContribute     — регистрирует хендлер компонента в ближайшем контексте
  */
 
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Типы
@@ -87,49 +87,35 @@ export function useDraft<T>(): DraftAPI<T> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Регистрирует хендлер компонента в entity-контексте.
- * Контекст передаётся первым аргументом — должен содержать DraftAPI<T>.
- * Снимает регистрацию автоматически при размонтировании.
- *
- * handlerRef-трюк: хендлер всегда читает свежее замыкание,
- * регистрация в контексте происходит один раз при монтировании.
+ * Регистрирует хендлер компонента в черновике.
+ * Принимает функцию contribute из entity-контекста — T выводится из неё автоматически.
+ * Снимает регистрацию при размонтировании.
  *
  * @example
- * function OrderCardFile() {
- *     const fileField = useField<OrderFileState, 'fileId'>('fileId')
+ * function FileCardSettings() {
+ *     const { contribute } = useFileCardContext()
+ *     const field = useField('active', false)
  *
- *     useContribute(OrderCardContext, 'file', (draft) => {
- *         if (!fileField.value) return undefined
- *         return { ...draft, fileId: fileField.value }
- *     })
+ *     useContribute(contribute, 'settings', (draft) => ({
+ *         ...draft,
+ *         settings: { active: field.value },  // draft типизирован автоматически
+ *     }))
  *
- *     return <FileSelector field={fileField} />
+ *     return <Switch checked={field.value} onCheckedChange={field.onChange} />
  * }
  */
-export function useContribute<
-    T,
-    TContext extends { contribute: DraftAPI<T>["contribute"] },
->(
-    Context: React.Context<TContext | null>,
+export function useContribute<T>(
+    contribute: DraftAPI<T>["contribute"],
     id: string,
     handler: DraftHandler<T>,
 ): void {
-    const ctx = useContext(Context);
-    if (!ctx) {
-        throw new Error(
-            `useContribute: контекст не найден в дереве. ` +
-                `Компонент должен быть внутри соответствующего провайдера.`,
-        );
-    }
-
     const handlerRef = useRef(handler);
     handlerRef.current = handler;
 
     useEffect(() => {
         const stable: DraftHandler<T> = (draft) => handlerRef.current(draft);
-        return ctx.contribute(id, stable);
-        // id — единственная стабильная зависимость;
-        // ctx.contribute стабилен (из useMemo), handlerRef — через ref
+        return contribute(id, stable);
+        // contribute стабилен (из useMemo), id — намеренная зависимость
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id]);
+    }, [id, contribute]);
 }

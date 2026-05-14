@@ -2,7 +2,7 @@
 
 Механизм сборки сложного объекта из плоских секций перед сохранением на сервер.
 
-Каждая секция (компонент) регистрирует хендлер, который патчит черновик своим слоем данных. Координатор (entity-контекст) запускает цепочку и получает итоговый объект.
+Каждая секция регистрирует хендлер, который патчит черновик своим слоем. Координатор запускает цепочку и получает итоговый объект.
 
 ---
 
@@ -13,10 +13,10 @@ collect({ ...order })
   → handler "file"  : { ...draft, fileId: "abc" }
   → handler "req-0" : { ...draft, requirements: [...] }
   → handler "req-1" : { ...draft, requirements: [..., req1] }
-  → итог передаётся в мутацию
+  → итог → мутация
 ```
 
-Если хендлер возвращает `undefined` — цепочка прерывается, сохранение отменяется. Компонент сам решает как сообщить об ошибке пользователю перед возвратом `undefined`.
+Если хендлер возвращает `undefined` — цепочка прерывается, сохранение отменяется. Компонент сам показывает ошибку перед возвратом `undefined`.
 
 ---
 
@@ -27,7 +27,7 @@ collect({ ...order })
 | `DraftHandler<T>` | Тип хендлера: `(draft: T) => T \| undefined` |
 | `DraftAPI<T>` | Интерфейс: `contribute`, `collect` |
 | `useDraft<T>()` | Создаёт `DraftAPI` — вызывается в entity-провайдере |
-| `useContribute(Context, id, handler)` | Регистрирует хендлер компонента |
+| `useContribute(contribute, id, handler)` | Регистрирует хендлер компонента |
 
 ### `DraftAPI<T>`
 
@@ -40,11 +40,9 @@ collect({ ...order })
 
 ## Подключение в entity-контекст
 
-`useDraft<T>()` вызывается в провайдере, результат встраивается в контекст через spread.
-Контекст должен иметь тип `{ ... } & DraftAPI<T>` — тогда `useContribute` его найдёт.
+`useDraft<T>()` вызывается в провайдере, результат встраивается через spread.
 
 ```tsx
-// types
 type OrderCardContextType = {
     order: Stored<Order>
     files: FileWithMeta[]
@@ -52,7 +50,6 @@ type OrderCardContextType = {
 
 const OrderCardContext = createContext<OrderCardContextType | null>(null)
 
-// провайдер
 function OrderCardProvider({ order, files, children }) {
     const draft = useDraft<Order>()
 
@@ -68,12 +65,15 @@ function OrderCardProvider({ order, files, children }) {
 
 ## Использование в компонентах
 
+`contribute` берётся из entity-контекста. TypeScript выводит `T` из типа `contribute` автоматически — аннотировать `draft` не нужно.
+
 ```tsx
 function OrderCardFile() {
-    const fileField = useField<OrderFileState, 'fileId'>('fileId')
+    const { contribute } = useOrderCardContext()
+    const fileField = useField('fileId', '')
 
-    useContribute(OrderCardContext, 'file', (draft) => {
-        if (!fileField.value) return undefined   // отклонить — файл не выбран
+    useContribute(contribute, 'file', (draft) => {
+        if (!fileField.value) return undefined  // отклонить
         return { ...draft, fileId: fileField.value }
     })
 
@@ -81,7 +81,19 @@ function OrderCardFile() {
 }
 ```
 
-TypeScript выводит тип `draft` из `OrderCardContext` автоматически — явно указывать не нужно.
+```tsx
+function FileCardSettings() {
+    const { contribute } = useFileCardContext()
+    const activeField = useField('active', false)
+
+    useContribute(contribute, 'settings', (draft) => ({
+        ...draft,
+        settings: { active: activeField.value },
+    }))
+
+    return <Switch checked={activeField.value} onCheckedChange={activeField.onChange} />
+}
+```
 
 ---
 
@@ -95,7 +107,7 @@ function OrderCardBody() {
 
     const handleSave = () => {
         const result = collect({ ...order })
-        if (result === undefined) return  // кто-то отклонил — компонент уже показал ошибку
+        if (result === undefined) return  // кто-то отклонил
 
         mutation.mutate(
             { id: order.id, ...result },
@@ -109,24 +121,21 @@ function OrderCardBody() {
 
 ## Правила
 
-**id должен быть стабильным.** При смене `id` хендлер переregisterируется — используй константу или `useMemo`.
+**id стабильный.** При смене id хендлер перерегистрируется — используй константу.
 
 **Каждый хендлер трогает только свой слой.** Не перезаписывай поля других секций.
 
-**`undefined` = сохранение отклонено.** Хендлер обязан показать ошибку пользователю сам, до возврата `undefined` — координатор не знает причину.
+**`undefined` = сохранение отклонено.** Хендлер показывает ошибку сам — координатор причину не знает.
 
-**Порядок хендлеров = порядок регистрации (mount).** Если порядок важен — учитывай порядок монтирования компонентов.
+**Порядок = порядок монтирования.** Если порядок важен — учитывай порядок mount компонентов.
 
 ---
 
 ## Связь с dirty-state
 
-`draft-api` и `dirty-state` решают разные задачи и не зависят друг от друга:
-
 | | dirty-state | draft-api |
 |---|---|---|
 | Задача | Отслеживать изменения, блокировать навигацию | Собрать объект из секций для сохранения |
-| Когда активен | Всё время (реактивно) | Только в момент вызова `collect` |
-| commit | `commitAll()` из Guard — после успеха мутации | — |
+| Когда активен | Постоянно (реактивно) | Только в момент `collect` |
 
-`commitAll()` из `DirtyGuard` вызывается после успешной мутации — он закрывает dirty-состояния всех секций. `draft-api` к этому не причастен.
+`commitAll()` из Guard вызывается после успешной мутации. `draft-api` к этому не причастен.
