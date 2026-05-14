@@ -38,7 +38,8 @@
       "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(x.get\\('name',''\\)\\) for x in \\(data if isinstance\\(data,list\\) else []\\)]\")",
       "Bash(curl -s \"https://raw.githubusercontent.com/yandex-cloud/docs/master/ru/foundation-models/operations/yandexgpt/async-request.md\")",
       "Bash(node -e \"require\\('openai'\\)\")",
-      "Bash(grep -v \"//\")"
+      "Bash(grep -v \"//\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\components\\\\blocks\\\\order-card\" -File)"
     ]
   }
 }
