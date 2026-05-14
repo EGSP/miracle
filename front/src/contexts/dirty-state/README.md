@@ -1,97 +1,204 @@
-# dirty-state / dirty-guard
+# dirty-state
 
-Механизм отслеживания несохранённых изменений в формах и секциях с опциональной блокировкой навигации.
+Механизм отслеживания несохранённых изменений в полях и секциях с блокировкой навигации.
 
 ---
 
 ## Из чего состоит
 
-| Часть | Файл | Назначение |
-|---|---|---|
-| **DirtyState** | `DirtyStateContext.tsx` | Отслеживает изменения в одной форме или секции |
-| **DirtyGuard** | `DirtyGuardContext.tsx` | Агрегирует несколько секций, блокирует навигацию |
-
-Обе части независимы. `DirtyState` работает без `DirtyGuard`. `DirtyGuard` без хотя бы одного `DirtyProvider` с `id` ничего не отслеживает.
+| Файл | Назначение |
+|---|---|
+| `DirtyGuardContext.tsx` | Guard — регистрирует поля и секции, блокирует навигацию |
+| `useField.tsx` | Поле — хранит собственный original/value, регистрируется в Guard |
 
 ---
 
 ## Ключевые идеи
 
-**Изоляция через Context + Zustand `createStore`.** Каждый `<DirtyProvider>` создаёт собственный стор в React-дереве — нет глобального стейта, нет утечек между страницами.
+**Поле — единица отслеживания.** `useField<T>(id, defaultValue)` хранит собственный `original` и `value`. Сравнение через `fast-deep-equal` — работает для примитивов, объектов, массивов, boolean.
 
-**Сравнение через `original` / `workingCopy`.** Стор хранит эталон (с сервера) и рабочую копию. При каждом изменении сравнивает их — если отличаются, `isDirty: true`.
+**Guard — регистр участников.** `DirtyGuardProvider` хранит все зарегистрированные поля через единый интерфейс `EntryApi { commit, reset }`. Знает кто грязный, умеет закоммитить или сбросить всех.
 
-**Автоматическая регистрация в гварде.** `<DirtyProvider id="...">` сам регистрируется в ближайшем `<DirtyGuardProvider>` при появлении изменений и снимает регистрацию при сбросе или размонтировании.
+**Вложенность для секций.** Вместо отдельного `DirtyProvider` — просто вложенный `<DirtyGuardProvider id="...">`. Он регистрируется в родительском Guard как секция с тем же интерфейсом `EntryApi`.
 
-**Плоские объекты.** Сравнение работает через `===` на уровне ключей — вложенные объекты и массивы сравниваются по ссылке. Для сложных структур разбивай на несколько плоских `<DirtyProvider>`.
-
----
-
-## Справка по API
-
-### DirtyState
-
-| Экспорт | Уровень | Когда использовать |
-|---|---|---|
-| `<DirtyProvider initial id? reinitializeOnChange?>` | — | Всегда — оборачивает секцию |
-| `useField<T, K>(key)` | **Tier 1** | Биндинг поля: `value`, `isDirty`, `onChange`, `onInputChange` |
-| `useDirtyStore<T, R>(selector)` | **Tier 2** | Всё остальное: флаги, экшены, рабочая копия |
-| `useDirtyStoreApi<T>()` | **Tier 2** | Сырой `StoreApi` для `getState()` в обработчиках |
-| `DirtyStore<T>` | тип | Тип стора |
-| `DirtyStoreApi<T>` | тип | Тип StoreApi |
-
-### DirtyGuard
-
-| Экспорт | Уровень | Когда использовать |
-|---|---|---|
-| `<DirtyGuardProvider confirmMessage? skipBuiltinBlocker?>` | — | Всегда — оборачивает страницу |
-| `useGuardState()` | **Tier 1** | `isDirtyAnywhere`, `dirtyIds`, `dirtyCount`, `isDirty(id)` |
-| `useGuardActions()` | **Tier 1** | `commitAll()`, `resetAll()` после сохранения |
-| `useGuardBlocker()` | **Tier 2** | Кастомная модалка вместо `window.confirm` |
+**Работает без Guard.** `useField` без `DirtyGuardProvider` в дереве работает автономно — отслеживает isDirty локально, commit/reset доступны напрямую.
 
 ---
 
-## Быстрый выбор
+## API
 
-| Ситуация | Решение |
+### `useField<T>(id, defaultValue)`
+
+| Возвращает | Тип | Описание |
+|---|---|---|
+| `value` | `T` | Текущее значение |
+| `isDirty` | `boolean` | Отличается ли от original |
+| `onChange` | `(value: T) => void` | Для кастомных компонентов |
+| `onInputChange` | `(e: ChangeEvent) => void` | Для нативных `<input>` / `<textarea>` |
+| `commit` | `() => void` | value → original, isDirty → false |
+| `reset` | `() => void` | value → original (отмена изменений) |
+
+### `DirtyGuardProvider`
+
+| Проп | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `id` | `string` | — | Регистрирует в родительском Guard как секцию |
+| `confirmMessage` | `string` | `"Есть несохранённые..."` | Текст `window.confirm` |
+| `skipBuiltinBlocker` | `boolean` | `false` | Отключить `window.confirm`, использовать `useGuardBlocker` |
+
+### Хуки Guard
+
+| Хук | Описание |
 |---|---|
-| Одна форма, не нужна блокировка навигации | `<DirtyProvider>` + `useField` |
-| Индикатор изменений в шапке той же секции | `useDirtyStore(s => s.isDirty)` в любом дочернем компоненте |
-| Кнопка сохранения с данными из стора | `useDirtyStoreApi` + `getState()` в обработчике |
-| Несколько форм, каждая сохраняется отдельно | Несколько изолированных `<DirtyProvider>` без гварда |
-| Глобальный индикатор или кнопка "Сохранить всё" | `<DirtyGuardProvider>` + `<DirtyProvider id="...">` + `useGuardState` |
-| Заблокировать навигацию через `window.confirm` | `<DirtyGuardProvider confirmMessage="...">` |
-| Заблокировать навигацию через кастомный диалог | `<DirtyGuardProvider skipBuiltinBlocker>` + `useGuardBlocker` |
-| Сбросить/закоммитить все секции разом | `useGuardActions()` → `resetAll()` / `commitAll()` |
-| Вложенные структуры (массивы, объекты в объектах) | Несколько плоских `<DirtyProvider>` с разными `id` |
+| `useGuardState()` | `{ isDirtyAnywhere, dirtyIds, dirtyCount, isDirty(id) }` |
+| `useGuardActions()` | `{ commitAll(), resetAll() }` |
+| `useGuardBlocker()` | Кастомный UI блокера (TanStack Router blocker) |
 
 ---
 
-## Правила использования
+## Примеры
+
+### Одно поле, без Guard
 
 ```tsx
-// ✅ Поле — всегда useField
-const field = useField<T, 'name'>('name')
-<input value={field.value} onChange={field.onInputChange} />
+function NameInput() {
+    const field = useField<string>('name', '')
+    return (
+        <div>
+            <input value={field.value} onChange={field.onInputChange} />
+            {field.isDirty && <button onClick={field.reset}>Сбросить</button>}
+        </div>
+    )
+}
+```
 
-// ✅ Флаг isDirty — через selector, не подписываться на workingCopy
-const isDirty = useDirtyStore<T, boolean>(s => s.isDirty)
+### Форма с Guard и кнопкой сохранения
 
-// ✅ Данные для сохранения — читать в обработчике через getState(), не реактивно
-const storeApi = useDirtyStoreApi<T>()
-const handleSave = () => {
-    const { workingCopy, commit } = storeApi.getState()
-    mutate(workingCopy, { onSuccess: commit })
+```tsx
+function ProfilePage({ profile }) {
+    return (
+        <DirtyGuardProvider>
+            <ProfileForm />
+        </DirtyGuardProvider>
+    )
 }
 
-// ❌ Не читать workingCopy реактивно если нужен только в обработчике
-const workingCopy = useDirtyStore(s => s.workingCopy)  // подписка на каждый keypress
-const handleSave = () => mutate(workingCopy)             // плохо для больших форм
+function ProfileForm() {
+    const nameField  = useField<string>('name', profile.name)
+    const emailField = useField<string>('email', profile.email)
+    const { isDirtyAnywhere } = useGuardState()
+    const { commitAll } = useGuardActions()
+    const { mutate } = useSaveMutation()
+
+    const handleSave = () => mutate(
+        { name: nameField.value, email: emailField.value },
+        { onSuccess: commitAll }
+    )
+
+    return (
+        <form>
+            <input value={nameField.value}  onChange={nameField.onInputChange} />
+            <input value={emailField.value} onChange={emailField.onInputChange} />
+            <button disabled={!isDirtyAnywhere} onClick={handleSave}>Сохранить</button>
+        </form>
+    )
+}
+```
+
+### Boolean и другие типы
+
+```tsx
+// Boolean — onChange, не onInputChange
+const active = useField<boolean>('active', false)
+<Switch checked={active.value} onCheckedChange={active.onChange} />
+
+// Select
+const status = useField<'draft' | 'published'>('status', 'draft')
+<Select value={status.value} onValueChange={status.onChange} />
+
+// Объект — fast-deep-equal сравнивает глубоко
+const address = useField<Address>('address', defaultAddress)
+<AddressPicker value={address.value} onChange={address.onChange} />
+```
+
+### Секции через вложенные Guard
+
+```tsx
+function EditorPage({ meta, content }) {
+    return (
+        <DirtyGuardProvider>
+            {/* Секция регистрируется в родительском Guard */}
+            <DirtyGuardProvider id="meta">
+                <MetaSection />
+            </DirtyGuardProvider>
+
+            <DirtyGuardProvider id="content">
+                <ContentSection />
+            </DirtyGuardProvider>
+
+            <EditorToolbar />
+        </DirtyGuardProvider>
+    )
+}
+
+function EditorToolbar() {
+    const { isDirtyAnywhere, isDirty } = useGuardState()
+    const { commitAll } = useGuardActions()
+
+    return (
+        <div>
+            {isDirty('meta') && <span>Мета изменена</span>}
+            {isDirty('content') && <span>Контент изменён</span>}
+            <button disabled={!isDirtyAnywhere} onClick={handleSaveAll}>
+                Сохранить всё
+            </button>
+        </div>
+    )
+}
+```
+
+### Кастомный диалог блокировки
+
+```tsx
+<DirtyGuardProvider skipBuiltinBlocker>
+    <MyPage />
+    <NavigationGuard />
+</DirtyGuardProvider>
+
+function NavigationGuard() {
+    const blocker = useGuardBlocker()
+    if (blocker.status !== 'blocked') return null
+    return (
+        <Dialog open>
+            <button onClick={blocker.proceed}>Покинуть</button>
+            <button onClick={blocker.reset}>Остаться</button>
+        </Dialog>
+    )
+}
 ```
 
 ---
 
-## Подробная документация
+## Связь с draft-api
 
-- [DirtyState.md](./DirtyState.md) — стор, хуки, примеры с нативными и кастомными компонентами
-- [DirtyGuard.md](./DirtyGuard.md) — гвард, вложенность, блокировка навигации, сложные структуры
+`dirty-state` и `draft-api` решают разные задачи:
+
+| | dirty-state | draft-api |
+|---|---|---|
+| Задача | Отслеживать изменения, блокировать навигацию | Собрать объект из секций для сохранения |
+| Когда активен | Постоянно (реактивно) | Только в момент вызова `collect` |
+
+В компоненте они используются вместе: `useField` отслеживает значение, `useContribute` передаёт `field.value` в черновик при сохранении.
+
+```tsx
+function TitleField() {
+    const field = useField<string>('title', doc.title)
+
+    useContribute(DocumentCardContext, 'title', (draft) => ({
+        ...draft,
+        title: field.value,
+    }))
+
+    return <input value={field.value} onChange={field.onInputChange} />
+}
+```

@@ -1,72 +1,191 @@
 # dirty-guard
 
-Утилита для **агрегированного** отслеживания несохранённых изменений в нескольких секциях и блокировки навигации.
-
-Построена на паттерне **Context + Zustand `createStore`**: `<DirtyGuardProvider>` создаёт изолированный стор, в который `<DirtyProvider id="...">` автоматически регистрируются — без передачи пропов вручную.
+Guard для агрегированного отслеживания несохранённых изменений в полях и секциях с блокировкой навигации.
 
 ---
 
 ## Концепция
 
-`DirtyProvider` с prop `id` сам находит ближайший `DirtyGuardProvider` в дереве. Когда секция становится грязной — регистрируется в гварде; когда чистой или размонтируется — снимает регистрацию.
+Все участники — поля (`useField`) и вложенные секции (`DirtyGuardProvider id="..."`) — используют единый интерфейс `EntryApi`:
 
-```
-DirtyGuardProvider
-  dirtyIds = Set { "meta", "content" }
-  sections = Map { "meta" → StoreApi, "content" → StoreApi }
-           ↑ register("meta", api)       ↑ register("content", api)
-  DirtyProvider id="meta"     DirtyProvider id="content"
-  isDirty = true               isDirty = true
+```typescript
+type EntryApi = {
+    commit: () => void
+    reset:  () => void
+}
 ```
 
-После вызова `commitAll()` или `resetAll()` каждая секция обновляет свой `isDirty → false` и автоматически снимает регистрацию через подписку.
+Guard хранит:
+- `entries: Map<id, EntryApi>` — все зарегистрированные участники
+- `dirtyIds: Set<id>` — кто из них грязный
 
-### Два контекста под капотом
+`commitAll` / `resetAll` обходят `entries` и вызывают соответствующий метод у каждого.
 
-- **`GuardContext`** — для чтения состояния (`useGuardState`, `useGuardActions`, `useGuardBlocker`).
-- **`GuardApiContext`** — только для регистрации. Передаёт стабильный объект `{ register, unregister }` — `DirtyProvider` не подписывается на стейт гварда и не ре-рендерится при изменении `dirtyIds`.
+### Поток регистрации
 
-### Блокировка навигации
+```
+useField('title', '')
+  mount    → guard.register('title', { commit, reset })
+  isDirty  → guard.markDirty('title')
+  !isDirty → guard.markClean('title')
+  unmount  → cleanup: удаляет из entries и dirtyIds
 
-`DirtyGuardProvider` встраивает невидимый `GuardBlockerEffect`, который:
+DirtyGuardProvider id="meta"  (внутри другого Guard)
+  mount    → parentGuard.register('meta', { commit: commitAll, reset: resetAll })
+  isDirtyAnywhere → parentGuard.markDirty('meta')
+  unmount  → cleanup
+```
 
-1. Вызывает `useBlocker` из TanStack Router — перехватывает переходы пока `dirtyIds.size > 0`.
-2. Слушает `beforeunload` — блокирует закрытие вкладки.
+### Два контекста
 
-По умолчанию показывается `window.confirm`. Для кастомного диалога — используй `useGuardBlocker` вместе с `skipBuiltinBlocker`.
+- **`GuardContext`** — публичный, для `useGuardState`, `useGuardActions`, `useGuardBlocker`
+- **`GuardApiContext`** — внутренний, стабильный `apiRef`, для `useField` и вложенных Guard. Не вызывает ре-рендеры при изменении `dirtyIds`.
 
 ---
 
 ## API
 
-### `<DirtyGuardProvider confirmMessage? skipBuiltinBlocker?>`
+### `<DirtyGuardProvider id? confirmMessage? skipBuiltinBlocker?>`
 
 | Проп | Тип | По умолчанию | Описание |
 |---|---|---|---|
+| `id` | `string` | — | Регистрирует в родительском Guard. Используй для секций. |
 | `confirmMessage` | `string` | `"Есть несохранённые изменения. Покинуть страницу?"` | Текст `window.confirm` |
-| `skipBuiltinBlocker` | `boolean` | `false` | Отключить встроенный `window.confirm`. Используй с `useGuardBlocker()` |
-
----
+| `skipBuiltinBlocker` | `boolean` | `false` | Отключить встроенный confirm. Использовать с `useGuardBlocker()` |
 
 ### `useGuardState()`
 
-Агрегированное состояние всех секций.
+```tsx
+const { isDirtyAnywhere, dirtyIds, dirtyCount, isDirty } = useGuardState()
+```
 
-| Возвращает | Тип | Описание |
-|---|---|---|
-| `isDirtyAnywhere` | `boolean` | `true` если хотя бы одна секция грязная |
-| `dirtyIds` | `Set<string>` | id грязных секций |
-| `dirtyCount` | `number` | Количество грязных секций |
-| `isDirty(id)` | `(id: string) => boolean` | Проверить конкретную секцию |
+| Возвращает | Описание |
+|---|---|
+| `isDirtyAnywhere` | `true` если хотя бы один участник грязный |
+| `dirtyIds` | `Set<string>` грязных id |
+| `dirtyCount` | Количество грязных участников |
+| `isDirty(id)` | Проверить конкретный участник |
+
+### `useGuardActions()`
 
 ```tsx
+const { commitAll, resetAll } = useGuardActions()
+```
+
+`commitAll()` — вызвать `commit()` у всех зарегистрированных участников.
+`resetAll()` — вызвать `reset()` у всех.
+
+### `useGuardBlocker()`
+
+Возвращает объект `blocker` из TanStack Router. Использовать только с `skipBuiltinBlocker`.
+
+| `blocker.*` | Описание |
+|---|---|
+| `status` | `'idle' \| 'blocked'` |
+| `proceed()` | Разрешить переход |
+| `reset()` | Отменить переход |
+
+---
+
+## Примеры
+
+### Простая форма
+
+```tsx
+function SettingsPage({ settings }) {
+    return (
+        <DirtyGuardProvider confirmMessage="Настройки не сохранены. Уйти?">
+            <SettingsForm settings={settings} />
+        </DirtyGuardProvider>
+    )
+}
+
+function SettingsForm({ settings }) {
+    const themeField    = useField<string>('theme', settings.theme)
+    const languageField = useField<string>('language', settings.language)
+    const { isDirtyAnywhere } = useGuardState()
+    const { commitAll } = useGuardActions()
+    const { mutate } = useSaveMutation()
+
+    return (
+        <form>
+            <Select value={themeField.value} onValueChange={themeField.onChange} />
+            <Select value={languageField.value} onValueChange={languageField.onChange} />
+            <button
+                disabled={!isDirtyAnywhere}
+                onClick={() => mutate(
+                    { theme: themeField.value, language: languageField.value },
+                    { onSuccess: commitAll }
+                )}
+            >
+                Сохранить
+            </button>
+        </form>
+    )
+}
+```
+
+---
+
+### Секции через вложенные Guard
+
+Вместо `DirtyProvider` — вложенный `<DirtyGuardProvider id="...">`.
+
+```tsx
+type ArticleMeta    = { title: string; slug: string }
+type ArticleContent = { body: string }
+
+function ArticleEditor({ meta, content }) {
+    return (
+        <DirtyGuardProvider>
+            <DirtyGuardProvider id="meta">
+                <MetaSection meta={meta} />
+            </DirtyGuardProvider>
+
+            <DirtyGuardProvider id="content">
+                <ContentSection content={content} />
+            </DirtyGuardProvider>
+
+            <EditorToolbar />
+        </DirtyGuardProvider>
+    )
+}
+
+function MetaSection({ meta }) {
+    const titleField = useField<string>('title', meta.title)
+    const slugField  = useField<string>('slug', meta.slug)
+    const { isDirtyAnywhere } = useGuardState()  // видит только эту секцию
+    const { commitAll } = useGuardActions()
+    const { mutate } = useSaveMetaMutation()
+
+    return (
+        <section>
+            <input value={titleField.value} onChange={titleField.onInputChange} />
+            <input value={slugField.value}  onChange={slugField.onInputChange} />
+            <button
+                disabled={!isDirtyAnywhere}
+                onClick={() => mutate(
+                    { title: titleField.value, slug: slugField.value },
+                    { onSuccess: commitAll }
+                )}
+            >
+                Сохранить мету
+            </button>
+        </section>
+    )
+}
+
 function EditorToolbar() {
-    const { isDirtyAnywhere, dirtyCount, isDirty } = useGuardState()
+    const { isDirtyAnywhere, isDirty } = useGuardState()  // видит обе секции
+    const { commitAll } = useGuardActions()
 
     return (
         <div>
-            {isDirtyAnywhere && <span>● {dirtyCount} несохранённых секции</span>}
             {isDirty('meta') && <Tag>Мета изменена</Tag>}
+            {isDirty('content') && <Tag>Контент изменён</Tag>}
+            <button disabled={!isDirtyAnywhere} onClick={handleSaveAll}>
+                Сохранить всё
+            </button>
         </div>
     )
 }
@@ -74,51 +193,22 @@ function EditorToolbar() {
 
 ---
 
-### `useGuardActions()`
-
-Действия над всеми грязными секциями.
-
-| Возвращает | Тип | Описание |
-|---|---|---|
-| `commitAll()` | `() => void` | Вызвать `commit()` на каждой грязной секции |
-| `resetAll()` | `() => void` | Вызвать `reset()` на каждой грязной секции |
+### Кастомный диалог блокировки
 
 ```tsx
-function SaveAllButton() {
-    const { isDirtyAnywhere } = useGuardState()
-    const { commitAll } = useGuardActions()
-    const { mutate, isPending } = useSaveAllMutation()
-
-    const handleSave = () => {
-        mutate(collectData(), { onSuccess: commitAll })
-    }
-
+function EditorPage() {
     return (
-        <button onClick={handleSave} disabled={!isDirtyAnywhere || isPending}>
-            Сохранить всё
-        </button>
+        <DirtyGuardProvider skipBuiltinBlocker>
+            <DirtyGuardProvider id="content">
+                <ContentSection />
+            </DirtyGuardProvider>
+            <NavigationGuard />
+        </DirtyGuardProvider>
     )
 }
-```
 
----
-
-### `useGuardBlocker()`
-
-Кастомный UI блокера навигации. Возвращает объект `blocker` из TanStack Router.
-
-| `blocker.*` | Тип | Описание |
-|---|---|---|
-| `status` | `'idle' \| 'blocked'` | `'blocked'` когда навигация перехвачена |
-| `proceed()` | `() => void` | Разрешить переход |
-| `reset()` | `() => void` | Отменить переход |
-
-Используй вместе с `skipBuiltinBlocker` — иначе при навигации сработают оба: `window.confirm` и кастомный диалог.
-
-```tsx
 function NavigationGuard() {
     const blocker = useGuardBlocker()
-
     if (blocker.status !== 'blocked') return null
 
     return (
@@ -132,149 +222,11 @@ function NavigationGuard() {
         </Dialog>
     )
 }
-
-function EditorPage({ meta, content }) {
-    return (
-        <DirtyGuardProvider skipBuiltinBlocker>
-            <DirtyProvider<Meta> id="meta" initial={meta}>
-                <MetaSection />
-            </DirtyProvider>
-            <DirtyProvider<Content> id="content" initial={content}>
-                <ContentSection />
-            </DirtyProvider>
-            <NavigationGuard />
-        </DirtyGuardProvider>
-    )
-}
-```
-
----
-
-## Примеры
-
-### Редактор с несколькими секциями
-
-```tsx
-type ArticleMeta    = { title: string; slug: string; status: 'draft' | 'published' }
-type ArticleContent = { body: string; summary: string }
-
-function ArticleEditor({ meta, content }: { meta: ArticleMeta; content: ArticleContent }) {
-    return (
-        <DirtyGuardProvider confirmMessage="Изменения не сохранены. Уйти?">
-            <DirtyProvider<ArticleMeta> id="meta" initial={meta}>
-                <MetaSection />
-            </DirtyProvider>
-
-            <DirtyProvider<ArticleContent> id="content" initial={content}>
-                <ContentSection />
-            </DirtyProvider>
-
-            <EditorToolbar />
-        </DirtyGuardProvider>
-    )
-}
-
-// Тулбар снаружи секций — читает агрегированный гвард
-function EditorToolbar() {
-    const { isDirtyAnywhere, isDirty } = useGuardState()
-    const { commitAll } = useGuardActions()
-    const { mutate } = useSaveArticleMutation()
-
-    const handleSaveAll = () => {
-        // собрать данные из секций через useDirtyStoreApi (внутри каждой секции)
-        // или через отдельный механизм сбора
-        mutate(data, { onSuccess: commitAll })
-    }
-
-    return (
-        <div>
-            {isDirty('meta') && <span>Мета изменена</span>}
-            {isDirty('content') && <span>Контент изменён</span>}
-            <button disabled={!isDirtyAnywhere} onClick={handleSaveAll}>
-                Сохранить всё
-            </button>
-        </div>
-    )
-}
-```
-
----
-
-### Кнопка сохранения внутри секции
-
-Когда каждая секция сохраняется отдельно — кнопка живёт внутри `DirtyProvider` и работает напрямую со своим стором.
-
-```tsx
-function MetaSection() {
-    const titleField  = useField<ArticleMeta, 'title'>('title')
-    const statusField = useField<ArticleMeta, 'status'>('status')
-    const isDirty     = useDirtyStore<ArticleMeta, boolean>(s => s.isDirty)
-    const storeApi    = useDirtyStoreApi<ArticleMeta>()
-    const { mutate }  = useSaveMetaMutation()
-
-    const handleSave = () => {
-        const { workingCopy, commit } = storeApi.getState()
-        mutate(workingCopy, { onSuccess: commit })
-    }
-
-    return (
-        <section>
-            <input value={titleField.value} onChange={titleField.onInputChange} />
-            <Select value={statusField.value} onValueChange={statusField.onChange}>
-                <SelectItem value="draft">Черновик</SelectItem>
-                <SelectItem value="published">Опубликован</SelectItem>
-            </Select>
-            <button disabled={!isDirty} onClick={handleSave}>Сохранить мету</button>
-        </section>
-    )
-}
-```
-
----
-
-### Сложная сущность — плоские секции вместо одного большого объекта
-
-Когда сущность содержит вложенные структуры или динамические списки — разбивай на плоские секции.
-
-```tsx
-// ❌ Не делай так — shallowEqual не работает для массивов и вложенных объектов
-type OrderDirtyState = {
-    fileId: string
-    requirements: Array<{ id: string; value: string }>  // массив — проблема
-}
-
-// ✅ Делай так — каждый уровень своим плоским провайдером
-type OrderBasic   = { fileId: string }
-type Requirement  = { value: string; active: boolean }
-
-function OrderEditor({ order }: { order: Order }) {
-    return (
-        <DirtyGuardProvider>
-            <DirtyProvider<OrderBasic> id="basic" initial={{ fileId: order.fileId }}>
-                <OrderBasicSection />
-            </DirtyProvider>
-
-            {order.requirements.map(req =>
-                <DirtyProvider<Requirement>
-                    key={req.id}
-                    id={`req-${req.id}`}
-                    initial={{ value: req.value, active: req.active }}
-                >
-                    <RequirementRow reqId={req.id} />
-                </DirtyProvider>
-            )}
-
-            <SaveAllButton />
-        </DirtyGuardProvider>
-    )
-}
 ```
 
 ---
 
 ### Переключение сущности с подтверждением
-
-Паттерн для страниц со списком и деталями — переключение сущности при наличии изменений требует подтверждения.
 
 ```tsx
 function DocumentsPage() {
@@ -282,108 +234,42 @@ function DocumentsPage() {
 
     return (
         <DirtyGuardProvider skipBuiltinBlocker>
-            <DocumentList
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-            />
+            <DocumentList selectedId={selectedId} onSelect={handleSelect} />
             {selectedId && (
-                <DirtyProvider<Document>
-                    key={selectedId}         // размонтировать стор при смене документа
-                    id="document"
-                    initial={documents[selectedId]}
-                >
-                    <DocumentEditor />
-                </DirtyProvider>
+                <DirtyGuardProvider id="document" key={selectedId}>
+                    <DocumentEditor id={selectedId} />
+                </DirtyGuardProvider>
             )}
-            <SwitchGuard onSwitch={setSelectedId} />
+            <SwitchGuard onConfirm={setSelectedId} />
         </DirtyGuardProvider>
     )
 }
 
-// Перехватывает клики по списку когда есть изменения
-function SwitchGuard({ onSwitch }: { onSwitch: (id: string) => void }) {
+function SwitchGuard({ onConfirm }) {
     const { isDirtyAnywhere } = useGuardState()
     const { resetAll } = useGuardActions()
-    const [pendingId, setPendingId] = useState<string | null>(null)
+    const [pending, setPending] = useState<string | null>(null)
 
     const handleSelect = (id: string) => {
-        if (isDirtyAnywhere) {
-            setPendingId(id)  // показать диалог
-        } else {
-            onSwitch(id)
-        }
+        if (isDirtyAnywhere) { setPending(id); return }
+        onConfirm(id)
     }
 
     const handleConfirm = () => {
-        if (!pendingId) return
+        if (!pending) return
         resetAll()
-        onSwitch(pendingId)
-        setPendingId(null)
+        onConfirm(pending)
+        setPending(null)
     }
 
-    // ... передать handleSelect в DocumentList, показать диалог при pendingId
+    // ... диалог при pending !== null
 }
 ```
-
----
-
-### Гвард на уровне лэйаута
-
-```tsx
-function AppLayout() {
-    return (
-        <DirtyGuardProvider>
-            <nav>
-                {/* Ссылки перехватываются автоматически через useBlocker */}
-                <Link to="/documents">Документы</Link>
-                <Link to="/settings">Настройки</Link>
-            </nav>
-            <Outlet />  {/* Страницы с DirtyProvider рендерятся здесь */}
-        </DirtyGuardProvider>
-    )
-}
-
-// На странице — просто DirtyProvider с id
-function DocumentPage({ data }: { data: Document }) {
-    return (
-        <DirtyProvider<Document> id="document" initial={data}>
-            <DocumentForm />
-        </DirtyProvider>
-    )
-}
-```
-
----
-
-### Вложенные гварды
-
-```tsx
-// Внешний гвард — видит "profile" и "settings"
-<DirtyGuardProvider confirmMessage="Изменения не сохранены. Уйти?">
-    <DirtyProvider<Profile> id="profile" initial={profileData}>
-        <ProfileSection />
-    </DirtyProvider>
-
-    {/* Вложенный гвард — видит только "payment", своё сообщение */}
-    <DirtyGuardProvider confirmMessage="Платёжные данные не сохранены. Уйти?">
-        <DirtyProvider<Payment> id="payment" initial={paymentData}>
-            <PaymentSection />
-        </DirtyProvider>
-    </DirtyGuardProvider>
-
-    <DirtyProvider<AppSettings> id="settings" initial={settingsData}>
-        <SettingsSection />
-    </DirtyProvider>
-</DirtyGuardProvider>
-```
-
-Каждый `DirtyProvider` регистрируется в **ближайшем** гварде вверх по дереву.
 
 ---
 
 ## Ограничения
 
-- `useGuardState`, `useGuardActions`, `useGuardBlocker` работают только внутри `<DirtyGuardProvider>`.
-- `useGuardBlocker` требует TanStack Router в дереве.
-- Гвард отслеживает секции поверхностно — только факт `isDirty`. Данные секции читай через `useDirtyStoreApi` внутри неё.
-- `commitAll` / `resetAll` работают асинхронно с регистрацией — после вызова `dirtyIds` очистится в следующем тике React (через подписки `DirtyProvider`).
+- `useGuardState`, `useGuardActions`, `useGuardBlocker` — только внутри `<DirtyGuardProvider>`
+- `useGuardBlocker` требует TanStack Router в дереве
+- После `commitAll()` Guard очищается асинхронно (через один render-цикл) — поля сами вызывают `markClean` после ре-рендера

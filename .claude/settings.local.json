@@ -39,7 +39,9 @@
       "Bash(curl -s \"https://raw.githubusercontent.com/yandex-cloud/docs/master/ru/foundation-models/operations/yandexgpt/async-request.md\")",
       "Bash(node -e \"require\\('openai'\\)\")",
       "Bash(grep -v \"//\")",
-      "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\components\\\\blocks\\\\order-card\" -File)"
+      "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\components\\\\blocks\\\\order-card\" -File)",
+      "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\contexts\\\\dirty-state\\\\DirtyStateContext.tsx\" -Force)",
+      "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\contexts\\\\dirty-state\\\\DirtyState.md\" -Force)"
     ]
   }
 }

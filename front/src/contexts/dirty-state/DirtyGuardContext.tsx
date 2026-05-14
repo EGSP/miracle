@@ -1,20 +1,35 @@
 /**
  * dirty-guard.tsx
  *
- * DirtyGuardProvider — контекст-охранник для отслеживания несохранённых изменений
- * в нескольких DirtyProvider одновременно.
+ * DirtyGuardProvider — контекст для отслеживания несохранённых изменений
+ * в полях и секциях с блокировкой навигации.
  *
  * Архитектура:
- *   - DirtyProvider с prop `id` автоматически регистрирует себя при isDirty → true
- *   - Guard хранит Set<id> грязных секций и Map<id, StoreApi> для действий
- *   - После commit/reset секция снимает регистрацию сама через подписку
+ *   - useField регистрирует себя в ближайшем DirtyGuardProvider
+ *   - Вложенный DirtyGuardProvider с id регистрируется в родительском
+ *   - Все участники используют единый интерфейс EntryApi { commit, reset }
+ *   - Guard хранит entries (все участники) и dirtyIds (кто грязный)
+ *
+ * Структура:
+ *
+ *   <DirtyGuardProvider>                    ← страница, блокировка навигации
+ *     <DirtyGuardProvider id="meta">        ← секция: свой commitAll / isDirty
+ *       useField('title')                   ← регистрируется в ближайшем Guard
+ *       useField('status')
+ *     </DirtyGuardProvider>
+ *     <DirtyGuardProvider id="content">
+ *       useField('body')
+ *     </DirtyGuardProvider>
+ *     <SaveAllButton />                     ← читает внешний Guard
+ *   </DirtyGuardProvider>
  *
  * Экспорты:
- *   DirtyGuardProvider   — оборачивает страницу с несколькими секциями
- *   useDirtyGuardContext — внутренний хук для DirtyProvider (регистрация)
+ *   EntryApi             — интерфейс участника: commit, reset
+ *   DirtyGuardProvider   — оборачивает страницу или секцию
+ *   useDirtyGuardContext — внутренний хук для useField (регистрация)
  *   useGuardState        — isDirtyAnywhere, dirtyIds, dirtyCount, isDirty(id)
  *   useGuardActions      — commitAll(), resetAll()
- *   useGuardBlocker      — кастомный UI блокера навигации (совместно с skipBuiltinBlocker)
+ *   useGuardBlocker      — кастомный UI блокера навигации
  */
 
 import {
@@ -26,25 +41,32 @@ import {
 } from "react";
 import { createStore, useStore } from "zustand";
 import { useBlocker } from "@tanstack/react-router";
-import type { DirtyStoreApi } from "./DirtyStateContext";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Тип стора
+// Типы
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Единый интерфейс участника — поля и вложенные Guard используют одинаковый */
+export type EntryApi = {
+    commit: () => void;
+    reset: () => void;
+};
 
 type GuardStore = {
-    /** id грязных секций — для чтения состояния в компонентах */
+    /** Все зарегистрированные участники */
+    entries: Map<string, EntryApi>;
+    /** id участников у которых isDirty === true */
     dirtyIds: Set<string>;
-    /** StoreApi грязных секций — для commitAll / resetAll */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    sections: Map<string, DirtyStoreApi<any>>;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    register: (id: string, api: DirtyStoreApi<any>) => void;
-    unregister: (id: string) => void;
-    /** Вызвать commit() на всех грязных секциях. После сохранения на сервер. */
+    /** Зарегистрировать участника. Возвращает cleanup — снимает регистрацию */
+    register: (id: string, api: EntryApi) => () => void;
+    /** Пометить участника грязным */
+    markDirty: (id: string) => void;
+    /** Пометить участника чистым */
+    markClean: (id: string) => void;
+    /** Вызвать commit() у всех участников */
     commitAll: () => void;
-    /** Вызвать reset() на всех грязных секциях. */
+    /** Вызвать reset() у всех участников */
     resetAll: () => void;
 };
 
@@ -54,33 +76,38 @@ type GuardStore = {
 
 function createGuardStore() {
     return createStore<GuardStore>()((set, get) => ({
+        entries: new Map(),
         dirtyIds: new Set(),
-        sections: new Map(),
 
-        register: (id, api) =>
-            set((state) => ({
-                dirtyIds: new Set([...state.dirtyIds, id]),
-                sections: new Map([...state.sections, [id, api]]),
-            })),
+        register: (id, api) => {
+            set((s) => ({ entries: new Map([...s.entries, [id, api]]) }));
+            return () =>
+                set((s) => {
+                    const entries = new Map(s.entries);
+                    entries.delete(id);
+                    const dirtyIds = new Set(s.dirtyIds);
+                    dirtyIds.delete(id);
+                    return { entries, dirtyIds };
+                });
+        },
 
-        unregister: (id) =>
-            set((state) => {
-                const dirtyIds = new Set(state.dirtyIds);
-                dirtyIds.delete(id);
-                const sections = new Map(state.sections);
-                sections.delete(id);
-                return { dirtyIds, sections };
+        markDirty: (id) =>
+            set((s) => ({ dirtyIds: new Set([...s.dirtyIds, id]) })),
+
+        markClean: (id) =>
+            set((s) => {
+                const next = new Set(s.dirtyIds);
+                next.delete(id);
+                return { dirtyIds: next };
             }),
 
         commitAll: () => {
-            // Снимаем snapshot перед итерацией — commit вызовет unregister через подписки
-            const apis = [...get().sections.values()];
-            apis.forEach((api) => api.getState().commit());
+            // Снимаем snapshot — commit вызовет markClean через подписки useField
+            [...get().entries.values()].forEach((e) => e.commit());
         },
 
         resetAll: () => {
-            const apis = [...get().sections.values()];
-            apis.forEach((api) => api.getState().reset());
+            [...get().entries.values()].forEach((e) => e.reset());
         },
     }));
 }
@@ -88,23 +115,22 @@ function createGuardStore() {
 type GuardStoreApi = ReturnType<typeof createGuardStore>;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Context
+// Контексты
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Публичный контекст — для чтения состояния и действий.
- */
+/** Публичный — для чтения состояния (useGuardState, useGuardActions, useGuardBlocker) */
 const GuardContext = createContext<GuardStoreApi | null>(null);
 
 /**
- * Внутренний контекст — только для регистрации DirtyProvider.
- * Отделён от GuardContext чтобы DirtyProvider не подписывался на стейт гварда.
+ * Внутренний — для регистрации useField и вложенных Guard.
+ * Стабильный объект (apiRef) — не вызывает ре-рендеры при изменении dirtyIds.
  */
 type GuardApi = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    register: (id: string, api: DirtyStoreApi<any>) => void;
-    unregister: (id: string) => void;
+    register: (id: string, api: EntryApi) => () => void;
+    markDirty: (id: string) => void;
+    markClean: (id: string) => void;
 };
+
 const GuardApiContext = createContext<GuardApi | null>(null);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,12 +139,18 @@ const GuardApiContext = createContext<GuardApi | null>(null);
 
 type DirtyGuardProviderProps = PropsWithChildren<{
     /**
+     * Идентификатор секции.
+     * Если указан и провайдер находится внутри другого DirtyGuardProvider —
+     * регистрируется в нём как участник (вложенная секция).
+     */
+    id?: string;
+    /**
      * Текст window.confirm при попытке покинуть страницу.
      * @default "Есть несохранённые изменения. Покинуть страницу?"
      */
     confirmMessage?: string;
     /**
-     * Отключает встроенный window.confirm.
+     * Отключить встроенный window.confirm.
      * Используй вместе с useGuardBlocker() для кастомного диалога.
      * @default false
      */
@@ -126,6 +158,7 @@ type DirtyGuardProviderProps = PropsWithChildren<{
 }>;
 
 export function DirtyGuardProvider({
+    id,
     children,
     confirmMessage = "Есть несохранённые изменения. Покинуть страницу?",
     skipBuiltinBlocker = false,
@@ -137,9 +170,39 @@ export function DirtyGuardProvider({
 
     // Стабильный объект — не пересоздаётся между рендерами
     const apiRef = useRef<GuardApi>({
-        register: (id, api) => storeRef.current!.getState().register(id, api),
-        unregister: (id) => storeRef.current!.getState().unregister(id),
+        register: (entryId, api) =>
+            storeRef.current!.getState().register(entryId, api),
+        markDirty: (entryId) =>
+            storeRef.current!.getState().markDirty(entryId),
+        markClean: (entryId) =>
+            storeRef.current!.getState().markClean(entryId),
     });
+
+    // Если есть id и родительский Guard — регистрируемся в нём как секция
+    const parentApi = useContext(GuardApiContext);
+    useEffect(() => {
+        if (!parentApi || !id) return;
+
+        const cleanup = parentApi.register(id, {
+            commit: () => storeRef.current!.getState().commitAll(),
+            reset: () => storeRef.current!.getState().resetAll(),
+        });
+
+        // Сообщаем родителю о смене isDirtyAnywhere
+        const unsubscribe = storeRef.current!.subscribe((state, prev) => {
+            const isDirty = state.dirtyIds.size > 0;
+            const wasDirty = prev.dirtyIds.size > 0;
+            if (isDirty === wasDirty) return;
+            if (isDirty) parentApi.markDirty(id);
+            else parentApi.markClean(id);
+        });
+
+        return () => {
+            cleanup();
+            unsubscribe();
+            parentApi.markClean(id);
+        };
+    }, [parentApi, id]);
 
     return (
         <GuardContext.Provider value={storeRef.current}>
@@ -166,7 +229,7 @@ function GuardBlockerEffect({ confirmMessage }: { confirmMessage: string }) {
         blockerFn: () => window.confirm(confirmMessage),
     });
 
-    // store стабилен — слушатель ставится один раз, читает актуальное состояние через getState
+    // store стабилен — слушатель ставится один раз
     useEffect(() => {
         const handler = (e: BeforeUnloadEvent) => {
             if (store.getState().dirtyIds.size > 0) e.preventDefault();
@@ -179,12 +242,12 @@ function GuardBlockerEffect({ confirmMessage }: { confirmMessage: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Внутренний хук для DirtyProvider
+// Внутренний хук — для useField
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Используется внутри DirtyProvider для получения API регистрации.
- * Возвращает null если гварда нет в дереве.
+ * Возвращает GuardApi ближайшего DirtyGuardProvider.
+ * null если Guard не найден — useField работает без регистрации.
  */
 export function useDirtyGuardContext(): GuardApi | null {
     return useContext(GuardApiContext);
@@ -197,18 +260,19 @@ export function useDirtyGuardContext(): GuardApi | null {
 function useGuardStore<R>(selector: (state: GuardStore) => R): R {
     const store = useContext(GuardContext);
     if (!store) {
-        throw new Error("useGuard* должен использоваться внутри <DirtyGuardProvider>");
+        throw new Error(
+            "useGuard* должен использоваться внутри <DirtyGuardProvider>",
+        );
     }
     return useStore(store, selector);
 }
 
 /**
- * Агрегированное состояние всех секций под гвардом.
+ * Агрегированное состояние всех участников под Guard.
  *
  * @example
  * const { isDirtyAnywhere, dirtyCount, isDirty } = useGuardState()
- * isDirty('profile')   // true если секция "profile" грязная
- * dirtyCount           // количество грязных секций
+ * isDirty('meta')  // true если секция или поле 'meta' грязное
  */
 export function useGuardState() {
     return useGuardStore((s) => ({
@@ -220,21 +284,20 @@ export function useGuardState() {
 }
 
 /**
- * Действия над всеми грязными секциями.
- * commitAll — вызвать после успешного сохранения всех секций на сервер.
- * resetAll  — отменить все несохранённые изменения.
+ * Действия над всеми участниками под Guard.
  *
  * @example
  * const { commitAll, resetAll } = useGuardActions()
- * await saveAll(pieces)
+ * await saveAll()
  * commitAll()
  */
 export function useGuardActions() {
     const store = useContext(GuardContext);
     if (!store) {
-        throw new Error("useGuardActions должен использоваться внутри <DirtyGuardProvider>");
+        throw new Error(
+            "useGuardActions должен использоваться внутри <DirtyGuardProvider>",
+        );
     }
-    // Экшены из getState() стабильны — новый объект на каждый рендер не проблема
     const { commitAll, resetAll } = store.getState();
     return { commitAll, resetAll };
 }
@@ -243,19 +306,11 @@ export function useGuardActions() {
  * Кастомный UI блокера навигации.
  * Используй вместе с prop skipBuiltinBlocker на DirtyGuardProvider.
  *
- * Возвращает объект blocker из TanStack Router:
- *   status     — 'idle' | 'blocked'
- *   proceed()  — разрешить переход
- *   reset()    — отменить переход
- *
  * @example
- * // В провайдере — отключить встроенный confirm
  * <DirtyGuardProvider skipBuiltinBlocker>
- *   <MyPage />
  *   <NavigationGuard />
  * </DirtyGuardProvider>
  *
- * // Компонент с кастомным диалогом
  * function NavigationGuard() {
  *   const blocker = useGuardBlocker()
  *   if (blocker.status !== 'blocked') return null
