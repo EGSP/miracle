@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileDropZone } from "@/components/ui/file-dropzone";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getApiErrorMessage } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api"
+import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification";
 import { getFileDomain, FileDomain } from "@miracle/types";
 import { useState } from "react";
 import {
@@ -189,11 +190,6 @@ function FileCardBody() {
                 <Stack gap={2}>
                     <FileCardSettings />
                     <Stack orientation="horizontal" gap={2} className="items-center">
-                        {isDirtyAnywhere && (
-                            <Text as="span" compact className="text-muted-foreground">
-                                есть изменения
-                            </Text>
-                        )}
                         <Button
                             variant="outline"
                             size="sm"
@@ -203,11 +199,7 @@ function FileCardBody() {
                             {isSaving ? "Сохранение..." : "Сохранить настройки"}
                         </Button>
                     </Stack>
-                    {saveError && (
-                        <Text as="span" compact className="text-destructive">
-                            {getApiErrorMessage(saveError)}
-                        </Text>
-                    )}
+                    <InlineMutationNotification mutation={{ isError: !!saveError, isSuccess: false, error: saveError }} />
                 </Stack>
             )}
 
@@ -231,16 +223,10 @@ function FileCardBody() {
                         <Upload />
                         {restoreMutation.isPending ? "Загрузка..." : "Восстановить файл"}
                     </Button>
-                    {restoreMutation.isError && (
-                        <Text as="span" compact className="text-destructive">
-                            {getApiErrorMessage(restoreMutation.error)}
-                        </Text>
-                    )}
-                    {restoreMutation.isSuccess && (
-                        <Text as="span" compact className="text-green-600">
-                            Файл успешно восстановлен
-                        </Text>
-                    )}
+                    <InlineMutationNotification
+                        mutation={restoreMutation}
+                        successMessage="Файл успешно восстановлен"
+                    />
                 </Stack>
             )}
 
@@ -344,21 +330,11 @@ function FileCardBody() {
                 </Dialog>
             </Stack>
 
-            {extractMutation.isError && (
-                <Text as="span" compact className="text-destructive">
-                    {getApiErrorMessage(extractMutation.error)}
-                </Text>
-            )}
-            {softDeleteMutation.isError && (
-                <Text as="span" compact className="text-destructive">
-                    {getApiErrorMessage(softDeleteMutation.error)}
-                </Text>
-            )}
-            {isGetContentError && (
-                <Text as="span" compact className="text-destructive">
-                    Ошибка загрузки контента: {getApiErrorMessage(getContentError)}
-                </Text>
-            )}
+            <InlineMutationNotification mutation={extractMutation} />
+            <InlineMutationNotification mutation={softDeleteMutation} />
+            <InlineMutationNotification
+                mutation={{ isError: isGetContentError, isSuccess: false, error: getContentError }}
+            />
         </Stack>
     );
 }

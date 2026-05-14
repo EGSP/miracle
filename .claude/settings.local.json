@@ -41,7 +41,8 @@
       "Bash(grep -v \"//\")",
       "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\components\\\\blocks\\\\order-card\" -File)",
       "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\contexts\\\\dirty-state\\\\DirtyStateContext.tsx\" -Force)",
-      "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\contexts\\\\dirty-state\\\\DirtyState.md\" -Force)"
+      "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\contexts\\\\dirty-state\\\\DirtyState.md\" -Force)",
+      "WebFetch(domain:carbondesignsystem.com)"
     ]
   }
 }
