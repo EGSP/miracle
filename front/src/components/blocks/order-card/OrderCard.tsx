@@ -1,10 +1,8 @@
 import * as React from 'react';
 import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
-import { FileCard } from '@/components/blocks/FileCard';
 import { DirtyGuardProvider, useGuardActions, useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
-import { useField, type FieldReturn } from '@/contexts/dirty-state/useField';
-import { DraftAPI, useContribute, useDraft } from '@/contexts/draft-api/DraftContext';
+import { DraftAPI, useDraft } from '@/contexts/draft-api/DraftContext';
 import { getApiErrorMessage } from '@/lib/api';
 import { useUpdateOrder } from '@/lib/queries/order.query';
 import { OrderCardAnalyse } from './OrderCardAnalyse';
@@ -20,8 +18,6 @@ import { createContext, useContext } from 'react';
 type OrderCardContextType = {
     order: Stored<Order>;
     files: FileWithMeta[];
-    /** Поле выбора файла — объявлено здесь т.к. нужно нескольким компонентам */
-    fileIdField: FieldReturn<string | undefined>;
     isSaving: boolean;
     saveError: Error | null;
     save: () => void;
@@ -44,14 +40,6 @@ function OrderCardProvider({ order, files, onOrderSaved, children }: OrderCardPr
     const { commitAll } = useGuardActions();
     const mutation = useUpdateOrder();
 
-    // fileId — общее поле: нужно и OrderCardFile (рендер), и Body (поиск файла)
-    const fileIdField = useField<string | undefined>('fileId', order.fileId ?? undefined);
-
-    useContribute(draft.contribute, 'fileId', (o) => ({
-        ...o,
-        fileId: fileIdField.value ?? null,
-    }));
-
     const save = () => {
         const result = draft.collect({ ...order });
         if (!result) return;
@@ -71,7 +59,6 @@ function OrderCardProvider({ order, files, onOrderSaved, children }: OrderCardPr
             value={{
                 order,
                 files,
-                fileIdField,
                 isSaving: mutation.isPending,
                 saveError: mutation.error ?? null,
                 save,
@@ -86,14 +73,8 @@ function OrderCardProvider({ order, files, onOrderSaved, children }: OrderCardPr
 // ─── Body ────────────────────────────────────────────────────────────────────
 
 function OrderCardBody() {
-    const { order, files, fileIdField, isSaving, save, saveError } = useOrderCardContext();
+    const { order, isSaving, save, saveError } = useOrderCardContext();
     const { isDirtyAnywhere } = useGuardState();
-
-    const selectedFile = React.useMemo(
-        () => files.find((f) => f.id === fileIdField.value) ?? null,
-        [files, fileIdField.value],
-    );
-    const shouldShowFileCard = selectedFile?.meta?.available === true;
 
     return (
         <Grid as="article" withRowGap className="border border-border">
@@ -120,15 +101,8 @@ function OrderCardBody() {
                 </Stack>
             </Column>
 
-            <Column span={16}><OrderCardInfo order={order} /></Column>
+            <Column span={16}><OrderCardInfo /></Column>
             <Column span={16}><OrderCardFile /></Column>
-
-            {shouldShowFileCard && (
-                <Column span={16}>
-                    <FileCard key={selectedFile!.id} file={selectedFile!} />
-                </Column>
-            )}
-
             <Column span={16}><OrderCardDetails /></Column>
             <Column span={16}><OrderCardAnalyse /></Column>
 

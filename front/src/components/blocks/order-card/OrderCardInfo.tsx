@@ -1,12 +1,14 @@
 import { Stack, Text } from '@miracle/aramid';
 import type { Order, Stored } from '@miracle/types';
 import { useGetUser } from '@/lib/queries/user.query';
+import { useOrderCardContext } from './OrderCard';
 
 function formatCreatedAt(unixMs: number): string {
     return new Date(unixMs).toLocaleString();
 }
 
-export function OrderCardInfo({ order }: { order: Stored<Order> }) {
+export function OrderCardInfo() {
+    const { order } = useOrderCardContext();
     const { data: author } = useGetUser(order.authorId);
 
     return (
