@@ -8,7 +8,7 @@ import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation
 import { ListBox } from '@/components/ui/listbox';
 import { Button } from '@/components/ui/button';
 import { OrderCard } from '@/components/blocks/order-card/OrderCard';
-import { DirtyGuardProvider, useGuard } from '@/contexts/dirty-state/DirtyGuardContext';
+import { DirtyGuardProvider, useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
 import { useFilteredOrders } from '@/lib/hooks/useFilteredOrders';
 import { useGetFiles } from '@/lib/queries/file.query';
 import { useCreateOrder, useGetOrders } from '@/lib/queries/order.query';
@@ -89,7 +89,7 @@ function OrdersPageContent() {
     const { data: files, isLoading: isFilesLoading, error: filesError } = useGetFiles({
         includeMeta: true,
     });
-    const isDirtyAnywhere = useGuard((state) => state.dirtyIds.size > 0);
+    const { isDirtyAnywhere } = useGuardState();
 
     const filesById = useMemo(() => {
         return new Map((files ?? []).map((file) => [file.id, file] as const));

@@ -5,8 +5,3 @@ export type OrderCardProps = {
     files: FileWithMeta[];
     onOrderSaved: (order: Stored<Order>) => void;
 };
-
-export type OrderCardDirtyState = {
-    orderId: string;
-    fileId?: string;
-};

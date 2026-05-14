@@ -1,27 +1,27 @@
+import { useMemo } from 'react';
 import { Stack, Text } from '@miracle/aramid';
-import type { Order, Stored } from '@miracle/types';
 import { Button } from '@/components/ui/button';
-import { useDirtyStore } from '@/contexts/dirty-state/DirtyStateContext';
+import { useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
 import { getApiErrorMessage } from '@/lib/api';
 import { useAnalyseOrderDetails, useCanAnalyseOrderDetails } from '@/lib/queries/order.query';
-import type { OrderCardDirtyState } from './OrderCard.types';
 import { useOrderCardContext } from './OrderCard';
-import { useMemo } from 'react';
 
 const detailsBlockMessage = 'Сначала очистите детали заказа, чтобы запустить анализ снова';
 
 export function OrderCardAnalyse() {
     const { order } = useOrderCardContext();
+    const { isDirtyAnywhere } = useGuardState();
     const details = useMemo(() => order?.details, [order?.id]);
-    const hasUnsavedChanges = useDirtyStore<OrderCardDirtyState, boolean>((s) => s.isDirty);
 
     const analyseDetailsMutation = useAnalyseOrderDetails(order?.id);
     const analyseAvailabilityQuery = useCanAnalyseOrderDetails(order?.id);
+
     const canAnalyse =
-        !hasUnsavedChanges
+        !isDirtyAnywhere
         && !details
         && analyseAvailabilityQuery.data?.canAnalyse === true;
-    const analyseDisabledMessage = hasUnsavedChanges
+
+    const analyseDisabledMessage = isDirtyAnywhere
         ? 'Сохраните изменения перед запуском анализа'
         : details
             ? detailsBlockMessage
@@ -29,9 +29,7 @@ export function OrderCardAnalyse() {
 
     return (
         <Stack gap={2} className="border border-border p-3">
-            <Text.Heading as="h4" variant="compact-01">
-                Анализ
-            </Text.Heading>
+            <Text.Heading as="h4" variant="compact-01">Анализ</Text.Heading>
             <div>
                 <Button
                     variant="outline"
@@ -46,26 +44,26 @@ export function OrderCardAnalyse() {
                             : 'Вывести требования'}
                 </Button>
             </div>
-            {analyseAvailabilityQuery.isError ? (
+            {analyseAvailabilityQuery.isError && (
                 <Text as="p" compact className="text-destructive">
                     Ошибка проверки анализа: {getApiErrorMessage(analyseAvailabilityQuery.error)}
                 </Text>
-            ) : null}
-            {!analyseAvailabilityQuery.isError && analyseDisabledMessage ? (
+            )}
+            {!analyseAvailabilityQuery.isError && analyseDisabledMessage && (
                 <Text as="p" compact className="text-muted-foreground">
                     {analyseDisabledMessage}
                 </Text>
-            ) : null}
-            {analyseDetailsMutation.isError ? (
+            )}
+            {analyseDetailsMutation.isError && (
                 <Text as="p" compact className="text-destructive">
                     {getApiErrorMessage(analyseDetailsMutation.error)}
                 </Text>
-            ) : null}
-            {analyseDetailsMutation.isSuccess ? (
+            )}
+            {analyseDetailsMutation.isSuccess && (
                 <Text as="p" compact className="text-muted-foreground">
                     Воркер запущен
                 </Text>
-            ) : null}
+            )}
         </Stack>
     );
 }
