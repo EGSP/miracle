@@ -2,3 +2,12 @@
   grid-column: var(--col-start, auto) /
     var(--col-end, span var(--col-span, var(--aramid-column-span-default)));
 }
+
+.aramid-column:has(> .aramid-subgrid) {
+  display: contents;
+}
+
+.aramid-column:has(> .aramid-subgrid) > .aramid-subgrid {
+  grid-column: var(--col-start, auto) /
+    var(--col-end, span var(--col-span, var(--aramid-column-span-default)));
+}

@@ -24,7 +24,6 @@
   box-sizing: border-box;
   display: grid;
   grid-template-columns: subgrid;
-  grid-template-rows: subgrid;
   width: 100%;
   column-gap: var(--subgrid-column-gap, var(--grid-column-gap, var(--aramid-grid-gutter)));
   row-gap: var(--subgrid-row-gap, var(--grid-row-gap, 0px));
