@@ -43,7 +43,9 @@
       "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\contexts\\\\dirty-state\\\\DirtyStateContext.tsx\" -Force)",
       "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\contexts\\\\dirty-state\\\\DirtyState.md\" -Force)",
       "WebFetch(domain:carbondesignsystem.com)",
-      "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\front\\\\src\\\\components\\\\blocks\\\\order-card\\\\OrderCardAnalyse.tsx\")"
+      "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\front\\\\src\\\\components\\\\blocks\\\\order-card\\\\OrderCardAnalyse.tsx\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

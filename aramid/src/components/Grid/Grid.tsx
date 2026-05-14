@@ -3,7 +3,7 @@ import { clsx } from 'clsx';
 import './aramid-grid.css';
 import { aramidGridClass, aramidSubgridClass } from '../../internal/layoutClassNames';
 import { PolymorphicComponentPropWithRef } from '../../internal/PolymorphicProps';
-import { GridSettings, useGridSettings } from './GridContext';
+import { GridColsContext, GridSettings, useGridSettings } from './GridContext';
 
 type SubgridMode = 'wide' | 'narrow' | 'condensed';
 
@@ -183,9 +183,11 @@ const CSSGrid = React.forwardRef<
     const style = { ...rootGridVariables(layoutProps), ...userStyle };
     return (
       <GridSettings subgrid>
-        <BaseComponent className={clsx(aramidGridClass, customClassName)} ref={ref} style={style} {...rest}>
-          {children}
-        </BaseComponent>
+        <GridColsContext.Provider value={16}>
+          <BaseComponent className={clsx(aramidGridClass, customClassName)} ref={ref} style={style} {...rest}>
+            {children}
+          </BaseComponent>
+        </GridColsContext.Provider>
       </GridSettings>
     );
   }

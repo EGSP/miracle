@@ -3,6 +3,7 @@ import { clsx } from 'clsx'
 import './aramid-column.css'
 import { aramidColumnClass } from '../../internal/layoutClassNames'
 import { PolymorphicComponentPropWithRef } from '../../internal/PolymorphicProps';
+import { GridColsContext, useGridCols } from '../Grid/GridContext';
 
 type ColumnSpanRange = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
 
@@ -53,6 +54,13 @@ export interface ColumnComponent {
 
 type StyleWithVars = React.CSSProperties & Record<string, string | number>;
 
+const percentFractions: Record<ColumnSpanPercent, number> = {
+  '25%': 0.25,
+  '50%': 0.5,
+  '75%': 0.75,
+  '100%': 1.0,
+};
+
 const normalizeColumnSpan = (
   value: ColumnSpan<ColumnSpanRange> | undefined
 ): ColumnSpanComplex<ColumnSpanRange> | undefined => {
@@ -67,7 +75,24 @@ const normalizeColumnSpan = (
   return { span: value };
 };
 
-const setColumnStyle = (style: StyleWithVars, value: ColumnSpan<ColumnSpanRange> | undefined) => {
+/** Резолвит span в число колонок, если это возможно; иначе undefined (auto). */
+const resolveSpanToCols = (
+  span: ColumnSpanSimple<ColumnSpanRange> | undefined,
+  parentCols: number
+): number | undefined => {
+  if (typeof span === 'number') return span;
+  if (typeof span === 'string') {
+    const fraction = percentFractions[span as ColumnSpanPercent];
+    if (fraction !== undefined) return Math.round(fraction * parentCols);
+  }
+  return undefined;
+};
+
+const setColumnStyle = (
+  style: StyleWithVars,
+  value: ColumnSpan<ColumnSpanRange> | undefined,
+  parentCols: number
+) => {
   const normalized = normalizeColumnSpan(value);
 
   if (!normalized) {
@@ -77,8 +102,13 @@ const setColumnStyle = (style: StyleWithVars, value: ColumnSpan<ColumnSpanRange>
   const { span, start, end, offset } = normalized;
   const resolvedStart = start ?? (offset !== undefined ? offset + 1 : undefined);
 
-  if (span !== undefined) {
-    style['--col-span'] = String(span);
+  if (span === true || span === false) {
+    // auto — не задаём --col-span, колонка авторазмещается с дефолтным спаном
+  } else if (span !== undefined) {
+    const cols = resolveSpanToCols(span, parentCols);
+    if (cols !== undefined) {
+      style['--col-span'] = String(cols);
+    }
   }
 
   if (resolvedStart !== undefined) {
@@ -90,11 +120,12 @@ const setColumnStyle = (style: StyleWithVars, value: ColumnSpan<ColumnSpanRange>
   }
 };
 
-const getColumnInlineStyle = ({ span }: Pick<ColumnBaseProps, 'span'>): React.CSSProperties => {
+const getColumnInlineStyle = (
+  { span }: Pick<ColumnBaseProps, 'span'>,
+  parentCols: number
+): React.CSSProperties => {
   const style: StyleWithVars = {};
-
-  setColumnStyle(style, span);
-
+  setColumnStyle(style, span, parentCols);
   return style;
 };
 
@@ -108,19 +139,35 @@ const Column = React.forwardRef<
     { as, children, className: customClassName, span, style: customStyle, ...rest },
     ref
   ) => {
+    const parentCols = useGridCols();
     const BaseComponent = as || 'div';
 
-    const inlineStyle = getColumnInlineStyle({ span });
+    const inlineStyle = getColumnInlineStyle({ span }, parentCols);
     const style = {
       ...inlineStyle,
       ...customStyle,
     };
 
-    return (
+    const normalized = normalizeColumnSpan(span);
+    const resolvedCols = normalized?.span !== undefined
+      ? resolveSpanToCols(normalized.span, parentCols)
+      : undefined;
+
+    const element = (
       <BaseComponent className={clsx(aramidColumnClass, customClassName)} style={style} ref={ref} {...rest}>
         {children}
       </BaseComponent>
     );
+
+    if (resolvedCols !== undefined) {
+      return (
+        <GridColsContext.Provider value={resolvedCols}>
+          {element}
+        </GridColsContext.Provider>
+      );
+    }
+
+    return element;
   }
 );
 

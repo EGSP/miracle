@@ -28,69 +28,65 @@ export function OrderCardActions() {
             : analyseAvailabilityQuery.data?.errorMessage;
 
     return (
-        <Grid fullWidth withRowGap>
-            <Column span={8}>
-                <Stack gap={2}>
-                    <Stack orientation="horizontal" gap={2} className="items-center">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!isDirtyAnywhere || isSaving}
-                            onClick={save}
-                        >
-                            {isSaving ? 'Сохранение...' : 'Сохранить'}
-                        </Button>
-                        {isDirtyAnywhere && (
-                            <Text as="span" compact className="text-muted-foreground">
-                                есть изменения
-                            </Text>
-                        )}
-                    </Stack>
-                    <InlineMutationNotification
-                        mutation={{ isError: saveError !== null, isSuccess: false, error: saveError }}
-                    />
-                </Stack>
-            </Column>
-
-            <Column span={8}>
-                <Stack gap={2}>
-                    <Stack orientation="horizontal" gap={2}>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!canAnalyse || analyseAvailabilityQuery.isFetching || analyseDetailsMutation.isPending}
-                            onClick={() => analyseDetailsMutation.mutate()}
-                        >
-                            {analyseDetailsMutation.isPending
-                                ? 'Запуск...'
-                                : analyseAvailabilityQuery.isFetching
-                                    ? 'Проверка...'
-                                    : 'Вывести требования'}
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!details || clearDetailsMutation.isPending}
-                            onClick={() => clearDetailsMutation.mutate()}
-                        >
-                            {clearDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
-                        </Button>
-                    </Stack>
-                    {analyseDisabledMessage && !analyseAvailabilityQuery.isError && (
-                        <Text as="p" compact className="text-muted-foreground">
-                            {analyseDisabledMessage}
+        <Stack gap={6} orientation='vertical'>
+            <Stack gap={6} orientation='horizontal'>
+                <Stack gap={2} className="items-center">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!isDirtyAnywhere || isSaving}
+                        onClick={save}
+                    >
+                        {isSaving ? 'Сохранение...' : 'Сохранить'}
+                    </Button>
+                    {isDirtyAnywhere && (
+                        <Text as="span" compact className="text-muted-foreground">
+                            есть изменения
                         </Text>
                     )}
-                    <InlineMutationNotification
-                        mutation={{ isError: analyseAvailabilityQuery.isError, isSuccess: false, error: analyseAvailabilityQuery.error }}
-                    />
-                    <InlineMutationNotification
-                        mutation={analyseDetailsMutation}
-                        successMessage="Воркер запущен"
-                    />
-                    <InlineMutationNotification mutation={clearDetailsMutation} />
                 </Stack>
-            </Column>
-        </Grid>
+
+                <Stack gap={2}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!canAnalyse || analyseAvailabilityQuery.isFetching || analyseDetailsMutation.isPending}
+                        onClick={() => analyseDetailsMutation.mutate()}
+                    >
+                        {analyseDetailsMutation.isPending
+                            ? 'Запуск...'
+                            : analyseAvailabilityQuery.isFetching
+                                ? 'Проверка...'
+                                : 'Вывести требования'}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!details || clearDetailsMutation.isPending}
+                        onClick={() => clearDetailsMutation.mutate()}
+                    >
+                        {clearDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
+                    </Button>
+                </Stack>
+            </Stack>
+            <Stack gap={2} orientation='vertical'>
+                {analyseDisabledMessage && !analyseAvailabilityQuery.isError && (
+                    <Text as="p" compact className="text-muted-foreground">
+                        {analyseDisabledMessage}
+                    </Text>
+                )}
+                <InlineMutationNotification
+                    mutation={{ isError: saveError !== null, isSuccess: false, error: saveError }}
+                />
+                <InlineMutationNotification
+                    mutation={{ isError: analyseAvailabilityQuery.isError, isSuccess: false, error: analyseAvailabilityQuery.error }}
+                />
+                <InlineMutationNotification
+                    mutation={analyseDetailsMutation}
+                    successMessage="Воркер запущен"
+                />
+                <InlineMutationNotification mutation={clearDetailsMutation} />
+            </Stack>
+        </Stack>
     );
 }

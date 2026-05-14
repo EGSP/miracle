@@ -73,13 +73,13 @@ function OrderCardProvider({ order, files, onOrderSaved, children }: OrderCardPr
 function OrderCardBody() {
     return (
         <Grid withRowGap className="border border-border">
-            <Column span={16}>
+            <Column span="100%">
                 <Text.Heading as="h3" variant="compact-01">Карточка заказа</Text.Heading>
             </Column>
-            <Column span={16}><OrderCardActions /></Column>
-            <Column span={16}><OrderCardInfo /></Column>
-            <Column span={16}><OrderCardFile /></Column>
-            <Column span={16}><OrderCardDetails /></Column>
+            <Column span="100%"><OrderCardActions /></Column>
+            <Column span="100%"><OrderCardInfo /></Column>
+            <Column span="100%"><OrderCardFile /></Column>
+            {/* <Column span={8}><OrderCardDetails /></Column> */}
         </Grid>
     );
 }
