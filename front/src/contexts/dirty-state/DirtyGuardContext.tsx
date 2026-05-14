@@ -275,12 +275,14 @@ function useGuardStore<R>(selector: (state: GuardStore) => R): R {
  * isDirty('meta')  // true если секция или поле 'meta' грязное
  */
 export function useGuardState() {
-    return useGuardStore((s) => ({
-        isDirtyAnywhere: s.dirtyIds.size > 0,
-        dirtyIds: s.dirtyIds,
-        dirtyCount: s.dirtyIds.size,
-        isDirty: (id: string) => s.dirtyIds.has(id),
-    }));
+    const isDirtyAnywhere = useGuardStore((s) => s.dirtyIds.size > 0);
+    const dirtyIds = useGuardStore((s) => s.dirtyIds);
+    return {
+        isDirtyAnywhere,
+        dirtyIds,
+        dirtyCount: dirtyIds.size,
+        isDirty: (id: string) => dirtyIds.has(id),
+    };
 }
 
 /**
