@@ -1,8 +1,5 @@
 ﻿import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import type { Dual, Order, OrderDetails, OrderRequirement, Stored } from '@miracle/types';
-import { Button } from '@/components/ui/button';
-import { getApiErrorMessage } from '@/lib/api';
-import { useClearAnalysedDetails as useClearDetailsMutation } from '@/lib/queries/order.query';
 import { useOrderCardContext } from './OrderCard';
 import { useMemo } from 'react';
 
@@ -43,7 +40,6 @@ function OrderRequirementItem({ requirement }: { requirement: Dual<OrderRequirem
 export function OrderCardDetails() {
     const { order } = useOrderCardContext();
     const details = useMemo(() => order?.details, [order?.id]);
-    const clearDetailsMutation = useClearDetailsMutation(order?.id);
 
     const requirements = useMemo(() => {
         if (!details || !details.requirements) return [];
@@ -55,19 +51,9 @@ export function OrderCardDetails() {
 
     return (
         <Stack gap={3} className="border border-border p-3">
-            <Stack orientation="horizontal" gap={2} className="items-center justify-between">
-                <Text.Heading as="h3" variant="compact-01">
-                    Детали заказа
-                </Text.Heading>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!details || clearDetailsMutation.isPending}
-                    onClick={() => clearDetailsMutation.mutate()}
-                >
-                    {clearDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
-                </Button>
-            </Stack>
+            <Text.Heading as="h3" variant="compact-01">
+                Детали заказа
+            </Text.Heading>
             <Stack gap={2}>
                 <Text.Heading as="h4" variant="compact-01">
                     Требования
@@ -90,11 +76,6 @@ export function OrderCardDetails() {
                 )}
             </Stack>
 
-            {clearDetailsMutation.isError ? (
-                <Text as="p" compact className="text-destructive">
-                    Ошибка очистки анализа: {getApiErrorMessage(clearDetailsMutation.error)}
-                </Text>
-            ) : null}
         </Stack>
     );
 }

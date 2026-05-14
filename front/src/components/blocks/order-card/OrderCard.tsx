@@ -1,11 +1,9 @@
 import * as React from 'react';
-import { Column, Grid, Stack, Text } from '@miracle/aramid';
-import { Button } from '@/components/ui/button';
-import { DirtyGuardProvider, useGuardActions, useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
+import { Column, Grid, Text } from '@miracle/aramid';
+import { DirtyGuardProvider, useGuardActions } from '@/contexts/dirty-state/DirtyGuardContext';
 import { DraftAPI, useDraft } from '@/contexts/draft-api/DraftContext';
-import { getApiErrorMessage } from '@/lib/api';
 import { useUpdateOrder } from '@/lib/queries/order.query';
-import { OrderCardAnalyse } from './OrderCardAnalyse';
+import { OrderCardActions } from './OrderCardActions';
 import { OrderCardDetails } from './OrderCardDetails';
 import { OrderCardFile } from './OrderCardFile';
 import { OrderCardInfo } from './OrderCardInfo';
@@ -73,46 +71,15 @@ function OrderCardProvider({ order, files, onOrderSaved, children }: OrderCardPr
 // ─── Body ────────────────────────────────────────────────────────────────────
 
 function OrderCardBody() {
-    const { order, isSaving, save, saveError } = useOrderCardContext();
-    const { isDirtyAnywhere } = useGuardState();
-
     return (
-        <Grid as="article" withRowGap className="border border-border">
+        <Grid withRowGap className="border border-border">
             <Column span={16}>
-                <Stack gap={2}>
-                    <Stack orientation="horizontal" gap={2} className="items-center">
-                        <Text.Heading as="h3" variant="compact-01">Карточка заказа</Text.Heading>
-                        {isDirtyAnywhere && (
-                            <Text as="span" compact className="text-muted-foreground">
-                                есть изменения
-                            </Text>
-                        )}
-                    </Stack>
-                    <div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!isDirtyAnywhere || isSaving}
-                            onClick={save}
-                        >
-                            {isSaving ? 'Сохранение...' : 'Сохранить'}
-                        </Button>
-                    </div>
-                </Stack>
+                <Text.Heading as="h3" variant="compact-01">Карточка заказа</Text.Heading>
             </Column>
-
+            <Column span={16}><OrderCardActions /></Column>
             <Column span={16}><OrderCardInfo /></Column>
             <Column span={16}><OrderCardFile /></Column>
             <Column span={16}><OrderCardDetails /></Column>
-            <Column span={16}><OrderCardAnalyse /></Column>
-
-            {saveError && (
-                <Column span={16}>
-                    <Text as="p" compact className="text-destructive">
-                        Ошибка сохранения: {getApiErrorMessage(saveError)}
-                    </Text>
-                </Column>
-            )}
         </Grid>
     );
 }
