@@ -79,7 +79,7 @@ function OrderCardBody() {
             <Column span="100%"><OrderCardActions /></Column>
             <Column span="100%"><OrderCardInfo /></Column>
             <Column span="100%"><OrderCardFile /></Column>
-            {/* <Column span={8}><OrderCardDetails /></Column> */}
+            <Column span="100%"><OrderCardDetails /></Column>
         </Grid>
     );
 }
