@@ -70,7 +70,7 @@ export function OrderCardFile() {
             </Stack>
 
             {selectedFile?.meta?.available === true && (
-                <FileCard key={selectedFile.id} file={selectedFile} />
+                <FileCard key={selectedFile.id} file={selectedFile} readonly/>
             )}
         </Stack>
     );
