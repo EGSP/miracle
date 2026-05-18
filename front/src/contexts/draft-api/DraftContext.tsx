@@ -7,13 +7,18 @@
  * накопленный черновик и возвращает его с изменениями, либо undefined (отклонить).
  *
  * Паттерн: entity-контекст встраивает DraftAPI через useDraft<T>().
- * Компоненты подписываются через useContribute(Context, id, handler).
+ * Компоненты подписываются через useContribute(contribute, id, handler).
+ *
+ * readonly-режим: когда useDraft({ readonly: true }) —
+ *   contribute() — no-op, хендлеры не регистрируются
+ *   collect()    — возвращает base без изменений
+ * Используется для компонентов которые отображают данные, но не участвуют в сохранении.
  *
  * Экспорты:
  *   DraftHandler<T>   — тип хендлера: (draft: T) => T | undefined
- *   DraftAPI<T>       — интерфейс: contribute, collect
+ *   DraftAPI<T>       — интерфейс: readonly, contribute, collect
  *   useDraft<T>       — создаёт DraftAPI (используется в entity-провайдерах)
- *   useContribute     — регистрирует хендлер компонента в ближайшем контексте
+ *   useContribute     — регистрирует хендлер компонента
  */
 
 import { useEffect, useMemo, useRef } from "react";
@@ -30,13 +35,19 @@ export type DraftHandler<T> = (draft: T) => T | undefined;
 
 export type DraftAPI<T> = {
     /**
+     * true — contribute() не регистрирует хендлеры, collect() возвращает base.
+     * Удобно пробрасывать в UI-компоненты чтобы отключить элементы управления.
+     */
+    readonly: boolean;
+    /**
      * Зарегистрировать хендлер под id.
-     * Возвращает функцию отмены регистрации — передаётся в useEffect cleanup.
+     * В readonly-режиме — no-op, возвращает пустой cleanup.
      */
     contribute: (id: string, handler: DraftHandler<T>) => () => void;
     /**
-     * Запустить цепочку: применить все хендлеры к base по очереди.
-     * Если хотя бы один вернёт undefined — вернёт undefined (сохранение отменено).
+     * Запустить цепочку хендлеров на base.
+     * В readonly-режиме — возвращает base без изменений.
+     * Если хендлер вернёт undefined — цепочка прерывается.
      */
     collect: (base: T) => T | undefined;
 };
@@ -46,39 +57,49 @@ export type DraftAPI<T> = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Создаёт DraftAPI для entity-контекста.
- * Вызывается один раз в провайдере, результат встраивается в контекст.
+ * Создаёт DraftAPI для entity-провайдера.
+ *
+ * @param options.readonly  Если true — contribute и collect становятся no-op.
+ *                          Пробрасывается в контекст как DraftAPI.readonly.
  *
  * @example
- * function OrderCardProvider({ order, files, children }) {
- *     const draft = useDraft<Order>()
+ * function FileCardProvider({ file, readonly = false, children }) {
+ *     const draft = useDraft<FileWithMeta>({ readonly })
  *     return (
- *         <OrderCardContext.Provider value={{ order, files, ...draft }}>
+ *         <FileCardContext.Provider value={{ file, ...draft }}>
  *             {children}
- *         </OrderCardContext.Provider>
+ *         </FileCardContext.Provider>
  *     )
  * }
  */
-export function useDraft<T>(): DraftAPI<T> {
+export function useDraft<T>(options?: { readonly?: boolean }): DraftAPI<T> {
+    const isReadonly = options?.readonly ?? false;
     const handlersRef = useRef(new Map<string, DraftHandler<T>>());
 
     return useMemo(
         () => ({
-            contribute(id, handler) {
-                handlersRef.current.set(id, handler);
-                return () => handlersRef.current.delete(id);
-            },
-            collect(base) {
-                let draft = { ...base } as T;
-                for (const [, handler] of handlersRef.current) {
-                    const result = handler(draft);
-                    if (result === undefined) return undefined;
-                    draft = result;
-                }
-                return draft;
-            },
+            readonly: isReadonly,
+
+            contribute: isReadonly
+                ? () => () => {}
+                : (id, handler) => {
+                      handlersRef.current.set(id, handler);
+                      return () => handlersRef.current.delete(id);
+                  },
+
+            collect: isReadonly
+                ? (base) => base
+                : (base) => {
+                      let draft = { ...base } as T;
+                      for (const [, handler] of handlersRef.current) {
+                          const result = handler(draft);
+                          if (result === undefined) return undefined;
+                          draft = result;
+                      }
+                      return draft;
+                  },
         }),
-        [],
+        [isReadonly],
     );
 }
 
@@ -88,20 +109,20 @@ export function useDraft<T>(): DraftAPI<T> {
 
 /**
  * Регистрирует хендлер компонента в черновике.
- * Принимает функцию contribute из entity-контекста — T выводится из неё автоматически.
- * Снимает регистрацию при размонтировании.
+ * Принимает contribute из entity-контекста — T выводится автоматически.
+ * В readonly-режиме contribute — no-op, хук не делает ничего.
  *
  * @example
  * function FileCardSettings() {
  *     const { contribute } = useFileCardContext()
- *     const field = useField('active', false)
+ *     const field = useField('complexLayout', false)
  *
  *     useContribute(contribute, 'settings', (draft) => ({
  *         ...draft,
- *         settings: { active: field.value },  // draft типизирован автоматически
+ *         settings: { complexLayout: field.value },
  *     }))
  *
- *     return <Switch checked={field.value} onCheckedChange={field.onChange} />
+ *     return <Checkbox checked={field.value} onCheckedChange={field.onChange} />
  * }
  */
 export function useContribute<T>(

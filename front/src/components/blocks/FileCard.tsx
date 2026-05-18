@@ -46,6 +46,8 @@ type FileCardContextType = {
     isSaving: boolean;
     saveError: Error | null;
     save: () => void;
+    // Пробрасывается из DraftAPI — удобно читать напрямую в дочерних компонентах
+    // без дополнительного деструктурирования draft
 } & DraftAPI<FileWithMeta>;
 
 const FileCardContext = createContext<FileCardContextType | null>(null);
@@ -58,8 +60,12 @@ function useFileCardContext(): FileCardContextType {
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 
-function FileCardProvider({ file, children }: PropsWithChildren<{ file: FileWithMeta }>) {
-    const draft = useDraft<FileWithMeta>();
+function FileCardProvider({
+    file,
+    readonly = false,
+    children,
+}: PropsWithChildren<{ file: FileWithMeta; readonly?: boolean }>) {
+    const draft = useDraft<FileWithMeta>({ readonly });
     const { commitAll } = useGuardActions();
     const patchMutation = usePatchFile(file.id);
 
@@ -90,7 +96,7 @@ function FileCardProvider({ file, children }: PropsWithChildren<{ file: FileWith
 // ─── FileCardSettings ─────────────────────────────────────────────────────────
 
 function FileCardSettings() {
-    const { file, contribute, isSaving } = useFileCardContext();
+    const { file, contribute, isSaving, readonly } = useFileCardContext();
     const complexLayout = useField<boolean>(
         "complexLayout",
         file.settings?.complexLayout ?? false,
@@ -105,7 +111,7 @@ function FileCardSettings() {
         <label className="inline-flex items-center gap-2">
             <Checkbox
                 checked={complexLayout.value}
-                disabled={isSaving}
+                disabled={isSaving || readonly}
                 onCheckedChange={complexLayout.onChange}
             />
             <Text.Label as="span">Сложная структура (LLM вместо OCR)</Text.Label>
@@ -116,7 +122,7 @@ function FileCardSettings() {
 // ─── FileCardBody ─────────────────────────────────────────────────────────────
 
 function FileCardBody() {
-    const { file, isSaving, save, saveError } = useFileCardContext();
+    const { file, isSaving, save, saveError, readonly } = useFileCardContext();
     const { isDirtyAnywhere } = useGuardState();
 
     const {
@@ -189,17 +195,23 @@ function FileCardBody() {
             {isVisual && (
                 <Stack gap={2}>
                     <FileCardSettings />
-                    <Stack orientation="horizontal" gap={2} className="items-center">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!isDirtyAnywhere || isSaving}
-                            onClick={save}
-                        >
-                            {isSaving ? "Сохранение..." : "Сохранить настройки"}
-                        </Button>
-                    </Stack>
-                    <InlineMutationNotification mutation={{ isError: !!saveError, isSuccess: false, error: saveError }} />
+                    {!readonly && (
+                        <>
+                            <Stack orientation="horizontal" gap={2} className="items-center">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={!isDirtyAnywhere || isSaving}
+                                    onClick={save}
+                                >
+                                    {isSaving ? "Сохранение..." : "Сохранить настройки"}
+                                </Button>
+                            </Stack>
+                            <InlineMutationNotification
+                                mutation={{ isError: !!saveError, isSuccess: false, error: saveError }}
+                            />
+                        </>
+                    )}
                 </Stack>
             )}
 
@@ -341,10 +353,20 @@ function FileCardBody() {
 
 // ─── Экспорт ─────────────────────────────────────────────────────────────────
 
-export function FileCard({ file }: { file: FileWithMeta }) {
+type FileCardProps = {
+    file: FileWithMeta;
+    /**
+     * Если true — настройки отображаются, но недоступны для редактирования.
+     * Кнопка сохранения скрыта.
+     * @default false
+     */
+    readonly?: boolean;
+};
+
+export function FileCard({ file, readonly = false }: FileCardProps) {
     return (
         <DirtyGuardProvider id="file-settings">
-            <FileCardProvider file={file}>
+            <FileCardProvider file={file} readonly={readonly}>
                 <FileCardBody />
             </FileCardProvider>
         </DirtyGuardProvider>
