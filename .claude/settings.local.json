@@ -45,7 +45,8 @@
       "WebFetch(domain:carbondesignsystem.com)",
       "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\front\\\\src\\\\components\\\\blocks\\\\order-card\\\\OrderCardAnalyse.tsx\")",
       "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(grep -E \"\\\\.\\(ts|json\\)$\")"
     ]
   }
 }
