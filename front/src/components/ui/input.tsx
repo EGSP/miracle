@@ -1,12 +1,15 @@
 import * as React from "react"
 import { Input as InputPrimitive } from "@base-ui/react/input"
+import { Text } from "@miracle/aramid"
 
 import { InputDropdown } from "@/components/ui/input-dropdown"
 import { InputSuggest } from "@/components/ui/input-suggest"
 import { cn } from "@/lib/utils"
 
-function InputRoot({ className, type, ...props }: React.ComponentProps<"input">) {
-  return (
+type InputRootProps = React.ComponentProps<"input"> & { label?: string }
+
+function InputRoot({ className, type, label, ...props }: InputRootProps) {
+  const input = (
     <InputPrimitive
       type={type}
       data-slot="input"
@@ -17,6 +20,17 @@ function InputRoot({ className, type, ...props }: React.ComponentProps<"input">)
       {...props}
     />
   )
+
+  if (label) {
+    return (
+      <div className="flex flex-col gap-0.5">
+        <Text.Helper as="span">{label}</Text.Helper>
+        {input}
+      </div>
+    )
+  }
+
+  return input
 }
 
 const Input = Object.assign(InputRoot, {

@@ -1,55 +1,79 @@
-import { useState } from 'react';
 import { Stack, Text } from '@miracle/aramid';
 import type { DesignationSlot, Stored, TechnicalCondition } from '@miracle/types';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { ArrayEditor } from '@/components/ui/array-editor';
 import { useContribute } from '@/contexts/draft-api/DraftContext';
 import { useField } from '@/contexts/dirty-state/useField';
 import { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
 
-function formatSlotsJson(slots: DesignationSlot[]): string {
-    return JSON.stringify(slots, null, 2);
+function makeSlot(index: number): DesignationSlot {
+    return { index, name: '', ruleIds: [] };
 }
 
 export function TechnicalConditionCardSlotsSection() {
     const { technicalCondition, contribute, isSaving } = useTechnicalConditionCardContext();
     const tc = technicalCondition;
-    const [parseError, setParseError] = useState<string | null>(null);
 
-    const slotsJson = useField(`tc-${tc.id}-slots-json`, formatSlotsJson(tc.designationSlots ?? []));
+    const slots = useField<DesignationSlot[]>(`tc-${tc.id}-slots`, tc.designationSlots ?? []);
 
-    useContribute(contribute, `tc-${tc.id}-slots`, (draft): Stored<TechnicalCondition> | undefined => {
-        try {
-            const parsed = JSON.parse(slotsJson.value) as unknown;
-            if (!Array.isArray(parsed)) {
-                setParseError('designationSlots: ожидается JSON-массив');
-                return undefined;
-            }
-            setParseError(null);
-            return { ...draft, designationSlots: parsed as DesignationSlot[] };
-        } catch {
-            setParseError('designationSlots: невалидный JSON');
-            return undefined;
-        }
-    });
+    const update = (i: number, patch: Partial<DesignationSlot>) =>
+        slots.onChange(slots.value.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+
+    const updateRuleId = (slotIdx: number, ruleIdx: number, value: string) => {
+        const slot = slots.value[slotIdx];
+        const next = slot.ruleIds.map((id, i) => (i === ruleIdx ? value : id));
+        update(slotIdx, { ruleIds: next });
+    };
+
+    useContribute(contribute, `tc-${tc.id}-slots`, (draft): Stored<TechnicalCondition> => ({
+        ...draft,
+        designationSlots: slots.value.map((s, i) => ({ ...s, index: i })),
+    }));
 
     return (
         <Stack gap={1}>
             <Text.Label as="span" className="font-medium">
-                designationSlots (JSON)
+                Слоты обозначения
             </Text.Label>
-            <Textarea
-                size="md"
-                className="font-mono text-xs"
-                value={slotsJson.value}
-                onChange={slotsJson.onInputChange}
+            <ArrayEditor
+                items={slots.value}
+                onAdd={() => slots.onChange([...slots.value, makeSlot(slots.value.length)])}
+                onRemove={(i) => slots.onChange(slots.value.filter((_, idx) => idx !== i))}
+                renderItem={(slot, i) => (
+                    <Stack gap={1}>
+                        <Input
+                            label="Название параметра"
+                            placeholder="Напр. Климатическое исполнение"
+                            value={slot.name}
+                            onChange={(e) => update(i, { name: e.target.value })}
+                            disabled={isSaving}
+                        />
+                        <div className="flex flex-col gap-0.5">
+                            <Text.Helper as="span">ID правил</Text.Helper>
+                            <ArrayEditor
+                                items={slot.ruleIds}
+                                onAdd={() => update(i, { ruleIds: [...slot.ruleIds, ''] })}
+                                onRemove={(j) =>
+                                    update(i, { ruleIds: slot.ruleIds.filter((_, idx) => idx !== j) })
+                                }
+                                renderItem={(ruleId, j) => (
+                                    <Input
+                                        label={`Правило ${j + 1}`}
+                                        placeholder="UUID правила"
+                                        value={ruleId}
+                                        onChange={(e) => updateRuleId(i, j, e.target.value)}
+                                        disabled={isSaving}
+                                    />
+                                )}
+                                addLabel="Добавить ID"
+                                disabled={isSaving}
+                            />
+                        </div>
+                    </Stack>
+                )}
+                addLabel="Добавить слот"
                 disabled={isSaving}
-                aria-label="Слоты обозначения в формате JSON"
             />
-            {parseError && (
-                <Text as="span" compact className="text-destructive">
-                    {parseError}
-                </Text>
-            )}
         </Stack>
     );
 }

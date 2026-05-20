@@ -35,6 +35,7 @@ function TechnicalConditionCardProvider({
             return;
         }
         const body: TechnicalCondition = {
+            name: merged.name,
             fileId: merged.fileId,
             productTypeId: merged.productTypeId,
             lastProductTypeName: merged.lastProductTypeName,

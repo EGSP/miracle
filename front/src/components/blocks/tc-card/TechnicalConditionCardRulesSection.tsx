@@ -1,55 +1,63 @@
-import { useState } from 'react';
 import { Stack, Text } from '@miracle/aramid';
 import type { Stored, TechnicalCondition, TechnicalConditionRule } from '@miracle/types';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { ArrayEditor } from '@/components/ui/array-editor';
 import { useContribute } from '@/contexts/draft-api/DraftContext';
 import { useField } from '@/contexts/dirty-state/useField';
 import { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
 
-function formatRulesJson(rules: TechnicalConditionRule[]): string {
-    return JSON.stringify(rules, null, 2);
+function makeRule(index: number): TechnicalConditionRule {
+    return { id: crypto.randomUUID(), index, title: '', content: '' };
 }
 
 export function TechnicalConditionCardRulesSection() {
     const { technicalCondition, contribute, isSaving } = useTechnicalConditionCardContext();
     const tc = technicalCondition;
-    const [parseError, setParseError] = useState<string | null>(null);
 
-    const rulesJson = useField(`tc-${tc.id}-rules-json`, formatRulesJson(tc.rules ?? []));
+    const rules = useField<TechnicalConditionRule[]>(`tc-${tc.id}-rules`, tc.rules ?? []);
 
-    useContribute(contribute, `tc-${tc.id}-rules`, (draft): Stored<TechnicalCondition> | undefined => {
-        try {
-            const parsed = JSON.parse(rulesJson.value) as unknown;
-            if (!Array.isArray(parsed)) {
-                setParseError('rules: ожидается JSON-массив');
-                return undefined;
-            }
-            setParseError(null);
-            return { ...draft, rules: parsed as TechnicalConditionRule[] };
-        } catch {
-            setParseError('rules: невалидный JSON');
-            return undefined;
-        }
-    });
+    const update = (i: number, patch: Partial<TechnicalConditionRule>) =>
+        rules.onChange(rules.value.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+    useContribute(contribute, `tc-${tc.id}-rules`, (draft): Stored<TechnicalCondition> => ({
+        ...draft,
+        rules: rules.value.map((r, i) => ({ ...r, index: i })),
+    }));
 
     return (
         <Stack gap={1}>
             <Text.Label as="span" className="font-medium">
-                rules (JSON)
+                Правила
             </Text.Label>
-            <Textarea
-                size="md"
-                className="font-mono text-xs"
-                value={rulesJson.value}
-                onChange={rulesJson.onInputChange}
+            <ArrayEditor
+                items={rules.value}
+                onAdd={() => rules.onChange([...rules.value, makeRule(rules.value.length)])}
+                onRemove={(i) => rules.onChange(rules.value.filter((_, idx) => idx !== i))}
+                renderItem={(rule, i) => (
+                    <Stack gap={1}>
+                        <Input
+                            label="Заголовок"
+                            placeholder="Напр. 5.3 Климатическое исполнение"
+                            value={rule.title ?? ''}
+                            onChange={(e) => update(i, { title: e.target.value })}
+                            disabled={isSaving}
+                        />
+                        <div className="flex flex-col gap-0.5">
+                            <Text.Helper as="span">Текст правила</Text.Helper>
+                            <Textarea
+                                size="auto"
+                                placeholder="Таблицы хранятся как markdown-таблицы"
+                                value={rule.content}
+                                onChange={(e) => update(i, { content: e.target.value })}
+                                disabled={isSaving}
+                            />
+                        </div>
+                    </Stack>
+                )}
+                addLabel="Добавить правило"
                 disabled={isSaving}
-                aria-label="Правила ТУ в формате JSON"
             />
-            {parseError && (
-                <Text as="span" compact className="text-destructive">
-                    {parseError}
-                </Text>
-            )}
         </Stack>
     );
 }

@@ -16,6 +16,7 @@ export function TechnicalConditionCardMeta() {
     const { data: files = [], isLoading: isFilesLoading } = useGetFiles({ includeMeta: true });
     const { data: productTypes = [], isLoading: isProductTypesLoading } = useProductTypes();
 
+    const name = useField<string>(`tc-${tc.id}-name`, tc.name ?? '');
     const fileId = useField<string | undefined>(`tc-${tc.id}-fileId`, tc.fileId);
     const productTypeId = useField<string | undefined>(
         `tc-${tc.id}-productTypeId`,
@@ -29,6 +30,7 @@ export function TechnicalConditionCardMeta() {
 
     useContribute(contribute, `tc-${tc.id}-meta`, (draft): Stored<TechnicalCondition> => ({
         ...draft,
+        name: name.value.trim() || undefined,
         fileId: fileId.value,
         productTypeId: productTypeId.value,
     }));
@@ -42,6 +44,15 @@ export function TechnicalConditionCardMeta() {
             <Text.Label as="span" className="font-medium">
                 Основные поля
             </Text.Label>
+            <Stack gap={1}>
+                <Text.Label as="span">Название</Text.Label>
+                <Input
+                    placeholder="Напр. ГОСТ Р 52931-2008"
+                    value={name.value}
+                    onChange={name.onInputChange}
+                    disabled={isSaving}
+                />
+            </Stack>
             <Stack gap={1}>
                 <Text.Label as="span">Файл ТУ</Text.Label>
                 {isFilesLoading ? (
