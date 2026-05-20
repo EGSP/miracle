@@ -2,6 +2,8 @@ import type { Stored, TechnicalCondition, TechnicalConditionsQuery } from '@mira
 import { defineRouter, err, route } from '../app/index.js';
 import { technicalConditionsService } from '../databases/technical-condition.db.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
+import { workerPool } from '../workers/worker-pool.js';
+import { TCDetailsWorker } from '../workers/tc-details.worker.js';
 
 const getTechnicalConditions = route.get('/', {
     validate: { query: true },
@@ -56,6 +58,21 @@ const replaceTechnicalCondition = route.put('/:id', {
     },
 });
 
+const extractTcDetails = route.post('/:id/extract-details', {
+    validate: { params: true },
+    handler: async ({ params }: { params: { id: string } }) => {
+        const tc = await technicalConditionsService.getById(params.id);
+        if (!tc) {
+            return err.notFound('Technical condition not found');
+        }
+        if (!tc.fileId) {
+            return err.badRequest('TC не имеет прикреплённого PDF-файла');
+        }
+
+        workerPool.launch(new TCDetailsWorker({ data: null, tcId: params.id }));
+    },
+});
+
 export const technicalConditionRouter = defineRouter('/technical-conditions', {
     middlewares: [authMiddleware],
     routes: [
@@ -63,5 +80,6 @@ export const technicalConditionRouter = defineRouter('/technical-conditions', {
         createTechnicalCondition,
         getTechnicalCondition,
         replaceTechnicalCondition,
+        extractTcDetails,
     ],
 } as const);

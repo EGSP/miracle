@@ -25,4 +25,8 @@ export const technicalCondition = {
         url: formatPath('/technical-conditions/:id', params),
         data: technicalCondition,
     }),
+    extractTcDetails: (params: { id: string; }) => customInstance<null>({
+        method: 'POST',
+        url: formatPath('/technical-conditions/:id/extract-details', params),
+    }),
 };

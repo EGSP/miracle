@@ -7,8 +7,8 @@ import { useContribute } from '@/contexts/draft-api/DraftContext';
 import { useField } from '@/contexts/dirty-state/useField';
 import { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
 
-function makeRule(index: number): TechnicalConditionRule {
-    return { id: crypto.randomUUID(), index, title: '', content: '' };
+function makeRule(): TechnicalConditionRule {
+    return { id: crypto.randomUUID(), title: '', content: '' };
 }
 
 export function TechnicalConditionCardRulesSection() {
@@ -22,7 +22,7 @@ export function TechnicalConditionCardRulesSection() {
 
     useContribute(contribute, `tc-${tc.id}-rules`, (draft): Stored<TechnicalCondition> => ({
         ...draft,
-        rules: rules.value.map((r, i) => ({ ...r, index: i })),
+        rules: rules.value,
     }));
 
     return (
@@ -32,7 +32,7 @@ export function TechnicalConditionCardRulesSection() {
             </Text.Label>
             <ArrayEditor
                 items={rules.value}
-                onAdd={() => rules.onChange([...rules.value, makeRule(rules.value.length)])}
+                onAdd={() => rules.onChange([...rules.value, makeRule()])}
                 onRemove={(i) => rules.onChange(rules.value.filter((_, idx) => idx !== i))}
                 renderItem={(rule, i) => (
                     <Stack gap={1}>

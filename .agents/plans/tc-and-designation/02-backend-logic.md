@@ -61,6 +61,7 @@
 | POST | `/` | Создать TC: тело — `TechnicalCondition` (все поля опциональны). Ответ: `Stored<TechnicalCondition>` |
 | GET | `/:id` | Получить TC. Ответ: `Stored<TechnicalCondition>` |
 | PUT | `/:id` | Заменить целиком полезную нагрузку TC. Ответ: `Stored<TechnicalCondition>`. При `productTypeId` сервер записывает `lastProductTypeName` из справочника типов; без id — сохраняет переданное или прежнее имя |
+| POST | `/:id/extract-details` | Запустить TCDetailsWorker — извлечь rules + designationSlots из готового FileContent |
 
 Пока **не** делаем: `DELETE`, PATCH на отдельные слоты/правила/шаблоны — всё это сводится к одному `PUT` с полным объектом. Извлечение текста PDF ТУ — через общий `filesContentService.extract(fileId)` (см. ниже).
 
@@ -169,6 +170,120 @@ User-сообщение в `callVisionCompletion`: `Извлеки содерж�
 
 ---
 
+### TCDetailsWorker (`back/src/workers/tc-details.worker.ts`)
+
+**Что делает:**
+Читает уже извлечённый текст ТУ из `FileContent`, вызывает Yandex LLM (text, async) и получает структурированные правила (`TechnicalConditionRule[]`) и слоты условного обозначения (`DesignationSlot[]`). Обновляет `TC.rules` и `TC.designationSlots`.
+
+**Место в пайплайне:**
+```
+LlmVisionTcWorker → FileContent.content (markdown) → TCDetailsWorker → TC.rules + TC.designationSlots
+```
+Запускается вручную из UI после того, как `FileContent` для файла ТУ перешёл в статус `COMPLETED`.
+
+**Зависимости:**
+- `technicalConditionsService` — читает TC по `tcId`, записывает rules + designationSlots в `apply()`
+- `filesContentService` — резолвит FileContent через `TC.fileId` (как `OrderDetailsWorker` резолвит через `Order.fileId`)
+- `yandexLlm.submitCompletion` + `yandexLlm.pollCompletionJson` (async, как `OrderDetailsWorker`)
+
+**Жизненный цикл:**
+
+```
+mount()
+  → создаёт запись в workers.json (type: tc-details-worker)
+
+run()
+  → technicalConditionsService.getById(tcId) → tc
+  → filesContentService.getContent(tc.fileId) → находит completed FileContent
+  → склеивает content[].text в один markdown-текст
+  → yandexLlm.submitCompletion({
+        messages: [{ role: 'system', text: SYSTEM_PROMPT }, { role: 'user', text }],
+        temperature: 0.1,
+        jsonSchema: TCDetailsJsonSchema,   ← zodToJsonSchema(TCDetailsZodSchema)
+    })
+  → сохраняет cloudOperationId в workers.json
+  → polling: yandexLlm.pollCompletionJson(cloudOperationId, TCDetailsZodSchema)
+  → при done: сохраняет operationResult, status: success
+
+apply()
+  → парсит operationResult → { rules: RawRule[], designationSlots: RawSlot[] }
+  → для каждого RawRule генерирует id через nanoid → TechnicalConditionRule[]
+  → строит map: rule.index → rule.id
+  → для каждого RawSlot: ruleIndexes[] → ruleIds[] через map → DesignationSlot[]
+  → technicalConditionsService.replace(tcId, { ...tc, rules, designationSlots })
+```
+
+**Zod-схема ответа (`TCDetailsZodSchema`):**
+
+```typescript
+const TCDetailsZodSchema = z.object({
+    rules: z.array(
+        z.object({
+            index: z.number()
+                .describe('Порядковый номер раздела (0-based)'),
+            title: z.string().optional()
+                .describe('Заголовок раздела с нумерацией из ТУ, если есть'),
+            content: z.string()
+                .describe('Текст раздела дословно; таблицы оформлять как markdown-таблицы'),
+        })
+    ).describe('Смысловые разделы/правила из документа ТУ'),
+    designationSlots: z.array(
+        z.object({
+            index: z.number()
+                .describe('Позиция параметра в условном обозначении (0-based, по порядку в примере из ТУ)'),
+            name: z.string()
+                .describe('Читаемое название параметра обозначения'),
+            ruleIndexes: z.array(z.number())
+                .describe('Индексы (поле index) из массива rules, описывающих правила выбора этого параметра'),
+        })
+    ).describe('Параметры условного обозначения из раздела «Условное обозначение» или аналогичного'),
+});
+
+type TCDetailsResult = z.infer<typeof TCDetailsZodSchema>;
+const TCDetailsJsonSchema = zodToJsonSchema(TCDetailsZodSchema);
+```
+
+**Промпт TCDetailsWorker (`SYSTEM_PROMPT`):**
+
+```
+Ты обрабатываешь текст Технического Условия (ТУ) на производство промышленной арматуры.
+
+Выполни две задачи и верни результат в виде единого JSON-объекта.
+
+───────────────────────────────────────────────────
+ЗАДАЧА 1 — Извлечь правила (rules)
+───────────────────────────────────────────────────
+Разбей документ на смысловые разделы.
+Для каждого раздела:
+  - "index" — порядковый номер (0, 1, 2, ...)
+  - "title" — заголовок из ТУ с исходной нумерацией, если есть
+  - "content" — текст раздела дословно; таблицы оформляй как markdown-таблицы
+
+───────────────────────────────────────────────────
+ЗАДАЧА 2 — Извлечь параметры условного обозначения (designationSlots)
+───────────────────────────────────────────────────
+Найди в ТУ раздел со структурой условного обозначения (обычно называется
+«Условное обозначение», «Структура условного обозначения» или содержит пример
+аббревиатуры вида «ИМЯ-ДН-P-СРЕДА-...»).
+
+Для каждого параметра обозначения:
+  - "index" — позиция параметра в обозначении (0-based, по порядку в примере)
+  - "name" — читаемое название параметра
+  - "ruleIndexes" — массив index-ов из rules, описывающих правила выбора этого параметра
+
+───────────────────────────────────────────────────
+Формат ответа — строго JSON, без пояснений вне JSON:
+{
+  "rules": [ { "index": ..., "title": ..., "content": ... } ],
+  "designationSlots": [ { "index": ..., "name": ..., "ruleIndexes": [...] } ]
+}
+
+Текст Технического Условия:
+{fileContentText}
+```
+
+---
+
 ### DesignationWorker (`back/src/workers/designation.worker.ts`)
 
 **Что делает:**
@@ -200,6 +315,26 @@ apply()
   → парсит operationResult → DesignationValue[]
   → пишет в Order.details.designation.ai
   → пишет tcId в Designation
+```
+
+**Zod-схема ответа (`DesignationResultZodSchema`):**
+
+```typescript
+const DesignationResultZodSchema = z.array(
+    z.object({
+        slotIndex: z.number()
+            .describe('Соответствует DesignationSlot.index'),
+        value: z.string()
+            .describe('Итоговое значение параметра строго по допустимым значениям из правил ТУ'),
+        confidence: z.number().min(0).max(1)
+            .describe('Уверенность в правильности значения: 1.0 — явно указано в заявке, 0.0 — не определить'),
+        reasoning: z.string()
+            .describe('Краткое объяснение почему выбрано это значение'),
+    })
+).describe('Значения параметров условного обозначения по каждому слоту');
+
+type DesignationResult = z.infer<typeof DesignationResultZodSchema>;
+const DesignationResultJsonSchema = zodToJsonSchema(DesignationResultZodSchema);
 ```
 
 **Промпт DesignationWorker:**

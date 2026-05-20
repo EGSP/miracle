@@ -20,10 +20,8 @@ export type TechnicalCondition = {
 };
 
 export type TechnicalConditionRule = {
-    /** Уникальный идентификатор внутри TC. */
+    /** Уникальный идентификатор внутри TC — используется в DesignationSlot.ruleIds. */
     id: string;
-    /** Порядковый номер для сортировки в UI. */
-    index: number;
     /** Заголовок раздела из ТУ, напр. "5.3 Климатическое исполнение". */
     title?: string;
     /** Текст правила. Таблицы хранятся как markdown-таблицы. */

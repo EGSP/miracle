@@ -7,6 +7,7 @@ export type WorkerType =
     | 'llm-vision-worker'
     | 'order-details-worker'
     | 'tc-processing-worker'
+    | 'tc-details-worker'
     | 'designation-worker';
 
 export const WorkerStatus = {
@@ -76,6 +77,28 @@ export type TCWorkerData = BaseWorkerData & {
 };
 
 /**
+ * Читает уже извлечённый текст ТУ из FileContent (через TC.fileId).
+ * Вызывает Yandex LLM text (async) — разбивает текст на TechnicalConditionRule[]
+ * и извлекает DesignationSlot[] из раздела «Условное обозначение».
+ * В apply() обновляет TC.rules и TC.designationSlots.
+ */
+export type TCDetailsWorkerData = BaseWorkerData & {
+    type: 'tc-details-worker';
+    /** TC, чьи rules и designationSlots нужно заполнить. */
+    tcId: string;
+    /** ID асинхронной операции Yandex — сохраняется для восстановления после перезапуска. */
+    cloudOperationId?: string;
+    /**
+     * JSON-строка с результатом LLM до apply().
+     * Структура: { rules: RawRule[], designationSlots: RawSlot[] }
+     * где RawSlot.ruleIndexes (number[]) разрешаются в ruleIds в apply().
+     */
+    operationResult?: string;
+    /** Сообщение об ошибке при неуспешном завершении. */
+    errorMessage?: string;
+};
+
+/**
  * Читает rules через DesignationSlot.ruleIds + requirements из Order.
  * Вызывает Yandex LLM (async) → возвращает DesignationValue[].
  * В apply() записывает результат в Order.details.designation.ai.
@@ -99,6 +122,7 @@ export type WorkerData =
     | LlmVisionWorkerData
     | OrderDetailsWorkerData
     | TCWorkerData
+    | TCDetailsWorkerData
     | DesignationWorkerData;
 
 /** Человекочитаемое представление данных воркера — плоский объект без заранее известной схемы. */
@@ -170,6 +194,14 @@ export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanRea
                 ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),
                 ...(worker.orderDetails != null && { 'Результат': worker.orderDetails }),
                 ...(worker.errorMessage != null && { 'Ошибка': worker.errorMessage }),
+            };
+
+        case 'tc-details-worker':
+            return {
+                'TC': worker.tcId,
+                ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),
+                ...(worker.operationResult != null && { 'Результат (правил/слотов)': tryParseJson(worker.operationResult) }),
+                ...(worker.errorMessage != null && { 'Ошибка': tryParseJson(worker.errorMessage) }),
             };
 
         default: {

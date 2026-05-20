@@ -4,6 +4,7 @@ import type {
     LlmVisionWorkerData,
     OrderDetailsWorkerData,
     Stored,
+    TCDetailsWorkerData,
     WorkerData,
     YandexOcrWorkerData,
 } from '@miracle/types';
@@ -12,6 +13,7 @@ import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
 import { LlmVisionWorker } from './scan/llm-vision-worker.js';
 import { OrderDetailsWorker } from './order-details-worker.js';
+import { TCDetailsWorker } from './tc-details.worker.js';
 import { YandexOcrWorker } from './scan/yandex-ocr-worker.js';
 
 export class WorkerPool {
@@ -71,6 +73,8 @@ export class WorkerPool {
                 return new OrderDetailsWorker({ data: structuredClone(record) as Stored<OrderDetailsWorkerData> });
             case 'llm-vision-worker':
                 return new LlmVisionWorker({ data: structuredClone(record) as Stored<LlmVisionWorkerData> });
+            case 'tc-details-worker':
+                return new TCDetailsWorker({ data: structuredClone(record) as Stored<TCDetailsWorkerData> });
             default:
                 return null;
         }

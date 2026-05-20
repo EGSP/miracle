@@ -40,3 +40,9 @@ export const useReplaceTechnicalCondition = (id: string) => {
         },
     });
 };
+
+export const useExtractTcDetails = (id: string) => {
+    return useMutation({
+        mutationFn: () => technicalCondition.extractTcDetails({ id }),
+    });
+};

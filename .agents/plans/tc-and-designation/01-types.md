@@ -135,6 +135,7 @@ export type WorkerType =
     | 'llm-vision-worker'
     | 'order-details-worker'
     | 'llm-vision-tc-worker'   // новый
+    | 'tc-details-worker'      // новый
     | 'designation-worker';    // новый
 
 // Новые данные воркеров:
@@ -150,6 +151,31 @@ export type LlmVisionTcWorkerData = BaseWorkerData & {
     /** FileContent, который воркер заполняет в apply(). */
     fileContentId: string;
     /** Текстовый ответ LLM после завершения run(). */
+    operationResult?: string;
+    /** Сообщение об ошибке при неуспешном завершении. */
+    errorMessage?: string;
+};
+
+/**
+ * Читает уже извлечённый текст ТУ из FileContent.
+ * Вызывает Yandex LLM text (async) — разбивает текст на TechnicalConditionRule[]
+ * и извлекает DesignationSlot[] из раздела «Условное обозначение».
+ * В apply() обновляет TC.rules и TC.designationSlots.
+ *
+ * FileContent резолвится внутри воркера через tcId → TC.fileId → filesContentService.
+ * Отдельно хранить fileContentId не нужно.
+ */
+export type TCDetailsWorkerData = BaseWorkerData & {
+    type: 'tc-details-worker';
+    /** TC, чьи rules и designationSlots нужно заполнить. */
+    tcId: string;
+    /** ID асинхронной операции Yandex — сохраняется для восстановления после перезапуска. */
+    cloudOperationId?: string;
+    /**
+     * JSON-строка с результатом LLM до apply().
+     * Структура: { rules: RawRule[], designationSlots: RawSlot[] }
+     * где RawSlot использует ruleIndexes (number[]) вместо ruleIds — разрешается в apply().
+     */
     operationResult?: string;
     /** Сообщение об ошибке при неуспешном завершении. */
     errorMessage?: string;
@@ -180,6 +206,7 @@ export type WorkerData =
     | LlmVisionWorkerData
     | OrderDetailsWorkerData
     | LlmVisionTcWorkerData
+    | TCDetailsWorkerData
     | DesignationWorkerData;
 ```
 
