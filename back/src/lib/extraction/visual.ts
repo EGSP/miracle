@@ -2,8 +2,8 @@ import { ExtractionStatus, ExtractionType, getMimeType } from '@miracle/types';
 import type { FileModel, Stored } from '@miracle/types';
 import { filesContentService } from '../../databases/file-content.db.js';
 import { workerPool } from '../../workers/worker-pool.js';
-import { YandexOcrWorker } from '../../workers/yandex-ocr-worker.js';
-import { LlmVisionWorker } from '../../workers/llm-vision-worker.js';
+import { YandexOcrWorker } from '../../workers/scan/yandex-ocr-worker.js';
+import { LlmVisionWorker } from '../../workers/scan/llm-vision-worker.js';
 
 /**
  * MIME-типы, поддерживаемые Yandex OCR в асинхронном режиме.

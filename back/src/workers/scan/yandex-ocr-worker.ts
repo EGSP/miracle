@@ -4,13 +4,13 @@ import { ocrService } from '@yandex-cloud/nodejs-sdk/ai-ocr-v1';
 import { operation } from '@yandex-cloud/nodejs-sdk/operation';
 import { ExtractionStatus, ExtractionType, WorkerStatus, type Content } from '@miracle/types';
 import type { Stored, YandexOcrWorkerData } from '@miracle/types';
-import { yandex } from '../lib/yandex/yandex.js';
-import type { AsyncOcrClient } from '../lib/yandex/yandex-sdk.types.js';
-import { filesContentService } from '../databases/file-content.db.js';
-import { filesService, getFilePath } from '../databases/file.db.js';
-import { workersService } from '../databases/workers.db.js';
-import { logger } from '../logger/logger.js';
-import { BaseWorker } from './base-worker.js';
+import { yandex } from '../../lib/yandex/yandex.js';
+import type { AsyncOcrClient } from '../../lib/yandex/yandex-sdk.types.js';
+import { filesContentService } from '../../databases/file-content.db.js';
+import { filesService, getFilePath } from '../../databases/file.db.js';
+import { workersService } from '../../databases/workers.db.js';
+import { logger } from '../../logger/logger.js';
+import { BaseWorker } from '../base-worker.js';
 
 export type YandexOcrWorkerOptions =
     | { data: null; fileContentId: string; fileId: string; mimeType: string }

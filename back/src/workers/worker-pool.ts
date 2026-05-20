@@ -10,9 +10,9 @@ import type {
 import { workersService } from '../databases/workers.db.js';
 import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
-import { LlmVisionWorker } from './llm-vision-worker.js';
+import { LlmVisionWorker } from './scan/llm-vision-worker.js';
 import { OrderDetailsWorker } from './order-details-worker.js';
-import { YandexOcrWorker } from './yandex-ocr-worker.js';
+import { YandexOcrWorker } from './scan/yandex-ocr-worker.js';
 
 export class WorkerPool {
     /** Карта запущенных воркеров: ключ только для памяти процесса. */

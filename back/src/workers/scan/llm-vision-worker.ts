@@ -1,13 +1,13 @@
 import fs from 'fs/promises';
 import { ExtractionStatus, ExtractionType, WorkerStatus } from '@miracle/types';
 import type { LlmVisionWorkerData, Stored } from '@miracle/types';
-import { filesContentService } from '../databases/file-content.db.js';
-import { filesService, getFilePath } from '../databases/file.db.js';
-import { workersService } from '../databases/workers.db.js';
-import { pdfToImages } from '../lib/convert/pdf-to-image.js';
-import { yandexLlm } from '../lib/yandex/yandex-llm.js';
-import { logger } from '../logger/logger.js';
-import { BaseWorker } from './base-worker.js';
+import { filesContentService } from '../../databases/file-content.db.js';
+import { filesService, getFilePath } from '../../databases/file.db.js';
+import { workersService } from '../../databases/workers.db.js';
+import { pdfToImages } from '../../lib/convert/pdf-to-image.js';
+import { yandexLlm } from '../../lib/yandex/yandex-llm.js';
+import { logger } from '../../logger/logger.js';
+import { BaseWorker } from '../base-worker.js';
 
 const SYSTEM_PROMPT = `Ты — ассистент для извлечения содержимого из документов со сложной структурой.
 Тебе передаются страницы документа в виде изображений.
