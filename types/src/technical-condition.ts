@@ -1,8 +1,6 @@
 export type TechnicalCondition = {
     /** Ссылка на загруженный PDF ТУ — из него берётся FileContent. */
     fileId: string;
-    /** Номер/обозначение документа, напр. "ТУ 3667-013-05608841-2020". */
-    version: string;
     /** Тип продукции, к которому относится это ТУ. */
     productTypeId: string;
     /** Правила, извлечённые из PDF воркером. Заполняются после TCWorker. */
@@ -42,4 +40,9 @@ export type DisplayTemplate = {
     includedSlots: number[];
     /** Разделитель между частями обозначения, обычно "-". */
     separator: string;
+};
+
+/** Query для GET `/technical-conditions`. */
+export type TechnicalConditionsQuery = {
+    productTypeId?: string;
 };

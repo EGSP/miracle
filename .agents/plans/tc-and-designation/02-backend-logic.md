@@ -26,29 +26,18 @@
 ### `technicalConditionsService`
 
 ```
-Файл: back/src/databases/technical-conditions.service.ts
+Файл: back/src/databases/technical-condition.db.ts
 БД:   back/data/technical-conditions.json
 
-Методы:
+Методы (базовый CRUD без удаления и без отдельных операций по вложениям):
   create(data)                         → Stored<TechnicalCondition>
   getAll()                             → Stored<TechnicalCondition>[]
   getById(id)                          → Stored<TechnicalCondition> | undefined
   getByProductTypeId(productTypeId)    → Stored<TechnicalCondition>[]
-  update(id, patch)                    → Stored<TechnicalCondition>
-  delete(id)                           → void
-
-  // Работа с вложенными объектами:
-  addRule(tcId, rule)                  → Stored<TechnicalCondition>
-  updateRule(tcId, ruleId, patch)      → Stored<TechnicalCondition>
-  deleteRule(tcId, ruleId)             → Stored<TechnicalCondition>
-
-  setSlots(tcId, slots)                → Stored<TechnicalCondition>
-  updateSlot(tcId, slotIndex, patch)   → Stored<TechnicalCondition>
-
-  addTemplate(tcId, template)          → Stored<TechnicalCondition>
-  updateTemplate(tcId, tplId, patch)   → Stored<TechnicalCondition>
-  deleteTemplate(tcId, tplId)          → Stored<TechnicalCondition>
+  replace(id, data)                    → Stored<TechnicalCondition>   // полный объект TechnicalCondition
 ```
+
+Отдельные эндпоинты на правки `rules` / `designationSlots` / `displayTemplates` не используются: клиент передаёт целиком объект `TechnicalCondition` через `PUT /:id` (см. ниже). Удаление TC и воркеры (`POST …/process`) — вне текущей итерации.
 
 ---
 
@@ -68,17 +57,12 @@
 
 | Метод | Путь | Действие |
 |-------|------|---------|
-| GET | `/` | Список (query: `?productTypeId=`) |
-| POST | `/` | Создать TC (fileId, version, productTypeId) |
+| GET | `/` | Список (опциональный query: `?productTypeId=` — только ТУ этого типа продукции) |
+| POST | `/` | Создать TC: тело — полный объект `TechnicalCondition` (`fileId`, `productTypeId`, `rules`, `designationSlots`, `displayTemplates`) |
 | GET | `/:id` | Получить TC со всеми вложенными данными |
-| PATCH | `/:id` | Обновить метаданные TC |
-| POST | `/:id/process` | Запустить TCWorker (парсинг правил из FileContent) |
-| PUT | `/:id/slots` | Сохранить DesignationSlot[] целиком |
-| PATCH | `/:id/slots/:index` | Обновить один слот (name, ruleIds) |
-| PATCH | `/:id/rules/:ruleId` | Обновить правило (ручная правка content/title) |
-| POST | `/:id/templates` | Добавить DisplayTemplate |
-| PATCH | `/:id/templates/:tplId` | Обновить шаблон |
-| DELETE | `/:id/templates/:tplId` | Удалить шаблон |
+| PUT | `/:id` | Заменить целиком полезную нагрузку TC: тело — полный `TechnicalCondition` (те же поля, что при создании; `id`/`createdAt` задаёт сервер) |
+
+Пока **не** делаем: `DELETE`, `POST …/process` (TCWorker), PATCH на отдельные слоты/правила/шаблоны — всё это сводится к одному `PUT` с полным объектом.
 
 ### `/orders` (расширение существующего)
 

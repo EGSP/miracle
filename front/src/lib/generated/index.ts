@@ -9,4 +9,5 @@ export * from './file.client';
 export * from './order.client';
 export * from './workers.client';
 export * from './product-type.client';
+export * from './technical-condition.client';
 export * from './admin.client';

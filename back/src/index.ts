@@ -16,6 +16,7 @@ import { filesContentRouter } from './routers/file-content.router.js';
 import { workerPool } from './workers/worker-pool.js';
 import { workersRouter } from './routers/workers.router.js';
 import { productTypeRouter } from './routers/product-type.router.js';
+import { technicalConditionRouter } from './routers/technical-condition.router.js';
 import { adminRouter } from './routers/admin.router.js';
 
 const app = express();
@@ -46,6 +47,7 @@ const appDefinition = defineApp([
   orderRouter,
   workersRouter,
   productTypeRouter,
+  technicalConditionRouter,
   adminRouter,
 ] as const);
 

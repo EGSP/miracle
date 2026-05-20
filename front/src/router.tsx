@@ -4,6 +4,7 @@ import FilesPage from './pages/FilesPage';
 import OrdersPage from './pages/OrdersPage';
 import WorkersPage from './pages/WorkersPage';
 import ProductTypesPage from './pages/ProductTypesPage';
+import TechnicalConditionsPage from './pages/TechnicalConditionsPage';
 import { AuthPage, LoginForm, RegisterForm } from './pages/Auth';
 import AdminPage from './pages/admin/AdminPage';
 import { App } from './App';
@@ -66,6 +67,12 @@ const productTypesRoute = createRoute({
   component: ProductTypesPage,
 });
 
+const technicalConditionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/technical-conditions',
+  component: TechnicalConditionsPage,
+});
+
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin',
@@ -78,6 +85,7 @@ const routeTree = rootRoute.addChildren([
   ordersRoute,
   workersRoute,
   productTypesRoute,
+  technicalConditionsRoute,
   adminRoute,
   authRoute.addChildren([ loginRoute, registerRoute]),
 ]);

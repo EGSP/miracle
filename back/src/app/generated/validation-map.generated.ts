@@ -25,6 +25,9 @@ import {
     parseGetProductTypeParams,
     parseUpdateProductTypeParams,
     parseDeleteProductTypeParams,
+    parseGetTechnicalConditionsQuery,
+    parseGetTechnicalConditionParams,
+    parseReplaceTechnicalConditionParams,
 } from './parsers.generated.js';
 
 export const validationMap: Record<string, {
@@ -51,4 +54,7 @@ export const validationMap: Record<string, {
     'GET /product-types/:id': { params: parseGetProductTypeParams },
     'PATCH /product-types/:id': { params: parseUpdateProductTypeParams },
     'DELETE /product-types/:id': { params: parseDeleteProductTypeParams },
+    'GET /technical-conditions': { query: parseGetTechnicalConditionsQuery },
+    'GET /technical-conditions/:id': { params: parseGetTechnicalConditionParams },
+    'PUT /technical-conditions/:id': { params: parseReplaceTechnicalConditionParams },
 };

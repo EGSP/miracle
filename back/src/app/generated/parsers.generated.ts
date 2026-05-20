@@ -699,3 +699,75 @@ export function parseDeleteProductTypeParams(raw: Record<string, unknown>) {
 
     return result;
 }
+
+export function parseGetTechnicalConditionsQuery(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_productTypeId = readSingleValue(raw, "productTypeId");
+    if (raw_productTypeId.missing) {
+        result["productTypeId"] = undefined;
+    } else if (raw_productTypeId.multi) {
+        errors.push({ field: "productTypeId", message: 'expected single value' });
+    } else {
+        if (typeof raw_productTypeId.value !== 'string') {
+            errors.push({ field: "productTypeId", message: 'expected string' });
+        } else {
+            result["productTypeId"] = raw_productTypeId.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
+export function parseGetTechnicalConditionParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        errors.push({ field: "id", message: 'is required' });
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
+    } else {
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
+        } else {
+            result["id"] = raw_id.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
+export function parseReplaceTechnicalConditionParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        errors.push({ field: "id", message: 'is required' });
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
+    } else {
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
+        } else {
+            result["id"] = raw_id.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
