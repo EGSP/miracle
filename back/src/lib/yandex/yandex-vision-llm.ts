@@ -62,7 +62,7 @@ export async function callVisionCompletion(request: VisionRequest): Promise<stri
     const response = await client.responses.create({
         model: `gpt://${folderId}/${VISION_MODEL_SUFFIX}`,
         temperature: request.temperature ?? 0.1,
-        max_output_tokens: request.maxOutputTokens ?? 4000,
+        max_output_tokens: request.maxOutputTokens ?? 10000,
         input,
     });
 
