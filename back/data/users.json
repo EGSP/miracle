@@ -2,10 +2,19 @@
   "items": [
     {
       "login": "tatapstar",
+      "role": "ADMIN",
       "password": "$argon2id$v=19$m=65536,t=3,p=4$wdFOPGoie1iBQIA0sX18cQ$W5t7Ooz1cQVYQRypIO/WAR2/IZMfOlNVPg1oVcyxMm0",
       "id": "4eefb009-9533-4787-95d5-9de0fa05b21e",
       "createdAt": 1777293977640,
       "updatedAt": 1777293977640
+    },
+    {
+      "login": "elf",
+      "password": "$argon2id$v=19$m=65536,t=3,p=4$Lyxz+WigPqgaVi9QzSCJUg$sqUjstJ4R37ZodJvyZzmsz+LZehI3hwOMx+tZA2FDXU",
+      "role": "EMPLOYEE",
+      "id": "d33eec57-bdc8-49fe-8901-ffcbdd89417b",
+      "createdAt": 1779257094610,
+      "updatedAt": 1779257094610
     }
   ]
 }

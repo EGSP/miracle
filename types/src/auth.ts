@@ -1,17 +1,17 @@
 export interface JwtPayload {
 
     /**
-     * User ID
+     * Идентификатор пользователя
      */
     sub: string;
 
     /**
-     * Issued at
+     * Время выпуска токена
      */
     iat?: number;
 
     /**
-     * Expiration time
+     * Время истечения токена
      */
     exp?: number;
 }

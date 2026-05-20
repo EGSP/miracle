@@ -134,7 +134,7 @@ type GuardApi = {
 const GuardApiContext = createContext<GuardApi | null>(null);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Provider
+// Провайдер
 // ─────────────────────────────────────────────────────────────────────────────
 
 type DirtyGuardProviderProps = PropsWithChildren<{

@@ -18,6 +18,7 @@ import { filesContentRouter } from './routers/file-content.router.js';
 import { workerPool } from './workers/worker-pool.js';
 import { workersRouter } from './routers/workers.router.js';
 import { productTypeRouter } from './routers/product-type.router.js';
+import { adminRouter } from './routers/admin.router.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,6 +42,7 @@ const appDefinition = defineApp([
   orderRouter,
   workersRouter,
   productTypeRouter,
+  adminRouter,
 ] as const);
 
 registerApp(app, appDefinition);

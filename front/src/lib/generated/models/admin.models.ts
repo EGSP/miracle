@@ -1,10 +1,11 @@
 /* eslint-disable */
 // Файл сгенерирован @miracle/tools client-generator. Не редактировать вручную.
 
-import { User, type UserRole } from "@miracle/types";
+import type { User, UserRole } from '@miracle/types';
 export type { User, UserRole } from '@miracle/types';
 
-export type GetSessionResponse = {
-    userId: string;
-    role: UserRole;
-}
+export type CreateUserDTO = {
+    login: string;
+    password: string;
+    role?: UserRole;
+};

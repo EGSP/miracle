@@ -9,8 +9,8 @@ import { verifyToken } from '../databases/session.db.js';
 import { TOKENS } from './tokensTools.js';
 
 /**
- * @description Middleware for authentication
- * @returns Route error or void
+ * @description Middleware аутентификации
+ * @returns Ошибка маршрута или void
  */
 export const authMiddleware = mw(async ({ cookies, locals }) => {
     const { accessToken } = TOKENS.extractFromCookies(cookies);

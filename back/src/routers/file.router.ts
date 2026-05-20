@@ -10,9 +10,9 @@ import { filesService, getFilePath, getUploadsDir } from '../databases/file.db.j
 import { fixFileNameEncoding } from '../databases/runners/file.run.js';
 
 /**
- * Type hint for the client generator.
- * The generated client will send this type as FormData (multipart/form-data).
- * At runtime the handler does not use body — the file is available via req.file (multer).
+ * Подсказка типа для генератора клиента.
+ * Сгенерированный клиент отправит этот тип как FormData (multipart/form-data).
+ * В runtime обработчик не использует body — файл доступен через req.file (multer).
  */
 type PatchFileDTO = {
     settings?: FileModel['settings'];
@@ -104,9 +104,9 @@ const getFiles = route.get('/', {
 });
 
 /**
- * Type hint for the client generator.
- * The generated client will send this type as FormData (multipart/form-data).
- * At runtime the handler does not use body — the file is available via req.file (multer).
+ * Подсказка типа для генератора клиента.
+ * Сгенерированный клиент отправит этот тип как FormData (multipart/form-data).
+ * В runtime обработчик не использует body — файл доступен через req.file (multer).
  */
 type RestoreBody = FormData;
 

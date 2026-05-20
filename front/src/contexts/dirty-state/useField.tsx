@@ -14,7 +14,7 @@
  * const title = useField('title', '')
  * <input value={title.value} onChange={title.onInputChange} />
  *
- * // Boolean
+ * // Логическое значение
  * const active = useField('active', false)
  * <Switch checked={active.value} onCheckedChange={active.onChange} />
  *

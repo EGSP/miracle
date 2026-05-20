@@ -249,7 +249,7 @@ function ListBoxItem<T>({ item, index, disabled: itemDisabled, children, classNa
         setActiveIndex(index);
       }}
       onMouseDown={(event) => {
-        // Keep focus on listbox root for aria-activedescendant navigation.
+        // Держим фокус на корне listbox для навигации через aria-activedescendant.
         event.preventDefault();
       }}
       onClick={() => {

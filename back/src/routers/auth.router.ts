@@ -3,6 +3,7 @@ import { defineRouter, route } from "../app/router.js";
 import { sessionsService } from "../databases/session.db.js";
 import { userService } from "../databases/user.db.js";
 import { logger } from "../logger/logger.js";
+import { USER_ROLES } from "@miracle/types";
 import { PASSWORD, signTokens, TOKENS } from "../middlewares/tokensTools.js";
 import type { Response } from "express";
 
@@ -88,7 +89,7 @@ const register = route.post('/register', async ({ body }: { body: RegisterDTO })
         return err.conflict(`Login "${login}" is already taken`);
     }
 
-    await userService.create({ login, password });
+    await userService.create({ login, password, role: USER_ROLES.EMPLOYEE });
     return { status: 'success' } satisfies RegisterResponse;
 });
 

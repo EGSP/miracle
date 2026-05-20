@@ -425,10 +425,10 @@ function uniqueExternalTypeImports(externalTypeImports: ExternalTypeImportModel[
     });
 }
 
-// When ts-morph prints a type that is already imported in the current scope it omits the
-// import("path").TypeName prefix and returns just the bare name.  normalizeGeneratedTypeText
-// therefore finds nothing to replace and externalTypeImports stays empty.  This helper fills
-// that gap by scanning the source file's own import declarations.
+// Когда ts-morph печатает тип, уже импортированный в текущей области, он опускает
+// префикс import("path").TypeName и возвращает только имя. normalizeGeneratedTypeText
+// тогда не находит что заменить, и externalTypeImports остаётся пустым. Этот хелпер
+// заполняет пробел, сканируя import-декларации исходного файла.
 function collectExternalImportsFromSourceFile(
     typeText: string,
     sourceFile: SourceFile,

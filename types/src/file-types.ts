@@ -16,23 +16,23 @@ export const EXTENSIONS_BY_DOMAIN: Record<FileDomain, readonly string[]> = {
  * Ключи хранятся в нижнем регистре.
  */
 export const MIME_BY_EXTENSION: Record<string, string> = {
-    // VISUAL
+    // Визуальные
     jpg: 'image/jpeg',
     jpeg: 'image/jpeg',
     png: 'image/png',
     pdf: 'application/pdf',
-    // DOCUMENT
+    // Документы
     doc: 'application/msword',
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     odt: 'application/vnd.oasis.opendocument.text',
     rtf: 'application/rtf',
-    // SPREADSHEET
+    // Таблицы
     xls: 'application/vnd.ms-excel',
     xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ods: 'application/vnd.oasis.opendocument.spreadsheet',
     csv: 'text/csv',
     tsv: 'text/tab-separated-values',
-    // TEXT
+    // Текстовые
     md: 'text/markdown',
     txt: 'text/plain',
 };

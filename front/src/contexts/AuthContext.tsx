@@ -1,12 +1,13 @@
 import { useGetCookieSession } from "@/lib/queries/sessions.query";
 import { useAuthStore } from "@/lib/stores/auth.store";
-import { useQueryClient } from "@tanstack/react-query";
+import type { UserRole } from "@miracle/types";
 import { createContext, useContext, useEffect, useState } from "react";
 
 interface AuthContextType {
     isAuthenticated: boolean;
     userId: string | undefined;
-    activate(userId: string): void;
+    role: UserRole | undefined;
+    activate(userId: string, role: UserRole): void;
     deactivate(): void;
 }
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,25 +18,28 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
     const { data: session, error } = useGetCookieSession();
 
     const [userId, setUserId] = useState<string | undefined>(undefined);
+    const [role, setRole] = useState<UserRole | undefined>(undefined);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
         if (session) {
-            activate(session.userId);
+            activate(session.userId, session.role);
         } else {
             deactivate();
         }
     }, [session, error]);
 
-    const activate = (userId: string) => {
+    const activate = (userId: string, role: UserRole) => {
         setIsAuthenticated(true);
         setUserId(userId);
+        setRole(role);
     }
 
     const deactivate = () => {
         authStore.setStatus(undefined);
         setIsAuthenticated(false);
         setUserId(undefined);
+        setRole(undefined);
     }
 
     return (
@@ -43,6 +47,7 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
             {
                 isAuthenticated,
                 userId,
+                role,
                 activate,
                 deactivate,
             }}>

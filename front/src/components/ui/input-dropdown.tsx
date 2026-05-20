@@ -333,7 +333,7 @@ function InputDropdownList<T>({
       id={listId}
       role="listbox"
       onMouseDown={(event) => {
-        // Keep focus on Selected while choosing an option.
+        // Сохраняем фокус на выбранном элементе при выборе опции.
         event.preventDefault()
         onMouseDown?.(event)
       }}

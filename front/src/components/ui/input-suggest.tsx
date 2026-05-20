@@ -225,7 +225,7 @@ function InputSuggest<T>({
                 role="option"
                 aria-selected={isActive}
                 onMouseDown={(event) => {
-                  // Prevent input blur before click handler runs.
+                  // Не даём полю потерять фокус до срабатывания обработчика клика.
                   event.preventDefault()
                 }}
                 onMouseEnter={() => {

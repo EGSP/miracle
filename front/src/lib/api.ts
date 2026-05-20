@@ -59,7 +59,7 @@ export default api;
 
 
 
-/// REFRESH TOKEN INTERCEPTOR
+/// Перехватчик обновления refresh-токена
 
 // Этот promise используется для запуска refreshTokenPair в единственном экземпляре.
 let sharedRefreshPromise: Promise<RefreshTokensResponse> | null = null;

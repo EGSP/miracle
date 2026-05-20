@@ -1,5 +1,5 @@
-// Tailwind v4: configuration is now CSS-based (see src/index.css @theme block).
-// This file is kept for shadcn CLI compatibility.
+// Tailwind v4: конфигурация в CSS (см. блок @theme в src/index.css).
+// Файл оставлен для совместимости с shadcn CLI.
 import type { Config } from 'tailwindcss';
 
 const config: Config = {

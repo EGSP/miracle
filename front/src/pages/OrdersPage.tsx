@@ -111,7 +111,7 @@ function OrdersPageContent() {
         void navigate({ search: (prev) => ({ ...prev, orderId: next?.id }) });
     }, [isDirtyAnywhere, navigate]);
 
-    // Sync URL param → selection when orders load (без лишнего setState при том же снимке сущности)
+    // Синхронизация URL-параметра с выбором при загрузке заказов (без лишнего setState при том же снимке сущности)
     useEffect(() => {
         if (!orderIdParam || !orders) return;
         const match = orders.find((o) => o.id === orderIdParam);

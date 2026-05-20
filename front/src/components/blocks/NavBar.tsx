@@ -1,13 +1,15 @@
 import { Link } from '@tanstack/react-router';
-import { FileIcon, ListOrdered, House, Tags } from 'lucide-react';
+import { FileIcon, ListOrdered, House, Settings, Tags } from 'lucide-react';
 import { Text } from '@miracle/aramid';
 import { WorkerIcon } from '@/components/blocks/WorkerIcon';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useUserIsAdmin } from '@/lib/hooks/useUserIsAdmin';
 
 const navLinkClass = 'flex items-center gap-1.5 px-2 py-1 transition-colors hover:bg-foreground/5 [&.active]:bg-foreground/5 [&.active]:font-medium';
 
 export function NavBar() {
     const { isAuthenticated } = useAuthContext();
+    const isAdmin = useUserIsAdmin();
     if (!isAuthenticated) return null;
 
     return (
@@ -32,6 +34,12 @@ export function NavBar() {
                 <Tags className="size-3.5 shrink-0" />
                 <Text.Label as="span">Типы продукции</Text.Label>
             </Link>
+            {isAdmin && (
+                <Link to="/admin" className={navLinkClass}>
+                    <Settings className="size-3.5 shrink-0" />
+                    <Text.Label as="span">Администрирование</Text.Label>
+                </Link>
+            )}
         </nav>
     );
 }

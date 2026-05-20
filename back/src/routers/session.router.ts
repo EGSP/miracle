@@ -1,9 +1,11 @@
-import { Session, User } from "@miracle/types";
+import { User, type UserRole } from "@miracle/types";
 import { defineRouter, route } from "../app/index.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { resolveUserRole } from "../lib/user-role.util.js";
 
 type GetSessionResponse = {
     userId: string;
+    role: UserRole;
 }
 
 const getCookieSession =
@@ -13,7 +15,10 @@ const getCookieSession =
             throw new Error('Authenticated user is missing in session context');
         }
 
-        return { userId: user.id } satisfies GetSessionResponse;
+        return {
+            userId: user.id,
+            role: resolveUserRole(user),
+        } satisfies GetSessionResponse;
     });
 
 

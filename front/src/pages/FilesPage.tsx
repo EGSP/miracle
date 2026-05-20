@@ -87,14 +87,14 @@ export default function FilesPage() {
         });
     };
 
-    // Sync URL param → selection when files load
+    // Синхронизация URL-параметра с выбором при загрузке файлов
     useEffect(() => {
         if (!fileIdParam || !files) return;
         const match = files.find((f) => f.id === fileIdParam);
         if (match) setSelectedFileInList(match);
     }, [fileIdParam, files]);
 
-    // Clear selection if selected file disappears from filtered list
+    // Сброс выбора, если выбранный файл исчез из отфильтрованного списка
     useEffect(() => {
         if (!selectedFileInList) return;
         if (!filteredFiles.some((file) => file.id === selectedFileInList.id)) {

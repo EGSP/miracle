@@ -5,6 +5,7 @@ import OrdersPage from './pages/OrdersPage';
 import WorkersPage from './pages/WorkersPage';
 import ProductTypesPage from './pages/ProductTypesPage';
 import { AuthPage, LoginForm, RegisterForm } from './pages/Auth';
+import AdminPage from './pages/admin/AdminPage';
 import { App } from './App';
 
 const rootRoute = createRootRoute({
@@ -65,12 +66,19 @@ const productTypesRoute = createRoute({
   component: ProductTypesPage,
 });
 
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: AdminPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   filesRoute,
   ordersRoute,
   workersRoute,
   productTypesRoute,
+  adminRoute,
   authRoute.addChildren([ loginRoute, registerRoute]),
 ]);
 

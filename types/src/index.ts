@@ -1,5 +1,6 @@
 export * from './auth.js';
 export * from './session.js';
+export * from './user-role.js';
 export * from './user.js';
 export * from './file.js';
 export * from './file-types.js';

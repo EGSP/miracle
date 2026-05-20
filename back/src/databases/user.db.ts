@@ -1,6 +1,8 @@
 import type { User } from '@miracle/types';
+import { USER_ROLES } from '@miracle/types';
 import { JsonCollection, registerDb } from './db.js';
 import { PASSWORD } from '../middlewares/tokensTools.js';
+import { resolveUserRole } from '../lib/user-role.util.js';
 
 export const userDb = registerDb('users', await JsonCollection.create<UserInternal>('users'));
 
@@ -15,6 +17,14 @@ type UserInternal = User & {
 }
 
 
+function toPublicUser(user: UserInternal): User {
+    const { password: _password, ...publicUser } = user;
+    return {
+        ...publicUser,
+        role: resolveUserRole(publicUser),
+    };
+}
+
 export const userService = {
     create: async (user: UserInternal): Promise<User> => {
         if(!user.login)
@@ -27,17 +37,29 @@ export const userService = {
             throw new Error('Password is required');
 
         const hashedPassword = await PASSWORD.hash(user.password);
-        return userDb.create({ ...user, password: hashedPassword });
+        const created = await userDb.create({
+            ...user,
+            role: user.role ?? USER_ROLES.EMPLOYEE,
+            password: hashedPassword,
+        });
+
+        return toPublicUser(created);
+    },
+    getAll: async (): Promise<User[]> => {
+        return userDb.ref().map(toPublicUser);
     },
     get: async (id:string): Promise<User | undefined> => {
-        return userDb.getById(id);
+        const user = await userDb.getById(id);
+        return user ? toPublicUser(user) : undefined;
     },
     getInternal: async (id:string): Promise<UserInternal | undefined> => {
         return userDb.getById(id);
     },
     getByLogin: async (login:string): Promise<User | undefined> => {
-        return userDb.ref()
-            .filter(user => user.login === login)[0];
+        const user = userDb.ref()
+            .filter(item => item.login === login)[0];
+
+        return user ? toPublicUser(user) : undefined;
     },
     verifyPassword: async (user: User, password: string): Promise<boolean> => {
         if(!user.id)

@@ -108,11 +108,11 @@ function ProfileForm() {
 ### Boolean и другие типы
 
 ```tsx
-// Boolean — onChange, не onInputChange
+// Логическое значение — onChange, не onInputChange
 const active = useField<boolean>('active', false)
 <Switch checked={active.value} onCheckedChange={active.onChange} />
 
-// Select
+// Выпадающий список
 const status = useField<'draft' | 'published'>('status', 'draft')
 <Select value={status.value} onValueChange={status.onChange} />
 
