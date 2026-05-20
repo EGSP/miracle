@@ -22,6 +22,9 @@ import {
     parseGetWorkersQuery,
     parseApplyWorkerDataParams,
     parseDeleteWorkerParams,
+    parseGetProductTypeParams,
+    parseUpdateProductTypeParams,
+    parseDeleteProductTypeParams,
 } from './parsers.generated.js';
 
 export const validationMap: Record<string, {
@@ -45,4 +48,7 @@ export const validationMap: Record<string, {
     'GET /workers': { query: parseGetWorkersQuery },
     'POST /workers/:id/apply-worker-data': { params: parseApplyWorkerDataParams },
     'DELETE /workers/:id': { params: parseDeleteWorkerParams },
+    'GET /product-types/:id': { params: parseGetProductTypeParams },
+    'PATCH /product-types/:id': { params: parseUpdateProductTypeParams },
+    'DELETE /product-types/:id': { params: parseDeleteProductTypeParams },
 };

@@ -8,3 +8,4 @@ export * from './file-content.client';
 export * from './file.client';
 export * from './order.client';
 export * from './workers.client';
+export * from './product-type.client';

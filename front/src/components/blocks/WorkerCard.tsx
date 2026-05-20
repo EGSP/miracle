@@ -38,6 +38,12 @@ function getWorkerLabel(type: WorkerData['type']): string {
             return 'Анализ заказа';
         case 'llm-vision-worker':
             return 'LLM Vision извлечение';
+        case 'tc-processing-worker':
+            return 'Обработка ТУ';
+        case 'designation-worker':
+            return 'Условное обозначение';
+        default:
+            return type;
     }
 }
 

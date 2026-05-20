@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage';
 import FilesPage from './pages/FilesPage';
 import OrdersPage from './pages/OrdersPage';
 import WorkersPage from './pages/WorkersPage';
+import ProductTypesPage from './pages/ProductTypesPage';
 import { AuthPage, LoginForm, RegisterForm } from './pages/Auth';
 import { App } from './App';
 
@@ -58,11 +59,18 @@ const workersRoute = createRoute({
   component: WorkersPage,
 });
 
+const productTypesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/product-types',
+  component: ProductTypesPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   filesRoute,
   ordersRoute,
   workersRoute,
+  productTypesRoute,
   authRoute.addChildren([ loginRoute, registerRoute]),
 ]);
 

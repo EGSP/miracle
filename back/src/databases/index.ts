@@ -2,6 +2,7 @@ import './user.db.js';
 import './session.db.js';
 import './file.db.js';
 import './workers.db.js';
+import './product-type.db.js';
 
 export { db } from './db.js';
 export type {

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { FileIcon, ListOrdered, House } from 'lucide-react';
+import { FileIcon, ListOrdered, House, Tags } from 'lucide-react';
 import { Text } from '@miracle/aramid';
 import { WorkerIcon } from '@/components/blocks/WorkerIcon';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -27,6 +27,10 @@ export function NavBar() {
             <Link to="/workers" className={navLinkClass}>
                 <WorkerIcon className="size-3.5 shrink-0" />
                 <Text.Label as="span">Воркеры</Text.Label>
+            </Link>
+            <Link to="/product-types" className={navLinkClass}>
+                <Tags className="size-3.5 shrink-0" />
+                <Text.Label as="span">Типы продукции</Text.Label>
             </Link>
         </nav>
     );
