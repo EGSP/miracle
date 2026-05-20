@@ -52,7 +52,13 @@
       "Bash(pm2 delete *)",
       "Bash(pm2 start *)",
       "Bash(pm2 save *)",
-      "Bash(timeout 2)"
+      "Bash(timeout 2)",
+      "Bash(node -e \"const {OpenAI} = require\\('openai'\\); const r = new OpenAI\\({apiKey:'x'}\\); console.log\\(typeof r.responses.retrieve\\);\")",
+      "Bash(node -e \"const pkg = require\\('./node_modules/openai/package.json'\\); console.log\\(pkg.version\\);\")",
+      "Bash(node -e \"console.log\\(require\\('openai/package.json'\\).version\\)\")",
+      "Bash(findstr version *)",
+      "Bash(findstr /C:\"\\\\\"version\\\\\"\" \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\node_modules\\\\openai\\\\package.json\")",
+      "Bash(findstr /n \"output_text\" \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\node_modules\\\\openai\\\\resources\\\\responses\\\\responses.d.ts\")"
     ]
   }
 }

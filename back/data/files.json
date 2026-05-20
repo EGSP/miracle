@@ -172,9 +172,10 @@
       "bytes": 567441,
       "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
       "createdAt": 1778572095869,
-      "updatedAt": 1779252427626,
+      "updatedAt": 1779289587530,
       "settings": {
-        "complexLayout": true
+        "complexLayout": true,
+        "isTechnicalCondition": false
       }
     },
     {

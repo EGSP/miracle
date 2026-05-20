@@ -76,30 +76,45 @@ export class LlmVisionWorker extends BaseWorker {
                 throw new Error('Воркер не инициализирован: ожидается вызов mount() перед run()');
             }
 
-            const images = await this.renderPages();
+            if (!this.data.cloudOperationId) {
+                const images = await this.renderPages();
+                const taskId = await yandexLlm.submitVisionCompletion({
+                    instructions: SYSTEM_PROMPT,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: [
+                                ...images.map((p) => ({
+                                    type: 'input_image' as const,
+                                    image_url: p.dataUrl,
+                                    detail: 'auto' as const,
+                                })),
+                                { type: 'input_text' as const, text: 'Извлеки содержимое документа.' },
+                            ],
+                        },
+                    ],
+                });
+                const updatedWD = await workersService.update(this.data.id, { cloudOperationId: taskId });
+                this.data = updatedWD as Stored<LlmVisionWorkerData>;
+            }
 
-            // Responses API синхронный — ответ возвращается сразу, polling не нужен
-            const result = await yandexLlm.callVisionCompletion({
-                instructions: SYSTEM_PROMPT,
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            ...images.map((p) => ({
-                                type: 'input_image' as const,
-                                image_url: p.dataUrl,
-                                detail: 'auto' as const,
-                            })),
-                            { type: 'input_text' as const, text: 'Извлеки содержимое документа.' },
-                        ],
-                    },
-                ],
-            });
+            while (true) {
+                if (this.shouldStop) {
+                    await this.markStopped();
+                    return;
+                }
 
-            const updatedWD = await workersService.update(this.data.id, { operationResult: result });
-            this.data = updatedWD as Stored<LlmVisionWorkerData>;
+                const poll = await yandexLlm.pollVisionCompletion(this.data.cloudOperationId!);
 
-            await this.markSuccess();
+                if (poll.done) {
+                    const updatedWD = await workersService.update(this.data.id!, { operationResult: poll.result });
+                    this.data = updatedWD as Stored<LlmVisionWorkerData>;
+                    await this.markSuccess();
+                    break;
+                }
+
+                await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+            }
         } catch (error) {
             const message = LlmVisionWorker.extractErrorMessage(error);
             logger.error(`[LlmVisionWorker] Ошибка обработки файла "${this.data.fileId}": ${message}`);
@@ -171,6 +186,12 @@ export class LlmVisionWorker extends BaseWorker {
     private async markSuccess(): Promise<void> {
         if (!this.data.id) return;
         const updatedWD = await workersService.update(this.data.id, { status: WorkerStatus.Success });
+        this.data = updatedWD as Stored<LlmVisionWorkerData>;
+    }
+
+    private async markStopped(): Promise<void> {
+        if (!this.data.id) return;
+        const updatedWD = await workersService.update(this.data.id, { status: WorkerStatus.Stopped });
         this.data = updatedWD as Stored<LlmVisionWorkerData>;
     }
 }
