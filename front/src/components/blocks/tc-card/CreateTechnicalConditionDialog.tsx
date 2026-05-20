@@ -4,6 +4,7 @@ import { Stack, Text } from '@miracle/aramid';
 import type { Stored, ProductType } from '@miracle/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FilePickerDropdown } from '@/components/blocks/file-picker/FilePickerDropdown';
 import {
     Dialog,
     DialogContent,
@@ -16,40 +17,30 @@ import { InlineMutationNotification } from '@/components/ui/inline-mutation-noti
 import {
     DirtyGuardProvider,
     useGuardActions,
-    useGuardState,
 } from '@/contexts/dirty-state/DirtyGuardContext';
 import { useField } from '@/contexts/dirty-state/useField';
+import { useGetFiles } from '@/lib/queries/file.query';
 import { useProductTypes } from '@/lib/queries/product-type.query';
 import { useCreateTechnicalCondition } from '@/lib/queries/technical-condition.query';
 
 function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) {
     const createMutation = useCreateTechnicalCondition();
-    const { isDirtyAnywhere } = useGuardState();
     const { commitAll, resetAll } = useGuardActions();
-    const { data: productTypes, isLoading: isProductTypesLoading } = useProductTypes();
+    const { data: productTypes = [], isLoading: isProductTypesLoading } = useProductTypes();
+    const { data: files = [], isLoading: isFilesLoading } = useGetFiles({ includeMeta: true });
 
-    const fileId = useField('new-tc-file-id', '');
+    const fileId = useField<string | undefined>('new-tc-file-id', undefined);
     const productTypeId = useField<string | undefined>('new-tc-product-type-id', undefined);
 
     const selectedProductType = useMemo(
-        () => productTypes?.find((pt) => pt.id === productTypeId.value) ?? null,
+        () => productTypes.find((pt) => pt.id === productTypeId.value) ?? null,
         [productTypes, productTypeId.value],
     );
 
-    const canCreate =
-        Boolean(fileId.value.trim())
-        && Boolean(productTypeId.value)
-        && !createMutation.isPending;
-
     const handleCreate = () => {
-        const trimmedFileId = fileId.value.trim();
-        if (!trimmedFileId || !productTypeId.value) {
-            return;
-        }
-
         createMutation.mutate(
             {
-                fileId: trimmedFileId,
+                fileId: fileId.value,
                 productTypeId: productTypeId.value,
                 rules: [],
                 designationSlots: [],
@@ -73,20 +64,19 @@ function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) 
         <>
             <Stack gap={3}>
                 <Text.Helper as="p">
-                    Выберите тип продукции и укажите идентификатор уже загруженного файла PDF ТУ.
-                    Правила, слоты и шаблоны можно заполнить в карточке после создания.
+                    Все поля необязательны. Файл и тип продукции можно задать сейчас или позже в карточке ТУ.
                 </Text.Helper>
                 <Stack gap={1}>
                     <Text.Label as="span">Тип продукции</Text.Label>
                     <Input.Dropdown<Stored<ProductType>>
-                        items={productTypes ?? []}
+                        items={productTypes}
                         value={selectedProductType}
                         onChange={(next) => productTypeId.onChange(next?.id)}
                         getItemKey={(item) => item.id}
                         disabled={isProductTypesLoading || createMutation.isPending}
                         renderSelectedItem={(item) => (
                             <Text as="span" compact>
-                                {item?.name ?? 'Выберите тип продукции'}
+                                {item?.name ?? 'Тип не выбран'}
                             </Text>
                         )}
                         renderListItem={(item) => (
@@ -100,13 +90,17 @@ function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) 
                     </Input.Dropdown>
                 </Stack>
                 <Stack gap={1}>
-                    <Text.Label as="span">fileId</Text.Label>
-                    <Input
-                        value={fileId.value}
-                        onChange={fileId.onInputChange}
-                        disabled={createMutation.isPending}
-                        aria-label="Идентификатор файла ТУ"
-                    />
+                    <Text.Label as="span">Файл ТУ</Text.Label>
+                    {isFilesLoading ? (
+                        <Text.Label as="p">Загрузка файлов…</Text.Label>
+                    ) : (
+                        <FilePickerDropdown
+                            files={files}
+                            value={fileId.value}
+                            onChange={(nextId) => fileId.onChange(nextId)}
+                            disabled={createMutation.isPending}
+                        />
+                    )}
                 </Stack>
                 <InlineMutationNotification mutation={createMutation} />
             </Stack>
@@ -120,7 +114,7 @@ function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) 
                 </Button>
                 <Button
                     onClick={handleCreate}
-                    disabled={!isDirtyAnywhere || !canCreate}
+                    disabled={createMutation.isPending}
                 >
                     {createMutation.isPending ? 'Создание...' : 'Создать ТУ'}
                 </Button>

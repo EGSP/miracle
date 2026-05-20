@@ -15,9 +15,9 @@ export function TechnicalConditionCardRulesSection() {
     const tc = technicalCondition;
     const [parseError, setParseError] = useState<string | null>(null);
 
-    const rulesJson = useField(`tc-${tc.id}-rules-json`, formatRulesJson(tc.rules));
+    const rulesJson = useField(`tc-${tc.id}-rules-json`, formatRulesJson(tc.rules ?? []));
 
-    useContribute(contribute, `tc-${tc.id}-rules`, (draft: Stored<TechnicalCondition>) => {
+    useContribute(contribute, `tc-${tc.id}-rules`, (draft): Stored<TechnicalCondition> | undefined => {
         try {
             const parsed = JSON.parse(rulesJson.value) as unknown;
             if (!Array.isArray(parsed)) {

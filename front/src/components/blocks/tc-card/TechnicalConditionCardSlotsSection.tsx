@@ -15,9 +15,9 @@ export function TechnicalConditionCardSlotsSection() {
     const tc = technicalCondition;
     const [parseError, setParseError] = useState<string | null>(null);
 
-    const slotsJson = useField(`tc-${tc.id}-slots-json`, formatSlotsJson(tc.designationSlots));
+    const slotsJson = useField(`tc-${tc.id}-slots-json`, formatSlotsJson(tc.designationSlots ?? []));
 
-    useContribute(contribute, `tc-${tc.id}-slots`, (draft: Stored<TechnicalCondition>) => {
+    useContribute(contribute, `tc-${tc.id}-slots`, (draft): Stored<TechnicalCondition> | undefined => {
         try {
             const parsed = JSON.parse(slotsJson.value) as unknown;
             if (!Array.isArray(parsed)) {

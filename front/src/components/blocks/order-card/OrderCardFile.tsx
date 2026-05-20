@@ -1,31 +1,9 @@
-import * as React from 'react';
-import { IconIndicator, Stack, Text } from '@miracle/aramid';
-import type { FileWithMeta } from '@miracle/types';
-import { Input } from '@/components/ui/input';
+import { Stack, Text } from '@miracle/aramid';
 import { FileCard } from '@/components/blocks/FileCard';
+import { FilePickerDropdown } from '@/components/blocks/file-picker/FilePickerDropdown';
 import { useField } from '@/contexts/dirty-state/useField';
 import { useContribute } from '@/contexts/draft-api/DraftContext';
 import { useOrderCardContext } from './OrderCard';
-
-function getFileIndicator(file: FileWithMeta | null): {
-    kind: 'succeeded' | 'failed' | 'unknown';
-    label: string;
-} {
-    if (!file) return { kind: 'unknown', label: 'Файл не прикреплен' };
-    if (file.meta?.available === true) return { kind: 'succeeded', label: 'Файл доступен' };
-    if (file.meta?.available === false) return { kind: 'failed', label: 'Файл недоступен' };
-    return { kind: 'unknown', label: 'Статус файла неизвестен' };
-}
-
-function FileOption({ file }: { file: FileWithMeta | null }) {
-    const indicator = getFileIndicator(file);
-    return (
-        <Stack orientation="horizontal" gap={2} className="items-center">
-            <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />
-            {file && <Text as="span" compact>{file.name}</Text>}
-        </Stack>
-    );
-}
 
 export function OrderCardFile() {
     const { order, files, contribute } = useOrderCardContext();
@@ -37,10 +15,7 @@ export function OrderCardFile() {
         fileId: fileIdField.value ?? null,
     }));
 
-    const selectedFile = React.useMemo(
-        () => files.find((f) => f.id === fileIdField.value) ?? null,
-        [files, fileIdField.value],
-    );
+    const selectedFile = files.find((f) => f.id === fileIdField.value) ?? null;
 
     return (
         <Stack gap={2}>
@@ -53,24 +28,15 @@ export function OrderCardFile() {
                         </Text>
                     )}
                 </Stack>
-                <Input.Dropdown<FileWithMeta>
-                    items={files}
-                    value={selectedFile}
-                    onChange={(nextFile) => {
-                        if (nextFile?.id === fileIdField.value) return;
-                        fileIdField.onChange(nextFile?.id);
-                    }}
-                    getItemKey={(item) => item.id}
-                    renderSelectedItem={(item) => <FileOption file={item} />}
-                    renderListItem={(item) => <FileOption file={item} />}
-                >
-                    <Input.Dropdown.Selected />
-                    <Input.Dropdown.List />
-                </Input.Dropdown>
+                <FilePickerDropdown
+                    files={files}
+                    value={fileIdField.value}
+                    onChange={(nextId) => fileIdField.onChange(nextId)}
+                />
             </Stack>
 
             {selectedFile?.meta?.available === true && (
-                <FileCard key={selectedFile.id} file={selectedFile} readonly/>
+                <FileCard key={selectedFile.id} file={selectedFile} readonly />
             )}
         </Stack>
     );

@@ -58,9 +58,9 @@
 | Метод | Путь | Действие |
 |-------|------|---------|
 | GET | `/` | Список (опциональный query: `?productTypeId=` — только ТУ этого типа продукции) |
-| POST | `/` | Создать TC: тело — полный объект `TechnicalCondition` (`fileId`, `productTypeId`, `rules`, `designationSlots`, `displayTemplates`) |
-| GET | `/:id` | Получить TC со всеми вложенными данными |
-| PUT | `/:id` | Заменить целиком полезную нагрузку TC: тело — полный `TechnicalCondition` (те же поля, что при создании; `id`/`createdAt` задаёт сервер) |
+| POST | `/` | Создать TC: тело — `TechnicalCondition` (все поля опциональны). Ответ: `Stored<TechnicalCondition>` |
+| GET | `/:id` | Получить TC. Ответ: `Stored<TechnicalCondition>` |
+| PUT | `/:id` | Заменить целиком полезную нагрузку TC. Ответ: `Stored<TechnicalCondition>`. При `productTypeId` сервер записывает `lastProductTypeName` из справочника типов; без id — сохраняет переданное или прежнее имя |
 
 Пока **не** делаем: `DELETE`, `POST …/process` (TCWorker), PATCH на отдельные слоты/правила/шаблоны — всё это сводится к одному `PUT` с полным объектом.
 

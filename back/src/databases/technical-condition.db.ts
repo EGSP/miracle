@@ -1,4 +1,5 @@
 import type { Stored, TechnicalCondition } from '@miracle/types';
+import { prepareTechnicalConditionPayload } from '../lib/technical-condition/prepare-payload.js';
 import { JsonCollection, registerDb } from './db.js';
 
 const technicalConditionsDb = registerDb(
@@ -13,7 +14,8 @@ declare module './db.js' {
 }
 
 export const technicalConditionsService = {
-    create: async (data: TechnicalCondition): Promise<Stored<TechnicalCondition>> => {
+    create: async (body: TechnicalCondition): Promise<Stored<TechnicalCondition>> => {
+        const data = await prepareTechnicalConditionPayload(body);
         return technicalConditionsDb.create(data);
     },
 
@@ -27,25 +29,21 @@ export const technicalConditionsService = {
     },
 
     getByProductTypeId: (productTypeId: string): Stored<TechnicalCondition>[] => {
-        return technicalConditionsDb.list().filter((row) => row.productTypeId === productTypeId);
+        return technicalConditionsDb
+            .list()
+            .filter((row) => row.productTypeId === productTypeId);
     },
 
     /**
      * Полная замена полезной нагрузки TC (без смены id и createdAt).
-     * Тело запроса — объект {@link TechnicalCondition} целиком.
      */
-    replace: async (id: string, data: TechnicalCondition): Promise<Stored<TechnicalCondition>> => {
+    replace: async (id: string, body: TechnicalCondition): Promise<Stored<TechnicalCondition>> => {
         const existing = await technicalConditionsDb.getById(id);
         if (!existing) {
             throw new Error('Техническое условие не найдено');
         }
-        const updated = await technicalConditionsDb.update(id, {
-            fileId: data.fileId,
-            productTypeId: data.productTypeId,
-            rules: data.rules,
-            designationSlots: data.designationSlots,
-            displayTemplates: data.displayTemplates,
-        });
+        const data = await prepareTechnicalConditionPayload(body, existing);
+        const updated = await technicalConditionsDb.update(id, data);
         if (!updated) {
             throw new Error('Техническое условие не найдено');
         }

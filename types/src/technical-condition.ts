@@ -1,14 +1,20 @@
 export type TechnicalCondition = {
     /** Ссылка на загруженный PDF ТУ — из него берётся FileContent. */
-    fileId: string;
+    fileId?: string;
     /** Тип продукции, к которому относится это ТУ. */
-    productTypeId: string;
+    productTypeId?: string;
+    /**
+     * Название типа продукции на момент последнего сохранения с указанным `productTypeId`.
+     * Нужно, чтобы понимать, какой тип продукции был привязан ранее, если id снят или запись типа удалена.
+     * При сохранении с `productTypeId` заполняется на сервере; без id сохраняется переданное или прежнее значение.
+     */
+    lastProductTypeName?: string;
     /** Правила, извлечённые из PDF воркером. Заполняются после TCWorker. */
-    rules: TechnicalConditionRule[];
+    rules?: TechnicalConditionRule[];
     /** Параметры условного обозначения. Определяет человек, ссылается на rules. */
-    designationSlots: DesignationSlot[];
+    designationSlots?: DesignationSlot[];
     /** Шаблоны отображения обозначения (полное, краткое и др.). */
-    displayTemplates: DisplayTemplate[];
+    displayTemplates?: DisplayTemplate[];
 };
 
 export type TechnicalConditionRule = {

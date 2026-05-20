@@ -37,9 +37,10 @@ function TechnicalConditionCardProvider({
         const body: TechnicalCondition = {
             fileId: merged.fileId,
             productTypeId: merged.productTypeId,
-            rules: merged.rules,
-            designationSlots: merged.designationSlots,
-            displayTemplates: merged.displayTemplates,
+            lastProductTypeName: merged.lastProductTypeName,
+            rules: merged.rules ?? [],
+            designationSlots: merged.designationSlots ?? [],
+            displayTemplates: merged.displayTemplates ?? [],
         };
 
         mutation.mutate(body, {

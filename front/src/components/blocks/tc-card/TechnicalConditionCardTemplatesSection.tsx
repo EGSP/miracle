@@ -15,9 +15,9 @@ export function TechnicalConditionCardTemplatesSection() {
     const tc = technicalCondition;
     const [parseError, setParseError] = useState<string | null>(null);
 
-    const templatesJson = useField(`tc-${tc.id}-templates-json`, formatTemplatesJson(tc.displayTemplates));
+    const templatesJson = useField(`tc-${tc.id}-templates-json`, formatTemplatesJson(tc.displayTemplates ?? []));
 
-    useContribute(contribute, `tc-${tc.id}-templates`, (draft: Stored<TechnicalCondition>) => {
+    useContribute(contribute, `tc-${tc.id}-templates`, (draft): Stored<TechnicalCondition> | undefined => {
         try {
             const parsed = JSON.parse(templatesJson.value) as unknown;
             if (!Array.isArray(parsed)) {

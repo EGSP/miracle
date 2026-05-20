@@ -17,21 +17,7 @@ const getTechnicalConditions = route.get('/', {
 
 const createTechnicalCondition = route.post('/', {
     handler: async ({ body }: { body: TechnicalCondition }) => {
-        if (!body.fileId?.trim()) {
-            return err.validation('fileId is required');
-        }
-        if (!body.productTypeId?.trim()) {
-            return err.validation('productTypeId is required');
-        }
-
-        const created = await technicalConditionsService.create({
-            fileId: body.fileId.trim(),
-            productTypeId: body.productTypeId.trim(),
-            rules: body.rules ?? [],
-            designationSlots: body.designationSlots ?? [],
-            displayTemplates: body.displayTemplates ?? [],
-        });
-
+        const created = await technicalConditionsService.create(body);
         return created satisfies Stored<TechnicalCondition>;
     },
 });
@@ -61,21 +47,8 @@ const replaceTechnicalCondition = route.put('/:id', {
             return err.notFound('Technical condition not found');
         }
 
-        if (!body.fileId?.trim()) {
-            return err.validation('fileId is required');
-        }
-        if (!body.productTypeId?.trim()) {
-            return err.validation('productTypeId is required');
-        }
-
         try {
-            const updated = await technicalConditionsService.replace(params.id, {
-                fileId: body.fileId.trim(),
-                productTypeId: body.productTypeId.trim(),
-                rules: body.rules ?? [],
-                designationSlots: body.designationSlots ?? [],
-                displayTemplates: body.displayTemplates ?? [],
-            });
+            const updated = await technicalConditionsService.replace(params.id, body);
             return updated satisfies Stored<TechnicalCondition>;
         } catch {
             return err.notFound('Technical condition not found');

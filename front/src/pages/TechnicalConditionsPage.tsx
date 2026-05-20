@@ -44,12 +44,21 @@ export default function TechnicalConditionsPage() {
                     {technicalConditions && technicalConditions.length > 0 && (
                         <Stack gap={3}>
                             {technicalConditions.map((tc) => {
-                                const productType = productTypeById.get(tc.productTypeId);
+                                const productType = tc.productTypeId
+                                    ? productTypeById.get(tc.productTypeId)
+                                    : undefined;
+                                const productTypeLabel =
+                                    productType?.name
+                                    ?? tc.lastProductTypeName
+                                    ?? (tc.productTypeId ? tc.productTypeId : null);
                                 return (
                                     <Stack key={tc.id} gap={1}>
-                                        <Text.Label as="span" className="text-muted-foreground">
-                                            Тип продукции: {productType?.name ?? tc.productTypeId}
-                                        </Text.Label>
+                                        {productTypeLabel && (
+                                            <Text.Label as="span" className="text-muted-foreground">
+                                                Тип продукции: {productTypeLabel}
+                                                {!tc.productTypeId && tc.lastProductTypeName && ' (id снят)'}
+                                            </Text.Label>
+                                        )}
                                         <TechnicalConditionCard technicalCondition={tc} />
                                     </Stack>
                                 );

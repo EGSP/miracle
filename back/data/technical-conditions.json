@@ -1,3 +1,14 @@
 {
-  "items": []
+  "items": [
+    {
+      "productTypeId": "6c05c0a2-bfb5-4403-b0f9-d585c3d8fc89",
+      "lastProductTypeName": "НЭМС",
+      "rules": [],
+      "designationSlots": [],
+      "displayTemplates": [],
+      "id": "ef8cb8b5-463b-4770-ab63-8cf38eab9785",
+      "createdAt": 1779274339828,
+      "updatedAt": 1779274378183
+    }
+  ]
 }
