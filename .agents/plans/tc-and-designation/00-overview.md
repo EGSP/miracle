@@ -20,23 +20,22 @@
 [Справочники — делается один раз]
 
 1. Человек создаёт ProductType (name, synonyms)
-2. Человек создаёт TechnicalCondition — загружает PDF ТУ
-3. PDF ТУ уже прошёл OCR/LLM Vision → FileContent
-4. TCWorker читает FileContent, вызывает Yandex LLM async →
-   разбивает текст на TechnicalConditionRule[]
-5. Человек в UI проверяет правила, привязывает их к DesignationSlot[]
-6. Человек настраивает DisplayTemplate (полное / краткое обозначение)
+2. Человек создаёт TechnicalCondition — загружает PDF ТУ (`settings.isTechnicalCondition = true`)
+3. `filesContentService.extract` по настройке файла запускает LlmVisionTcWorker →
+   заполняет FileContent структурированным markdown-текстом ТУ
+4. Человек в UI проверяет текст, формирует TechnicalConditionRule[], привязывает их к DesignationSlot[]
+5. Человек настраивает DisplayTemplate (полное / краткое обозначение)
 
 [Обработка заявки — при каждом заказе]
 
-7. Заявка загружается, OCR/LLM Vision извлекает текст
-8. OrderDetailsWorker определяет productCategory + requirements[]
-9. Система матчит productCategory → ProductType (по synonyms)
-10. DesignationWorker читает правила из DesignationSlot.ruleIds →
-    вызывает Yandex LLM async → возвращает DesignationValue[]
-11. Order.details.designation.ai заполнен
-12. UI показывает обозначение через DisplayTemplate
-13. Конструктор проверяет, правит через designation.human при необходимости
+6. Заявка загружается, OCR/LLM Vision извлекает текст
+7. OrderDetailsWorker определяет productCategory + requirements[]
+8. Система матчит productCategory → ProductType (по synonyms)
+9. DesignationWorker читает правила из DesignationSlot.ruleIds →
+   вызывает Yandex LLM async → возвращает DesignationValue[]
+10. Order.details.designation.ai заполнен
+11. UI показывает обозначение через DisplayTemplate
+12. Конструктор проверяет, правит через designation.human при необходимости
 ```
 
 ---

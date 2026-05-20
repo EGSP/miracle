@@ -62,7 +62,7 @@
 | GET | `/:id` | Получить TC. Ответ: `Stored<TechnicalCondition>` |
 | PUT | `/:id` | Заменить целиком полезную нагрузку TC. Ответ: `Stored<TechnicalCondition>`. При `productTypeId` сервер записывает `lastProductTypeName` из справочника типов; без id — сохраняет переданное или прежнее имя |
 
-Пока **не** делаем: `DELETE`, `POST …/process` (TCWorker), PATCH на отдельные слоты/правила/шаблоны — всё это сводится к одному `PUT` с полным объектом.
+Пока **не** делаем: `DELETE`, PATCH на отдельные слоты/правила/шаблоны — всё это сводится к одному `PUT` с полным объектом. Извлечение текста PDF ТУ — через общий `filesContentService.extract(fileId)` (см. ниже).
 
 ### `/orders` (расширение существующего)
 
@@ -73,57 +73,99 @@
 
 ---
 
+## Маршрутизация извлечения (`filesContentService.extract`)
+
+Точка входа для «читки» файла — существующий `filesContentService.extract(fileId)` (`back/src/databases/file-content.db.ts`). При запуске извлечения сервис **обязан учитывать настройки файла** (`FileModel.settings`).
+
+Для домена `VISUAL` (pdf, jpg, png) порядок выбора воркера:
+
+```
+filesContentService.extract(fileId)
+  → читает file.settings
+  → if (file.settings?.isTechnicalCondition)
+        extractVisualContentWithTcLLM(file)   // LlmVisionTcWorker
+     else if (file.settings?.complexLayout)
+        extractVisualContentWithLLM(file)     // LlmVisionWorker
+     else
+        extractVisualContentWithOCR(file)     // YandexOcrWorker
+```
+
+**Важно:**
+- `isTechnicalCondition` имеет **приоритет** над `complexLayout`: PDF ТУ всегда идёт в `LlmVisionTcWorker`, даже если включены обе настройки.
+- Настройка `isTechnicalCondition` уже есть в `FileModel.settings`; при загрузке/привязке PDF к TC UI выставляет её через `PATCH /files/:id` (или при upload с `settings`).
+- Отдельный запуск воркера из роутера TC не нужен — достаточно `POST /files-content/:fileId/extract` (или автозапуск после upload, как для остальных файлов).
+- Хелпер `extractVisualContentWithTcLLM` — по аналогии с `extractVisualContentWithLLM` в `back/src/lib/extraction/visual.ts`: создаёт `FileContent` со статусом `STARTED`, запускает `LlmVisionTcWorker` через `workerPool.launch`.
+
+---
+
 ## Воркеры
 
-### TCWorker (`back/src/workers/tc-processing.worker.ts`)
+### LlmVisionTcWorker (`back/src/workers/scan/llm-vision-tc-worker.ts`)
 
 **Что делает:**
-Разбивает уже извлечённый текст ТУ на структурированные правила.
+Извлекает из PDF Технического Условия структурированный и осмысленный текст — разделы, таблицы (markdown), нумерацию, коды параметров. Воркер **только вычитывает** документ с учётом специфики ТУ; результат — заполненный `FileContent.content`. Разбиение на `TechnicalConditionRule[]` — отдельный шаг (UI / последующая обработка), не задача этого воркера.
+
+**Вход:** всегда PDF (`fileId` TC-файла). Предварительный OCR или `llm-vision-worker` не требуются.
 
 **Зависимости:**
-- `technicalConditionsService` — читает TC, пишет rules в apply()
-- `filesContentService` — читает FileContent по fileContentId
-- Yandex LLM API (async, как в OrderDetailsWorker)
+- `filesService`, `getFilePath` — читает PDF с диска
+- `filesContentService` — создаёт запись до запуска, пишет `content` в `apply()`
+- `pdfToImages` — рендер страниц PDF в изображения
+- `yandexLlm.callVisionCompletion` — синхронный Responses API с передачей изображений (как `LlmVisionWorker`, **не** async polling)
+
+**Запуск** — через `filesContentService.extract(fileId)` при `file.settings.isTechnicalCondition === true` (см. «Маршрутизация извлечения» выше):
+
+```
+extractVisualContentWithTcLLM(file):
+  1. filesContentService.create({ fileId, meta: { extractionType: LLM, extractionStatus: STARTED } })
+  2. workerPool.launch(new LlmVisionTcWorker({ data: null, fileId, fileContentId }))
+```
 
 **Жизненный цикл:**
 
 ```
 mount()
-  → создаёт запись в workers.json
+  → создаёт запись в workers.json (type: llm-vision-tc-worker)
 
 run()
-  → читает FileContent[].content (текст страниц)
-  → склеивает в один текст
-  → формирует промпт (см. ниже)
-  → отправляет в Yandex LLM async
-  → сохраняет cloudOperationId
-  → polling до завершения (как LlmVisionWorker)
-  → сохраняет operationResult (JSON строка)
+  → читает PDF по fileId
+  → pdfToImages(buffer, { scale: 2.5 }) → dataUrl[] для каждой страницы
+  → callVisionCompletion({
+        instructions: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: [ ...input_image, input_text ] }]
+    })
+  → сохраняет operationResult (markdown-текст ответа LLM)
+  → status: success
+  (при ошибке — meta.extractionStatus: FAILED на FileContent, status: failed)
 
 apply()
-  → парсит operationResult → TechnicalConditionRule[]
-  → генерирует id для каждого правила (nanoid)
-  → записывает в TC.rules через technicalConditionsService
+  → записывает operationResult в FileContent.content: [{ text }]
+  → meta: { extractionType: LLM, extractionStatus: COMPLETED }
 ```
 
-**Промпт TCWorker:**
+**Промпт LlmVisionTcWorker** (`SYSTEM_PROMPT`):
 
 ```
-Ты обрабатываешь текст Технического Условия (ТУ).
-Разбей документ на смысловые правила/разделы.
-Для каждого раздела выдели: заголовок (если есть) и содержание.
-Таблицы сохраняй в формате markdown-таблиц.
-Нумерацию разделов из ТУ сохраняй в заголовке.
+Ты — ассистент для извлечения содержимого из документов Технических Условий (ТУ).
+Тебе передаются страницы PDF в виде изображений.
 
-Верни JSON массив:
-[
-  { "index": 0, "title": "...", "content": "..." },
-  ...
-]
+Извлеки весь текст документа с сохранением структуры:
+- Заголовки разделов и подразделов с исходной нумерацией из ТУ
+- Обычный текст — дословно, в порядке следования в документе
+- Таблицы — в формате markdown-таблиц с сохранением всех строк, столбцов и заголовков
+- Списки и перечисления — с сохранением маркировки и уровней вложенности
+- Формулы, обозначения, единицы измерения — без интерпретации и перефразирования
 
-Текст ТУ:
-{fileContentText}
+Особое внимание:
+- Таблицы технических условий (параметры, допустимые значения, коды обозначений) — извлекай полностью
+- Сохраняй связь между номером пункта ТУ и его содержанием
+- Не пропускай текст мелким шрифтом, сноски, примечания к таблицам
+
+Не добавляй комментариев, пояснений и интерпретаций от себя.
+Верни единый связный текст документа в формате markdown.
 ```
+
+User-сообщение в `callVisionCompletion`: `Извлеки содержимое документа Технических Условий.`
 
 ---
 

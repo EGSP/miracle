@@ -32,7 +32,7 @@ export type TechnicalCondition = {
      * Нужно, чтобы понимать, какой тип продукции был привязан ранее, если id снят или запись типа удалена.
      */
     lastProductTypeName?: string;
-    /** Правила, извлечённые из PDF воркером. Заполняются после TCWorker. */
+    /** Правила, сформированные из текста PDF (вручную или последующей обработкой FileContent). */
     rules?: TechnicalConditionRule[];
     /** Параметры условного обозначения. Определяет человек, ссылается на rules. */
     designationSlots?: DesignationSlot[];
@@ -134,25 +134,22 @@ export type WorkerType =
     | 'yandex-ocr-worker'
     | 'llm-vision-worker'
     | 'order-details-worker'
-    | 'tc-processing-worker'   // новый
+    | 'llm-vision-tc-worker'   // новый
     | 'designation-worker';    // новый
 
 // Новые данные воркеров:
 
 /**
- * Читает FileContent уже извлечённого PDF ТУ.
- * Вызывает Yandex LLM (async) → разбивает текст на TechnicalConditionRule[].
- * В apply() записывает правила в TechnicalCondition.rules.
+ * Читает PDF ТУ, рендерит страницы в изображения, вызывает Yandex Vision LLM (sync).
+ * В apply() записывает извлечённый markdown-текст в FileContent.content.
  */
-export type TCWorkerData = BaseWorkerData & {
-    type: 'tc-processing-worker';
-    /** TC, для которого извлекаются правила. */
-    tcId: string;
-    /** FileContent с извлечённым текстом PDF ТУ. */
+export type LlmVisionTcWorkerData = BaseWorkerData & {
+    type: 'llm-vision-tc-worker';
+    /** PDF-файл ТУ на диске. */
+    fileId: string;
+    /** FileContent, который воркер заполняет в apply(). */
     fileContentId: string;
-    /** ID асинхронной операции Yandex — сохраняется для восстановления. */
-    cloudOperationId?: string;
-    /** JSON с TechnicalConditionRule[] — заполняется после завершения операции. */
+    /** Текстовый ответ LLM после завершения run(). */
     operationResult?: string;
     /** Сообщение об ошибке при неуспешном завершении. */
     errorMessage?: string;
@@ -182,7 +179,7 @@ export type WorkerData =
     | YandexOcrWorkerData
     | LlmVisionWorkerData
     | OrderDetailsWorkerData
-    | TCWorkerData
+    | LlmVisionTcWorkerData
     | DesignationWorkerData;
 ```
 
