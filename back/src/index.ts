@@ -1,6 +1,4 @@
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import path from 'path';
+import './load-env.js'; // must be first — loads .env before any other module reads process.env
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -20,15 +18,26 @@ import { workersRouter } from './routers/workers.router.js';
 import { productTypeRouter } from './routers/product-type.router.js';
 import { adminRouter } from './routers/admin.router.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-
 const app = express();
 const PORT = serverConfig.PORT;
 
-app.use(cors({ origin: serverConfig.CORS_ORIGIN, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow non-browser clients and same-origin calls without Origin header.
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (serverConfig.CORS_ORIGINS.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(cookieParser());
 app.use(express.json());
 

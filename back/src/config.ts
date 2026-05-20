@@ -4,7 +4,7 @@ import type { StringValue } from 'ms';
 export type ServerConfig = {
 
     PORT: number;
-    CORS_ORIGIN: string;
+    CORS_ORIGINS: string[];
 
     ACCESS_TOKEN_LIFETIME: string;
     REFRESH_TOKEN_LIFETIME: string;
@@ -19,7 +19,10 @@ const REFRESH_TOKEN_LIFETIME = (process.env.REFRESH_TOKEN_LIFETIME ?? '7d') as S
 
 export const serverConfig: ServerConfig = {
     PORT: Number(process.env.PORT ?? 3001),
-    CORS_ORIGIN: process.env.CORS_ORIGIN ?? `http://localhost:8081`,
+    CORS_ORIGINS: (process.env.CORS_ORIGIN ?? 'http://localhost:8081')
+        .split(',')
+        .map(origin => origin.trim())
+        .filter(Boolean),
     
     ACCESS_TOKEN_LIFETIME,
     REFRESH_TOKEN_LIFETIME,

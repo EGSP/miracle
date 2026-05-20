@@ -46,7 +46,13 @@
       "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\front\\\\src\\\\components\\\\blocks\\\\order-card\\\\OrderCardAnalyse.tsx\")",
       "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(grep -E \"\\\\.\\(ts|json\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|json\\)$\")",
+      "Bash(npx tsx *)",
+      "Bash(pm2 logs *)",
+      "Bash(pm2 delete *)",
+      "Bash(pm2 start *)",
+      "Bash(pm2 save *)",
+      "Bash(timeout 2)"
     ]
   }
 }

@@ -22,7 +22,9 @@
 
     "generate:all": "npm run generate:client --workspace=tools && npm run generate:backend-validation --workspace=tools",
     "generate-client": "npm run generate:client --workspace=tools",
-    "generate-backend-validation": "npm run generate:backend-validation --workspace=tools"
+    "generate-backend-validation": "npm run generate:backend-validation --workspace=tools",
+
+    "deploy": "tsx tools/src/deploy/index.ts"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
