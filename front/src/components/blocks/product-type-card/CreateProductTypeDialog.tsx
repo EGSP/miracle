@@ -78,15 +78,23 @@ function CreateProductTypeForm({
                 <Stack gap={1}>
                     <Text.Label as="span">Синонимы</Text.Label>
                     <Text.Helper as="p">По одному синониму на строку</Text.Helper>
-                    <Textarea
-                        size="md"
-                        value={synonymsText.value}
-                        onChange={synonymsText.onInputChange}
-                        disabled={createMutation.isPending}
-                        placeholder="муфта"
-                        aria-label="Синонимы нового типа"
-                    />
-                    <SynonymsPreview synonyms={parsedSynonyms} emptyLabel="" />
+                    <div className="flex items-start gap-2">
+                        <div className="basis-[70%]">
+                            <Textarea
+                                size="md"
+                                value={synonymsText.value}
+                                onChange={synonymsText.onInputChange}
+                                disabled={createMutation.isPending}
+                                placeholder="муфта"
+                                aria-label="Синонимы нового типа"
+                            />
+                        </div>
+                        <div className="basis-[30%]">
+                            <div className="min-w-0 border border-input/50 bg-muted/20 p-2">
+                                <SynonymsPreview synonyms={parsedSynonyms} emptyLabel="" />
+                            </div>
+                        </div>
+                    </div>
                 </Stack>
                 <InlineMutationNotification mutation={createMutation} />
             </Stack>

@@ -70,7 +70,7 @@ const deleteProductType = route.delete('/:id', {
     validate: { params: true },
     handler: async ({ params }: { params: { id: string } }) => {
         try {
-            await productTypesService.delete(params.id);
+            await productTypesService.softDelete(params.id);
         } catch {
             return err.notFound('Product type not found');
         }

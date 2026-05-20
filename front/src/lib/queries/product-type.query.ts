@@ -33,3 +33,14 @@ export const useUpdateProductType = (id: string) => {
         },
     });
 };
+
+export const useSoftDeleteProductType = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => productType.deleteProductType({ id }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: PRODUCT_TYPES_QUERY_KEY });
+        },
+    });
+};

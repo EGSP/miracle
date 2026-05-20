@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Trash2 } from 'lucide-react';
 import { Stack, Text } from '@miracle/aramid';
 import type { ProductType, Stored } from '@miracle/types';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,7 @@ import {
     formatSynonymsToText,
     parseSynonymsFromText,
 } from '@/lib/product-type-synonyms';
-import { useUpdateProductType } from '@/lib/queries/product-type.query';
+import { useSoftDeleteProductType, useUpdateProductType } from '@/lib/queries/product-type.query';
 import { SynonymsPreview } from './SynonymsPreview';
 
 type ProductTypeCardProps = {
@@ -34,6 +35,7 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
     const { isDirtyAnywhere } = useGuardState();
     const { commitAll } = useGuardActions();
     const updateMutation = useUpdateProductType(productType.id);
+    const softDeleteMutation = useSoftDeleteProductType();
 
     const name = useField('name', productType.name);
     const synonymsText = useField(
@@ -45,6 +47,8 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
         () => parseSynonymsFromText(synonymsText.value),
         [synonymsText.value],
     );
+
+    const isBusy = updateMutation.isPending || softDeleteMutation.isPending;
 
     const save = () => {
         const trimmedName = name.value.trim();
@@ -58,12 +62,34 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
         );
     };
 
+    const handleSoftDelete = () => {
+        if (
+            !window.confirm(
+                'Удалить тип продукции? Запись будет скрыта из списка (мягкое удаление).',
+            )
+        ) {
+            return;
+        }
+        softDeleteMutation.mutate(productType.id);
+    };
+
     return (
         <Stack gap={3} className="border border-border p-3">
             <Stack orientation="horizontal" gap={2} className="items-center justify-end">
                 <Button
+                    type="button"
+                    variant="destructive"
                     size="sm"
-                    disabled={!isDirtyAnywhere || !name.value.trim() || updateMutation.isPending}
+                    disabled={isBusy}
+                    onClick={handleSoftDelete}
+                    aria-label="Удалить тип продукции"
+                >
+                    <Trash2 />
+                    Удалить
+                </Button>
+                <Button
+                    size="sm"
+                    disabled={!isDirtyAnywhere || !name.value.trim() || isBusy}
                     onClick={save}
                 >
                     {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
@@ -77,25 +103,34 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
                     aria-label="Название типа продукции"
                     value={name.value}
                     onChange={name.onInputChange}
-                    disabled={updateMutation.isPending}
+                    disabled={isBusy}
                 />
             </Stack>
 
             <Stack gap={1}>
                 <Text.Label as="span">Синонимы</Text.Label>
                 <Text.Helper as="p">По одному синониму на строку</Text.Helper>
-                <Textarea
-                    size="md"
-                    value={synonymsText.value}
-                    onChange={synonymsText.onInputChange}
-                    disabled={updateMutation.isPending}
-                    placeholder={'муфта\nНЭМС'}
-                    aria-label="Синонимы"
-                />
-                <SynonymsPreview synonyms={parsedSynonyms} />
+                <div className="flex items-start gap-2">
+                    <div className="basis-[70%]">
+                        <Textarea
+                            size="md"
+                            value={synonymsText.value}
+                            onChange={synonymsText.onInputChange}
+                            disabled={isBusy}
+                            placeholder={'Вставка электроизолирующая\nМуфтовый...'}
+                            aria-label="Синонимы"
+                        />
+                    </div>
+                    <div className="basis-[30%]">
+                        <div className="min-w-0 border border-input/50 bg-muted/20 p-2">
+                            <SynonymsPreview synonyms={parsedSynonyms} />
+                        </div>
+                    </div>
+                </div>
             </Stack>
 
             <InlineMutationNotification mutation={updateMutation} successMessage="Сохранено" />
+            <InlineMutationNotification mutation={softDeleteMutation} />
         </Stack>
     );
 }

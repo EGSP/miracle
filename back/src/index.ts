@@ -22,20 +22,15 @@ const app = express();
 const PORT = serverConfig.PORT;
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow non-browser clients and same-origin calls without Origin header.
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-
-    if (serverConfig.CORS_ORIGINS.includes(origin)) {
-      callback(null, true);
-      return;
-    }
-
-    callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
+  origin: serverConfig.CORS_OPEN
+    ? true
+    : (origin, callback) => {
+        if (!origin || serverConfig.CORS_ORIGINS.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`CORS blocked for origin: ${origin}`));
+        }
+      },
   credentials: true,
 }));
 app.use(cookieParser());
