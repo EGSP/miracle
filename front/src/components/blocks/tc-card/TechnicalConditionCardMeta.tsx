@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Stack, Text } from '@miracle/aramid';
 import type { Stored, ProductType, TechnicalCondition } from '@miracle/types';
 import { Input } from '@/components/ui/input';
-import { FilePickerDropdown } from '@/components/blocks/file-picker/FilePickerDropdown';
+import { FileWizard } from '@/components/blocks/FileWizard';
 import { useContribute } from '@/contexts/draft-api/DraftContext';
 import { useField } from '@/contexts/dirty-state/useField';
 import { useGetFiles } from '@/lib/queries/file.query';
@@ -13,7 +13,7 @@ export function TechnicalConditionCardMeta() {
     const { technicalCondition, contribute, isSaving } = useTechnicalConditionCardContext();
     const tc = technicalCondition;
 
-    const { data: files = [], isLoading: isFilesLoading } = useGetFiles({ includeMeta: true });
+    const { data: tcFiles = [] } = useGetFiles({ isTechnicalCondition: true, includeMeta: true });
     const { data: productTypes = [], isLoading: isProductTypesLoading } = useProductTypes();
 
     const name = useField<string>(`tc-${tc.id}-name`, tc.name ?? '');
@@ -55,19 +55,11 @@ export function TechnicalConditionCardMeta() {
             </Stack>
             <Stack gap={1}>
                 <Text.Label as="span">Файл ТУ</Text.Label>
-                {isFilesLoading ? (
-                    <Text.Label as="p">Загрузка файлов…</Text.Label>
-                ) : (
-                    <FilePickerDropdown
-                        files={files}
-                        value={fileId.value}
-                        onChange={(nextId) => fileId.onChange(nextId)}
-                        disabled={isSaving}
-                    />
-                )}
-                <Text.Helper as="p">
-                    В списке можно выбрать «Файл не прикреплен», чтобы отвязать файл от ТУ.
-                </Text.Helper>
+                <FileWizard
+                    fileId={fileId.value}
+                    files={tcFiles}
+                    onFileSelected={(id) => fileId.onChange(id ?? undefined)}
+                />
             </Stack>
             <Stack gap={1}>
                 <Text.Label as="span">Тип продукции</Text.Label>
@@ -84,7 +76,7 @@ export function TechnicalConditionCardMeta() {
                     )}
                     renderListItem={(item) => (
                         <Text as="span" compact>
-                            {item?.name ?? ''}
+                            {item?.name ?? 'Тип не выбран'}
                         </Text>
                     )}
                 >

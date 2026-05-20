@@ -9,7 +9,7 @@ import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation
 import { ListBox } from '@/components/ui/listbox';
 import { FileContentPreview } from '@/components/ui/file-content-preview';
 import { FileCard } from '@/components/blocks/FileCard';
-import { useGetFiles, useUploadFile } from '@/lib/queries/file.query';
+import { useGetFiles, useUploadFileWithSettings } from '@/lib/queries/file.query';
 import { useFilteredFiles } from '@/lib/hooks/useFilteredFiles';
 import { getAllowedExtensions, type FileWithMeta } from '@miracle/types';
 import { frontConfig } from '@/lib/config';
@@ -62,11 +62,14 @@ export default function FilesPage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [myFilesOnly, setMyFilesOnly] = useState(false);
     const [availableOnly, setAvailableOnly] = useState<TriStateValue>(undefined);
+    const [tcOnly, setTcOnly] = useState<TriStateValue>(undefined);
+    const [uploadComplexLayout, setUploadComplexLayout] = useState(false);
+    const [uploadIsTechnicalCondition, setUploadIsTechnicalCondition] = useState(false);
     const { data: files, isLoading, error } = useGetFiles({
         includeMeta: true,
     });
-    const filteredFiles = useFilteredFiles(files, { myFilesOnly, availableOnly });
-    const uploadMutation = useUploadFile();
+    const filteredFiles = useFilteredFiles(files, { myFilesOnly, availableOnly, isTechnicalCondition: tcOnly });
+    const uploadMutation = useUploadFileWithSettings();
 
     const handleSelectFileInList = useCallback((file: FileWithMeta | null) => {
         setSelectedFileInList(file);
@@ -80,11 +83,22 @@ export default function FilesPage() {
     const handleUpload = () => {
         if (!selectedFile) return;
 
-        uploadMutation.mutate(selectedFile, {
-            onSuccess: () => {
-                setSelectedFile(null);
+        uploadMutation.mutate(
+            {
+                fileToUpload: selectedFile,
+                settings: {
+                    complexLayout: uploadComplexLayout || undefined,
+                    isTechnicalCondition: uploadIsTechnicalCondition || undefined,
+                },
             },
-        });
+            {
+                onSuccess: () => {
+                    setSelectedFile(null);
+                    setUploadComplexLayout(false);
+                    setUploadIsTechnicalCondition(false);
+                },
+            },
+        );
     };
 
     // Синхронизация URL-параметра с выбором при загрузке файлов
@@ -125,6 +139,7 @@ export default function FilesPage() {
                             <Text.Label as="span">Мои файлы</Text.Label>
                         </label>
                         <TriStateCheckbox label="Доступные" value={availableOnly} onChange={setAvailableOnly} />
+                        <TriStateCheckbox label="Технические условия" value={tcOnly} onChange={setTcOnly} />
                     </Stack>
 
                     {isLoading && <Text.Label as="p">Загрузка...</Text.Label>}
@@ -189,6 +204,26 @@ export default function FilesPage() {
                             <Text.Label as="span">{formatBytes(selectedFile.size)}</Text.Label>
                         </Stack>
                     )}
+
+                    <Stack gap={2} className="border border-border p-2">
+                        <Text.Label as="span" className="font-medium">Настройки</Text.Label>
+                        <label className="inline-flex items-center gap-2">
+                            <Checkbox
+                                checked={uploadComplexLayout}
+                                onCheckedChange={(v) => setUploadComplexLayout(v === true)}
+                                disabled={uploadMutation.isPending}
+                            />
+                            <Text.Label as="span">Сложная структура (LLM вместо OCR)</Text.Label>
+                        </label>
+                        <label className="inline-flex items-center gap-2">
+                            <Checkbox
+                                checked={uploadIsTechnicalCondition}
+                                onCheckedChange={(v) => setUploadIsTechnicalCondition(v === true)}
+                                disabled={uploadMutation.isPending}
+                            />
+                            <Text.Label as="span">Технические условия</Text.Label>
+                        </label>
+                    </Stack>
 
                     {uploadMutation.isError && (
                         <Text.Label as="p">{uploadMutation.error.message}</Text.Label>

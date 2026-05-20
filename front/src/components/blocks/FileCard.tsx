@@ -101,21 +101,39 @@ function FileCardSettings() {
         "complexLayout",
         file.settings?.complexLayout ?? false,
     );
+    const isTechnicalCondition = useField<boolean>(
+        "isTechnicalCondition",
+        file.settings?.isTechnicalCondition ?? false,
+    );
 
     useContribute(contribute, "settings", (draft) => ({
         ...draft,
-        settings: { ...draft.settings, complexLayout: complexLayout.value },
+        settings: {
+            ...draft.settings,
+            complexLayout: complexLayout.value,
+            isTechnicalCondition: isTechnicalCondition.value,
+        },
     }));
 
     return (
-        <label className="inline-flex items-center gap-2">
-            <Checkbox
-                checked={complexLayout.value}
-                disabled={isSaving || readonly}
-                onCheckedChange={complexLayout.onChange}
-            />
-            <Text.Label as="span">Сложная структура (LLM вместо OCR)</Text.Label>
-        </label>
+        <Stack gap={2}>
+            <label className="inline-flex items-center gap-2">
+                <Checkbox
+                    checked={complexLayout.value}
+                    disabled={isSaving || readonly}
+                    onCheckedChange={complexLayout.onChange}
+                />
+                <Text.Label as="span">Сложная структура (LLM вместо OCR)</Text.Label>
+            </label>
+            <label className="inline-flex items-center gap-2">
+                <Checkbox
+                    checked={isTechnicalCondition.value}
+                    disabled={isSaving || readonly}
+                    onCheckedChange={isTechnicalCondition.onChange}
+                />
+                <Text.Label as="span">Технические условия</Text.Label>
+            </label>
+        </Stack>
     );
 }
 

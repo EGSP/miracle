@@ -318,6 +318,19 @@ export function parseGetFilesQuery(raw: Record<string, unknown>) {
             result["includeMeta"] = parsed;
         }
     }
+    const raw_isTechnicalCondition = readSingleValue(raw, "isTechnicalCondition");
+    if (raw_isTechnicalCondition.missing) {
+        result["isTechnicalCondition"] = undefined;
+    } else if (raw_isTechnicalCondition.multi) {
+        errors.push({ field: "isTechnicalCondition", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_isTechnicalCondition.value, [false,true]);
+        if (parsed === undefined) {
+            errors.push({ field: "isTechnicalCondition", message: "expected one of: false, true" });
+        } else {
+            result["isTechnicalCondition"] = parsed;
+        }
+    }
 
     if (errors.length > 0) {
         throw new ParseError(errors);

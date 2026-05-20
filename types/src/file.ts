@@ -12,6 +12,8 @@ export type FileModel = {
     settings?: {
         /** Файл содержит сложную структуру (чекбоксы, таблицы-галочки) — использовать LLM Vision вместо OCR. */
         complexLayout?: boolean;
+        /** Файл является документом технических условий. */
+        isTechnicalCondition?: boolean;
     };
 }
 
@@ -27,6 +29,7 @@ export type FilesQuery = {
     authorId?: string;
     available?: boolean;
     includeMeta?: boolean;
+    isTechnicalCondition?: boolean;
 };
 
 export const FileDomain = {

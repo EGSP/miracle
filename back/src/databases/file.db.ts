@@ -66,6 +66,13 @@ export const filesService = {
                 }
             }
 
+            if (query.isTechnicalCondition !== undefined) {
+                const val = file.settings?.isTechnicalCondition ?? false;
+                if (val !== query.isTechnicalCondition) {
+                    return false;
+                }
+            }
+
             return true;
         }).map((file) => {
             if (!query.includeMeta) {

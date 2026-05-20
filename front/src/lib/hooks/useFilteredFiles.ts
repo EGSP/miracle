@@ -5,6 +5,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 export type FileFilters = {
     myFilesOnly: boolean;
     availableOnly: boolean | undefined;
+    isTechnicalCondition: boolean | undefined;
 };
 
 export function useFilteredFiles(files: FileWithMeta[] | undefined, filters: FileFilters): FileWithMeta[] {
@@ -27,6 +28,11 @@ export function useFilteredFiles(files: FileWithMeta[] | undefined, filters: Fil
             result = result.filter((file) => file.meta?.available === false);
         }
 
+        if (filters.isTechnicalCondition !== undefined) {
+            const flag = filters.isTechnicalCondition;
+            result = result.filter((file) => (file.settings?.isTechnicalCondition ?? false) === flag);
+        }
+
         return result;
-    }, [files, filters.availableOnly, filters.myFilesOnly, userId]);
+    }, [files, filters.availableOnly, filters.isTechnicalCondition, filters.myFilesOnly, userId]);
 }
