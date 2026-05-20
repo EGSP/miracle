@@ -7,4 +7,7 @@ export * from './worker.js';
 export * from './order.js';
 export * from './db.js';
 export * from './file-content.js';
-export * from './ai.js'
+export * from './ai.js';
+export * from './product-type.js';
+export * from './technical-condition.js';
+export * from './designation.js';

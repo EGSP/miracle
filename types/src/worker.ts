@@ -2,7 +2,12 @@ import type { Stored } from './db.js';
 import type { Content } from './file-content.js';
 import type { OrderDetails } from './order.js';
 
-export type WorkerType = 'yandex-ocr-worker' | 'llm-vision-worker' | 'order-details-worker';
+export type WorkerType =
+    | 'yandex-ocr-worker'
+    | 'llm-vision-worker'
+    | 'order-details-worker'
+    | 'tc-processing-worker'
+    | 'designation-worker';
 
 export const WorkerStatus = {
     Active: 'active',
@@ -51,7 +56,50 @@ export type LlmVisionWorkerData = BaseWorkerData & {
     errorMessage?: string;
 };
 
-export type WorkerData = YandexOcrWorkerData | LlmVisionWorkerData | OrderDetailsWorkerData;
+/**
+ * Читает FileContent уже извлечённого PDF ТУ.
+ * Вызывает Yandex LLM (async) → разбивает текст на TechnicalConditionRule[].
+ * В apply() записывает правила в TechnicalCondition.rules.
+ */
+export type TCWorkerData = BaseWorkerData & {
+    type: 'tc-processing-worker';
+    /** TC, для которого извлекаются правила. */
+    tcId: string;
+    /** FileContent с извлечённым текстом PDF ТУ. */
+    fileContentId: string;
+    /** ID асинхронной операции Yandex — сохраняется для восстановления. */
+    cloudOperationId?: string;
+    /** JSON с TechnicalConditionRule[] — заполняется после завершения операции. */
+    operationResult?: string;
+    /** Сообщение об ошибке при неуспешном завершении. */
+    errorMessage?: string;
+};
+
+/**
+ * Читает rules через DesignationSlot.ruleIds + requirements из Order.
+ * Вызывает Yandex LLM (async) → возвращает DesignationValue[].
+ * В apply() записывает результат в Order.details.designation.ai.
+ */
+export type DesignationWorkerData = BaseWorkerData & {
+    type: 'designation-worker';
+    /** Заказ, для которого строится обозначение. */
+    orderId: string;
+    /** TC, по которому выполняется определение. */
+    tcId: string;
+    /** ID асинхронной операции Yandex — сохраняется для восстановления. */
+    cloudOperationId?: string;
+    /** JSON с DesignationValue[] — заполняется после завершения операции. */
+    operationResult?: string;
+    /** Сообщение об ошибке при неуспешном завершении. */
+    errorMessage?: string;
+};
+
+export type WorkerData =
+    | YandexOcrWorkerData
+    | LlmVisionWorkerData
+    | OrderDetailsWorkerData
+    | TCWorkerData
+    | DesignationWorkerData;
 
 /** Человекочитаемое представление данных воркера — плоский объект без заранее известной схемы. */
 export type HumanReadableWorkerData = Record<string, unknown>;

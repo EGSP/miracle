@@ -1,4 +1,5 @@
 import { Dual } from "./ai.js";
+import type { Designation } from "./designation.js";
 
 export const ProductCategory = {
     NEMS: 'НЭМС',
@@ -23,6 +24,14 @@ export type OrderDetails = {
     clientCompanyName?: Dual<string>;
     productCategory?: Dual<ProductCategory>;
     requirements?: Dual<OrderRequirement>[];
+    /** Тип продукции, определённый из заявки. */
+    productTypeId?: string;
+    /**
+     * Условное обозначение.
+     * ai — результат DesignationWorker.
+     * human — ручная правка конструктора.
+     */
+    designation?: Dual<Designation>;
 };
 
 export type Order = {
