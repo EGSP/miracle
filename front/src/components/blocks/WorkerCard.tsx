@@ -57,82 +57,81 @@ export function WorkerCard({ worker }: WorkerCardProps) {
 
     return (
         <Layer>
-            <Stack gap={3} className="border border-border p-3">
-            <Stack orientation="horizontal" gap={2} className="items-center">
-                <WorkerIcon className="size-4 shrink-0" />
-                <Text.Heading as="h3" variant="compact-01" className="flex-1 truncate">
-                    {getWorkerLabel(worker.type)}
-                </Text.Heading>
-                <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />
-            </Stack>
+            <Stack gap={3} className=" p-3">
+                <Stack orientation="horizontal" gap={2} className="items-center">
+                    <WorkerIcon className="size-4 shrink-0" />
+                    <Text.Heading as="h3" variant="compact-01" className="flex-1 truncate">
+                        {getWorkerLabel(worker.type)}
+                    </Text.Heading>
+                </Stack>
+                <Stack gap={1}>
+                    <Stack orientation="horizontal" gap={2} className="justify-between">
+                        <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />
 
-            {showApplyButton || showDeleteButton ? (
-                <Stack gap={2}>
-                    <Stack orientation="horizontal" gap={2}>
-                        {showApplyButton ? (
-                            <Button
-                                type="button"
-                                variant="primary"
-                                size="sm"
-                                label={applyMutation.isPending ? 'Применение...' : 'Применить'}
-                                disabled={applyMutation.isPending || deleteMutation.isPending}
-                                onClick={() => applyMutation.mutate(worker.id)}
-                            />
+                        <Text.Label as="span" className="text-muted-foreground">
+                            Обновлён: {new Date(worker.updatedAt).toLocaleString()}
+                        </Text.Label>
+                    </Stack>
+                    <Text.Label as="span" className="text-muted-foreground">
+                        ID: {worker.id}
+                    </Text.Label>
+
+                    {(worker.type === 'yandex-ocr-worker' || worker.type === 'llm-vision-worker') && (
+                        <Link to="/files" search={{ fileId: worker.fileId }} className="inline-flex items-center gap-1">
+                            <FileIcon className="size-3 shrink-0" />
+                            <Text as="span" compact>Файл</Text>
+                        </Link>
+                    )}
+                    {worker.type === 'order-details-worker' && (
+                        <Link to="/orders" search={{ orderId: worker.orderId }} className="inline-flex items-center gap-1">
+                            <FileIcon className="size-3 shrink-0" />
+                            <Text as="span" compact>Заказ</Text>
+                        </Link>
+                    )}
+                </Stack>
+
+                <div className="border border-border bg-muted/20 p-2 w-full">
+                    <Text.Code as="pre" language="json" variant="md">
+                        {JSON.stringify(hrData, null, 2)}
+                    </Text.Code>
+                </div>
+                
+                {showApplyButton || showDeleteButton ? (
+                    <Stack gap={2}>
+                        <Stack orientation="horizontal" gap={2}>
+                            {showApplyButton ? (
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    size="sm"
+                                    label={applyMutation.isPending ? 'Применение...' : 'Применить'}
+                                    disabled={applyMutation.isPending || deleteMutation.isPending}
+                                    onClick={() => applyMutation.mutate(worker.id)}
+                                />
+                            ) : null}
+                            {showDeleteButton ? (
+                                <Button
+                                    type="button"
+                                    variant="danger-tertiary"
+                                    size="sm"
+                                    label={deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
+                                    disabled={deleteMutation.isPending || applyMutation.isPending}
+                                    onClick={() => deleteMutation.mutate(worker.id)}
+                                />
+                            ) : null}
+                        </Stack>
+                        {applyMutation.isError ? (
+                            <Text as="p" compact className="text-destructive">
+                                {getApiErrorMessage(applyMutation.error)}
+                            </Text>
                         ) : null}
-                        {showDeleteButton ? (
-                            <Button
-                                type="button"
-                                variant="danger-tertiary"
-                                size="sm"
-                                label={deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
-                                disabled={deleteMutation.isPending || applyMutation.isPending}
-                                onClick={() => deleteMutation.mutate(worker.id)}
-                            />
+                        {deleteMutation.isError ? (
+                            <Text as="p" compact className="text-destructive">
+                                {getApiErrorMessage(deleteMutation.error)}
+                            </Text>
                         ) : null}
                     </Stack>
-                    {applyMutation.isError ? (
-                        <Text as="p" compact className="text-destructive">
-                            {getApiErrorMessage(applyMutation.error)}
-                        </Text>
-                    ) : null}
-                    {deleteMutation.isError ? (
-                        <Text as="p" compact className="text-destructive">
-                            {getApiErrorMessage(deleteMutation.error)}
-                        </Text>
-                    ) : null}
-                </Stack>
-            ) : null}
-
-            <Stack gap={1}>
-                <Stack orientation="horizontal" gap={2} className="items-center">
-                    <Text.Label as="span" className="text-muted-foreground">Статус</Text.Label>
-                    <Text.Label as="span">{indicator.label}</Text.Label>
-                </Stack>
-                <Text.Label as="span" className="text-muted-foreground">
-                    ID: {worker.id}
-                </Text.Label>
-                <Text.Label as="span" className="text-muted-foreground">
-                    Обновлён: {new Date(worker.updatedAt).toLocaleString()}
-                </Text.Label>
-                {(worker.type === 'yandex-ocr-worker' || worker.type === 'llm-vision-worker') && (
-                    <Link to="/files" search={{ fileId: worker.fileId }} className="inline-flex items-center gap-1">
-                        <FileIcon className="size-3 shrink-0" />
-                        <Text as="span" compact>Файл</Text>
-                    </Link>
-                )}
-                {worker.type === 'order-details-worker' && (
-                    <Link to="/orders" search={{ orderId: worker.orderId }} className="inline-flex items-center gap-1">
-                        <FileIcon className="size-3 shrink-0" />
-                        <Text as="span" compact>Заказ</Text>
-                    </Link>
-                )}
-            </Stack>
-
-            <div className="border border-border bg-muted/20 p-2 w-full">
-                <Text.Code as="pre" language="json" variant="md">
-                    {JSON.stringify(hrData, null, 2)}
-                </Text.Code>
-            </div>
+                ) : null}
             </Stack>
         </Layer>
     );
