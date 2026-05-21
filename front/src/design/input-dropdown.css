@@ -1,0 +1,51 @@
+/* ─── Dropdown trigger button ─────────────────────────────────────────────
+   Applied alongside .input. Resets button-specific defaults.
+──────────────────────────────────────────────────────────────────────────── */
+
+.input-dropdown-trigger {
+  text-align: left;
+  cursor: pointer;
+}
+
+.input-dropdown-trigger:disabled {
+  cursor: not-allowed;
+}
+
+/* ─── Dropdown list panel ────────────────────────────────────────────────── */
+
+.input-dropdown-list {
+  position: absolute;
+  top: 100%;
+  z-index: 50;
+  margin-top: var(--aramid-spacing-1);
+  max-height: calc(var(--aramid-spacing-9) * 4);   /* 192px */
+  width: 100%;
+  overflow-y: auto;
+  border: 1px solid var(--aramid-color-gray-20);
+  background-color: #fff;
+  padding: var(--aramid-spacing-1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ─── List items ─────────────────────────────────────────────────────────── */
+
+.input-dropdown-item {
+  cursor: pointer;
+  padding-inline: var(--aramid-spacing-3);
+  padding-block: var(--aramid-spacing-2);
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs);
+  color: var(--aramid-color-gray-100);
+}
+
+.input-dropdown-item--active {
+  background-color: var(--aramid-color-gray-10);
+}
+
+.input-dropdown-empty {
+  padding-inline: var(--aramid-spacing-3);
+  padding-block: var(--aramid-spacing-2);
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs);
+  color: var(--aramid-color-gray-50);
+}

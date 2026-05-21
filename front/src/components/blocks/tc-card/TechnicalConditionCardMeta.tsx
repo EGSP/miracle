@@ -41,16 +41,16 @@ export function TechnicalConditionCardMeta() {
 
     return (
         <Stack gap={2}>
-            <Text.Label as="span" className="font-medium">
+            <Text.Heading as="p" variant="02">
                 Основные поля
-            </Text.Label>
+            </Text.Heading>
             <Stack gap={1}>
-                <Text.Label as="span">Название</Text.Label>
                 <Input
                     placeholder="Напр. ГОСТ Р 52931-2008"
                     value={name.value}
                     onChange={name.onInputChange}
                     disabled={isSaving}
+                    label='Название'
                 />
             </Stack>
             <Stack gap={1}>

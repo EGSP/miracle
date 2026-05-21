@@ -1,50 +1,20 @@
 import * as React from "react"
+import { Text } from "@miracle/aramid"
 
+import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
 import { cn } from "@/lib/utils"
 
-type InputDropdownProps<T> = {
-  /**
-   * Набор элементов, доступных для выбора.
-   * Компонент не ограничивает тип элемента: можно передавать любой объект.
-   */
+import "@/design/input.css"
+import "@/design/input-dropdown.css"
+
+type InputDropdownProps<T> = BaseInputProps & {
   items: T[]
-  /**
-   * Текущее выбранное значение (контролируемый режим).
-   * Если передан, состояние выбора управляется снаружи.
-   */
   value?: T | null
-  /**
-   * Начальное выбранное значение (неконтролируемый режим).
-   * Полезно, когда значение уже известно и пользователь может не делать выбор вручную.
-   */
   defaultValue?: T | null
-  /**
-   * Колбэк выбора элемента.
-   * Возвращает типизированный объект, а не строку.
-   */
   onChange?: (value: T | null) => void
-  /**
-   * Стабильный ключ для элемента.
-   * Используется для React key, определения выбранного/активного пункта и aria-идентификаторов.
-   */
   getItemKey: (item: T) => string
-  /**
-   * Рендер элемента в выпадающем списке.
-   * Может вернуть любой ReactNode. На выбор и навигацию это не влияет.
-   */
   renderListItem: (item: T | null, state: { isSelected: boolean; isActive: boolean; index: number }) => React.ReactNode
-  /**
-   * Рендер выбранного значения в кнопке Selected.
-   * Если не передан, используется стандартный fallback-текст.
-   */
   renderSelectedItem?: ((item: T | null) => React.ReactNode) | null
-  /**
-   * Блокировка интерактива.
-   */
-  disabled?: boolean
-  /**
-   * Обертка для всего dropdown-компонента.
-   */
   className?: string
   children: React.ReactNode
 }
@@ -52,9 +22,6 @@ type InputDropdownProps<T> = {
 type InputDropdownSelectedProps = Omit<React.HTMLAttributes<HTMLButtonElement>, "children">
 
 type InputDropdownListProps = Omit<React.HTMLAttributes<HTMLDivElement>, "children"> & {
-  /**
-   * Сообщение, если список пуст.
-   */
   emptyText?: React.ReactNode
 }
 
@@ -65,6 +32,7 @@ type DropdownContextValue<T> = {
   isOpen: boolean
   activeIndex: number
   disabled: boolean
+  size: BaseInputProps["size"]
   getItemKey: (item: T) => string
   renderListItem: (item: T | null, state: { isSelected: boolean; isActive: boolean; index: number }) => React.ReactNode
   renderSelectedItem: ((item: T | null) => React.ReactNode) | null
@@ -98,6 +66,9 @@ function InputDropdownRoot<T>({
   const getItemKey = props.getItemKey
   const renderListItem = props.renderListItem
   const disabled = props.disabled ?? false
+  const size = props.size
+  const full = props.full ?? false
+  const label = props.label
   const className = props.className
   const children = props.children
 
@@ -127,22 +98,15 @@ function InputDropdownRoot<T>({
 
   const setSelected = React.useCallback(
     (nextValue: T | null) => {
-      if (isSameValue(selected, nextValue)) {
-        return
-      }
-      if (!isControlled) {
-        setInternalValue(nextValue)
-      }
+      if (isSameValue(selected, nextValue)) return
+      if (!isControlled) setInternalValue(nextValue)
       onChange?.(nextValue)
     },
     [isSameValue, selected, isControlled, onChange]
   )
 
   const selectedIndex = React.useMemo(() => {
-    if (selected === null) {
-      return options.findIndex((item) => item == null)
-    }
-
+    if (selected === null) return options.findIndex((item) => item == null)
     return options.findIndex((item) => item != null && getItemKey(item) === getItemKey(selected))
   }, [options, selected, getItemKey])
 
@@ -159,18 +123,14 @@ function InputDropdownRoot<T>({
         setIsOpen((prev) => (prev ? false : prev))
       }
     }
-
     document.addEventListener("pointerdown", handlePointerDown)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown)
-    }
+    return () => document.removeEventListener("pointerdown", handlePointerDown)
   }, [])
 
   const selectByIndex = React.useCallback(
     (index: number) => {
       const option = options[index]
-      if (disabled) return
-      if (option === undefined) return
+      if (disabled || option === undefined) return
       setSelected(option)
       setIsOpen((prev) => (prev ? false : prev))
     },
@@ -184,44 +144,37 @@ function InputDropdownRoot<T>({
 
   const contextValue = React.useMemo<DropdownContextValue<T>>(
     () => ({
-      items,
-      options,
-      value: selected,
-      isOpen,
-      activeIndex,
-      disabled,
-      getItemKey,
-      renderListItem,
-      renderSelectedItem,
-      listId,
-      triggerId,
-      setIsOpen,
-      setActiveIndex,
-      selectByIndex,
-      toggleOpen,
+      items, options, value: selected, isOpen, activeIndex, disabled, size,
+      getItemKey, renderListItem, renderSelectedItem, listId, triggerId,
+      setIsOpen, setActiveIndex, selectByIndex, toggleOpen,
     }),
     [
-      items,
-      options,
-      selected,
-      isOpen,
-      activeIndex,
-      disabled,
-      getItemKey,
-      renderListItem,
-      renderSelectedItem,
-      listId,
-      triggerId,
-      selectByIndex,
-      toggleOpen,
+      items, options, selected, isOpen, activeIndex, disabled, size,
+      getItemKey, renderListItem, renderSelectedItem, listId, triggerId,
+      selectByIndex, toggleOpen,
     ]
   )
 
+  const wrap = (
+    <div ref={rootRef} className={cn("input-wrap", full && "input-wrap--full", className)}>
+      {children}
+    </div>
+  )
+
+  if (label) {
+    return (
+      <DropdownContext.Provider value={contextValue as DropdownContextValue<unknown>}>
+        <div className="input-field">
+          <Text.Helper as="span">{label}</Text.Helper>
+          {wrap}
+        </div>
+      </DropdownContext.Provider>
+    )
+  }
+
   return (
     <DropdownContext.Provider value={contextValue as DropdownContextValue<unknown>}>
-      <div ref={rootRef} className={cn("relative w-full", className)}>
-        {children}
-      </div>
+      {wrap}
     </DropdownContext.Provider>
   )
 }
@@ -233,19 +186,9 @@ function InputDropdownSelected<T>({
   ...props
 }: InputDropdownSelectedProps) {
   const {
-    options,
-    value,
-    isOpen,
-    activeIndex,
-    disabled,
-    getItemKey,
-    renderSelectedItem,
-    listId,
-    triggerId,
-    setIsOpen,
-    setActiveIndex,
-    selectByIndex,
-    toggleOpen,
+    options, value, isOpen, activeIndex, disabled, size,
+    getItemKey, renderSelectedItem, listId, triggerId,
+    setIsOpen, setActiveIndex, selectByIndex, toggleOpen,
   } = useDropdownContext<T>()
 
   const hasValue = value != null
@@ -273,40 +216,25 @@ function InputDropdownSelected<T>({
       }}
       onKeyDown={(event) => {
         if (disabled) return
-
         if (event.key === "ArrowDown") {
           event.preventDefault()
-          if (!isOpen) {
-            setIsOpen(true)
-          } else {
-            setActiveIndex(Math.min(activeIndex + 1, options.length - 1))
-          }
+          if (!isOpen) setIsOpen(true)
+          else setActiveIndex(Math.min(activeIndex + 1, options.length - 1))
         } else if (event.key === "ArrowUp") {
           event.preventDefault()
-          if (!isOpen) {
-            setIsOpen(true)
-          } else {
-            setActiveIndex(Math.max(activeIndex - 1, 0))
-          }
+          if (!isOpen) setIsOpen(true)
+          else setActiveIndex(Math.max(activeIndex - 1, 0))
         } else if (event.key === "Enter") {
-          if (!isOpen) {
-            event.preventDefault()
-            setIsOpen(true)
-          } else if (activeIndex >= 0) {
-            event.preventDefault()
-            selectByIndex(activeIndex)
-          }
+          if (!isOpen) { event.preventDefault(); setIsOpen(true) }
+          else if (activeIndex >= 0) { event.preventDefault(); selectByIndex(activeIndex) }
         } else if (event.key === "Escape") {
-          if (isOpen) {
-            event.preventDefault()
-            setIsOpen(false)
-          }
+          if (isOpen) { event.preventDefault(); setIsOpen(false) }
         }
-
         onKeyDown?.(event)
       }}
       className={cn(
-        "h-8 w-full min-w-0 rounded-none border border-input bg-transparent px-2.5 py-1 text-left text-xs transition-colors outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50",
+        inputVariants({ size, full: true }),
+        "input-dropdown-trigger",
         !hasValue && "text-muted-foreground",
         className
       )}
@@ -333,19 +261,17 @@ function InputDropdownList<T>({
       id={listId}
       role="listbox"
       onMouseDown={(event) => {
-        // Сохраняем фокус на выбранном элементе при выборе опции.
         event.preventDefault()
         onMouseDown?.(event)
       }}
-      className={cn("absolute top-full z-50 mt-1 max-h-56 w-full overflow-auto border border-input bg-background p-1 shadow-md", className)}
+      className={cn("input-dropdown-list", className)}
     >
       {options.length === 0 ? (
-        <div className="px-2 py-1 text-xs text-muted-foreground">{emptyText}</div>
+        <div className="input-dropdown-empty">{emptyText}</div>
       ) : (
         options.map((item, index) => {
           const isSelected = item == null ? value === null : value ? getItemKey(value) === getItemKey(item) : false
           const isActive = index === activeIndex
-
           return (
             <div
               key={item != null ? getItemKey(item) : index}
@@ -354,7 +280,7 @@ function InputDropdownList<T>({
               aria-selected={isSelected}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => selectByIndex(index)}
-              className={cn("cursor-pointer px-2 py-1 text-xs text-foreground", isActive && "bg-muted")}
+              className={cn("input-dropdown-item", isActive && "input-dropdown-item--active")}
             >
               {renderListItem(item ?? null, { isSelected, isActive, index })}
             </div>

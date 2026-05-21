@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { InlineMutationNotification } from '@/components/ui/inline-mutation-notification';
@@ -32,7 +32,7 @@ export function OrderCardActions() {
             <Stack gap={6} orientation='horizontal'>
                 <Stack gap={2} className="items-center">
                     <Button
-                        variant="outline"
+                        variant="tertiary"
                         size="sm"
                         disabled={!isDirtyAnywhere || isSaving}
                         onClick={save}
@@ -48,7 +48,7 @@ export function OrderCardActions() {
 
                 <Stack gap={2}>
                     <Button
-                        variant="outline"
+                        variant="tertiary"
                         size="sm"
                         disabled={!canAnalyse || analyseAvailabilityQuery.isFetching || analyseDetailsMutation.isPending}
                         onClick={() => analyseDetailsMutation.mutate()}
@@ -60,7 +60,7 @@ export function OrderCardActions() {
                                 : 'Вывести требования'}
                     </Button>
                     <Button
-                        variant="outline"
+                        variant="tertiary"
                         size="sm"
                         disabled={!details || clearDetailsMutation.isPending}
                         onClick={() => clearDetailsMutation.mutate()}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Upload } from 'lucide-react';
 import { Stack, Text } from '@miracle/aramid';
 import type { FileWithMeta } from '@miracle/types';
@@ -35,7 +35,6 @@ function FileWizardSelected({ fileId, files, onFileSelected }: FileWizardSelecte
 
     return (
         <Stack gap={2}>
-            <FileCard file={selectedFile} />
             {files && (
                 <FilePickerDropdown
                     files={files}
@@ -43,6 +42,7 @@ function FileWizardSelected({ fileId, files, onFileSelected }: FileWizardSelecte
                     onChange={(id) => onFileSelected(id ?? null)}
                 />
             )}
+            <FileCard file={selectedFile} />
         </Stack>
     );
 }
@@ -83,7 +83,7 @@ export function FileWizard({ fileId, files, onFileSelected }: FileWizardProps) {
                     onChange={(id) => onFileSelected(id ?? null)}
                 />
             )}
-            <Button variant="outline" size="sm" className="self-start" onClick={() => setDialogOpen(true)}>
+            <Button variant="tertiary" size="sm" className="self-start" onClick={() => setDialogOpen(true)}>
                 <Upload />
                 Загрузить файл
             </Button>

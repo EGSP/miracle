@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
@@ -71,7 +71,7 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close data-slot="dialog-close" render={<Button variant="ghost" className="absolute top-2 right-2" size="icon-sm"><XIcon /><span className="sr-only">Close</span></Button>} />
+          <DialogPrimitive.Close data-slot="dialog-close" render={<Button variant="icon-button" className="absolute top-2 right-2" size="sm" icon={<XIcon />} label="Close" />} />
         )}
       </DialogPrimitive.Popup>
     </DialogPortal>
@@ -107,7 +107,7 @@ function DialogFooter({
     >
       {children}
       {showCloseButton && (
-        <DialogPrimitive.Close render={<Button variant="outline">Close</Button>} />
+        <DialogPrimitive.Close render={<Button variant="tertiary">Close</Button>} />
       )}
     </div>
   )

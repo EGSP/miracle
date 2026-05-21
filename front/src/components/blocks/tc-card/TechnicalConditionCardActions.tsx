@@ -1,4 +1,4 @@
-import { Stack } from '@miracle/aramid';
+﻿import { Stack } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { InlineMutationNotification } from '@/components/ui/inline-mutation-notification';
 import { useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
@@ -13,11 +13,19 @@ export function TechnicalConditionCardActions() {
 
     return (
         <Stack gap={2}>
-            <Stack orientation="horizontal" gap={2} className="items-center justify-end flex-wrap">
+            <Stack orientation="horizontal" gap={2} className="items-center  flex-wrap">
                 <Button
                     type="button"
                     size="sm"
-                    variant="outline"
+                    disabled={!isDirtyAnywhere || isSaving}
+                    onClick={save}
+                >
+                    {isSaving ? 'Сохранение...' : 'Сохранить ТУ'}
+                </Button>
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="tertiary"
                     disabled={!technicalCondition.fileId || extractMutation.isPending}
                     title={
                         !technicalCondition.fileId
@@ -27,15 +35,6 @@ export function TechnicalConditionCardActions() {
                     onClick={() => extractMutation.mutate()}
                 >
                     {extractMutation.isPending ? 'Запуск...' : 'Извлечь правила и слоты'}
-                </Button>
-
-                <Button
-                    type="button"
-                    size="sm"
-                    disabled={!isDirtyAnywhere || isSaving}
-                    onClick={save}
-                >
-                    {isSaving ? 'Сохранение...' : 'Сохранить ТУ'}
                 </Button>
             </Stack>
 

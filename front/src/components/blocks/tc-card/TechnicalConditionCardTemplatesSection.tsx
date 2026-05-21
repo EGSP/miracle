@@ -36,9 +36,9 @@ export function TechnicalConditionCardTemplatesSection() {
 
     return (
         <Stack gap={1}>
-            <Text.Label as="span" className="font-medium">
+            <Text.Heading as="p" variant="02">
                 Шаблоны отображения
-            </Text.Label>
+            </Text.Heading>
             <ArrayEditor
                 items={templates.value}
                 onAdd={() => templates.onChange([...templates.value, makeTemplate()])}

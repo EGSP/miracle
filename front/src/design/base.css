@@ -1,3 +1,10 @@
+:root {
+    /* 2 × spacing-13 (160px) = 320px — Carbon-default fixed input width */
+    --input-fixed-width: calc(var(--aramid-spacing-13) * 2);
+    /* spacing-13 (160px) — фиксированная ширина кнопок (не fluid) */
+    --button-fixed-width: var(--aramid-spacing-13);
+}
+
 a {
     color: var(--aramid-color-blue-60);
     text-decoration: none;

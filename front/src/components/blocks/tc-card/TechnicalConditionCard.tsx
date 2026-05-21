@@ -75,8 +75,8 @@ function TechnicalConditionCardBody() {
 
     return (
         <Stack gap={3} className="border border-border bg-muted/10 p-3">
-            <Text.Heading as="h4" variant="compact-01">
-                ТУ <Text as="span" compact className="text-muted-foreground">({technicalCondition.id})</Text>
+            <Text.Heading as="p" variant="03">
+                Техническое условие <Text as="span" expressive>({technicalCondition.id})</Text>
             </Text.Heading>
             <TechnicalConditionCardActions />
             <TechnicalConditionCardMeta />

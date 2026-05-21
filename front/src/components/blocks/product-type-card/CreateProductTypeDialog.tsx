@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
@@ -100,7 +100,7 @@ function CreateProductTypeForm({
             </Stack>
             <DialogFooter>
                 <Button
-                    variant="outline"
+                    variant="tertiary"
                     onClick={handleCancel}
                     disabled={createMutation.isPending}
                 >

@@ -1,0 +1,293 @@
+/* ─── Button ──────────────────────────────────────────────────────────────────
+   Carbon-aligned button. Размер md / variant primary / fixed width по умолчанию.
+   Токены: Aramid spacing + color.
+───────────────────────────────────────────────────────────────────────────── */
+
+.button {
+  --button-h: var(--aramid-spacing-8);           /* 40px (md) */
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;               /* label прижат влево, иконка — вправо */
+  width: var(--button-fixed-width);             /* 160px, одинаково для всех размеров */
+  min-height: var(--button-h);
+  padding-block: 0;
+  padding-inline: var(--aramid-spacing-5);       /* 16px */
+  gap: var(--aramid-spacing-3);                  /* 8px */
+  border: 1px solid transparent;
+  background: none;
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-sm);         /* 14px */
+  font-weight: var(--aramid-font-weight-regular);
+  line-height: var(--aramid-font-line-height-tight);
+  letter-spacing: 0.16px;
+  cursor: pointer;
+  text-decoration: none;
+  outline: none;
+  transition: background-color 70ms, border-color 70ms, color 70ms;
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+}
+
+/* ─── Label ─────────────────────────────────────────────────────────────── */
+
+.button-label {
+  flex: 0 1 auto;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* ─── Icon slot ─────────────────────────────────────────────────────────── */
+
+.button-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-icon svg {
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+/* ─── Sizes ─────────────────────────────────────────────────────────────── */
+/* Ширина фиксирована через --button-fixed-width и одинакова для всех размеров.
+   Размер управляет высотой, отступами и шрифтом. */
+
+.button--xs {
+  --button-h: var(--aramid-spacing-6);           /* 24px */
+  padding-inline: var(--aramid-spacing-3);       /* 8px */
+  font-size: var(--aramid-font-size-xs);         /* 12px */
+}
+
+.button--xs .button-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.button--sm {
+  --button-h: var(--aramid-spacing-7);           /* 32px */
+  padding-inline: var(--aramid-spacing-4);       /* 12px */
+}
+
+.button--sm .button-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.button--md {
+  --button-h: var(--aramid-spacing-8);           /* 40px */
+  padding-inline: var(--aramid-spacing-5);       /* 16px */
+  font-size: var(--aramid-font-size-sm);         /* 14px */
+}
+
+.button--lg {
+  --button-h: var(--aramid-spacing-9);           /* 48px */
+}
+
+.button--xl {
+  --button-h: var(--aramid-spacing-10);          /* 64px */
+  padding-inline: var(--aramid-spacing-6);       /* 24px */
+  font-size: var(--aramid-font-size-md);         /* 16px */
+}
+
+.button--xl .button-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ─── Fluid ─────────────────────────────────────────────────────────────── */
+
+.button--fluid {
+  display: flex;
+  width: 100%;
+}
+
+/* ─── Icon button ───────────────────────────────────────────────────────── */
+/* Квадратная кнопка: только иконка, label скрыт визуально (остаётся для a11y) */
+
+.button--icon-button {
+  width: var(--button-h);                        /* переопределяет --button-fixed-width */
+  padding-inline: 0;
+  justify-content: center;
+}
+
+/* ─── Primary ───────────────────────────────────────────────────────────── */
+
+.button--primary {
+  background-color: var(--aramid-color-blue-60);
+  color: var(--aramid-color-white-0);
+}
+
+.button--primary:hover:not(:disabled) {
+  background-color: var(--aramid-color-blue-hover-60);
+}
+
+.button--primary:active:not(:disabled) {
+  background-color: var(--aramid-color-blue-80);
+}
+
+.button--primary:focus-visible {
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: 2px;
+  box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
+}
+
+.button--primary:disabled {
+  background-color: var(--aramid-color-gray-30);
+  border-color: transparent;
+  color: var(--aramid-color-gray-50);
+}
+
+/* ─── Secondary ─────────────────────────────────────────────────────────── */
+
+.button--secondary {
+  background-color: var(--aramid-color-gray-80);
+  color: var(--aramid-color-white-0);
+}
+
+.button--secondary:hover:not(:disabled) {
+  background-color: var(--aramid-color-gray-hover-80);
+}
+
+.button--secondary:active:not(:disabled) {
+  background-color: var(--aramid-color-gray-90);
+}
+
+.button--secondary:focus-visible {
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: 2px;
+  box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
+}
+
+.button--secondary:disabled {
+  background-color: var(--aramid-color-gray-30);
+  border-color: transparent;
+  color: var(--aramid-color-gray-50);
+}
+
+/* ─── Tertiary ──────────────────────────────────────────────────────────── */
+
+.button--tertiary {
+  background-color: transparent;
+  border-color: var(--aramid-color-blue-60);
+  color: var(--aramid-color-blue-60);
+}
+
+.button--tertiary:hover:not(:disabled) {
+  background-color: var(--aramid-color-blue-60);
+  color: var(--aramid-color-white-0);
+}
+
+.button--tertiary:active:not(:disabled) {
+  background-color: var(--aramid-color-blue-80);
+  border-color: var(--aramid-color-blue-80);
+  color: var(--aramid-color-white-0);
+}
+
+.button--tertiary:focus-visible {
+  background-color: var(--aramid-color-blue-60);
+  color: var(--aramid-color-white-0);
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: 2px;
+  box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
+}
+
+.button--tertiary:disabled {
+  background-color: transparent;
+  border-color: var(--aramid-color-gray-30);
+  color: var(--aramid-color-gray-30);
+}
+
+/* ─── Ghost ─────────────────────────────────────────────────────────────── */
+
+.button--ghost {
+  background-color: transparent;
+  color: var(--aramid-color-blue-60);
+}
+
+.button--ghost:hover:not(:disabled) {
+  background-color: var(--aramid-color-blue-10);
+  color: var(--aramid-color-blue-70);
+}
+
+.button--ghost:active:not(:disabled) {
+  background-color: var(--aramid-color-blue-20);
+  color: var(--aramid-color-blue-80);
+}
+
+.button--ghost:focus-visible {
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: 2px;
+}
+
+.button--ghost:disabled {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--aramid-color-gray-30);
+}
+
+/* ─── Danger ────────────────────────────────────────────────────────────── */
+
+.button--danger {
+  background-color: var(--aramid-color-red-60);
+  color: var(--aramid-color-white-0);
+}
+
+.button--danger:hover:not(:disabled) {
+  background-color: var(--aramid-color-red-hover-60);
+}
+
+.button--danger:active:not(:disabled) {
+  background-color: var(--aramid-color-red-80);
+}
+
+.button--danger:focus-visible {
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: 2px;
+  box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
+}
+
+.button--danger:disabled {
+  background-color: var(--aramid-color-gray-30);
+  border-color: transparent;
+  color: var(--aramid-color-gray-50);
+}
+
+/* ─── Icon button (ghost-стиль + квадратная форма) ──────────────────────── */
+
+.button--icon-button {
+  background-color: transparent;
+  color: var(--aramid-color-blue-60);
+}
+
+.button--icon-button:hover:not(:disabled) {
+  background-color: var(--aramid-color-blue-10);
+  color: var(--aramid-color-blue-70);
+}
+
+.button--icon-button:active:not(:disabled) {
+  background-color: var(--aramid-color-blue-20);
+  color: var(--aramid-color-blue-80);
+}
+
+.button--icon-button:focus-visible {
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: 2px;
+}
+
+.button--icon-button:disabled {
+  background-color: transparent;
+  color: var(--aramid-color-gray-30);
+}
+
+/* ─── Disabled base ─────────────────────────────────────────────────────── */
+
+.button:disabled {
+  cursor: not-allowed;
+}

@@ -1,63 +1,23 @@
 import * as React from "react"
+import { Text } from "@miracle/aramid"
 
+import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
 import { cn } from "@/lib/utils"
+
+import "@/design/input.css"
+import "@/design/input-suggest.css"
 
 type SuggestItemRenderer<T> = (item: T, state: { isActive: boolean; index: number }) => React.ReactNode
 
-type InputSuggestProps<T> = Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "onSelect"> & {
-  /**
-   * Текущее значение инпута (контролируемый режим).
-   * Хранится во внешнем стейте, чтобы компонент можно было синхронизировать с формой/URL.
-   * Пример: `value={searchQuery}`
-   */
+type InputSuggestProps<T> = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "value" | "onChange" | "onSelect"> &
+  BaseInputProps & {
   value: string
-  /**
-   * Вызывается при любом изменении текста в инпуте.
-   * Нужен для обновления внешнего `value` в контролируемом режиме.
-   * Пример: `onChange={(next) => setSearchQuery(next)}`
-   */
   onChange: (value: string) => void
-  /**
-   * Функция поиска подсказок по введенному запросу.
-   * Может быть синхронной (`Item[]`) или асинхронной (`Promise<Item[]>`),
-   * поэтому компонент не зависит от источника данных (API, локальный массив и т.д.).
-   * Пример:
-   * `onSearch={async (query) => api.orders.suggest({ query })}`
-   */
   onSearch: (query: string) => T[] | Promise<T[]>
-  /**
-   * Колбэк выбора элемента из списка подсказок.
-   * Вызывается после подстановки значения в инпут, если нужно сохранить выбранный объект целиком.
-   * Пример: `onSelect={(order) => setSelectedOrder(order)}`
-   */
   onSelect?: (item: T) => void
-  /**
-   * Кастомный рендер элемента подсказки.
-   * Используйте, когда нужно отрисовать не просто строку, а сложный UI
-   * (например, номер заказа + статус + дата).
-   * Пример:
-   * `renderItem={(item, { isActive }) => <OrderOption item={item} active={isActive} />}`
-   */
   renderItem?: SuggestItemRenderer<T>
-  /**
-   * Извлекает строковое значение из элемента для подстановки в инпут при выборе.
-   * Нужен, чтобы компонент работал с любым типом данных, а не только со строками.
-   * Пример: `getItemValue={(order) => order.number}`
-   */
   getItemValue: (item: T) => string
-  /**
-   * Внешний флаг загрузки.
-   * Полезен, когда поиск управляется снаружи (например, через React Query),
-   * и вы хотите явно передать состояние загрузки в компонент.
-   * Пример: `loading={isFetchingOrders}`
-   */
   loading?: boolean
-  /**
-   * Задержка (мс) перед вызовом `onSearch` после ввода.
-   * Уменьшает число лишних запросов на каждый символ.
-   * По умолчанию: `300`.
-   * Пример: `debounceMs={500}`
-   */
   debounceMs?: number
 }
 
@@ -75,6 +35,9 @@ function InputSuggest<T>({
   onBlur,
   onKeyDown,
   disabled,
+  size,
+  full = false,
+  label,
   ...props
 }: InputSuggestProps<T>) {
   const rootRef = React.useRef<HTMLDivElement>(null)
@@ -98,65 +61,44 @@ function InputSuggest<T>({
 
   React.useEffect(() => {
     const query = value.trim()
-
     if (!query) {
       setItems([])
       setActiveIndex(-1)
       setIsInternalLoading(false)
       return
     }
-
     const timer = window.setTimeout(async () => {
       const searchId = ++searchIdRef.current
       setIsInternalLoading(true)
-
       try {
         const nextItems = await Promise.resolve(onSearch(query))
-
-        if (searchId !== searchIdRef.current) {
-          return
-        }
-
+        if (searchId !== searchIdRef.current) return
         setItems(nextItems)
         setActiveIndex(nextItems.length ? 0 : -1)
       } finally {
-        if (searchId === searchIdRef.current) {
-          setIsInternalLoading(false)
-        }
+        if (searchId === searchIdRef.current) setIsInternalLoading(false)
       }
     }, debounceMs)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
+    return () => window.clearTimeout(timer)
   }, [value, onSearch, debounceMs])
 
   React.useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
       if (!rootRef.current) return
-
       if (!rootRef.current.contains(event.target as Node)) {
         clearBlurTimeout()
         setIsFocused(false)
       }
     }
-
     document.addEventListener("pointerdown", handlePointerDown)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown)
-    }
+    return () => document.removeEventListener("pointerdown", handlePointerDown)
   }, [clearBlurTimeout])
 
-  React.useEffect(() => {
-    return () => {
-      clearBlurTimeout()
-    }
-  }, [clearBlurTimeout])
+  React.useEffect(() => () => clearBlurTimeout(), [clearBlurTimeout])
 
   const selectItem = React.useCallback(
     (item: T) => {
-      const nextValue = getItemValue(item)
-      onChange(nextValue)
+      onChange(getItemValue(item))
       onSelect?.(item)
       setIsFocused(false)
       setActiveIndex(-1)
@@ -164,8 +106,8 @@ function InputSuggest<T>({
     [getItemValue, onChange, onSelect]
   )
 
-  return (
-    <div ref={rootRef} className="relative w-full">
+  const wrap = (
+    <div ref={rootRef} className={cn("input-wrap", full && "input-wrap--full")}>
       <input
         {...props}
         value={value}
@@ -178,9 +120,7 @@ function InputSuggest<T>({
         }}
         onBlur={(event) => {
           clearBlurTimeout()
-          blurTimeoutRef.current = window.setTimeout(() => {
-            setIsFocused(false)
-          }, 150)
+          blurTimeoutRef.current = window.setTimeout(() => setIsFocused(false), 150)
           onBlur?.(event)
         }}
         onKeyDown={(event) => {
@@ -194,63 +134,54 @@ function InputSuggest<T>({
             if (activeIndex >= 0 && activeIndex < items.length) {
               event.preventDefault()
               const selected = items[activeIndex]
-              if (selected) {
-                selectItem(selected)
-              }
+              if (selected) selectItem(selected)
             }
           } else if (event.key === "Escape") {
             setIsFocused(false)
             setActiveIndex(-1)
           }
-
           onKeyDown?.(event)
         }}
-        className={cn(
-          "h-8 w-full min-w-0 rounded-none border border-input bg-transparent px-2.5 py-1 text-xs transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 md:text-xs dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
-          className
-        )}
+        className={cn(inputVariants({ size, full: true }), className)}
       />
 
-      {isOpen ? (
-        <div
-          role="listbox"
-          className="absolute top-full z-50 mt-1 max-h-56 w-full overflow-auto border border-input bg-background p-1 shadow-md"
-        >
+      {isOpen && (
+        <div role="listbox" className="input-suggest-list">
           {items.map((item, index) => {
             const isActive = index === activeIndex
-
             return (
               <div
                 key={`${getItemValue(item)}-${index}`}
                 role="option"
                 aria-selected={isActive}
-                onMouseDown={(event) => {
-                  // Не даём полю потерять фокус до срабатывания обработчика клика.
-                  event.preventDefault()
-                }}
-                onMouseEnter={() => {
-                  setActiveIndex(index)
-                }}
-                onClick={() => {
-                  selectItem(item)
-                }}
-                className={cn(
-                  "cursor-pointer px-2 py-1 text-xs text-foreground",
-                  isActive && "bg-muted"
-                )}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => selectItem(item)}
+                className={cn("input-suggest-item", isActive && "input-suggest-item--active")}
               >
                 {renderItem ? renderItem(item, { isActive, index }) : getItemValue(item)}
               </div>
             )
           })}
         </div>
-      ) : null}
+      )}
 
-      {isFocused && isLoading ? (
-        <div className="mt-1 text-[11px] text-muted-foreground">Loading suggestions...</div>
-      ) : null}
+      {isFocused && isLoading && (
+        <div className="input-suggest-loading">Loading suggestions...</div>
+      )}
     </div>
   )
+
+  if (label) {
+    return (
+      <div className="input-field">
+        <Text.Helper as="span">{label}</Text.Helper>
+        {wrap}
+      </div>
+    )
+  }
+
+  return wrap
 }
 
 export { InputSuggest }

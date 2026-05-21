@@ -1,4 +1,4 @@
-import { IconIndicator, Stack, Text } from '@miracle/aramid';
+﻿import { IconIndicator, Stack, Text } from '@miracle/aramid';
 import { Link } from '@tanstack/react-router';
 import { FileIcon } from 'lucide-react';
 import { WorkerStatus, getHumanReadableWorkerData } from '@miracle/types';
@@ -71,7 +71,7 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                         {showApplyButton ? (
                             <Button
                                 type="button"
-                                variant="outline"
+                                variant="tertiary"
                                 size="sm"
                                 disabled={applyMutation.isPending || deleteMutation.isPending}
                                 onClick={() => applyMutation.mutate(worker.id)}
@@ -82,7 +82,7 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                         {showDeleteButton ? (
                             <Button
                                 type="button"
-                                variant="destructive"
+                                variant="danger"
                                 size="sm"
                                 disabled={deleteMutation.isPending || applyMutation.isPending}
                                 onClick={() => deleteMutation.mutate(worker.id)}

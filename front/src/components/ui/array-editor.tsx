@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+﻿import { type ReactNode } from 'react';
 import { Stack } from '@miracle/aramid';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,18 +29,17 @@ export function ArrayEditor<T>({
                 <div key={i} className="flex gap-1 items-end border border-border p-2">
                     <div className="flex-1 min-w-0">{renderItem(item, i)}</div>
                     <Button
-                        variant="ghost"
-                        size="icon-sm"
+                        variant="icon-button"
+                        size="sm"
+                        icon={<Trash2 />}
+                        label="Удалить"
                         onClick={() => onRemove(i)}
                         disabled={disabled}
-                        aria-label="Удалить"
-                    >
-                        <Trash2 />
-                    </Button>
+                    />
                 </div>
             ))}
             <Button
-                variant="outline"
+                variant="tertiary"
                 size="sm"
                 onClick={onAdd}
                 disabled={disabled}

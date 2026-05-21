@@ -1,0 +1,106 @@
+/* ─── Input element ──────────────────────────────────────────────────────────
+   Base class for all input-like elements: <input>, <button> (dropdown trigger).
+   Size and width are md / fixed by default.
+──────────────────────────────────────────────────────────────────────────── */
+
+.input {
+  display: block;
+  min-width: 0;
+  width: var(--input-fixed-width);
+  height: var(--aramid-spacing-8);           /* md = 40px */
+  padding-inline: var(--aramid-spacing-5);   /* 16px */
+  border: 1px solid var(--aramid-color-gray-50);
+  background-color: transparent;
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs);
+  font-weight: var(--aramid-font-weight-regular);
+  color: var(--aramid-color-gray-100);
+  line-height: 1;
+  appearance: none;
+  outline: none;
+  transition: border-color 100ms;
+}
+
+.input::placeholder {
+  color: var(--aramid-color-gray-40);
+}
+
+.input:focus-visible {
+  border-color: var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: -2px;
+}
+
+.input:disabled {
+  cursor: not-allowed;
+  background-color: var(--aramid-color-gray-10);
+  color: var(--aramid-color-gray-30);
+  border-color: var(--aramid-color-gray-30);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--aramid-color-semantic-danger);
+}
+
+.input[aria-invalid="true"]:focus-visible {
+  border-color: var(--aramid-color-semantic-danger);
+  outline-color: var(--aramid-color-semantic-danger);
+}
+
+/* type="file" button */
+.input::file-selector-button {
+  display: inline-flex;
+  align-items: center;
+  height: calc(var(--aramid-spacing-8) - var(--aramid-spacing-3));
+  border: none;
+  background-color: transparent;
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs);
+  font-weight: var(--aramid-font-weight-medium);
+  color: var(--aramid-color-gray-100);
+  cursor: pointer;
+}
+
+/* ─── Size variants ──────────────────────────────────────────────────────── */
+
+.input--sm {
+  height: var(--aramid-spacing-7);           /* 32px */
+  padding-inline: var(--aramid-spacing-4);   /* 12px */
+}
+
+.input--sm::file-selector-button {
+  height: calc(var(--aramid-spacing-7) - var(--aramid-spacing-3));
+}
+
+.input--lg {
+  height: var(--aramid-spacing-9);           /* 48px */
+}
+
+.input--lg::file-selector-button {
+  height: calc(var(--aramid-spacing-9) - var(--aramid-spacing-3));
+}
+
+/* ─── Width variants ─────────────────────────────────────────────────────── */
+
+.input--full {
+  width: 100%;
+}
+
+/* ─── Wrapper (for compound inputs: dropdown, suggest) ───────────────────── */
+
+.input-wrap {
+  position: relative;
+  width: var(--input-fixed-width);
+}
+
+.input-wrap--full {
+  width: 100%;
+}
+
+/* ─── Field (label + control stack) ─────────────────────────────────────── */
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2);
+}

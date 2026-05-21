@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+﻿import { useState, type ReactNode } from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
 import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ export function AuthPage() {
                             На главную
                         </Text>
                     </Link>
-                    <Button type="button" variant="outline" onClick={() => logout()} disabled={isLogoutPending}>
+                    <Button type="button" variant="tertiary" onClick={() => logout()} disabled={isLogoutPending}>
                         {isLogoutPending ? 'Выйти из аккаунта...' : 'Выйти из аккаунта'}
                     </Button>
                 </Stack>

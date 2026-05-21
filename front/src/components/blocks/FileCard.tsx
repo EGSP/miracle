@@ -1,4 +1,4 @@
-import { createContext, useContext, type PropsWithChildren } from "react";
+﻿import { createContext, useContext, type PropsWithChildren } from "react";
 import { IconIndicator, Stack, Text } from "@miracle/aramid";
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types";
 import { Eye, Trash2, Upload } from "lucide-react";
@@ -217,7 +217,7 @@ function FileCardBody() {
                         <>
                             <Stack orientation="horizontal" gap={2} className="items-center">
                                 <Button
-                                    variant="outline"
+                                    variant="tertiary"
                                     size="sm"
                                     disabled={!isDirtyAnywhere || isSaving}
                                     onClick={save}
@@ -245,7 +245,7 @@ function FileCardBody() {
                         disabled={restoreMutation.isPending}
                     />
                     <Button
-                        variant="outline"
+                        variant="tertiary"
                         size="sm"
                         disabled={!restoreFile || restoreMutation.isPending}
                         onClick={handleRestore}
@@ -283,15 +283,15 @@ function FileCardBody() {
             </Stack>
 
             <Stack orientation="horizontal" gap={2}>
-                <Button variant="outline" size="sm" disabled={!canRead} onClick={() => extractMutation.mutate()}>
+                <Button variant="tertiary" size="sm" disabled={!canRead} onClick={() => extractMutation.mutate()}>
                     Прочитать
                 </Button>
-                <Button variant="outline" size="sm" disabled={!canReread} onClick={() => extractMutation.mutate()}>
+                <Button variant="tertiary" size="sm" disabled={!canReread} onClick={() => extractMutation.mutate()}>
                     Перечитать
                 </Button>
                 <Button
                     type="button"
-                    variant="destructive"
+                    variant="danger"
                     size="sm"
                     disabled={!canMarkContentDeleted}
                     onClick={() => {
@@ -306,7 +306,7 @@ function FileCardBody() {
                 <Dialog>
                     <DialogTrigger
                         render={
-                            <Button variant="outline" size="sm" disabled={!hasContent}>
+                            <Button variant="tertiary" size="sm" disabled={!hasContent}>
                                 <Eye />
                                 Увидеть
                             </Button>
@@ -322,7 +322,7 @@ function FileCardBody() {
                                 <Stack gap={2}>
                                     <DialogClose
                                         render={
-                                            <Button variant="outline" size="sm">
+                                            <Button variant="tertiary" size="sm">
                                                 Закрыть
                                             </Button>
                                         }

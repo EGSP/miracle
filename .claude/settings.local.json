@@ -58,7 +58,12 @@
       "Bash(node -e \"console.log\\(require\\('openai/package.json'\\).version\\)\")",
       "Bash(findstr version *)",
       "Bash(findstr /C:\"\\\\\"version\\\\\"\" \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\node_modules\\\\openai\\\\package.json\")",
-      "Bash(findstr /n \"output_text\" \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\node_modules\\\\openai\\\\resources\\\\responses\\\\responses.d.ts\")"
+      "Bash(findstr /n \"output_text\" \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\node_modules\\\\openai\\\\resources\\\\responses\\\\responses.d.ts\")",
+      "Bash(\\\\.css\")",
+      "Bash(powershell -Command ' *)",
+      "Bash(powershell -Command '$f='\\\\''pages/Auth.tsx'\\\\''; $c=Get-Content $f -Raw -Encoding UTF8; $n=$c -replace '\\\\''variant=\"outline\"'\\\\'','\\\\''variant=\"tertiary\"'\\\\''; Set-Content $f $n -Encoding UTF8 -NoNewline; Write-Host '\\\\''Updated'\\\\''')",
+      "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\components\\\\ui\\\\button.css\")",
+      "WebFetch(domain:v10.carbondesignsystem.com)"
     ]
   }
 }

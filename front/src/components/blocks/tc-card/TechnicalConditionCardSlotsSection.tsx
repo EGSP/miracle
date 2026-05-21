@@ -43,9 +43,9 @@ export function TechnicalConditionCardSlotsSection() {
 
     return (
         <Stack gap={1}>
-            <Text.Label as="span" className="font-medium">
-                Слоты обозначения
-            </Text.Label>
+            <Text.Heading as="p" variant="02">
+                Параметры условного обозначения
+            </Text.Heading>
             <ArrayEditor
                 items={slots.value}
                 onAdd={() => slots.onChange([...slots.value, makeSlot(slots.value.length)])}
@@ -53,14 +53,14 @@ export function TechnicalConditionCardSlotsSection() {
                 renderItem={(slot, i) => (
                     <Stack gap={1}>
                         <Input
-                            label="Название параметра"
+                            label={`${i + 1} Название параметра`}
                             placeholder="Напр. Климатическое исполнение"
                             value={slot.name}
                             onChange={(e) => update(i, { name: e.target.value })}
                             disabled={isSaving}
                         />
                         <div className="flex flex-col gap-0.5">
-                            <Text.Helper as="span">Правила</Text.Helper>
+                            <Text.Helper as="span">Правила определения значения</Text.Helper>
                             <ArrayEditor
                                 items={slot.ruleIds}
                                 onAdd={() => update(i, { ruleIds: [...slot.ruleIds, ''] })}
@@ -105,7 +105,7 @@ export function TechnicalConditionCardSlotsSection() {
                         </div>
                     </Stack>
                 )}
-                addLabel="Добавить слот"
+                addLabel="Добавить параметр"
                 disabled={isSaving}
             />
         </Stack>

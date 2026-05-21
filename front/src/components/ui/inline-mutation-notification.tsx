@@ -51,14 +51,13 @@ export function InlineMutationNotification({
                             Подробнее
                         </Button>
                         <Button
-                            variant="ghost"
-                            size="icon-xs"
+                            variant="icon-button"
+                            size="xs"
+                            icon={<X />}
+                            label="Закрыть"
                             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => setDismissed(true)}
-                        >
-                            <X />
-                            <span className="sr-only">Закрыть</span>
-                        </Button>
+                        />
                     </div>
                 </div>
                 <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
@@ -81,14 +80,13 @@ export function InlineMutationNotification({
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
                 <p className="min-w-0 flex-1 text-xs line-clamp-2">{successMessage}</p>
                 <Button
-                    variant="ghost"
-                    size="icon-xs"
+                    variant="icon-button"
+                    size="xs"
+                    icon={<X />}
+                    label="Закрыть"
                     className="shrink-0 text-green-700 hover:bg-green-500/10 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400"
                     onClick={() => setDismissed(true)}
-                >
-                    <X />
-                    <span className="sr-only">Закрыть</span>
-                </Button>
+                />
             </div>
         )
     }

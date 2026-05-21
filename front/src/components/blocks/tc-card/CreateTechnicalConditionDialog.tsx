@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Stack, Text } from '@miracle/aramid';
 import type { Stored, ProductType } from '@miracle/types';
@@ -106,7 +106,7 @@ function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) 
             </Stack>
             <DialogFooter>
                 <Button
-                    variant="outline"
+                    variant="tertiary"
                     onClick={handleCancel}
                     disabled={createMutation.isPending}
                 >

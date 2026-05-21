@@ -1,0 +1,92 @@
+/* ─── Textarea element ───────────────────────────────────────────────────────
+   Heights step up from Input lg (spacing-9 = 48px):
+     sm  +       2× = 96px   (default)
+     md  ++      4× = 192px
+     lg  +++     8× = 384px
+     xl  +++++  16× = 768px
+──────────────────────────────────────────────────────────────────────────── */
+
+.textarea {
+  display: block;
+  min-width: 0;
+  width: var(--input-fixed-width);
+  min-height: calc(var(--aramid-spacing-9) * 2);  /* sm = 96px */
+  padding-block: var(--aramid-spacing-3);          /* 8px */
+  padding-inline: var(--aramid-spacing-5);         /* 16px */
+  border: 1px solid var(--aramid-color-gray-50);
+  background-color: transparent;
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs);
+  font-weight: var(--aramid-font-weight-regular);
+  color: var(--aramid-color-gray-100);
+  line-height: var(--aramid-font-line-height-normal);
+  outline: none;
+  resize: vertical;
+  transition: border-color 100ms;
+}
+
+.textarea::placeholder {
+  color: var(--aramid-color-gray-40);
+}
+
+.textarea:focus-visible {
+  border-color: var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: -2px;
+}
+
+.textarea:disabled {
+  cursor: not-allowed;
+  background-color: var(--aramid-color-gray-10);
+  color: var(--aramid-color-gray-30);
+  border-color: var(--aramid-color-gray-30);
+  resize: none;
+}
+
+.textarea[aria-invalid="true"] {
+  border-color: var(--aramid-color-semantic-danger);
+}
+
+.textarea[aria-invalid="true"]:focus-visible {
+  border-color: var(--aramid-color-semantic-danger);
+  outline-color: var(--aramid-color-semantic-danger);
+}
+
+/* ─── Height variants ────────────────────────────────────────────────────── */
+
+.textarea--md {
+  min-height: calc(var(--aramid-spacing-9) * 4);   /* 192px */
+}
+
+.textarea--lg {
+  min-height: calc(var(--aramid-spacing-9) * 8);   /* 384px */
+}
+
+.textarea--xl {
+  min-height: calc(var(--aramid-spacing-9) * 16);  /* 768px */
+}
+
+.textarea--auto {
+  min-height: 0;
+  resize: none;
+}
+
+/* ─── Width variants ─────────────────────────────────────────────────────── */
+
+.textarea--full {
+  width: 100%;
+}
+
+/* ─── Resize variants ────────────────────────────────────────────────────── */
+
+.textarea--no-resize {
+  resize: none;
+}
+
+/* ─── Field (label + textarea stack) ────────────────────────────────────── */
+
+.textarea-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2);
+}

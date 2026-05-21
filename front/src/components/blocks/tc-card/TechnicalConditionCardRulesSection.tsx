@@ -24,9 +24,9 @@ export function TechnicalConditionCardRulesSection() {
 
     return (
         <Stack gap={1}>
-            <Text.Label as="span" className="font-medium">
+            <Text.Heading as="p" variant='02'>
                 Правила
-            </Text.Label>
+            </Text.Heading>
             <ArrayEditor
                 items={rules.value}
                 onAdd={() => rules.onChange([...rules.value, makeRule()])}

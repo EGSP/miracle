@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Stack, Text } from '@miracle/aramid';
 import type { ProductType, Stored } from '@miracle/types';
@@ -78,7 +78,7 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
             <Stack orientation="horizontal" gap={2} className="items-center justify-end">
                 <Button
                     type="button"
-                    variant="destructive"
+                    variant="danger"
                     size="sm"
                     disabled={isBusy}
                     onClick={handleSoftDelete}
