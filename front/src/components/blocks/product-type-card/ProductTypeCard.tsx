@@ -76,59 +76,54 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
     return (
         <Layer>
             <Stack gap={3} className="border border-border p-3">
-            <Stack orientation="horizontal" gap={2} className="items-center">
-                <Button
-                    size="sm"
-                    label={updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
-                    disabled={!isDirtyAnywhere || !name.value.trim() || isBusy}
-                    onClick={save}
-                />
-                <Button
-                    type="button"
-                    variant="danger-tertiary"
-                    size="sm"
-                    icon={<Trash2 />}
-                    label="Удалить"
-                    disabled={isBusy}
-                    onClick={handleSoftDelete}
-                />
-            </Stack>
+                <Stack orientation="horizontal" gap={2} className="items-center">
+                    <Button
+                        size="xs"
+                        label={updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+                        disabled={!isDirtyAnywhere || !name.value.trim() || isBusy}
+                        onClick={save}
+                    />
+                    <Button
+                        type="button"
+                        variant="danger-tertiary"
+                        size="xs"
+                        icon={<Trash2 />}
+                        label="Удалить"
+                        disabled={isBusy}
+                        onClick={handleSoftDelete}
+                    />
+                </Stack>
 
-            <Stack gap={1}>
-                <Text.Label as="span">Название</Text.Label>
-                <Input
-                    id={`product-type-name-${productType.id}`}
-                    aria-label="Название типа продукции"
-                    value={name.value}
-                    onChange={name.onInputChange}
-                    disabled={isBusy}
-                />
-            </Stack>
+                <Stack gap={1}>
+                    <Text.Label as="span">Название</Text.Label>
+                    <Input
+                        id={`product-type-name-${productType.id}`}
+                        aria-label="Название типа продукции"
+                        value={name.value}
+                        onChange={name.onInputChange}
+                        disabled={isBusy}
+                    />
+                </Stack>
 
-            <Stack gap={1}>
-                <Text.Label as="span">Синонимы</Text.Label>
-                <Text.Helper as="p">По одному синониму на строку</Text.Helper>
-                <div className="flex items-start gap-2">
-                    <div className="basis-[70%]">
-                        <Textarea
-                            size="md"
-                            value={synonymsText.value}
-                            onChange={synonymsText.onInputChange}
-                            disabled={isBusy}
-                            placeholder={'Вставка электроизолирующая\nМуфтовый...'}
-                            aria-label="Синонимы"
-                        />
-                    </div>
-                    <div className="basis-[30%]">
-                        <div className="min-w-0 border border-input/50 bg-muted/20 p-2">
-                            <SynonymsPreview synonyms={parsedSynonyms} />
+                <Stack gap={1}>
+                    <Text.Label as="span">Синонимы</Text.Label>
+                    <Text.Helper as="p">По одному синониму на строку</Text.Helper>
+                    <div className="flex items-start gap-2">
+                        <div className="basis-[70%]">
+                            <Textarea
+                                size="md"
+                                value={synonymsText.value}
+                                onChange={synonymsText.onInputChange}
+                                disabled={isBusy}
+                                placeholder={'Вставка электроизолирующая\nМуфтовый...'}
+                                aria-label="Синонимы"
+                            />
                         </div>
                     </div>
-                </div>
-            </Stack>
+                </Stack>
 
-            <InlineMutationNotification mutation={updateMutation} successMessage="Сохранено" />
-            <InlineMutationNotification mutation={softDeleteMutation} />
+                <InlineMutationNotification mutation={updateMutation} successMessage="Сохранено" />
+                <InlineMutationNotification mutation={softDeleteMutation} />
             </Stack>
         </Layer>
     );

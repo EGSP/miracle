@@ -19,24 +19,22 @@ export default function ProductTypesPage() {
                     </Stack>
                 </Column>
 
-                <Column span={16}>
-                    {isLoading && <Text.Label as="p">Загрузка...</Text.Label>}
-                    {error && (
-                        <Text as="p" compact className="text-destructive">
-                            Ошибка: {error.message}
-                        </Text>
-                    )}
-                    {!isLoading && !error && productTypes?.length === 0 && (
-                        <Text.Label as="p">Типы продукции ещё не созданы</Text.Label>
-                    )}
-                    {productTypes && productTypes.length > 0 && (
-                        <Stack gap={3}>
-                            {productTypes.map((item) => (
-                                <ProductTypeCard key={item.id} productType={item} />
-                            ))}
-                        </Stack>
-                    )}
-                </Column>
+                {isLoading && <Text.Label as="p">Загрузка...</Text.Label>}
+                {error && (
+                    <Text as="p" compact className="text-destructive">
+                        Ошибка: {error.message}
+                    </Text>
+                )}
+                {!isLoading && !error && productTypes?.length === 0 && (
+                    <Text.Label as="p">Типы продукции ещё не созданы</Text.Label>
+                )}
+                {productTypes && productTypes.length > 0 && (
+                    productTypes.map((item) => (
+                        <Column span="50%">
+                            <ProductTypeCard key={item.id} productType={item} />
+                        </Column>
+                    ))
+                )}
             </Grid>
         </DirtyGuardProvider>
     );
