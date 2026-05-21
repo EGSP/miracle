@@ -45,9 +45,7 @@ export default function HomePage() {
                                     </Text>
                                 )}
                             </Stack>
-                            <Button type="button" onClick={refetchHealth}>
-                                Проверить
-                            </Button>
+                            <Button type="button" label="Проверить" onClick={refetchHealth} />
                         </Stack>
                     )}
 

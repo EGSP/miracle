@@ -80,9 +80,11 @@ export function CreateUserForm() {
                     ))}
                 </select>
             </label>
-            <Button type="submit" disabled={isPending || !login.trim() || !password}>
-                {isPending ? 'Создание...' : 'Создать'}
-            </Button>
+            <Button
+                type="submit"
+                label={isPending ? 'Создание...' : 'Создать'}
+                disabled={isPending || !login.trim() || !password}
+            />
         </Stack>
     );
 }

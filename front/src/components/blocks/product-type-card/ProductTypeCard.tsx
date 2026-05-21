@@ -80,20 +80,17 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
                     type="button"
                     variant="danger"
                     size="sm"
+                    icon={<Trash2 />}
+                    label="Удалить"
                     disabled={isBusy}
                     onClick={handleSoftDelete}
-                    aria-label="Удалить тип продукции"
-                >
-                    <Trash2 />
-                    Удалить
-                </Button>
+                />
                 <Button
                     size="sm"
+                    label={updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
                     disabled={!isDirtyAnywhere || !name.value.trim() || isBusy}
                     onClick={save}
-                >
-                    {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
-                </Button>
+                />
             </Stack>
 
             <Stack gap={1}>

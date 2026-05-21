@@ -101,21 +101,19 @@ function CreateProductTypeForm({
             <DialogFooter>
                 <Button
                     variant="tertiary"
+                    label="Отмена"
                     onClick={handleCancel}
                     disabled={createMutation.isPending}
-                >
-                    Отмена
-                </Button>
+                />
                 <Button
+                    label={createMutation.isPending ? 'Создание...' : 'Создать'}
                     onClick={handleCreate}
                     disabled={
                         !isDirtyAnywhere
                         || !name.value.trim()
                         || createMutation.isPending
                     }
-                >
-                    {createMutation.isPending ? 'Создание...' : 'Создать'}
-                </Button>
+                />
             </DialogFooter>
         </>
     );
@@ -132,10 +130,7 @@ export function CreateProductTypeDialog() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger
                 render={
-                    <Button size={'sm'}>
-                        <Plus />
-                        Создать тип
-                    </Button>
+                    <Button size="sm" icon={<Plus />} label="Создать тип" />
                 }
             />
             <DialogContent size="medium">

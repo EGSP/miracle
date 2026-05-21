@@ -45,11 +45,10 @@ export function InlineMutationNotification({
                         <Button
                             variant="ghost"
                             size="xs"
+                            label="Подробнее"
                             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => setDetailsOpen(true)}
-                        >
-                            Подробнее
-                        </Button>
+                        />
                         <Button
                             variant="icon-button"
                             size="xs"

@@ -41,13 +41,12 @@ export function ArrayEditor<T>({
             <Button
                 variant="tertiary"
                 size="sm"
+                icon={<Plus />}
+                label={addLabel}
                 onClick={onAdd}
                 disabled={disabled}
                 className={cn('self-start', items.length > 0 && 'mt-1')}
-            >
-                <Plus />
-                {addLabel}
-            </Button>
+            />
         </Stack>
     );
 }

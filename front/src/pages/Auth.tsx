@@ -41,9 +41,13 @@ export function AuthPage() {
                             На главную
                         </Text>
                     </Link>
-                    <Button type="button" variant="tertiary" onClick={() => logout()} disabled={isLogoutPending}>
-                        {isLogoutPending ? 'Выйти из аккаунта...' : 'Выйти из аккаунта'}
-                    </Button>
+                    <Button
+                        type="button"
+                        variant="tertiary"
+                        label={isLogoutPending ? 'Выйти из аккаунта...' : 'Выйти из аккаунта'}
+                        onClick={() => logout()}
+                        disabled={isLogoutPending}
+                    />
                 </Stack>
             </>
         );
@@ -105,9 +109,7 @@ export function LoginForm() {
                 onChange={(e) => setPasswordValue(e.target.value)}
                 disabled={isPending}
             />
-            <Button type="submit" disabled={isPending}>
-                {isPending ? 'Вход...' : 'Войти'}
-            </Button>
+            <Button type="submit" label={isPending ? 'Вход...' : 'Войти'} disabled={isPending} />
         </Stack>
     );
 }
@@ -153,9 +155,7 @@ export function RegisterForm() {
                 onChange={(e) => setConfirmPasswordValue(e.target.value)}
                 disabled={isPending}
             />
-            <Button type="submit" disabled={isPending}>
-                {isPending ? 'Регистрация...' : 'Зарегистрироваться'}
-            </Button>
+            <Button type="submit" label={isPending ? 'Регистрация...' : 'Зарегистрироваться'} disabled={isPending} />
         </Stack>
     );
 }

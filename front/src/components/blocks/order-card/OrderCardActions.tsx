@@ -34,11 +34,10 @@ export function OrderCardActions() {
                     <Button
                         variant="tertiary"
                         size="sm"
+                        label={isSaving ? 'Сохранение...' : 'Сохранить'}
                         disabled={!isDirtyAnywhere || isSaving}
                         onClick={save}
-                    >
-                        {isSaving ? 'Сохранение...' : 'Сохранить'}
-                    </Button>
+                    />
                     {isDirtyAnywhere && (
                         <Text as="span" compact className="text-muted-foreground">
                             есть изменения
@@ -50,23 +49,23 @@ export function OrderCardActions() {
                     <Button
                         variant="tertiary"
                         size="sm"
+                        label={
+                            analyseDetailsMutation.isPending
+                                ? 'Запуск...'
+                                : analyseAvailabilityQuery.isFetching
+                                    ? 'Проверка...'
+                                    : 'Вывести требования'
+                        }
                         disabled={!canAnalyse || analyseAvailabilityQuery.isFetching || analyseDetailsMutation.isPending}
                         onClick={() => analyseDetailsMutation.mutate()}
-                    >
-                        {analyseDetailsMutation.isPending
-                            ? 'Запуск...'
-                            : analyseAvailabilityQuery.isFetching
-                                ? 'Проверка...'
-                                : 'Вывести требования'}
-                    </Button>
+                    />
                     <Button
                         variant="tertiary"
                         size="sm"
+                        label={clearDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
                         disabled={!details || clearDetailsMutation.isPending}
                         onClick={() => clearDetailsMutation.mutate()}
-                    >
-                        {clearDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
-                    </Button>
+                    />
                 </Stack>
             </Stack>
             <Stack gap={2} orientation='vertical'>

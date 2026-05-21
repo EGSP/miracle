@@ -229,10 +229,12 @@ export default function FilesPage() {
                         <Text.Label as="p">{uploadMutation.error.message}</Text.Label>
                     )}
 
-                    <Button onClick={handleUpload} disabled={!selectedFile || uploadMutation.isPending}>
-                        <Upload />
-                        {uploadMutation.isPending ? 'Загрузка...' : 'Загрузить'}
-                    </Button>
+                    <Button
+                        icon={<Upload />}
+                        label={uploadMutation.isPending ? 'Загрузка...' : 'Загрузить'}
+                        onClick={handleUpload}
+                        disabled={!selectedFile || uploadMutation.isPending}
+                    />
 
                     <Stack as="section" gap={2}>
                         <Text.Heading as="h3" variant="compact-01">

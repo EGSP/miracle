@@ -219,11 +219,10 @@ function FileCardBody() {
                                 <Button
                                     variant="tertiary"
                                     size="sm"
+                                    label={isSaving ? "Сохранение..." : "Сохранить настройки"}
                                     disabled={!isDirtyAnywhere || isSaving}
                                     onClick={save}
-                                >
-                                    {isSaving ? "Сохранение..." : "Сохранить настройки"}
-                                </Button>
+                                />
                             </Stack>
                             <InlineMutationNotification
                                 mutation={{ isError: !!saveError, isSuccess: false, error: saveError }}
@@ -247,12 +246,11 @@ function FileCardBody() {
                     <Button
                         variant="tertiary"
                         size="sm"
+                        icon={<Upload />}
+                        label={restoreMutation.isPending ? "Загрузка..." : "Восстановить файл"}
                         disabled={!restoreFile || restoreMutation.isPending}
                         onClick={handleRestore}
-                    >
-                        <Upload />
-                        {restoreMutation.isPending ? "Загрузка..." : "Восстановить файл"}
-                    </Button>
+                    />
                     <InlineMutationNotification
                         mutation={restoreMutation}
                         successMessage="Файл успешно восстановлен"
@@ -283,33 +281,25 @@ function FileCardBody() {
             </Stack>
 
             <Stack orientation="horizontal" gap={2}>
-                <Button variant="tertiary" size="sm" disabled={!canRead} onClick={() => extractMutation.mutate()}>
-                    Прочитать
-                </Button>
-                <Button variant="tertiary" size="sm" disabled={!canReread} onClick={() => extractMutation.mutate()}>
-                    Перечитать
-                </Button>
+                <Button variant="tertiary" size="sm" label="Прочитать" disabled={!canRead} onClick={() => extractMutation.mutate()} />
+                <Button variant="tertiary" size="sm" label="Перечитать" disabled={!canReread} onClick={() => extractMutation.mutate()} />
                 <Button
                     type="button"
                     variant="danger"
                     size="sm"
+                    icon={<Trash2 />}
+                    label={softDeleteMutation.isPending ? "Пометка..." : "Скрыть контент"}
                     disabled={!canMarkContentDeleted}
                     onClick={() => {
                         if (latestContent?.id) {
                             softDeleteMutation.mutate({ contentId: latestContent.id, mark: true });
                         }
                     }}
-                >
-                    <Trash2 />
-                    {softDeleteMutation.isPending ? "Пометка..." : "Скрыть контент"}
-                </Button>
+                />
                 <Dialog>
                     <DialogTrigger
                         render={
-                            <Button variant="tertiary" size="sm" disabled={!hasContent}>
-                                <Eye />
-                                Увидеть
-                            </Button>
+                            <Button variant="tertiary" size="sm" icon={<Eye />} label="Увидеть" disabled={!hasContent} />
                         }
                     />
                     <DialogContent
@@ -322,9 +312,7 @@ function FileCardBody() {
                                 <Stack gap={2}>
                                     <DialogClose
                                         render={
-                                            <Button variant="tertiary" size="sm">
-                                                Закрыть
-                                            </Button>
+                                            <Button variant="tertiary" size="sm" label="Закрыть" />
                                         }
                                     />
                                 </Stack>

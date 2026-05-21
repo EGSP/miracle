@@ -26,8 +26,8 @@
 }
 
 .input:focus-visible {
-  border-color: var(--aramid-color-semantic-interactive);
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  border-color: var(--aramid-color-sand-60);
+  outline: 2px solid var(--aramid-color-sand-60);
   outline-offset: -2px;
 }
 

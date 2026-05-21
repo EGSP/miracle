@@ -83,10 +83,14 @@ export function FileWizard({ fileId, files, onFileSelected }: FileWizardProps) {
                     onChange={(id) => onFileSelected(id ?? null)}
                 />
             )}
-            <Button variant="tertiary" size="sm" className="self-start" onClick={() => setDialogOpen(true)}>
-                <Upload />
-                Загрузить файл
-            </Button>
+            <Button
+                variant="tertiary"
+                size="sm"
+                icon={<Upload />}
+                label="Загрузить файл"
+                className="self-start"
+                onClick={() => setDialogOpen(true)}
+            />
             <FileUploadDialog
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}

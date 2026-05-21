@@ -107,17 +107,15 @@ function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) 
             <DialogFooter>
                 <Button
                     variant="tertiary"
+                    label="Отмена"
                     onClick={handleCancel}
                     disabled={createMutation.isPending}
-                >
-                    Отмена
-                </Button>
+                />
                 <Button
+                    label={createMutation.isPending ? 'Создание...' : 'Создать ТУ'}
                     onClick={handleCreate}
                     disabled={createMutation.isPending}
-                >
-                    {createMutation.isPending ? 'Создание...' : 'Создать ТУ'}
-                </Button>
+                />
             </DialogFooter>
         </>
     );
@@ -130,10 +128,7 @@ export function CreateTechnicalConditionDialog() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger
                 render={
-                    <Button type="button" size="sm">
-                        <Plus />
-                        Создать ТУ
-                    </Button>
+                    <Button type="button" size="sm" icon={<Plus />} label="Создать ТУ" />
                 }
             />
             <DialogContent size="medium">

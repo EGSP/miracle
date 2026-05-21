@@ -17,15 +17,15 @@ export function TechnicalConditionCardActions() {
                 <Button
                     type="button"
                     size="sm"
+                    label={isSaving ? 'Сохранение...' : 'Сохранить ТУ'}
                     disabled={!isDirtyAnywhere || isSaving}
                     onClick={save}
-                >
-                    {isSaving ? 'Сохранение...' : 'Сохранить ТУ'}
-                </Button>
+                />
                 <Button
                     type="button"
                     size="sm"
                     variant="tertiary"
+                    label={extractMutation.isPending ? 'Запуск...' : 'Извлечь правила и слоты'}
                     disabled={!technicalCondition.fileId || extractMutation.isPending}
                     title={
                         !technicalCondition.fileId
@@ -33,9 +33,7 @@ export function TechnicalConditionCardActions() {
                             : 'Запустить LLM-анализ: извлечь правила и слоты из текста ТУ'
                     }
                     onClick={() => extractMutation.mutate()}
-                >
-                    {extractMutation.isPending ? 'Запуск...' : 'Извлечь правила и слоты'}
-                </Button>
+                />
             </Stack>
 
             <InlineMutationNotification

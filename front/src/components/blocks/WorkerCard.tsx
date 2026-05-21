@@ -73,22 +73,20 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                                 type="button"
                                 variant="tertiary"
                                 size="sm"
+                                label={applyMutation.isPending ? 'Применение...' : 'Применить результат'}
                                 disabled={applyMutation.isPending || deleteMutation.isPending}
                                 onClick={() => applyMutation.mutate(worker.id)}
-                            >
-                                {applyMutation.isPending ? 'Применение...' : 'Применить результат'}
-                            </Button>
+                            />
                         ) : null}
                         {showDeleteButton ? (
                             <Button
                                 type="button"
                                 variant="danger"
                                 size="sm"
+                                label={deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
                                 disabled={deleteMutation.isPending || applyMutation.isPending}
                                 onClick={() => deleteMutation.mutate(worker.id)}
-                            >
-                                {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
-                            </Button>
+                            />
                         ) : null}
                     </Stack>
                     {applyMutation.isError ? (

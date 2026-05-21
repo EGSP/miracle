@@ -145,10 +145,12 @@ function OrdersPageContent() {
                         <Text.Heading as="h2" variant="compact-01">
                             Список заказов
                         </Text.Heading>
-                        <Button onClick={handleCreateOrder} disabled={createOrderMutation.isPending}>
-                            <Plus />
-                            {createOrderMutation.isPending ? 'Создание...' : 'Создать новый'}
-                        </Button>
+                        <Button
+                            icon={<Plus />}
+                            label={createOrderMutation.isPending ? 'Создание...' : 'Создать новый'}
+                            onClick={handleCreateOrder}
+                            disabled={createOrderMutation.isPending}
+                        />
                     </Stack>
                     <Stack
                         orientation="horizontal"

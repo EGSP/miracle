@@ -98,12 +98,11 @@ export function FileUploadDialog({ open, onOpenChange, onUploaded }: FileUploadD
 
                 <DialogFooter showCloseButton={!uploadMutation.isPending}>
                     <Button
+                        icon={<Upload />}
+                        label={uploadMutation.isPending ? 'Загрузка...' : 'Загрузить'}
                         onClick={handleUpload}
                         disabled={!selectedFile || uploadMutation.isPending}
-                    >
-                        <Upload />
-                        {uploadMutation.isPending ? 'Загрузка...' : 'Загрузить'}
-                    </Button>
+                    />
                 </DialogFooter>
             </DialogContent>
         </Dialog>
