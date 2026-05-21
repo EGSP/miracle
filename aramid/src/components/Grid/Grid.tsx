@@ -3,7 +3,7 @@ import { clsx } from 'clsx';
 import './aramid-grid.css';
 import { aramidGridClass, aramidSubgridClass } from '../../internal/layoutClassNames';
 import { PolymorphicComponentPropWithRef } from '../../internal/PolymorphicProps';
-import { GridColsContext, GridSettings, useGridSettings } from './GridContext';
+import { GridColsContext } from './GridContext';
 
 type SubgridMode = 'wide' | 'narrow' | 'condensed';
 
@@ -38,6 +38,16 @@ export interface GridBaseProps {
    * Режим «narrow»: без горизонтальных отступов у контейнера сетки.
    */
   narrow?: boolean;
+
+  /**
+   * Рендерит `Grid` как вложенную CSS subgrid, наследующую колонки родительской сетки.
+   *
+   * Требует явного указания: subgrid работает только когда компонент является прямым
+   * потомком grid-контейнера — любой промежуточный элемент (flex, absolute, портал и т. п.)
+   * разрывает наследование треков. По умолчанию `false` — каждый `Grid` создаёт
+   * независимую корневую сетку.
+   */
+  subgrid?: boolean;
 
   /**
    * Межстрочный зазор по величине совпадает с текущим межколоночным зазором.
@@ -146,49 +156,37 @@ const CSSGrid = React.forwardRef<
       condensed = false,
       fullWidth = false,
       narrow = false,
+      subgrid = false,
       withRowGap,
       style: userStyle,
       ...rest
     },
     ref?
   ) => {
-    const { subgrid } = useGridSettings();
     const mode = resolveMode(narrow, condensed);
-
-    const layoutProps = {
-      condensed,
-      narrow,
-      fullWidth,
-      align,
-      withRowGap,
-    };
-
     const BaseComponent = as || 'div';
 
     if (subgrid) {
       const style = { ...subgridVariables(mode, withRowGap), ...userStyle };
       return (
-        <GridSettings subgrid>
-          <BaseComponent
-            ref={ref}
-            className={clsx(aramidSubgridClass, customClassName)}
-            style={style}
-            {...rest}>
-            {children}
-          </BaseComponent>
-        </GridSettings>
+        <BaseComponent
+          ref={ref}
+          className={clsx(aramidSubgridClass, customClassName)}
+          style={style}
+          {...rest}>
+          {children}
+        </BaseComponent>
       );
     }
 
+    const layoutProps = { condensed, narrow, fullWidth, align, withRowGap };
     const style = { ...rootGridVariables(layoutProps), ...userStyle };
     return (
-      <GridSettings subgrid>
-        <GridColsContext.Provider value={16}>
-          <BaseComponent className={clsx(aramidGridClass, customClassName)} ref={ref} style={style} {...rest}>
-            {children}
-          </BaseComponent>
-        </GridColsContext.Provider>
-      </GridSettings>
+      <GridColsContext.Provider value={16}>
+        <BaseComponent className={clsx(aramidGridClass, customClassName)} ref={ref} style={style} {...rest}>
+          {children}
+        </BaseComponent>
+      </GridColsContext.Provider>
     );
   }
 ) as GridComponent;
