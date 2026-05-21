@@ -176,7 +176,7 @@ function CheckboxGroup({
   children,
 }: CheckboxGroupProps) {
   return (
-    <fieldset className={cn("checkbox-group", className)}>
+    <div className={cn("checkbox-group", className)}>
       <Text.Helper as="legend">{label}</Text.Helper>
       <div className={cn(
         "checkbox-group-items",
@@ -185,7 +185,7 @@ function CheckboxGroup({
         {children}
       </div>
       <CheckboxMessages error={error} warn={warn} />
-    </fieldset>
+    </div>
   )
 }
 

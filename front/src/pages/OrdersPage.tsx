@@ -151,7 +151,7 @@ function OrdersPageContent() {
                             disabled={createOrderMutation.isPending}
                         />
                     </Stack>
-                    <Checkbox.Group label="Фильтры" direction="horizontal" className="border border-border p-2">
+                    <Checkbox.Group label="Фильтры" direction="horizontal">
                         <Checkbox.Item label="Мои заказы" checked={myOrdersOnly} onChange={setMyOrdersOnly} />
                         <Checkbox.TristateItem label="С файлом" value={withFileOnly} onChange={setWithFileOnly} />
                     </Checkbox.Group>

@@ -128,7 +128,7 @@ export default function FilesPage() {
                     <Text.Heading as="h2" variant="compact-01">
                         Загруженные файлы
                     </Text.Heading>
-                    <Checkbox.Group label="Фильтры" direction="horizontal" className="border border-border p-2">
+                    <Checkbox.Group label="Фильтры" direction="horizontal">
                         <Checkbox.Item label="Мои файлы" checked={myFilesOnly} onChange={setMyFilesOnly} />
                         <Checkbox.TristateItem label="Доступные" value={availableOnly} onChange={setAvailableOnly} />
                         <Checkbox.TristateItem label="Технические условия" value={tcOnly} onChange={setTcOnly} />
