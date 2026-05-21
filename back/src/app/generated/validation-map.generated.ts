@@ -28,6 +28,7 @@ import {
     parseGetTechnicalConditionsQuery,
     parseGetTechnicalConditionParams,
     parseReplaceTechnicalConditionParams,
+    parseExtractTcDetailsParams,
 } from './parsers.generated.js';
 
 export const validationMap: Record<string, {
@@ -57,4 +58,5 @@ export const validationMap: Record<string, {
     'GET /technical-conditions': { query: parseGetTechnicalConditionsQuery },
     'GET /technical-conditions/:id': { params: parseGetTechnicalConditionParams },
     'PUT /technical-conditions/:id': { params: parseReplaceTechnicalConditionParams },
+    'POST /technical-conditions/:id/extract-details': { params: parseExtractTcDetailsParams },
 };

@@ -784,3 +784,27 @@ export function parseReplaceTechnicalConditionParams(raw: Record<string, unknown
 
     return result;
 }
+
+export function parseExtractTcDetailsParams(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_id = readSingleValue(raw, "id");
+    if (raw_id.missing) {
+        errors.push({ field: "id", message: 'is required' });
+    } else if (raw_id.multi) {
+        errors.push({ field: "id", message: 'expected single value' });
+    } else {
+        if (typeof raw_id.value !== 'string') {
+            errors.push({ field: "id", message: 'expected string' });
+        } else {
+            result["id"] = raw_id.value;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}

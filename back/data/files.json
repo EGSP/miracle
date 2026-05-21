@@ -190,6 +190,31 @@
         "complexLayout": true,
         "isTechnicalCondition": true
       }
+    },
+    {
+      "id": "68a5a61d-889e-4ba4-9f52-cc90f1114a86",
+      "name": "ТУ_НЭМС_3667_013_05608841_2020 от 12.09.docx",
+      "extension": "docx",
+      "bytes": 1462706,
+      "authorId": "d33eec57-bdc8-49fe-8901-ffcbdd89417b",
+      "createdAt": 1779367932819,
+      "updatedAt": 1779367932826,
+      "settings": {
+        "isTechnicalCondition": true
+      }
+    },
+    {
+      "id": "8a98145a-6521-41fe-9bf6-1e7be400d2e4",
+      "name": "ТУ_3667_013_05608841_2020_НЭМС_рабочий_актуальный.pdf",
+      "extension": "pdf",
+      "bytes": 13180948,
+      "authorId": "d33eec57-bdc8-49fe-8901-ffcbdd89417b",
+      "createdAt": 1779368187646,
+      "updatedAt": 1779368202411,
+      "settings": {
+        "complexLayout": false,
+        "isTechnicalCondition": true
+      }
     }
   ]
 }
