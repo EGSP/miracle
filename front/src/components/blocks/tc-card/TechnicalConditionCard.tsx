@@ -87,10 +87,10 @@ function TechnicalConditionCardBody() {
                 <Column span="100%">
                     <TCCInfo />
                 </Column>
-                <Column span="100%">
+                <Column span="50%">
                     <TCCRules />
                 </Column>
-                <Column span="100%">
+                <Column span="50%">
                     <TCCDesignationSlots />
                 </Column>
                 <Column span="100%">

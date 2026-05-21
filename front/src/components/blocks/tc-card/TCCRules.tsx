@@ -1,4 +1,4 @@
-import { Stack, Text } from '@miracle/aramid';
+import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import type { Stored, TechnicalCondition, TechnicalConditionRule } from '@miracle/types';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +23,7 @@ export function TCCRules() {
     }));
 
     return (
-        <Stack gap={1}>
+        <>
             <Text.Heading as="p" variant='02'>
                 Правила
             </Text.Heading>
@@ -39,6 +39,7 @@ export function TCCRules() {
                             value={rule.title ?? ''}
                             onChange={(e) => update(i, { title: e.target.value })}
                             disabled={isSaving}
+                            full
                         />
                         <div className="flex flex-col gap-0.5">
                             <Textarea
@@ -49,7 +50,7 @@ export function TCCRules() {
                                 onChange={(e) => update(i, { content: e.target.value })}
                                 disabled={isSaving}
                                 resizable={true}
-
+                                full
                             />
                         </div>
                     </Stack>
@@ -57,6 +58,6 @@ export function TCCRules() {
                 addLabel="Добавить правило"
                 disabled={isSaving}
             />
-        </Stack>
+        </>
     );
 }

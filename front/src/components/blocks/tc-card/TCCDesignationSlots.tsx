@@ -1,4 +1,4 @@
-import { Stack, Text } from '@miracle/aramid';
+import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import type { DesignationSlot, Stored, TechnicalCondition, TechnicalConditionRule } from '@miracle/types';
 import { Input } from '@/components/ui/input';
 import { ArrayEditor } from '@/components/ui/array-editor';
@@ -42,7 +42,7 @@ export function TCCDesignationSlots() {
     }));
 
     return (
-        <Stack gap={1}>
+        <>
             <Text.Heading as="p" variant="02">
                 Параметры условного обозначения
             </Text.Heading>
@@ -60,7 +60,7 @@ export function TCCDesignationSlots() {
                             disabled={isSaving}
                         />
                         <div className="flex flex-col gap-0.5">
-                            <Text.Helper as="span">Правила определения значения</Text.Helper>
+                            <Text.Helper as="span">Ссылки на правила определения значения параметра</Text.Helper>
                             <ArrayEditor
                                 items={slot.ruleIds}
                                 onAdd={() => update(i, { ruleIds: [...slot.ruleIds, ''] })}
@@ -99,7 +99,7 @@ export function TCCDesignationSlots() {
                                         </div>
                                     );
                                 }}
-                                addLabel="Добавить правило"
+                                addLabel="Добавить ссылку"
                                 disabled={isSaving}
                             />
                         </div>
@@ -108,6 +108,6 @@ export function TCCDesignationSlots() {
                 addLabel="Добавить параметр"
                 disabled={isSaving}
             />
-        </Stack>
+        </>
     );
 }

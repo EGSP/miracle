@@ -24,7 +24,7 @@ export function ArrayEditor<T>({
     className,
 }: ArrayEditorProps<T>) {
     return (
-        <Stack gap={1} className={className}>
+        <Stack gap={3} className={className}>
             {items.map((item, i) => (
                 <div key={i} className="flex gap-1 items-end border border-border p-2">
                     <div className="flex-1 min-w-0">{renderItem(item, i)}</div>
@@ -40,12 +40,12 @@ export function ArrayEditor<T>({
             ))}
             <Button
                 variant="tertiary"
-                size="sm"
+                size="md"
                 icon={<Plus />}
                 label={addLabel}
                 onClick={onAdd}
                 disabled={disabled}
-                className={cn('self-start', items.length > 0 && 'mt-1')}
+                fluid
             />
         </Stack>
     );
