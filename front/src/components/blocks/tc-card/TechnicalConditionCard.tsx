@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Stack, Text } from '@miracle/aramid';
 import type { Stored, TechnicalCondition } from '@miracle/types';
 import { DirtyGuardProvider, useGuardActions } from '@/contexts/dirty-state/DirtyGuardContext';
+import { useField } from '@/contexts/dirty-state/useField';
 import { useDraft } from '@/contexts/draft-api/DraftContext';
 import { useReplaceTechnicalCondition } from '@/lib/queries/technical-condition.query';
 import { TechnicalConditionCardActions } from './TechnicalConditionCardActions';
@@ -28,6 +29,7 @@ function TechnicalConditionCardProvider({
     const draft = useDraft<Stored<TechnicalCondition>>();
     const { commitAll } = useGuardActions();
     const mutation = useReplaceTechnicalCondition(technicalCondition.id);
+    const rules = useField(`tc-${technicalCondition.id}-rules`, technicalCondition.rules ?? []);
 
     const save = () => {
         const merged = draft.collect({ ...technicalCondition });
@@ -54,6 +56,7 @@ function TechnicalConditionCardProvider({
 
     const value: TechnicalConditionCardContextType = {
         technicalCondition,
+        rules,
         isSaving: mutation.isPending,
         saveError: mutation.error ?? null,
         save,

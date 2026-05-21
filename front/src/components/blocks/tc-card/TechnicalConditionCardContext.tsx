@@ -1,9 +1,11 @@
 import { createContext, useContext } from 'react';
-import type { Stored, TechnicalCondition } from '@miracle/types';
+import type { Stored, TechnicalCondition, TechnicalConditionRule } from '@miracle/types';
 import type { DraftAPI } from '@/contexts/draft-api/DraftContext';
+import type { FieldReturn } from '@/contexts/dirty-state/useField';
 
 export type TechnicalConditionCardContextType = {
     technicalCondition: Stored<TechnicalCondition>;
+    rules: FieldReturn<TechnicalConditionRule[]>;
     isSaving: boolean;
     saveError: Error | null;
     save: () => void;

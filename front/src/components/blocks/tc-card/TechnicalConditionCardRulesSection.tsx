@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrayEditor } from '@/components/ui/array-editor';
 import { useContribute } from '@/contexts/draft-api/DraftContext';
-import { useField } from '@/contexts/dirty-state/useField';
 import { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
 
 function makeRule(): TechnicalConditionRule {
@@ -12,10 +11,8 @@ function makeRule(): TechnicalConditionRule {
 }
 
 export function TechnicalConditionCardRulesSection() {
-    const { technicalCondition, contribute, isSaving } = useTechnicalConditionCardContext();
+    const { technicalCondition, contribute, isSaving, rules } = useTechnicalConditionCardContext();
     const tc = technicalCondition;
-
-    const rules = useField<TechnicalConditionRule[]>(`tc-${tc.id}-rules`, tc.rules ?? []);
 
     const update = (i: number, patch: Partial<TechnicalConditionRule>) =>
         rules.onChange(rules.value.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));

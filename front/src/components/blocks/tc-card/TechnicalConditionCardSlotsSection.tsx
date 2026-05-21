@@ -1,5 +1,5 @@
 import { Stack, Text } from '@miracle/aramid';
-import type { DesignationSlot, Stored, TechnicalCondition } from '@miracle/types';
+import type { DesignationSlot, Stored, TechnicalCondition, TechnicalConditionRule } from '@miracle/types';
 import { Input } from '@/components/ui/input';
 import { ArrayEditor } from '@/components/ui/array-editor';
 import { useContribute } from '@/contexts/draft-api/DraftContext';
@@ -10,8 +10,19 @@ function makeSlot(index: number): DesignationSlot {
     return { index, name: '', ruleIds: [] };
 }
 
+function ruleLabel(rule: TechnicalConditionRule | null, orphanId?: string): string {
+    if (rule) {
+        const title = rule.title?.trim();
+        return title || rule.id;
+    }
+    if (orphanId) {
+        return `Неизвестное правило (${orphanId})`;
+    }
+    return 'Правило не выбрано';
+}
+
 export function TechnicalConditionCardSlotsSection() {
-    const { technicalCondition, contribute, isSaving } = useTechnicalConditionCardContext();
+    const { technicalCondition, contribute, isSaving, rules } = useTechnicalConditionCardContext();
     const tc = technicalCondition;
 
     const slots = useField<DesignationSlot[]>(`tc-${tc.id}-slots`, tc.designationSlots ?? []);
@@ -49,23 +60,46 @@ export function TechnicalConditionCardSlotsSection() {
                             disabled={isSaving}
                         />
                         <div className="flex flex-col gap-0.5">
-                            <Text.Helper as="span">ID правил</Text.Helper>
+                            <Text.Helper as="span">Правила</Text.Helper>
                             <ArrayEditor
                                 items={slot.ruleIds}
                                 onAdd={() => update(i, { ruleIds: [...slot.ruleIds, ''] })}
                                 onRemove={(j) =>
                                     update(i, { ruleIds: slot.ruleIds.filter((_, idx) => idx !== j) })
                                 }
-                                renderItem={(ruleId, j) => (
-                                    <Input
-                                        label={`Правило ${j + 1}`}
-                                        placeholder="UUID правила"
-                                        value={ruleId}
-                                        onChange={(e) => updateRuleId(i, j, e.target.value)}
-                                        disabled={isSaving}
-                                    />
-                                )}
-                                addLabel="Добавить ID"
+                                renderItem={(ruleId, j) => {
+                                    const selectedRule =
+                                        rules.value.find((r) => r.id === ruleId) ?? null;
+
+                                    return (
+                                        <div className="flex flex-col gap-0.5">
+                                            <Text.Helper as="span">{`Правило ${j + 1}`}</Text.Helper>
+                                            <Input.Dropdown<TechnicalConditionRule>
+                                                items={rules.value}
+                                                value={selectedRule}
+                                                onChange={(next) =>
+                                                    updateRuleId(i, j, next?.id ?? '')
+                                                }
+                                                getItemKey={(item) => item.id}
+                                                disabled={isSaving}
+                                                renderSelectedItem={(item) => (
+                                                    <Text as="span" compact>
+                                                        {ruleLabel(item, ruleId || undefined)}
+                                                    </Text>
+                                                )}
+                                                renderListItem={(item) => (
+                                                    <Text as="span" compact>
+                                                        {ruleLabel(item)}
+                                                    </Text>
+                                                )}
+                                            >
+                                                <Input.Dropdown.Selected />
+                                                <Input.Dropdown.List emptyText="Нет правил — добавьте в разделе «Правила»" />
+                                            </Input.Dropdown>
+                                        </div>
+                                    );
+                                }}
+                                addLabel="Добавить правило"
                                 disabled={isSaving}
                             />
                         </div>
