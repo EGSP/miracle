@@ -75,21 +75,21 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
 
     return (
         <Stack gap={3} className="border border-border p-3">
-            <Stack orientation="horizontal" gap={2} className="items-center justify-end">
-                <Button
-                    type="button"
-                    variant="danger"
-                    size="sm"
-                    icon={<Trash2 />}
-                    label="Удалить"
-                    disabled={isBusy}
-                    onClick={handleSoftDelete}
-                />
+            <Stack orientation="horizontal" gap={2} className="items-center">
                 <Button
                     size="sm"
                     label={updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
                     disabled={!isDirtyAnywhere || !name.value.trim() || isBusy}
                     onClick={save}
+                />
+                <Button
+                    type="button"
+                    variant="danger-tertiary"
+                    size="sm"
+                    icon={<Trash2 />}
+                    label="Удалить"
+                    disabled={isBusy}
+                    onClick={handleSoftDelete}
                 />
             </Stack>
 

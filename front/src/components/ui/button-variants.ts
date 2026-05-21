@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
-export type ButtonVariant = "primary" | "secondary" | "tertiary" | "ghost" | "danger" | "icon-button"
+export type ButtonVariant = "primary" | "secondary" | "tertiary" | "ghost" | "danger" | "danger-tertiary" | "icon-button"
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl"
 
 export interface BaseButtonProps {
@@ -21,8 +21,9 @@ export const buttonVariants = cva("button", {
       secondary:     "button--secondary",
       tertiary:      "button--tertiary",
       ghost:         "button--ghost",
-      danger:        "button--danger",
-      "icon-button": "button--icon-button",
+      danger:           "button--danger",
+      "danger-tertiary": "button--danger-tertiary",
+      "icon-button":    "button--icon-button",
     },
     size: {
       xs: "button--xs",
