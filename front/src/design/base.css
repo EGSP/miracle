@@ -3,6 +3,31 @@
     --input-fixed-width: calc(var(--aramid-spacing-13) * 2);
     /* spacing-13 (160px) — фиксированная ширина кнопок (не fluid) */
     --button-fixed-width: var(--aramid-spacing-13);
+
+    /*
+     * Carbon $field / $border-strong на слое g10 (background = gray-10).
+     * Семантики в Aramid нет — прямые токены, инверсия на белых поверхностях ниже.
+     */
+    --field-background: var(--aramid-color-white-0);
+    --field-border-strong: var(--aramid-color-gray-50);
+}
+
+/* Поле на белом слое (card, popover): Carbon field = gray-10 */
+.bg-card,
+.bg-popover {
+    --field-background: var(--aramid-color-gray-10);
+}
+
+.dark {
+    --field-background: var(--aramid-color-gray-90);
+    --field-border-strong: var(--aramid-color-gray-50);
+}
+
+.dark.bg-card,
+.dark.bg-popover,
+.dark .bg-card,
+.dark .bg-popover {
+    --field-background: var(--aramid-color-gray-80);
 }
 
 a {

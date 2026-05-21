@@ -3,12 +3,34 @@
 ──────────────────────────────────────────────────────────────────────────── */
 
 .input-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aramid-spacing-3);
   text-align: left;
   cursor: pointer;
 }
 
 .input-dropdown-trigger:disabled {
   cursor: not-allowed;
+}
+
+.input-dropdown-trigger--empty {
+  color: var(--aramid-color-gray-40);
+}
+
+/* ─── Chevron icon ───────────────────────────────────────────────────────── */
+
+.input-dropdown-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--aramid-color-gray-60);
+  transition: transform 150ms ease;
+}
+
+.input-dropdown-chevron--open {
+  transform: rotate(180deg);
 }
 
 /* ─── Dropdown list panel ────────────────────────────────────────────────── */

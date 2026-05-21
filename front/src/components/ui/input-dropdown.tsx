@@ -1,4 +1,5 @@
 import * as React from "react"
+import { ChevronDownIcon } from "lucide-react"
 import { Text } from "@miracle/aramid"
 
 import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
@@ -235,11 +236,14 @@ function InputDropdownSelected<T>({
       className={cn(
         inputVariants({ size, full: true }),
         "input-dropdown-trigger",
-        !hasValue && "text-muted-foreground",
+        !hasValue && "input-dropdown-trigger--empty",
         className
       )}
     >
-      {renderSelectedItem ? renderSelectedItem(value) : <span>{value == null ? "" : getItemKey(value)}</span>}
+      <span>{renderSelectedItem ? renderSelectedItem(value) : (value == null ? "" : getItemKey(value))}</span>
+      <span aria-hidden="true" className={cn("input-dropdown-chevron", isOpen && "input-dropdown-chevron--open")}>
+        <ChevronDownIcon size={14} />
+      </span>
     </button>
   )
 }

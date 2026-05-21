@@ -41,13 +41,15 @@ export function TechnicalConditionCardRulesSection() {
                             disabled={isSaving}
                         />
                         <div className="flex flex-col gap-0.5">
-                            <Text.Helper as="span">Текст правила</Text.Helper>
                             <Textarea
-                                size="auto"
+                                label='Текст правила'
+                                size="md"
                                 placeholder="Таблицы хранятся как markdown-таблицы"
                                 value={rule.content}
                                 onChange={(e) => update(i, { content: e.target.value })}
                                 disabled={isSaving}
+                                resizable={true}
+
                             />
                         </div>
                     </Stack>

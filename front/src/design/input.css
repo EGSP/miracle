@@ -9,8 +9,9 @@
   width: var(--input-fixed-width);
   height: var(--aramid-spacing-8);           /* md = 40px */
   padding-inline: var(--aramid-spacing-5);   /* 16px */
-  border: 1px solid var(--aramid-color-gray-50);
-  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid var(--field-border-strong);
+  background-color: var(--field-background);
   font-family: var(--aramid-font-family-sans);
   font-size: var(--aramid-font-size-xs);
   font-weight: var(--aramid-font-weight-regular);
@@ -18,7 +19,7 @@
   line-height: 1;
   appearance: none;
   outline: none;
-  transition: border-color 100ms;
+  transition: border-bottom-color 100ms;
 }
 
 .input::placeholder {
@@ -26,24 +27,24 @@
 }
 
 .input:focus-visible {
-  border-color: var(--aramid-color-sand-60);
+  border-bottom-color: var(--aramid-color-sand-60);
   outline: 2px solid var(--aramid-color-sand-60);
   outline-offset: -2px;
 }
 
 .input:disabled {
   cursor: not-allowed;
-  background-color: var(--aramid-color-gray-10);
+  background-color: var(--field-background);
   color: var(--aramid-color-gray-30);
-  border-color: var(--aramid-color-gray-30);
+  border-bottom-color: var(--aramid-color-gray-30);
 }
 
 .input[aria-invalid="true"] {
-  border-color: var(--aramid-color-semantic-danger);
+  border-bottom-color: var(--aramid-color-semantic-danger);
 }
 
 .input[aria-invalid="true"]:focus-visible {
-  border-color: var(--aramid-color-semantic-danger);
+  border-bottom-color: var(--aramid-color-semantic-danger);
   outline-color: var(--aramid-color-semantic-danger);
 }
 

@@ -13,8 +13,9 @@
   min-height: calc(var(--aramid-spacing-9) * 2);  /* sm = 96px */
   padding-block: var(--aramid-spacing-3);          /* 8px */
   padding-inline: var(--aramid-spacing-5);         /* 16px */
-  border: 1px solid var(--aramid-color-gray-50);
-  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid var(--field-border-strong);
+  background-color: var(--field-background);
   font-family: var(--aramid-font-family-sans);
   font-size: var(--aramid-font-size-xs);
   font-weight: var(--aramid-font-weight-regular);
@@ -22,7 +23,7 @@
   line-height: var(--aramid-font-line-height-normal);
   outline: none;
   resize: vertical;
-  transition: border-color 100ms;
+  transition: border-bottom-color 100ms;
 }
 
 .textarea::placeholder {
@@ -30,25 +31,25 @@
 }
 
 .textarea:focus-visible {
-  border-color: var(--aramid-color-sand-60);
+  border-bottom-color: var(--aramid-color-sand-60);
   outline: 2px solid var(--aramid-color-sand-60);
   outline-offset: -2px;
 }
 
 .textarea:disabled {
   cursor: not-allowed;
-  background-color: var(--aramid-color-gray-10);
+  background-color: var(--field-background);
   color: var(--aramid-color-gray-30);
-  border-color: var(--aramid-color-gray-30);
+  border-bottom-color: var(--aramid-color-gray-30);
   resize: none;
 }
 
 .textarea[aria-invalid="true"] {
-  border-color: var(--aramid-color-semantic-danger);
+  border-bottom-color: var(--aramid-color-semantic-danger);
 }
 
 .textarea[aria-invalid="true"]:focus-visible {
-  border-color: var(--aramid-color-semantic-danger);
+  border-bottom-color: var(--aramid-color-semantic-danger);
   outline-color: var(--aramid-color-semantic-danger);
 }
 
