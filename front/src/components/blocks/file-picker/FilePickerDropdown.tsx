@@ -66,6 +66,7 @@ export function FilePickerDropdown({
             disabled={disabled}
             renderSelectedItem={(item) => <FileOption file={item} />}
             renderListItem={(item) => <FileOption file={item} />}
+            full
         >
             <Input.Dropdown.Selected />
             <Input.Dropdown.List />

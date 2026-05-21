@@ -12,7 +12,7 @@ import "@/design/input.css"
 
 type InputRootProps = Omit<React.ComponentProps<"input">, "size"> & BaseInputProps
 
-function InputRoot({ className, type, label, size, full, disabled, style, ...props }: InputRootProps) {
+function InputRoot({ className, type, label, helperText, size, full, disabled, style, ...props }: InputRootProps) {
   const fieldStyle = useFieldLayerStyle({ disabled, style })
 
   const input = (
@@ -26,11 +26,12 @@ function InputRoot({ className, type, label, size, full, disabled, style, ...pro
     />
   )
 
-  if (label) {
+  if (label || helperText) {
     return (
       <div className="input-field">
-        <Text.Helper as="span">{label}</Text.Helper>
+        {label && <Text.Helper as="span">{label}</Text.Helper>}
         {input}
+        {helperText && <Text.Helper as="span" className="field-helper-text">{helperText}</Text.Helper>}
       </div>
     )
   }

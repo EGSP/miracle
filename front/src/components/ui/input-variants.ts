@@ -7,6 +7,7 @@ export interface BaseInputProps {
   full?: boolean
   disabled?: boolean
   label?: string
+  helperText?: string
 }
 
 export const inputVariants = cva("input", {

@@ -24,7 +24,7 @@ const sizeClass: Record<TextareaSize, string> = {
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, size = "sm", full = false, resizable = true, disabled, label, style, ...props }, ref) => {
+  ({ className, size = "sm", full = false, resizable = true, disabled, label, helperText, style, ...props }, ref) => {
     const fieldStyle = useFieldLayerStyle({ disabled, style })
 
     const textarea = (
@@ -44,11 +44,12 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       />
     )
 
-    if (label) {
+    if (label || helperText) {
       return (
         <div className="textarea-field">
-          <Text.Helper as="span">{label}</Text.Helper>
+          {label && <Text.Helper as="span">{label}</Text.Helper>}
           {textarea}
+          {helperText && <Text.Helper as="span" className="field-helper-text">{helperText}</Text.Helper>}
         </div>
       )
     }

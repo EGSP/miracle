@@ -10,7 +10,7 @@ function makeTemplate(): DisplayTemplate {
     return { id: crypto.randomUUID(), name: '', separator: '-', includedSlots: [] };
 }
 
-export function TechnicalConditionCardTemplatesSection() {
+export function TCCTemplates() {
     const { technicalCondition, contribute, isSaving } = useTechnicalConditionCardContext();
     const tc = technicalCondition;
 

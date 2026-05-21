@@ -10,7 +10,7 @@ function makeRule(): TechnicalConditionRule {
     return { id: crypto.randomUUID(), title: '', content: '' };
 }
 
-export function TechnicalConditionCardRulesSection() {
+export function TCCRules() {
     const { technicalCondition, contribute, isSaving, rules } = useTechnicalConditionCardContext();
     const tc = technicalCondition;
 

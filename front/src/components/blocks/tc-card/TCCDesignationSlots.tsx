@@ -21,7 +21,7 @@ function ruleLabel(rule: TechnicalConditionRule | null, orphanId?: string): stri
     return 'Правило не выбрано';
 }
 
-export function TechnicalConditionCardSlotsSection() {
+export function TCCDesignationSlots() {
     const { technicalCondition, contribute, isSaving, rules } = useTechnicalConditionCardContext();
     const tc = technicalCondition;
 

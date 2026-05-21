@@ -4,8 +4,9 @@ import { InlineMutationNotification } from '@/components/ui/inline-mutation-noti
 import { useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
 import { useExtractTcDetails } from '@/lib/queries/technical-condition.query';
 import { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
+import { ScanEye, ScanLine, ScanText } from 'lucide-react';
 
-export function TechnicalConditionCardActions() {
+export function TCCActions() {
     const { technicalCondition, isSaving, save, saveError } = useTechnicalConditionCardContext();
     const { isDirtyAnywhere } = useGuardState();
 
@@ -16,16 +17,17 @@ export function TechnicalConditionCardActions() {
             <Stack orientation="horizontal" gap={2} className="items-center  flex-wrap">
                 <Button
                     type="button"
-                    size="sm"
+                    size="md"
                     label={isSaving ? 'Сохранение...' : 'Сохранить ТУ'}
                     disabled={!isDirtyAnywhere || isSaving}
                     onClick={save}
                 />
                 <Button
                     type="button"
-                    size="sm"
-                    variant="tertiary"
-                    label={extractMutation.isPending ? 'Запуск...' : 'Извлечь правила и слоты'}
+                    size="md"
+                    variant="secondary"
+                    icon={<ScanText />}
+                    label={extractMutation.isPending ? 'Запуск...' : 'Сканировать'}
                     disabled={!technicalCondition.fileId || extractMutation.isPending}
                     title={
                         !technicalCondition.fileId

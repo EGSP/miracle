@@ -71,6 +71,7 @@ function InputDropdownRoot<T>({
   const size = props.size
   const full = props.full ?? false
   const label = props.label
+  const helperText = props.helperText
   const className = props.className
   const children = props.children
 
@@ -163,12 +164,13 @@ function InputDropdownRoot<T>({
     </div>
   )
 
-  if (label) {
+  if (label || helperText) {
     return (
       <DropdownContext.Provider value={contextValue as DropdownContextValue<unknown>}>
         <div className="input-field">
-          <Text.Helper as="span">{label}</Text.Helper>
+          {label && <Text.Helper as="span">{label}</Text.Helper>}
           {wrap}
+          {helperText && <Text.Helper as="span" className="field-helper-text">{helperText}</Text.Helper>}
         </div>
       </DropdownContext.Provider>
     )

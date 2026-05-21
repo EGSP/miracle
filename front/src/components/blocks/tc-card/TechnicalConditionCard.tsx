@@ -1,20 +1,20 @@
 import * as React from 'react';
-import { Layer, Stack, Text } from '@miracle/aramid';
+import { Column, Grid, Layer, Stack, Text } from '@miracle/aramid';
 import type { Stored, TechnicalCondition } from '@miracle/types';
 import { DirtyGuardProvider, useGuardActions } from '@/contexts/dirty-state/DirtyGuardContext';
 import { useField } from '@/contexts/dirty-state/useField';
 import { useDraft } from '@/contexts/draft-api/DraftContext';
 import { useReplaceTechnicalCondition } from '@/lib/queries/technical-condition.query';
-import { TechnicalConditionCardActions } from './TechnicalConditionCardActions';
+import { TCCActions } from './TCCActions';
 import {
     TechnicalConditionCardContextProvider,
     type TechnicalConditionCardContextType,
     useTechnicalConditionCardContext,
 } from './TechnicalConditionCardContext';
-import { TechnicalConditionCardMeta } from './TechnicalConditionCardMeta';
-import { TechnicalConditionCardRulesSection } from './TechnicalConditionCardRulesSection';
-import { TechnicalConditionCardSlotsSection } from './TechnicalConditionCardSlotsSection';
-import { TechnicalConditionCardTemplatesSection } from './TechnicalConditionCardTemplatesSection';
+import { TCCInfo } from './TCCInfo';
+import { TCCRules } from './TCCRules';
+import { TCCDesignationSlots } from './TCCDesignationSlots';
+import { TCCTemplates } from './TCCTemplates';
 import type { TechnicalConditionCardProps } from './TechnicalConditionCard.types';
 
 export { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
@@ -75,16 +75,28 @@ function TechnicalConditionCardBody() {
 
     return (
         <Layer>
-            <Stack gap={3} className="border border-border p-3">
-                <Text.Heading as="p" variant="03">
-                    Техническое условие <Text as="span" expressive>({technicalCondition.id})</Text>
-                </Text.Heading>
-                <TechnicalConditionCardActions />
-                <TechnicalConditionCardMeta />
-                <TechnicalConditionCardRulesSection />
-                <TechnicalConditionCardSlotsSection />
-                <TechnicalConditionCardTemplatesSection />
-            </Stack>
+            <Grid withRowGap className="border border-border p-3">
+                <Column span="100%">
+                    <Text.Heading as="p" variant="03">
+                        Техническое условие <Text as="span" expressive>({technicalCondition.id})</Text>
+                    </Text.Heading>
+                </Column>
+                <Column span="100%">
+                    <TCCActions />
+                </Column>
+                <Column span="100%">
+                    <TCCInfo />
+                </Column>
+                <Column span="100%">
+                    <TCCRules />
+                </Column>
+                <Column span="100%">
+                    <TCCDesignationSlots />
+                </Column>
+                <Column span="100%">
+                    <TCCTemplates />
+                </Column>
+            </Grid>
         </Layer>
     );
 }

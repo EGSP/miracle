@@ -39,6 +39,7 @@ function InputSuggest<T>({
   size,
   full = false,
   label,
+  helperText,
   style,
   ...props
 }: InputSuggestProps<T>) {
@@ -184,11 +185,12 @@ function InputSuggest<T>({
     </div>
   )
 
-  if (label) {
+  if (label || helperText) {
     return (
       <div className="input-field">
-        <Text.Helper as="span">{label}</Text.Helper>
+        {label && <Text.Helper as="span">{label}</Text.Helper>}
         {wrap}
+        {helperText && <Text.Helper as="span" className="field-helper-text">{helperText}</Text.Helper>}
       </div>
     )
   }

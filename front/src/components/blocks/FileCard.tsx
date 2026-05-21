@@ -1,7 +1,7 @@
 ﻿import { createContext, useContext, type PropsWithChildren } from "react";
 import { IconIndicator, Layer, Stack, Text } from "@miracle/aramid";
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types";
-import { Eye, Trash2, Upload } from "lucide-react";
+import { Eye, ScanText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileDropZone } from "@/components/ui/file-dropzone";
@@ -191,165 +191,151 @@ function FileCardBody() {
 
     return (
         <Layer>
-            <Stack gap={3} className="border border-border p-3">
-            <Stack orientation="horizontal" gap={2} className="items-center justify-between">
-                <Text.Heading as="h3" variant="compact-01" className="truncate">
-                    {file.name}
-                </Text.Heading>
-                <Text.Label as="span">{file.extension.toUpperCase()}</Text.Label>
-            </Stack>
+            <Stack gap={3} className="p-4">
+                <Stack orientation="horizontal" gap={2} className="items-center justify-between">
+                    <Text.Heading as="h3" variant="compact-01" className="truncate">
+                        {file.name}
+                    </Text.Heading>
+                    <Text.Label as="span">{file.extension.toUpperCase()}</Text.Label>
+                </Stack>
 
-            <Stack gap={1}>
-                <Text.Label as="span">Размер: {formatBytes(file.bytes)}</Text.Label>
-                <Text.Label as="span">
-                    Доступность: {file.meta?.available === false ? "Недоступен" : "Доступен"}
-                </Text.Label>
-            </Stack>
+                <Stack gap={4} orientation="horizontal">
+                    <IconIndicator kind={file.meta?.available === false ? "failed" : "succeeded"} label={file.meta?.available === false ? "Недоступен" : "Доступен"} size={16} />
+                    <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />
+                </Stack>
 
-            {/* Настройки файла — только для визуальных */}
-            {isVisual && (
-                <Stack gap={2}>
-                    <FileCardSettings />
-                    {!readonly && (
-                        <>
-                            <Stack orientation="horizontal" gap={2} className="items-center">
-                                <Button
-                                    variant="tertiary"
-                                    size="sm"
-                                    label={isSaving ? "Сохранение..." : "Сохранить настройки"}
-                                    disabled={!isDirtyAnywhere || isSaving}
-                                    onClick={save}
+                {/* Настройки файла — только для визуальных */}
+                {isVisual && (
+                    <Stack gap={2}>
+                        <Button
+                            variant="primary"
+                            size="xs"
+                            label={isSaving ? "Сохранение..." : "Сохранить настройки"}
+                            disabled={!isDirtyAnywhere || isSaving || readonly}
+                            onClick={save}
+                        />
+                        <FileCardSettings />
+                        {!readonly && (
+                            <>
+                                <Stack orientation="horizontal" gap={2} className="items-center">
+
+                                </Stack>
+                                <InlineMutationNotification
+                                    mutation={{ isError: !!saveError, isSuccess: false, error: saveError }}
                                 />
-                            </Stack>
-                            <InlineMutationNotification
-                                mutation={{ isError: !!saveError, isSuccess: false, error: saveError }}
-                            />
-                        </>
+                            </>
+                        )}
+                    </Stack>
+                )}
+
+                {!isFileAvailable && (
+                    <Stack gap={2} className="border border-border bg-muted/20 p-2">
+                        <Text.Label as="span">
+                            Физический файл отсутствует — загрузите его
+                        </Text.Label>
+                        <FileDropZone
+                            value={restoreFile}
+                            onChange={setRestoreFile}
+                            accept={`.${file.extension}`}
+                            disabled={restoreMutation.isPending}
+                        />
+                        <Button
+                            variant="tertiary"
+                            size="sm"
+                            icon={<Upload />}
+                            label={restoreMutation.isPending ? "Загрузка..." : "Восстановить файл"}
+                            disabled={!restoreFile || restoreMutation.isPending}
+                            onClick={handleRestore}
+                        />
+                        <InlineMutationNotification
+                            mutation={restoreMutation}
+                            successMessage="Файл успешно восстановлен"
+                        />
+                    </Stack>
+                )}
+
+                <Stack gap={1}>
+
+                    {latestContent?.meta?.extractionFailedMessage && (
+                        <Text as="span" compact className="text-destructive">
+                            {latestContent.meta.extractionFailedMessage}
+                        </Text>
                     )}
                 </Stack>
-            )}
 
-            {!isFileAvailable && (
-                <Stack gap={2} className="border border-border bg-muted/20 p-2">
-                    <Text.Label as="span">
-                        Физический файл отсутствует — загрузите его
-                    </Text.Label>
-                    <FileDropZone
-                        value={restoreFile}
-                        onChange={setRestoreFile}
-                        accept={`.${file.extension}`}
-                        disabled={restoreMutation.isPending}
-                    />
+                <Stack orientation="horizontal" gap={2}>
+                    <Button variant="secondary" size="sm" label="Сканировать" icon={<ScanText />} disabled={!canRead} onClick={() => extractMutation.mutate()} />
+                    <Button variant="secondary" size="sm" label="Сканировать ещё раз" icon={<ScanText />} disabled={!canReread} onClick={() => extractMutation.mutate()} />
                     <Button
-                        variant="tertiary"
+                        type="button"
+                        variant="danger"
                         size="sm"
-                        icon={<Upload />}
-                        label={restoreMutation.isPending ? "Загрузка..." : "Восстановить файл"}
-                        disabled={!restoreFile || restoreMutation.isPending}
-                        onClick={handleRestore}
+                        icon={<Trash2 />}
+                        label={softDeleteMutation.isPending ? "Очищение..." : "Очистить скан"}
+                        disabled={!canMarkContentDeleted}
+                        onClick={() => {
+                            if (latestContent?.id) {
+                                softDeleteMutation.mutate({ contentId: latestContent.id, mark: true });
+                            }
+                        }}
                     />
-                    <InlineMutationNotification
-                        mutation={restoreMutation}
-                        successMessage="Файл успешно восстановлен"
-                    />
+                    <Dialog>
+                        <DialogTrigger
+                            render={
+                                <Button variant="tertiary" size="sm" icon={<Eye />} label="Увидеть" disabled={!hasContent} />
+                            }
+                        />
+                        <DialogContent
+                            size="large"
+                            className="overflow-hidden p-0"
+                            showCloseButton={false}
+                        >
+                            <section className="flex h-[calc(100vh-4rem)] max-h-208 w-full overflow-hidden">
+                                <aside className="w-28 shrink-0 border-r border-border p-3">
+                                    <Stack gap={2}>
+                                        <DialogClose
+                                            render={
+                                                <Button variant="tertiary" size="sm" label="Закрыть" />
+                                            }
+                                        />
+                                    </Stack>
+                                </aside>
+                                <div className="min-h-0 min-w-0 flex-1 p-3">
+                                    <Stack gap={2} className="h-full min-h-0">
+                                        <DialogTitle>{file.name}</DialogTitle>
+                                        <div className="min-h-0 flex-1 overflow-auto border border-border bg-muted/20 p-3">
+                                            <Stack gap={3}>
+                                                {latestContent?.content?.map((chunk, index) => (
+                                                    <Stack
+                                                        key={`${index}-${chunk.page ?? "no-page"}`}
+                                                        gap={1}
+                                                    >
+                                                        {chunk.page ? (
+                                                            <Text.Label as="span">
+                                                                Часть {chunk.page}
+                                                            </Text.Label>
+                                                        ) : (
+                                                            <Text.Label as="span">Контент</Text.Label>
+                                                        )}
+                                                        <pre className="w-full overflow-x-auto whitespace-pre-wrap wrap-break-word text-xs">
+                                                            {chunk.text ?? ""}
+                                                        </pre>
+                                                    </Stack>
+                                                ))}
+                                            </Stack>
+                                        </div>
+                                    </Stack>
+                                </div>
+                            </section>
+                        </DialogContent>
+                    </Dialog>
                 </Stack>
-            )}
 
-            <Stack gap={1} className="border border-border bg-muted/20 p-2">
-                <Text.Label as="span">Контент</Text.Label>
-                <Stack orientation="horizontal" gap={2} className="items-center">
-                    <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />
-                    <Text as="span" compact>{indicator.label}</Text>
-                </Stack>
-                {latestContent?.meta?.extractionFailedMessage && (
-                    <Text as="span" compact className="text-destructive">
-                        {latestContent.meta.extractionFailedMessage}
-                    </Text>
-                )}
-                {contentList?.[0]?.id && (
-                    <Text.Helper as="span">
-                        {isTokensLoading
-                            ? "Подсчёт токенов…"
-                            : isTokensError
-                                ? `Токены: ошибка (${getApiErrorMessage(tokensError)})`
-                                : `Токенов (оценка): ${tokensData?.tokens ?? "—"}`}
-                    </Text.Helper>
-                )}
-            </Stack>
-
-            <Stack orientation="horizontal" gap={2}>
-                <Button variant="tertiary" size="sm" label="Прочитать" disabled={!canRead} onClick={() => extractMutation.mutate()} />
-                <Button variant="tertiary" size="sm" label="Перечитать" disabled={!canReread} onClick={() => extractMutation.mutate()} />
-                <Button
-                    type="button"
-                    variant="danger"
-                    size="sm"
-                    icon={<Trash2 />}
-                    label={softDeleteMutation.isPending ? "Пометка..." : "Скрыть контент"}
-                    disabled={!canMarkContentDeleted}
-                    onClick={() => {
-                        if (latestContent?.id) {
-                            softDeleteMutation.mutate({ contentId: latestContent.id, mark: true });
-                        }
-                    }}
+                <InlineMutationNotification mutation={extractMutation} />
+                <InlineMutationNotification mutation={softDeleteMutation} />
+                <InlineMutationNotification
+                    mutation={{ isError: isGetContentError, isSuccess: false, error: getContentError }}
                 />
-                <Dialog>
-                    <DialogTrigger
-                        render={
-                            <Button variant="tertiary" size="sm" icon={<Eye />} label="Увидеть" disabled={!hasContent} />
-                        }
-                    />
-                    <DialogContent
-                        size="large"
-                        className="overflow-hidden p-0"
-                        showCloseButton={false}
-                    >
-                        <section className="flex h-[calc(100vh-4rem)] max-h-208 w-full overflow-hidden">
-                            <aside className="w-28 shrink-0 border-r border-border p-3">
-                                <Stack gap={2}>
-                                    <DialogClose
-                                        render={
-                                            <Button variant="tertiary" size="sm" label="Закрыть" />
-                                        }
-                                    />
-                                </Stack>
-                            </aside>
-                            <div className="min-h-0 min-w-0 flex-1 p-3">
-                                <Stack gap={2} className="h-full min-h-0">
-                                    <DialogTitle>{file.name}</DialogTitle>
-                                    <div className="min-h-0 flex-1 overflow-auto border border-border bg-muted/20 p-3">
-                                        <Stack gap={3}>
-                                            {latestContent?.content?.map((chunk, index) => (
-                                                <Stack
-                                                    key={`${index}-${chunk.page ?? "no-page"}`}
-                                                    gap={1}
-                                                >
-                                                    {chunk.page ? (
-                                                        <Text.Label as="span">
-                                                            Часть {chunk.page}
-                                                        </Text.Label>
-                                                    ) : (
-                                                        <Text.Label as="span">Контент</Text.Label>
-                                                    )}
-                                                    <pre className="w-full overflow-x-auto whitespace-pre-wrap wrap-break-word text-xs">
-                                                        {chunk.text ?? ""}
-                                                    </pre>
-                                                </Stack>
-                                            ))}
-                                        </Stack>
-                                    </div>
-                                </Stack>
-                            </div>
-                        </section>
-                    </DialogContent>
-                </Dialog>
-            </Stack>
-
-            <InlineMutationNotification mutation={extractMutation} />
-            <InlineMutationNotification mutation={softDeleteMutation} />
-            <InlineMutationNotification
-                mutation={{ isError: isGetContentError, isSuccess: false, error: getContentError }}
-            />
             </Stack>
         </Layer>
     );
