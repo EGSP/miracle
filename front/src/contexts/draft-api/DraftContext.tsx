@@ -122,7 +122,7 @@ export function useDraft<T>(options?: { readonly?: boolean }): DraftAPI<T> {
  *         settings: { complexLayout: field.value },
  *     }))
  *
- *     return <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+ *     return <Checkbox.Item label="…" checked={field.value} onChange={field.onChange} />
  * }
  */
 export function useContribute<T>(

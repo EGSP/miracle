@@ -116,24 +116,20 @@ function FileCardSettings() {
     }));
 
     return (
-        <Stack gap={2}>
-            <label className="inline-flex items-center gap-2">
-                <Checkbox
-                    checked={complexLayout.value}
-                    disabled={isSaving || readonly}
-                    onCheckedChange={complexLayout.onChange}
-                />
-                <Text.Label as="span">Сложная структура (LLM вместо OCR)</Text.Label>
-            </label>
-            <label className="inline-flex items-center gap-2">
-                <Checkbox
-                    checked={isTechnicalCondition.value}
-                    disabled={isSaving || readonly}
-                    onCheckedChange={isTechnicalCondition.onChange}
-                />
-                <Text.Label as="span">Технические условия</Text.Label>
-            </label>
-        </Stack>
+        <Checkbox.Group label="Настройки" direction="vertical">
+            <Checkbox.Item
+                label="Сложная структура (LLM вместо OCR)"
+                checked={complexLayout.value}
+                disabled={isSaving || readonly}
+                onChange={complexLayout.onChange}
+            />
+            <Checkbox.Item
+                label="Технические условия"
+                checked={isTechnicalCondition.value}
+                disabled={isSaving || readonly}
+                onChange={isTechnicalCondition.onChange}
+            />
+        </Checkbox.Group>
     );
 }
 

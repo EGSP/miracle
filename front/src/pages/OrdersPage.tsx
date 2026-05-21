@@ -3,8 +3,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { ListOrdered, Plus } from 'lucide-react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
 import type { FileWithMeta, Order, Stored } from '@miracle/types';
-import { Checkbox } from '@/components/ui/checkbox';
-import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation/tri-state-checkbox';
+import { Checkbox, type TriStateValue } from '@/components/ui/checkbox';
 import { ListBox } from '@/components/ui/listbox';
 import { Button } from '@/components/ui/button';
 import { OrderCard } from '@/components/blocks/order-card/OrderCard';
@@ -152,17 +151,10 @@ function OrdersPageContent() {
                             disabled={createOrderMutation.isPending}
                         />
                     </Stack>
-                    <Stack
-                        orientation="horizontal"
-                        gap={4}
-                        className="flex-wrap items-center border border-border p-2"
-                    >
-                        <label className="inline-flex items-center gap-2">
-                            <Checkbox checked={myOrdersOnly} onCheckedChange={(checked) => setMyOrdersOnly(checked === true)} />
-                            <Text.Label as="span">Мои заказы</Text.Label>
-                        </label>
-                        <TriStateCheckbox label="С файлом" value={withFileOnly} onChange={setWithFileOnly} />
-                    </Stack>
+                    <Checkbox.Group label="Фильтры" direction="horizontal" className="border border-border p-2">
+                        <Checkbox.Item label="Мои заказы" checked={myOrdersOnly} onChange={setMyOrdersOnly} />
+                        <Checkbox.TristateItem label="С файлом" value={withFileOnly} onChange={setWithFileOnly} />
+                    </Checkbox.Group>
 
                     {(isOrdersLoading || isFilesLoading) && <Text.Label as="p">Загрузка...</Text.Label>}
                     {(ordersError || filesError) && (

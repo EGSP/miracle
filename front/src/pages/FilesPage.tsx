@@ -4,8 +4,7 @@ import { FileIcon, Upload } from 'lucide-react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
 import { FileDropZone } from '@/components/ui/file-dropzone';
-import { Checkbox } from '@/components/ui/checkbox';
-import { TriStateCheckbox, type TriStateValue } from '@/components/ui/derivation/tri-state-checkbox';
+import { Checkbox, type TriStateValue } from '@/components/ui/checkbox';
 import { ListBox } from '@/components/ui/listbox';
 import { FileContentPreview } from '@/components/ui/file-content-preview';
 import { FileCard } from '@/components/blocks/FileCard';
@@ -129,18 +128,11 @@ export default function FilesPage() {
                     <Text.Heading as="h2" variant="compact-01">
                         Загруженные файлы
                     </Text.Heading>
-                    <Stack
-                        orientation="horizontal"
-                        gap={4}
-                        className="flex-wrap items-center border border-border p-2"
-                    >
-                        <label className="inline-flex items-center gap-2">
-                            <Checkbox checked={myFilesOnly} onCheckedChange={(checked) => setMyFilesOnly(checked === true)} />
-                            <Text.Label as="span">Мои файлы</Text.Label>
-                        </label>
-                        <TriStateCheckbox label="Доступные" value={availableOnly} onChange={setAvailableOnly} />
-                        <TriStateCheckbox label="Технические условия" value={tcOnly} onChange={setTcOnly} />
-                    </Stack>
+                    <Checkbox.Group label="Фильтры" direction="horizontal" className="border border-border p-2">
+                        <Checkbox.Item label="Мои файлы" checked={myFilesOnly} onChange={setMyFilesOnly} />
+                        <Checkbox.TristateItem label="Доступные" value={availableOnly} onChange={setAvailableOnly} />
+                        <Checkbox.TristateItem label="Технические условия" value={tcOnly} onChange={setTcOnly} />
+                    </Checkbox.Group>
 
                     {isLoading && <Text.Label as="p">Загрузка...</Text.Label>}
                     {error && <Text.Label as="p">Ошибка: {error.message}</Text.Label>}
@@ -205,25 +197,24 @@ export default function FilesPage() {
                         </Stack>
                     )}
 
-                    <Stack gap={2} className="border border-border p-2">
-                        <Text.Label as="span" className="font-medium">Настройки</Text.Label>
-                        <label className="inline-flex items-center gap-2">
-                            <Checkbox
-                                checked={uploadComplexLayout}
-                                onCheckedChange={(v) => setUploadComplexLayout(v === true)}
-                                disabled={uploadMutation.isPending}
-                            />
-                            <Text.Label as="span">Сложная структура (LLM вместо OCR)</Text.Label>
-                        </label>
-                        <label className="inline-flex items-center gap-2">
-                            <Checkbox
-                                checked={uploadIsTechnicalCondition}
-                                onCheckedChange={(v) => setUploadIsTechnicalCondition(v === true)}
-                                disabled={uploadMutation.isPending}
-                            />
-                            <Text.Label as="span">Технические условия</Text.Label>
-                        </label>
-                    </Stack>
+                    <Checkbox.Group
+                        label="Настройки"
+                        direction="vertical"
+                        className="border border-border p-2"
+                    >
+                        <Checkbox.Item
+                            label="Сложная структура (LLM вместо OCR)"
+                            checked={uploadComplexLayout}
+                            onChange={setUploadComplexLayout}
+                            disabled={uploadMutation.isPending}
+                        />
+                        <Checkbox.Item
+                            label="Технические условия"
+                            checked={uploadIsTechnicalCondition}
+                            onChange={setUploadIsTechnicalCondition}
+                            disabled={uploadMutation.isPending}
+                        />
+                    </Checkbox.Group>
 
                     {uploadMutation.isError && (
                         <Text.Label as="p">{uploadMutation.error.message}</Text.Label>

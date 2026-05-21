@@ -63,7 +63,11 @@
       "Bash(powershell -Command ' *)",
       "Bash(powershell -Command '$f='\\\\''pages/Auth.tsx'\\\\''; $c=Get-Content $f -Raw -Encoding UTF8; $n=$c -replace '\\\\''variant=\"outline\"'\\\\'','\\\\''variant=\"tertiary\"'\\\\''; Set-Content $f $n -Encoding UTF8 -NoNewline; Write-Host '\\\\''Updated'\\\\''')",
       "Bash(Remove-Item \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\\\\front\\\\src\\\\components\\\\ui\\\\button.css\")",
-      "WebFetch(domain:v10.carbondesignsystem.com)"
+      "WebFetch(domain:v10.carbondesignsystem.com)",
+      "Bash(node -e \"const l = require\\('C:/workroot/Разработка/Программы/js/miracle/front/node_modules/lucide-react'\\); console.log\\('AlertTriangle:', !!l.AlertTriangle, 'TriangleAlert:', !!l.TriangleAlert\\);\")",
+      "WebFetch(domain:react.carbondesignsystem.com)",
+      "WebFetch(domain:www.carbondesignsystem.com)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }

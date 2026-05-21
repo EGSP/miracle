@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Upload } from 'lucide-react';
-import { Stack, Text } from '@miracle/aramid';
+import { Stack } from '@miracle/aramid';
 import { getAllowedExtensions } from '@miracle/types';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -73,25 +73,24 @@ export function FileUploadDialog({ open, onOpenChange, onUploaded }: FileUploadD
                         disabled={uploadMutation.isPending}
                     />
 
-                    <Stack gap={2} className="border border-border p-2">
-                        <Text.Label as="span" className="font-medium">Настройки</Text.Label>
-                        <label className="inline-flex items-center gap-2">
-                            <Checkbox
-                                checked={complexLayout}
-                                onCheckedChange={(v) => setComplexLayout(v === true)}
-                                disabled={uploadMutation.isPending}
-                            />
-                            <Text.Label as="span">Сложная структура (LLM вместо OCR)</Text.Label>
-                        </label>
-                        <label className="inline-flex items-center gap-2">
-                            <Checkbox
-                                checked={isTechnicalCondition}
-                                onCheckedChange={(v) => setIsTechnicalCondition(v === true)}
-                                disabled={uploadMutation.isPending}
-                            />
-                            <Text.Label as="span">Технические условия</Text.Label>
-                        </label>
-                    </Stack>
+                    <Checkbox.Group
+                        label="Настройки"
+                        direction="vertical"
+                        className="border border-border p-2"
+                    >
+                        <Checkbox.Item
+                            label="Сложная структура (LLM вместо OCR)"
+                            checked={complexLayout}
+                            onChange={setComplexLayout}
+                            disabled={uploadMutation.isPending}
+                        />
+                        <Checkbox.Item
+                            label="Технические условия"
+                            checked={isTechnicalCondition}
+                            onChange={setIsTechnicalCondition}
+                            disabled={uploadMutation.isPending}
+                        />
+                    </Checkbox.Group>
 
                     <InlineMutationNotification mutation={uploadMutation} />
                 </Stack>
