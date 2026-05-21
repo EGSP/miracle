@@ -1,0 +1,63 @@
+{
+  "layer": {
+    "0": {
+      "background": {
+        "$value": "var(--aramid-color-gray-10)",
+        "$type": "color",
+        "$description": "Carbon g10: фон базового слоя (страница)"
+      },
+      "field": {
+        "$value": "var(--aramid-color-white-0)",
+        "$type": "color",
+        "$description": "Carbon g10: фон поля на слое 0"
+      },
+      "border-strong": {
+        "$value": "var(--aramid-color-gray-50)",
+        "$type": "color",
+        "$description": "Carbon: нижняя граница поля"
+      }
+    },
+    "1": {
+      "background": {
+        "$value": "var(--aramid-color-white-0)",
+        "$type": "color"
+      },
+      "field": {
+        "$value": "var(--aramid-color-gray-10)",
+        "$type": "color"
+      },
+      "border-strong": {
+        "$value": "var(--aramid-color-gray-50)",
+        "$type": "color"
+      }
+    },
+    "2": {
+      "background": {
+        "$value": "var(--aramid-color-gray-10)",
+        "$type": "color"
+      },
+      "field": {
+        "$value": "var(--aramid-color-white-0)",
+        "$type": "color"
+      },
+      "border-strong": {
+        "$value": "var(--aramid-color-gray-50)",
+        "$type": "color"
+      }
+    },
+    "3": {
+      "background": {
+        "$value": "var(--aramid-color-white-0)",
+        "$type": "color"
+      },
+      "field": {
+        "$value": "var(--aramid-color-gray-10)",
+        "$type": "color"
+      },
+      "border-strong": {
+        "$value": "var(--aramid-color-gray-50)",
+        "$type": "color"
+      }
+    }
+  }
+}

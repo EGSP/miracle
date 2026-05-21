@@ -7,3 +7,4 @@ export const aramidSubgridClass = 'aramid-subgrid';
 export const aramidColumnClass = 'aramid-column';
 export const aramidStackClass = 'aramid-stack';
 export const aramidAspectRatioClass = 'aramid-aspect-ratio';
+export const aramidLayerClass = 'aramid-layer';

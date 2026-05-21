@@ -2,6 +2,7 @@ import * as React from "react"
 import { Text } from "@miracle/aramid"
 
 import { type BaseInputProps } from "@/components/ui/input-variants"
+import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 
 import "@/design/textarea.css"
@@ -23,7 +24,9 @@ const sizeClass: Record<TextareaSize, string> = {
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, size = "sm", full = false, resizable = true, disabled, label, ...props }, ref) => {
+  ({ className, size = "sm", full = false, resizable = true, disabled, label, style, ...props }, ref) => {
+    const fieldStyle = useFieldLayerStyle({ disabled, style })
+
     const textarea = (
       <textarea
         ref={ref}
@@ -36,6 +39,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           !resizable && "textarea--no-resize",
           className
         )}
+        style={fieldStyle}
         {...props}
       />
     )

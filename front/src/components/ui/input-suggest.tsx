@@ -1,7 +1,8 @@
 import * as React from "react"
-import { Text } from "@miracle/aramid"
+import { Text, useLayerTokens, useNextLayerTokens } from "@miracle/aramid"
 
 import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
+import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 
 import "@/design/input.css"
@@ -38,8 +39,13 @@ function InputSuggest<T>({
   size,
   full = false,
   label,
+  style,
   ...props
 }: InputSuggestProps<T>) {
+  const fieldStyle = useFieldLayerStyle({ disabled, style })
+  const { layerBackground } = useNextLayerTokens()
+  const { fieldBackground } = useLayerTokens()
+
   const rootRef = React.useRef<HTMLDivElement>(null)
   const blurTimeoutRef = React.useRef<number | null>(null)
   const searchIdRef = React.useRef(0)
@@ -143,10 +149,15 @@ function InputSuggest<T>({
           onKeyDown?.(event)
         }}
         className={cn(inputVariants({ size, full: true }), className)}
+        style={fieldStyle}
       />
 
       {isOpen && (
-        <div role="listbox" className="input-suggest-list">
+        <div
+          role="listbox"
+          className="input-suggest-list"
+          style={{ backgroundColor: layerBackground }}
+        >
           {items.map((item, index) => {
             const isActive = index === activeIndex
             return (
@@ -158,6 +169,7 @@ function InputSuggest<T>({
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => selectItem(item)}
                 className={cn("input-suggest-item", isActive && "input-suggest-item--active")}
+                style={isActive ? { backgroundColor: fieldBackground } : undefined}
               >
                 {renderItem ? renderItem(item, { isActive, index }) : getItemValue(item)}
               </div>

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Stack, Text } from '@miracle/aramid';
+import { Layer, Stack, Text } from '@miracle/aramid';
 import type { Stored, TechnicalCondition } from '@miracle/types';
 import { DirtyGuardProvider, useGuardActions } from '@/contexts/dirty-state/DirtyGuardContext';
 import { useField } from '@/contexts/dirty-state/useField';
@@ -74,16 +74,18 @@ function TechnicalConditionCardBody() {
     const { technicalCondition } = useTechnicalConditionCardContext();
 
     return (
-        <Stack gap={3} className="border border-border bg-muted/10 p-3">
-            <Text.Heading as="p" variant="03">
-                Техническое условие <Text as="span" expressive>({technicalCondition.id})</Text>
-            </Text.Heading>
-            <TechnicalConditionCardActions />
-            <TechnicalConditionCardMeta />
-            <TechnicalConditionCardRulesSection />
-            <TechnicalConditionCardSlotsSection />
-            <TechnicalConditionCardTemplatesSection />
-        </Stack>
+        <Layer>
+            <Stack gap={3} className="border border-border p-3">
+                <Text.Heading as="p" variant="03">
+                    Техническое условие <Text as="span" expressive>({technicalCondition.id})</Text>
+                </Text.Heading>
+                <TechnicalConditionCardActions />
+                <TechnicalConditionCardMeta />
+                <TechnicalConditionCardRulesSection />
+                <TechnicalConditionCardSlotsSection />
+                <TechnicalConditionCardTemplatesSection />
+            </Stack>
+        </Layer>
     );
 }
 

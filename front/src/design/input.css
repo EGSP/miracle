@@ -10,8 +10,8 @@
   height: var(--aramid-spacing-8);           /* md = 40px */
   padding-inline: var(--aramid-spacing-5);   /* 16px */
   border: none;
-  border-bottom: 1px solid var(--field-border-strong);
-  background-color: var(--field-background);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
   font-family: var(--aramid-font-family-sans);
   font-size: var(--aramid-font-size-xs);
   font-weight: var(--aramid-font-weight-regular);
@@ -34,9 +34,7 @@
 
 .input:disabled {
   cursor: not-allowed;
-  background-color: var(--field-background);
   color: var(--aramid-color-gray-30);
-  border-bottom-color: var(--aramid-color-gray-30);
 }
 
 .input[aria-invalid="true"] {

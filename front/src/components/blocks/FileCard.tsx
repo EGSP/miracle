@@ -1,5 +1,5 @@
 ﻿import { createContext, useContext, type PropsWithChildren } from "react";
-import { IconIndicator, Stack, Text } from "@miracle/aramid";
+import { IconIndicator, Layer, Stack, Text } from "@miracle/aramid";
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types";
 import { Eye, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -190,7 +190,8 @@ function FileCardBody() {
     };
 
     return (
-        <Stack gap={3} className="border border-border p-3">
+        <Layer>
+            <Stack gap={3} className="border border-border p-3">
             <Stack orientation="horizontal" gap={2} className="items-center justify-between">
                 <Text.Heading as="h3" variant="compact-01" className="truncate">
                     {file.name}
@@ -349,7 +350,8 @@ function FileCardBody() {
             <InlineMutationNotification
                 mutation={{ isError: isGetContentError, isSuccess: false, error: getContentError }}
             />
-        </Stack>
+            </Stack>
+        </Layer>
     );
 }
 

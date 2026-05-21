@@ -12,6 +12,7 @@ const TOKEN_CORE_SOURCES = [
   'tokens/column/**/*.json',
   'tokens/color/**/*.json',
   'tokens/grid/**/*.json',
+  'tokens/layer/**/*.json',
   'tokens/spacing/**/*.json',
   'tokens/typography/**/*.json',
 ]

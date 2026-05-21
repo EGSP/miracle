@@ -1,0 +1,14 @@
+/*
+  Layer — фон поверхности слоя (Carbon g10).
+  Токены полей задают потребители через useLayerTokens, не Layer.
+*/
+
+:root {
+  --layer-level: 0;
+  --layer-background: var(--aramid-layer-0-background);
+}
+
+.aramid-layer {
+  background-color: var(--layer-background);
+  color: var(--aramid-color-gray-100);
+}

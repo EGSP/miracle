@@ -5,19 +5,23 @@ import { Text } from "@miracle/aramid"
 import { InputDropdown } from "@/components/ui/input-dropdown"
 import { InputSuggest } from "@/components/ui/input-suggest"
 import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
+import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 
 import "@/design/input.css"
 
 type InputRootProps = Omit<React.ComponentProps<"input">, "size"> & BaseInputProps
 
-function InputRoot({ className, type, label, size, full, disabled, ...props }: InputRootProps) {
+function InputRoot({ className, type, label, size, full, disabled, style, ...props }: InputRootProps) {
+  const fieldStyle = useFieldLayerStyle({ disabled, style })
+
   const input = (
     <InputPrimitive
       type={type}
       disabled={disabled}
       data-slot="input"
       className={cn(inputVariants({ size, full }), className)}
+      style={fieldStyle}
       {...props}
     />
   )

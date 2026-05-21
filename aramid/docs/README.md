@@ -8,6 +8,7 @@
 | Column | [COLUMN.md](./COLUMN.md) |
 | Stack | [STACK.md](./STACK.md) |
 | AspectRatio | [ASPECTRATIO.md](./ASPECTRATIO.md) |
+| Layer | [LAYER.md](./LAYER.md) |
 
 Общий гайд по переносу из Carbon: [CARBON_DESIGN_ADOPTION.md](../CARBON_DESIGN_ADOPTION.md).
 

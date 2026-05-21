@@ -1,8 +1,9 @@
 import * as React from "react"
 import { ChevronDownIcon } from "lucide-react"
-import { Text } from "@miracle/aramid"
+import { Text, useLayerTokens, useNextLayerTokens } from "@miracle/aramid"
 
 import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
+import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 
 import "@/design/input.css"
@@ -184,6 +185,7 @@ function InputDropdownSelected<T>({
   className,
   onKeyDown,
   onClick,
+  style,
   ...props
 }: InputDropdownSelectedProps) {
   const {
@@ -193,6 +195,7 @@ function InputDropdownSelected<T>({
   } = useDropdownContext<T>()
 
   const hasValue = value != null
+  const fieldStyle = useFieldLayerStyle({ disabled, style })
 
   return (
     <button
@@ -200,6 +203,7 @@ function InputDropdownSelected<T>({
       id={triggerId}
       type="button"
       disabled={disabled}
+      style={fieldStyle}
       role="combobox"
       aria-expanded={isOpen}
       aria-controls={listId}
@@ -252,10 +256,14 @@ function InputDropdownList<T>({
   className,
   emptyText = "No options",
   onMouseDown,
+  style,
   ...props
 }: InputDropdownListProps) {
   const { options, value, isOpen, activeIndex, getItemKey, renderListItem, listId, setActiveIndex, selectByIndex } =
     useDropdownContext<T>()
+
+  const { layerBackground } = useNextLayerTokens()
+  const { fieldBackground } = useLayerTokens()
 
   if (!isOpen) return null
 
@@ -269,6 +277,7 @@ function InputDropdownList<T>({
         onMouseDown?.(event)
       }}
       className={cn("input-dropdown-list", className)}
+      style={{ backgroundColor: layerBackground, ...style }}
     >
       {options.length === 0 ? (
         <div className="input-dropdown-empty">{emptyText}</div>
@@ -285,6 +294,7 @@ function InputDropdownList<T>({
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => selectByIndex(index)}
               className={cn("input-dropdown-item", isActive && "input-dropdown-item--active")}
+              style={isActive ? { backgroundColor: fieldBackground } : undefined}
             >
               {renderListItem(item ?? null, { isSelected, isActive, index })}
             </div>

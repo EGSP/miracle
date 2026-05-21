@@ -237,6 +237,19 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 
 ---
 
+## Слои (Layer)
+
+Поверхности и поля ввода завязаны на [Carbon Layer](https://react.carbondesignsystem.com/?path=/docs/components-layer--overview) (тема g10).
+
+- **`Layer`** из `@miracle/aramid` — фон панели (`--layer-background`) и уровень в React Context (0…3). Вложенный `Layer` без `level` увеличивает уровень на 1.
+- **Поля ввода** (`Input`, `Textarea`, dropdown, suggest) сами вызывают `useLayerTokens()` и задают фон/границу через inline `style` (хелпер `useFieldLayerStyle` в `front/src/lib/use-field-layer-style.ts`). Каскад `--field-background` с предка **не используется**.
+- **Диалог** рендерится в корне документа (`body`) вне дерева страницы — внутри `DialogContent` уже есть `<Layer level={1}>`.
+- Карточки с формами оборачиваются в `<Layer>` (белая поверхность, поля `gray-10`).
+
+Подробнее: [`aramid/docs/LAYER.md`](../../aramid/docs/LAYER.md).
+
+---
+
 ## Label
 
 - Все input-компоненты поддерживают `label?: string` через `BaseInputProps`

@@ -1,4 +1,4 @@
-﻿import { IconIndicator, Stack, Text } from '@miracle/aramid';
+﻿import { IconIndicator, Layer, Stack, Text } from '@miracle/aramid';
 import { Link } from '@tanstack/react-router';
 import { FileIcon } from 'lucide-react';
 import { WorkerStatus, getHumanReadableWorkerData } from '@miracle/types';
@@ -56,7 +56,8 @@ export function WorkerCard({ worker }: WorkerCardProps) {
     const showDeleteButton = worker.status !== WorkerStatus.Active;
 
     return (
-        <Stack gap={3} className="border border-border p-3">
+        <Layer>
+            <Stack gap={3} className="border border-border p-3">
             <Stack orientation="horizontal" gap={2} className="items-center">
                 <WorkerIcon className="size-4 shrink-0" />
                 <Text.Heading as="h3" variant="compact-01" className="flex-1 truncate">
@@ -132,6 +133,7 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                     {JSON.stringify(hrData, null, 2)}
                 </Text.Code>
             </div>
-        </Stack>
+            </Stack>
+        </Layer>
     );
 }

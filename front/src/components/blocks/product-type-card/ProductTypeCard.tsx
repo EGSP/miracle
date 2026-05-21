@@ -1,6 +1,6 @@
 ﻿import { useMemo } from 'react';
 import { Trash2 } from 'lucide-react';
-import { Stack, Text } from '@miracle/aramid';
+import { Layer, Stack, Text } from '@miracle/aramid';
 import type { ProductType, Stored } from '@miracle/types';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -74,7 +74,8 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
     };
 
     return (
-        <Stack gap={3} className="border border-border p-3">
+        <Layer>
+            <Stack gap={3} className="border border-border p-3">
             <Stack orientation="horizontal" gap={2} className="items-center">
                 <Button
                     size="sm"
@@ -128,6 +129,7 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
 
             <InlineMutationNotification mutation={updateMutation} successMessage="Сохранено" />
             <InlineMutationNotification mutation={softDeleteMutation} />
-        </Stack>
+            </Stack>
+        </Layer>
     );
 }
