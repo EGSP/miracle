@@ -72,9 +72,9 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                         {showApplyButton ? (
                             <Button
                                 type="button"
-                                variant="tertiary"
+                                variant="primary"
                                 size="sm"
-                                label={applyMutation.isPending ? 'Применение...' : 'Применить результат'}
+                                label={applyMutation.isPending ? 'Применение...' : 'Применить'}
                                 disabled={applyMutation.isPending || deleteMutation.isPending}
                                 onClick={() => applyMutation.mutate(worker.id)}
                             />
@@ -82,7 +82,7 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                         {showDeleteButton ? (
                             <Button
                                 type="button"
-                                variant="danger"
+                                variant="danger-tertiary"
                                 size="sm"
                                 label={deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
                                 disabled={deleteMutation.isPending || applyMutation.isPending}
@@ -128,7 +128,7 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                 )}
             </Stack>
 
-            <div className="border border-border bg-muted/20 p-2">
+            <div className="border border-border bg-muted/20 p-2 w-full">
                 <Text.Code as="pre" language="json" variant="md">
                     {JSON.stringify(hrData, null, 2)}
                 </Text.Code>

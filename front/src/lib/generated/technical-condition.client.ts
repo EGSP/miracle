@@ -4,6 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { Stored, TechnicalCondition, TechnicalConditionsQuery } from '@miracle/types';
+import type { ExtractTcDetailsResponse } from './models';
 
 export const technicalCondition = {
     getTechnicalConditions: (technicalConditionsQuery: TechnicalConditionsQuery) => customInstance<Stored<TechnicalCondition>[]>({
@@ -25,7 +26,7 @@ export const technicalCondition = {
         url: formatPath('/technical-conditions/:id', params),
         data: technicalCondition,
     }),
-    extractTcDetails: (params: { id: string; }) => customInstance<null>({
+    extractTcDetails: (params: { id: string; }) => customInstance<ExtractTcDetailsResponse>({
         method: 'POST',
         url: formatPath('/technical-conditions/:id/extract-details', params),
     }),

@@ -8,4 +8,5 @@ export * from './file.models';
 export * from './order.models';
 export * from './workers.models';
 export * from './product-type.models';
+export * from './technical-condition.models';
 export * from './admin.models';
