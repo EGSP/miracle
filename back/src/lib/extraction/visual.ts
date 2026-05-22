@@ -4,6 +4,7 @@ import { filesContentService } from '../../databases/file-content.db.js';
 import { workerPool } from '../../workers/worker-pool.js';
 import { YandexOcrWorker } from '../../workers/scan/yandex-ocr-worker.js';
 import { LlmVisionWorker } from '../../workers/scan/llm-vision-worker.js';
+import { LlmVisionTcWorker } from '../../workers/scan/llm-vision-tc-worker.js';
 
 /**
  * MIME-типы, поддерживаемые Yandex OCR в асинхронном режиме.
@@ -72,6 +73,36 @@ export async function extractVisualContentWithLLM(dbFile: Stored<FileModel>): Pr
 
     workerPool.launch(
         new LlmVisionWorker({
+            data: null,
+            fileId: dbFile.id,
+            fileContentId: fileContent.id,
+        }),
+    );
+}
+
+/**
+ * Запускает LLM Vision извлечение для PDF Технических Условий.
+ */
+export async function extractVisualContentWithTcLLM(dbFile: Stored<FileModel>): Promise<void> {
+    const mimeType = getMimeType(dbFile.extension);
+
+    if (!mimeType || !isYandexOcrMimeType(mimeType)) {
+        throw new Error(
+            `Расширение «${dbFile.extension}» не поддерживается LLM Vision ТУ. ` +
+            `Допустимые форматы: jpeg, png, pdf`,
+        );
+    }
+
+    const fileContent = await filesContentService.create({
+        fileId: dbFile.id,
+        meta: {
+            extractionType: ExtractionType.LLM,
+            extractionStatus: ExtractionStatus.STARTED,
+        },
+    });
+
+    workerPool.launch(
+        new LlmVisionTcWorker({
             data: null,
             fileId: dbFile.id,
             fileContentId: fileContent.id,

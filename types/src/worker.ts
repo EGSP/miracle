@@ -5,8 +5,8 @@ import type { OrderDetails } from './order.js';
 export type WorkerType =
     | 'yandex-ocr-worker'
     | 'llm-vision-worker'
+    | 'llm-vision-tc-worker'
     | 'order-details-worker'
-    | 'tc-processing-worker'
     | 'tc-details-worker'
     | 'designation-worker';
 
@@ -58,21 +58,15 @@ export type LlmVisionWorkerData = BaseWorkerData & {
 };
 
 /**
- * Читает FileContent уже извлечённого PDF ТУ.
- * Вызывает Yandex LLM (async) → разбивает текст на TechnicalConditionRule[].
- * В apply() записывает правила в TechnicalCondition.rules.
+ * Читает PDF ТУ, рендерит страницы в изображения, вызывает Yandex Vision LLM (async).
+ * В apply() записывает извлечённый markdown-текст в FileContent.content.
  */
-export type TCWorkerData = BaseWorkerData & {
-    type: 'tc-processing-worker';
-    /** TC, для которого извлекаются правила. */
-    tcId: string;
-    /** FileContent с извлечённым текстом PDF ТУ. */
+export type LlmVisionTcWorkerData = BaseWorkerData & {
+    type: 'llm-vision-tc-worker';
+    fileId: string;
     fileContentId: string;
-    /** ID асинхронной операции Yandex — сохраняется для восстановления. */
     cloudOperationId?: string;
-    /** JSON с TechnicalConditionRule[] — заполняется после завершения операции. */
     operationResult?: string;
-    /** Сообщение об ошибке при неуспешном завершении. */
     errorMessage?: string;
 };
 
@@ -120,8 +114,8 @@ export type DesignationWorkerData = BaseWorkerData & {
 export type WorkerData =
     | YandexOcrWorkerData
     | LlmVisionWorkerData
+    | LlmVisionTcWorkerData
     | OrderDetailsWorkerData
-    | TCWorkerData
     | TCDetailsWorkerData
     | DesignationWorkerData;
 
@@ -181,6 +175,14 @@ export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanRea
             };
 
         case 'llm-vision-worker':
+            return {
+                'Файл': worker.fileId,
+                ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),
+                ...(worker.operationResult != null && { 'Результат': worker.operationResult }),
+                ...(worker.errorMessage != null && { 'Ошибка': tryParseJson(worker.errorMessage) }),
+            };
+
+        case 'llm-vision-tc-worker':
             return {
                 'Файл': worker.fileId,
                 ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),

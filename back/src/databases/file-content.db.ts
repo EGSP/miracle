@@ -1,7 +1,7 @@
 import { ExtractionStatus, FileContent, FileDomain, FileModel, getFileDomain, Stored } from "@miracle/types";
 import { registerDb, JsonCollection, CreateEntityInput, StoredEntity } from "./db.js";
 import { filesService, getFilePath } from "./file.db.js";
-import { extractDocumentContent, extractSpreadsheetContent, extractTextContent, extractVisualContentWithLLM, extractVisualContentWithOCR } from "../lib/extraction/index.js";
+import { extractDocumentContent, extractSpreadsheetContent, extractTextContent, extractVisualContentWithLLM, extractVisualContentWithOCR, extractVisualContentWithTcLLM } from "../lib/extraction/index.js";
 
 /** Запись контента считается активной, если нет мягкого удаления (`deletedAt`). */
 function isActiveFileContent(content: StoredEntity<FileContent>): boolean {
@@ -91,9 +91,11 @@ export const filesContentService = {
         const pathToFile = getFilePath(file);
 
         // VISUAL — асинхронный воркер, не generator-паттерн.
-        // complexLayout → LLM Vision (лучше с чекбоксами/формами), иначе → Yandex OCR.
+        // isTechnicalCondition → LLM Vision ТУ; complexLayout → LLM Vision; иначе → Yandex OCR.
         if (domain === FileDomain.VISUAL) {
-            if (file.settings?.complexLayout) {
+            if (file.settings?.isTechnicalCondition) {
+                await extractVisualContentWithTcLLM(file);
+            } else if (file.settings?.complexLayout) {
                 await extractVisualContentWithLLM(file);
             } else {
                 await extractVisualContentWithOCR(file);
