@@ -2,13 +2,14 @@ import type { Stored, TechnicalCondition } from '@miracle/types';
 import { productTypesService } from '../../databases/product-type.db.js';
 
 /**
- * Нормализует тело TC перед записью: опциональные строки, массивы по умолчанию,
+ * Нормализует тело TC перед записью: name, fileId, productTypeId, массивы по умолчанию,
  * `lastProductTypeName` по правилам productTypeId.
  */
 export async function prepareTechnicalConditionPayload(
     body: TechnicalCondition,
     existing?: Stored<TechnicalCondition>,
 ): Promise<TechnicalCondition> {
+    const name = body.name?.trim() || undefined;
     const productTypeId = body.productTypeId?.trim() || undefined;
     const fileId = body.fileId?.trim() || undefined;
 
@@ -23,6 +24,7 @@ export async function prepareTechnicalConditionPayload(
     }
 
     return {
+        name,
         fileId,
         productTypeId,
         lastProductTypeName,
