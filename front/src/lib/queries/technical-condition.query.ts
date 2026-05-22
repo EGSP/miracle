@@ -18,6 +18,20 @@ export const useTechnicalConditions = (filters?: { productTypeId?: string }) => 
     });
 };
 
+export const technicalConditionItemKey = (id: string | undefined) =>
+    [...TECHNICAL_CONDITIONS_ROOT_KEY, 'item', id ?? 'none'] as const;
+
+export const useTechnicalCondition = (id: string | undefined) => {
+    return useQuery({
+        queryKey: technicalConditionItemKey(id),
+        queryFn: () => {
+            if (!id) throw new Error('TC id is required');
+            return technicalCondition.getTechnicalCondition({ id });
+        },
+        enabled: !!id,
+    });
+};
+
 export const useCreateTechnicalCondition = () => {
     const queryClient = useQueryClient();
 

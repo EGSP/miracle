@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { Stored, WorkerData, WorkersQuery } from '@miracle/types';
-import type { ApplyWorkerDataResponse, DeleteWorkerResponse } from './models';
+import type { ApplyWorkerDataResponse, DeleteWorkerResponse, WorkerPromptPreview } from './models';
 
 export const workers = {
     getWorkers: (workersQuery: WorkersQuery) => customInstance<Stored<WorkerData>[]>({
@@ -19,5 +19,9 @@ export const workers = {
     deleteWorker: (params: { id: string; }) => customInstance<DeleteWorkerResponse>({
         method: 'DELETE',
         url: formatPath('/workers/:id', params),
+    }),
+    previewPrompt: (params: { id: string; }) => customInstance<WorkerPromptPreview>({
+        method: 'GET',
+        url: formatPath('/workers/:id/preview-prompt', params),
     }),
 };

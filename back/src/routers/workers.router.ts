@@ -1,7 +1,14 @@
-import type { Stored, WorkerData, WorkersQuery } from '@miracle/types';
+import type { Stored, WorkerData, WorkerFinalPrompt, WorkersQuery } from '@miracle/types';
 import { defineRouter, route } from '../app/router.js';
+import { err } from '../app/index.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { workersService } from '../databases/workers.db.js';
+
+/**
+ * Превью собранного промпта воркера — то, что реально ушло в LLM.
+ * Тип — re-export из @miracle/types для удобства клиента.
+ */
+export type WorkerPromptPreview = WorkerFinalPrompt;
 
 const getWorkers = route.get('/', {
     validate: { query: true },
@@ -35,7 +42,33 @@ const deleteWorker = route.delete('/:id', {
     },
 });
 
+const previewPrompt = route.get('/:id/preview-prompt', {
+    validate: { params: true },
+    handler: async ({ params }: { params: { id: string } }) => {
+        const worker = workersService.get(params.id);
+        if (!worker) {
+            return err.notFound('Worker not found');
+        }
+
+        // Сейчас сохраняет finalPrompt только designation-worker. Если позже
+        // другие типы воркеров будут хранить промпт — расширить через дискриминант.
+        if (worker.type !== 'designation-worker') {
+            return err.badRequest(
+                `Превью промпта пока поддерживается только для designation-worker (получен ${worker.type})`,
+            );
+        }
+
+        if (!worker.finalPrompt) {
+            return err.notFound(
+                'У воркера ещё нет сохранённого промпта (возможно, run() не успел стартовать или упал до сборки промпта)',
+            );
+        }
+
+        return worker.finalPrompt satisfies WorkerPromptPreview;
+    },
+});
+
 export const workersRouter = defineRouter('/workers', {
     middlewares: [authMiddleware],
-    routes: [getWorkers, applyWorkerData, deleteWorker],
+    routes: [getWorkers, applyWorkerData, deleteWorker, previewPrompt],
 } as const);

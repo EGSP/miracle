@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage';
 import FilesPage from './pages/FilesPage';
 import OrdersPage from './pages/OrdersPage';
 import WorkersPage from './pages/WorkersPage';
+import WorkerPromptPage from './pages/WorkerPromptPage';
 import ProductTypesPage from './pages/ProductTypesPage';
 import TechnicalConditionsPage from './pages/TechnicalConditionsPage';
 import { AuthPage, LoginForm, RegisterForm } from './pages/Auth';
@@ -61,6 +62,15 @@ const workersRoute = createRoute({
   component: WorkersPage,
 });
 
+const workerPromptRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/worker-prompt',
+  component: WorkerPromptPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    workerId: typeof search.workerId === 'string' ? search.workerId : undefined,
+  }),
+});
+
 const productTypesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/product-types',
@@ -84,6 +94,7 @@ const routeTree = rootRoute.addChildren([
   filesRoute,
   ordersRoute,
   workersRoute,
+  workerPromptRoute,
   productTypesRoute,
   technicalConditionsRoute,
   adminRoute,

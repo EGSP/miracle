@@ -31,6 +31,20 @@ export const useApplyWorkerData = () => {
     });
 };
 
+/** GET `/workers/:id/preview-prompt` — собранный промпт по input воркера (для отладки). */
+export const useWorkerPromptPreview = (workerId: string | undefined) => {
+    return useQuery({
+        queryKey: ['workers', workerId, 'preview-prompt'] as const,
+        queryFn: () => {
+            if (!workerId) throw new Error('Worker id required');
+            return workers.previewPrompt({ id: workerId });
+        },
+        enabled: !!workerId,
+        // Промпт собирается по текущим Order/TC — иногда хочется свежий, иногда нет.
+        // Кэшируем по умолчанию, но даём react-query инвалидировать при перезагрузке страницы.
+    });
+};
+
 /** DELETE `/workers/:id` — удаляет воркера (кроме active). */
 export const useDeleteWorker = () => {
     const queryClient = useQueryClient();

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { order } from "../generated";
-import type { OrderQuery } from "@miracle/types";
+import type { DesignationWorkerInput, OrderQuery } from "@miracle/types";
 
 export const ORDERS_QUERY_KEY = ["orders"] as const;
 export const ORDER_ANALYSE_AVAILABILITY_QUERY_KEY = ["order-analyse-availability"] as const;
@@ -59,6 +59,20 @@ export const useCanAnalyseOrderDetails = (orderId: string | undefined) => {
         queryFn: () => {
             if (!orderId) throw new Error('Order ID is required');
             return order.canAnalyseOrderDetails({ id: orderId });
+        },
+    });
+};
+
+export const useAnalyseDesignation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (input: DesignationWorkerInput) => order.analyseDesignation(input),
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
+            queryClient.invalidateQueries({
+                queryKey: [...ORDER_ANALYSE_AVAILABILITY_QUERY_KEY, variables.orderId],
+            });
         },
     });
 };

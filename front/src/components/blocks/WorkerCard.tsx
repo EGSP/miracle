@@ -57,6 +57,13 @@ export function WorkerCard({ worker }: WorkerCardProps) {
     const showApplyButton = worker.status === WorkerStatus.Success;
     const showDeleteButton = worker.status !== WorkerStatus.Active;
 
+    // Превью промпта — пока поддерживается только для designation-worker
+    // (соответствует ограничению на бэке в /workers/:id/preview-prompt).
+    const showPreviewPromptButton = worker.type === 'designation-worker';
+    const openPromptPreview = () => {
+        window.open(`/worker-prompt?workerId=${worker.id}`, '_blank', 'noopener,noreferrer');
+    };
+
     return (
         <Layer>
             <Stack gap={3} className=" p-3">
@@ -98,7 +105,7 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                     </Text.Code>
                 </div>
                 
-                {showApplyButton || showDeleteButton ? (
+                {showApplyButton || showDeleteButton || showPreviewPromptButton ? (
                     <Stack gap={2}>
                         <Stack orientation="horizontal" gap={2}>
                             {showApplyButton ? (
@@ -109,6 +116,15 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                                     label={applyMutation.isPending ? 'Применение...' : 'Применить'}
                                     disabled={applyMutation.isPending || deleteMutation.isPending}
                                     onClick={() => applyMutation.mutate(worker.id)}
+                                />
+                            ) : null}
+                            {showPreviewPromptButton ? (
+                                <Button
+                                    type="button"
+                                    variant="tertiary"
+                                    size="sm"
+                                    label="Промпт"
+                                    onClick={openPromptPreview}
                                 />
                             ) : null}
                             {showDeleteButton ? (

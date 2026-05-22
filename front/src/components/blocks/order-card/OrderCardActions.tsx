@@ -5,6 +5,7 @@ import { InlineMutationNotification } from '@/components/ui/inline-mutation-noti
 import { useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
 import { useAnalyseOrderDetails, useCanAnalyseOrderDetails, useClearAnalysedDetails } from '@/lib/queries/order.query';
 import { useOrderCardContext } from './OrderCard';
+import { AnalyseDesignationDialog } from './AnalyseDesignationDialog';
 
 export function OrderCardActions() {
     const { order, isSaving, save, saveError } = useOrderCardContext();
@@ -26,6 +27,22 @@ export function OrderCardActions() {
         : details
             ? 'Сначала очистите детали заказа, чтобы запустить анализ снова'
             : analyseAvailabilityQuery.data?.errorMessage;
+
+    // Кнопка анализа условного обозначения доступна, когда у заказа есть хотя бы одно
+    // активное требование (human или ai с used !== false). Это совпадает с логикой
+    // валидации на бэке (см. analyseDesignation в order.router.ts).
+    const hasEffectiveRequirement = useMemo(() => {
+        return (details?.requirements ?? []).some(
+            (dual) => dual.human !== undefined || (dual.ai !== undefined && dual.ai.used !== false),
+        );
+    }, [details?.requirements]);
+
+    const canAnalyseDesignation = !isDirtyAnywhere && hasEffectiveRequirement && !!order?.id;
+    const analyseDesignationDisabledMessage = isDirtyAnywhere
+        ? 'Сохраните изменения перед запуском анализа обозначения'
+        : !hasEffectiveRequirement
+            ? 'Сначала выведите требования заказа'
+            : undefined;
 
     return (
         <Stack gap={6} orientation='vertical'>
@@ -67,11 +84,32 @@ export function OrderCardActions() {
                         onClick={() => clearDetailsMutation.mutate()}
                     />
                 </Stack>
+
+                {order?.id && (
+                    <Stack gap={2}>
+                        <AnalyseDesignationDialog
+                            orderId={order.id}
+                            trigger={
+                                <Button
+                                    variant="tertiary"
+                                    size="sm"
+                                    label="Анализ заказа"
+                                    disabled={!canAnalyseDesignation}
+                                />
+                            }
+                        />
+                    </Stack>
+                )}
             </Stack>
             <Stack gap={2} orientation='vertical'>
                 {analyseDisabledMessage && !analyseAvailabilityQuery.isError && (
                     <Text as="p" compact className="text-muted-foreground">
                         {analyseDisabledMessage}
+                    </Text>
+                )}
+                {analyseDesignationDisabledMessage && (
+                    <Text as="p" compact className="text-muted-foreground">
+                        {analyseDesignationDisabledMessage}
                     </Text>
                 )}
                 <InlineMutationNotification

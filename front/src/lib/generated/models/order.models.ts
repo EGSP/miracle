@@ -10,4 +10,6 @@ export type CanAnalyseOrderDetailsResponse = {
     errorMessage?: string;
 };
 
+export type AnalyseDesignationResponse = { workerId: string };
+
 export type AnalyseOrderDetailsResponse = null;

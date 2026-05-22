@@ -88,19 +88,46 @@ export type TCDetailsWorkerData = BaseWorkerData & {
 };
 
 /**
+ * Вход DesignationWorker — что анализируем и по какому ТУ.
+ * Капсула: воркер хранит этот объект как `input` и эндпоинт принимает его целиком
+ * как тело запроса. При расширении (например, выбор templateId)
+ * не разрастается shape воркера и не меняется сигнатура эндпоинта.
+ */
+export type DesignationWorkerInput = {
+    /** Заказ, для которого определяется обозначение. */
+    orderId: string;
+    /** TC, по правилам которого ведётся определение. */
+    tcId: string;
+};
+
+/**
+ * Финальный промпт, собранный воркером до отправки в LLM.
+ * Хранится в воркере для отладки: показывает ровно то, что ушло в модель,
+ * даже если Order или TC потом изменились/удалились.
+ */
+export type WorkerFinalPrompt = {
+    system: string;
+    user: string;
+};
+
+/**
  * Читает rules через DesignationSlot.ruleIds + requirements из Order.
  * Вызывает Yandex LLM (async) → возвращает DesignationValue[].
  * В apply() записывает результат в Order.details.designation.ai.
  */
 export type DesignationWorkerData = BaseWorkerData & {
     type: 'designation-worker';
-    /** Заказ, для которого строится обозначение. */
-    orderId: string;
-    /** TC, по которому выполняется определение. */
-    tcId: string;
+    /** Капсула входных данных воркера. */
+    input: DesignationWorkerInput;
     /** ID асинхронной операции Yandex — сохраняется для восстановления. */
     cloudOperationId?: string;
-    /** JSON с DesignationValue[] — заполняется после завершения операции. */
+    /**
+     * Собранный промпт (system + user), как он ушёл в LLM.
+     * Сохраняется до submitCompletion в run(). Показывается на отдельной
+     * странице /worker-prompt; в карточке воркера не отображается (большой текст).
+     */
+    finalPrompt?: WorkerFinalPrompt;
+    /** JSON с { values: DesignationValue[] } — заполняется после завершения операции. */
     operationResult?: string;
     /** Сообщение об ошибке при неуспешном завершении. */
     errorMessage?: string;
@@ -198,6 +225,15 @@ export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanRea
                 'TC': worker.tcId,
                 ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),
                 ...(worker.operationResult != null && { 'Результат (разделы)': tryParseJson(worker.operationResult) }),
+                ...(worker.errorMessage != null && { 'Ошибка': tryParseJson(worker.errorMessage) }),
+            };
+
+        case 'designation-worker':
+            return {
+                'Заказ': worker.input.orderId,
+                'TC': worker.input.tcId,
+                ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),
+                ...(worker.operationResult != null && { 'Результат (значения слотов)': tryParseJson(worker.operationResult) }),
                 ...(worker.errorMessage != null && { 'Ошибка': tryParseJson(worker.errorMessage) }),
             };
 

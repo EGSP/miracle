@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { WorkerStatus } from '@miracle/types';
 import type {
+    DesignationWorkerData,
     LlmVisionTcWorkerData,
     LlmVisionWorkerData,
     OrderDetailsWorkerData,
@@ -12,6 +13,7 @@ import type {
 import { workersService } from '../databases/workers.db.js';
 import { logger } from '../logger/logger.js';
 import { BaseWorker } from './base-worker.js';
+import { DesignationWorker } from './designation.worker.js';
 import { LlmVisionWorker } from './scan/llm-vision-worker.js';
 import { LlmVisionTcWorker } from './scan/llm-vision-tc-worker.js';
 import { OrderDetailsWorker } from './order-details-worker.js';
@@ -79,6 +81,8 @@ export class WorkerPool {
                 return new LlmVisionTcWorker({ data: structuredClone(record) as Stored<LlmVisionTcWorkerData> });
             case 'tc-details-worker':
                 return new TCDetailsWorker({ data: structuredClone(record) as Stored<TCDetailsWorkerData> });
+            case 'designation-worker':
+                return new DesignationWorker({ data: structuredClone(record) as Stored<DesignationWorkerData> });
             default:
                 return null;
         }
