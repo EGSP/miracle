@@ -567,7 +567,7 @@
       },
       "id": "18d5ec84-5600-4b3b-ac24-61737ca3865e",
       "createdAt": 1779368232585,
-      "updatedAt": 1779368295836,
+      "updatedAt": 1779435746111,
       "content": [
         {
           "page": 0,
@@ -741,7 +741,30 @@
           "page": 42,
           "text": "Лист регистрации изменений, извещений, предварительных извещений\nоб изменении\nНаименование и\nномер доку-\nмента\nДата утвер-\nждения\nдокумента\nВ какие пункты\nТУ внесены из-\nменения\nДата регистра-\nции\nдокумента\nНомер реги-\nстрации доку-\nмента\nПодп. и дата\nВзам. инв.№ Инв. № дубл.\nПодп. и дата\nИнв. № подп.\nТУ 3667-013-05608841-2022\nИзм.\nЛист\n№ докум.\nПодпись\nДата\n"
         }
-      ]
+      ],
+      "deletedAt": 1779435746111
+    },
+    {
+      "fileId": "8a98145a-6521-41fe-9bf6-1e7be400d2e4",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "Yandex Vision: задача \"abce3735-ab5f-4989-85ae-c2e5ccd3ab14\" завершилась со статусом \"failed\""
+      },
+      "id": "b47d7e23-635c-4688-8425-96020c206ea4",
+      "createdAt": 1779435747490,
+      "updatedAt": 1779435801346
+    },
+    {
+      "fileId": "8a98145a-6521-41fe-9bf6-1e7be400d2e4",
+      "meta": {
+        "extractionType": "llm",
+        "extractionStatus": "failed",
+        "extractionFailedMessage": "Yandex Vision: задача \"5483e799-28eb-4bb0-9e31-f95a0e160dc6\" завершилась со статусом \"failed\" — [model_call_error] Error while calling model: 500: Internal server error"
+      },
+      "id": "38b09639-0745-434c-9507-5b65e7036f58",
+      "createdAt": 1779436186725,
+      "updatedAt": 1779436238901
     }
   ]
 }

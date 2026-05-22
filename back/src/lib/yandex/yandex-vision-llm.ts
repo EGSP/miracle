@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type {
     EasyInputMessage,
+    Response,
     ResponseInputImage,
     ResponseInputText,
     ResponseOutputItem,
@@ -46,6 +47,79 @@ export type VisionRequest = {
     temperature?: number;
     maxOutputTokens?: number;
 };
+
+const VISION_ERROR_DIAG_MAX_LEN = 600;
+
+/**
+ * Собирает читаемое сообщение при status failed / cancelled / incomplete.
+ * Yandex Responses API кладёт детали в `error`, `incomplete_details` и иногда в `output`.
+ */
+function formatVisionTaskFailure(response: Response, taskId: string): string {
+    const status = response.status ?? 'unknown';
+    const parts: string[] = [
+        `Yandex Vision: задача "${taskId}" завершилась со статусом "${status}"`,
+    ];
+
+    if (response.error?.message) {
+        const code = response.error.code ? `[${response.error.code}] ` : '';
+        parts.push(`${code}${response.error.message}`);
+    }
+
+    if (response.incomplete_details?.reason) {
+        parts.push(`Причина незавершения: ${response.incomplete_details.reason}`);
+    }
+
+    for (const hint of collectVisionOutputHints(response.output)) {
+        parts.push(hint);
+    }
+
+    if (parts.length === 1) {
+        const diag = pickVisionFailureDiagnostics(response);
+        if (diag) {
+            parts.push(diag);
+        }
+    }
+
+    return parts.join(' — ');
+}
+
+function collectVisionOutputHints(output: ResponseOutputItem[] | undefined): string[] {
+    const hints: string[] = [];
+
+    for (const item of output ?? []) {
+        if (item.type === 'message') {
+            for (const part of item.content) {
+                if (part.type === 'refusal') {
+                    const refusal = part.refusal.trim();
+                    if (refusal) {
+                        hints.push(`Отказ модели: ${refusal}`);
+                    }
+                }
+            }
+        }
+
+        const withError = item as ResponseOutputItem & { error?: string | null };
+        if (typeof withError.error === 'string' && withError.error.trim()) {
+            hints.push(`Ошибка элемента (${item.type}): ${withError.error.trim()}`);
+        }
+    }
+
+    return hints;
+}
+
+function pickVisionFailureDiagnostics(response: Response): string | undefined {
+    const payload = {
+        status: response.status,
+        error: response.error,
+        incomplete_details: response.incomplete_details,
+        output_types: response.output?.map((item) => item.type),
+    };
+    const json = JSON.stringify(payload);
+    if (json.length <= VISION_ERROR_DIAG_MAX_LEN) {
+        return `Диагностика: ${json}`;
+    }
+    return `Диагностика: ${json.slice(0, VISION_ERROR_DIAG_MAX_LEN)}…`;
+}
 
 function buildInput(request: VisionRequest): EasyInputMessage[] {
     return request.messages.map((msg) => ({
@@ -96,8 +170,12 @@ export async function pollVisionCompletion(taskId: string): Promise<LlmPollResul
         return { done: false };
     }
 
-    if (response.status === 'failed' || response.status === 'cancelled') {
-        throw new Error(`Yandex Vision: задача "${taskId}" завершилась со статусом "${response.status}"`);
+    if (
+        response.status === 'failed'
+        || response.status === 'cancelled'
+        || response.status === 'incomplete'
+    ) {
+        throw new Error(formatVisionTaskFailure(response, taskId));
     }
 
     // SDK вычисляет output_text только когда response.object === 'response'.
