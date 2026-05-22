@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrayEditor } from '@/components/ui/array-editor';
 import { useContribute } from '@/contexts/draft-api/DraftContext';
+import { createUuid } from '@/lib/uuid';
 import { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
 
 function makeRule(): TechnicalConditionRule {
-    return { id: crypto.randomUUID(), title: '', content: '' };
+    return { id: createUuid(), title: '', content: '' };
 }
 
 export function TCCRules() {

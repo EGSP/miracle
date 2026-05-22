@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { ArrayEditor } from '@/components/ui/array-editor';
 import { useContribute } from '@/contexts/draft-api/DraftContext';
 import { useField } from '@/contexts/dirty-state/useField';
+import { createUuid } from '@/lib/uuid';
 import { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
 
 function makeTemplate(): DisplayTemplate {
-    return { id: crypto.randomUUID(), name: '', separator: '-', includedSlots: [] };
+    return { id: createUuid(), name: '', separator: '-', includedSlots: [] };
 }
 
 export function TCCTemplates() {
