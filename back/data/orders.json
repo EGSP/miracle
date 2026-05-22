@@ -235,7 +235,7 @@
       "fileId": "d58872f9-0afe-4e9f-a1ad-c21fef9a2915",
       "id": "1c5cae5c-f809-40a6-8ea5-9a03d820ad80",
       "createdAt": 1778576944440,
-      "updatedAt": 1779253331370,
+      "updatedAt": 1779481153024,
       "details": {
         "clientCompanyName": {
           "ai": "ООО «Черноморнефтегаз»"
@@ -444,7 +444,74 @@
               "used": true
             }
           }
-        ]
+        ],
+        "designation": {
+          "ai": {
+            "tcId": "4360be54-5e83-4bde-a182-eacc7158bc67",
+            "values": [
+              {
+                "slotIndex": 0,
+                "value": "НЭМС",
+                "confidence": 1,
+                "reasoning": "Первый параметр всегда 'НЭМС'"
+              },
+              {
+                "slotIndex": 1,
+                "value": "80",
+                "confidence": 1,
+                "reasoning": "В заявке указан номинальный диаметр DN80"
+              },
+              {
+                "slotIndex": 2,
+                "value": "P6",
+                "confidence": 1,
+                "reasoning": "Рабочее давление 0,3 МПа соответствует классу P6"
+              },
+              {
+                "slotIndex": 4,
+                "value": "ВД",
+                "confidence": 1,
+                "reasoning": "Транспортируемая среда — вода"
+              },
+              {
+                "slotIndex": 5,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "Тип установки — надземно"
+              },
+              {
+                "slotIndex": 6,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "Соединение с трубопроводом — стандартное, с патрубками под сварное соединение"
+              },
+              {
+                "slotIndex": 7,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "Внутреннее покрытие — без покрытия"
+              },
+              {
+                "slotIndex": 8,
+                "value": "5",
+                "confidence": 1,
+                "reasoning": "Наружное покрытие — система защитного покрытия 'СпецПротект 007/109'"
+              },
+              {
+                "slotIndex": 9,
+                "value": null,
+                "confidence": 1,
+                "reasoning": "Клеммы не установлены"
+              },
+              {
+                "slotIndex": 10,
+                "value": "У",
+                "confidence": 1,
+                "reasoning": "Климатическое исполнение — У"
+              }
+            ]
+          }
+        }
       }
     }
   ]
