@@ -27,13 +27,9 @@ export function startPm2(rootDir: string): void {
 
     const ecosystemPath = 'ecosystem.config.cjs';
 
-    if (miracleAppsRunning()) {
-        info('Найдены запущенные процессы — перезагружаем...');
-        execSync(`pm2 reload ${ecosystemPath}`, { cwd: rootDir, stdio: 'inherit' });
-    } else {
-        info('Запускаем процессы...');
-        execSync(`pm2 start ${ecosystemPath}`, { cwd: rootDir, stdio: 'inherit' });
-    }
+    // pm2 startOrRestart применяет весь конфиг (включая cwd) — в отличие от reload
+    info('Запускаем / перезапускаем процессы...');
+    execSync(`pm2 startOrRestart ${ecosystemPath}`, { cwd: rootDir, stdio: 'inherit' });
 
     execSync('pm2 save', { cwd: rootDir, stdio: 'pipe' });
     success('PM2 сохранил список процессов');

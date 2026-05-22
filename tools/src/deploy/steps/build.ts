@@ -11,7 +11,8 @@ function run(label: string, cmd: string, cwd: string): void {
 }
 
 export function buildBack(rootDir: string): void {
-    run('Компилируем TypeScript...', 'npm run build --workspace=back', rootDir);
+    run('Компилируем @miracle/types...', 'npm run build --workspace=types', rootDir);
+    run('Компилируем бекенд...', 'npm run build --workspace=back', rootDir);
 }
 
 export function buildFront(rootDir: string): void {

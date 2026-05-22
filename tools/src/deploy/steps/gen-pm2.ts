@@ -12,7 +12,8 @@ module.exports = {
   apps: [
     {
       name: 'miracle-back',
-      script: 'back/dist/index.js',
+      cwd: './back',
+      script: 'dist/index.js',
       instances: 1,
       autorestart: true,
       watch: false,
