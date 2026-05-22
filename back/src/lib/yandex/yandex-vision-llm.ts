@@ -20,7 +20,7 @@ import type { LlmPollResult } from './yandex-llm.types.js';
  */
 
 // Модель с поддержкой vision из официального примера Yandex AI Studio
-const VISION_MODEL_SUFFIX = 'qwen3.6-35b-a3b';
+const VISION_MODEL_SUFFIX = 'qwen3.6-35b-a3b/latest';
 
 function createClient(apiKey: string, folderId: string): OpenAI {
     return new OpenAI({
@@ -48,11 +48,17 @@ export type VisionRequest = {
     maxOutputTokens?: number;
 };
 
-const VISION_ERROR_DIAG_MAX_LEN = 600;
-
 /**
  * Собирает читаемое сообщение при status failed / cancelled / incomplete.
- * Yandex Responses API кладёт детали в `error`, `incomplete_details` и иногда в `output`.
+ *
+ * OpenAI Responses API типизирует `Response.error` как `{ code, message }`,
+ * но Yandex — кастомная реализация и может добавлять произвольные поля сверх
+ * стандартных (например, `details`, `request_id`, вложенные gRPC-ошибки).
+ * Чтобы они не терялись, `error` кастуется к `Record<string, unknown>`:
+ *   - `code` и `message` идут в читаемую часть сообщения,
+ *   - остаток (если есть) сериализуется в `details: {...}`.
+ * Это лучше, чем условный JSON-дамп всего response: мы всегда видим extra-поля
+ * Yandex, не засоряя лог данными, которые уже есть в читаемой части.
  */
 function formatVisionTaskFailure(response: Response, taskId: string): string {
     const status = response.status ?? 'unknown';
@@ -60,9 +66,16 @@ function formatVisionTaskFailure(response: Response, taskId: string): string {
         `Yandex Vision: задача "${taskId}" завершилась со статусом "${status}"`,
     ];
 
-    if (response.error?.message) {
-        const code = response.error.code ? `[${response.error.code}] ` : '';
-        parts.push(`${code}${response.error.message}`);
+    if (response.error) {
+        const err = response.error as unknown as Record<string, unknown>;
+        const code = err['code'] ? `[${err['code']}] ` : '';
+        const message = typeof err['message'] === 'string' ? err['message'] : '';
+        parts.push(`${code}${message}`);
+
+        const { code: _c, message: _m, ...rest } = err;
+        if (Object.keys(rest).length > 0) {
+            parts.push(`details: ${JSON.stringify(rest)}`);
+        }
     }
 
     if (response.incomplete_details?.reason) {
@@ -73,12 +86,7 @@ function formatVisionTaskFailure(response: Response, taskId: string): string {
         parts.push(hint);
     }
 
-    if (parts.length === 1) {
-        const diag = pickVisionFailureDiagnostics(response);
-        if (diag) {
-            parts.push(diag);
-        }
-    }
+    parts.push(`fullBody: ${JSON.stringify(response)}`);
 
     return parts.join(' — ');
 }
@@ -107,19 +115,6 @@ function collectVisionOutputHints(output: ResponseOutputItem[] | undefined): str
     return hints;
 }
 
-function pickVisionFailureDiagnostics(response: Response): string | undefined {
-    const payload = {
-        status: response.status,
-        error: response.error,
-        incomplete_details: response.incomplete_details,
-        output_types: response.output?.map((item) => item.type),
-    };
-    const json = JSON.stringify(payload);
-    if (json.length <= VISION_ERROR_DIAG_MAX_LEN) {
-        return `Диагностика: ${json}`;
-    }
-    return `Диагностика: ${json.slice(0, VISION_ERROR_DIAG_MAX_LEN)}…`;
-}
 
 function buildInput(request: VisionRequest): EasyInputMessage[] {
     return request.messages.map((msg) => ({
@@ -144,7 +139,7 @@ export async function submitVisionCompletion(request: VisionRequest): Promise<st
     const response = await client.responses.create({
         model: `gpt://${folderId}/${VISION_MODEL_SUFFIX}`,
         temperature: request.temperature ?? 0.1,
-        max_output_tokens: request.maxOutputTokens ?? 10000,
+        max_output_tokens: request.maxOutputTokens ?? 40000,
         input: buildInput(request),
         background: true,
     });
