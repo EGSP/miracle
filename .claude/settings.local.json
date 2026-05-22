@@ -67,7 +67,9 @@
       "Bash(node -e \"const l = require\\('C:/workroot/Разработка/Программы/js/miracle/front/node_modules/lucide-react'\\); console.log\\('AlertTriangle:', !!l.AlertTriangle, 'TriangleAlert:', !!l.TriangleAlert\\);\")",
       "WebFetch(domain:react.carbondesignsystem.com)",
       "WebFetch(domain:www.carbondesignsystem.com)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(npm --prefix front exec -- tsc -p front/tsconfig.json --noEmit)",
+      "Bash(echo \"EXIT: $?\")"
     ]
   }
 }

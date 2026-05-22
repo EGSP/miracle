@@ -34,7 +34,7 @@ export function NavBar() {
                 <Tags className="size-3.5 shrink-0" />
                 <Text.Label as="span">Типы продукции</Text.Label>
             </Link>
-            <Link to="/technical-conditions" className={navLinkClass}>
+            <Link to="/technical-conditions" search={{ tcId: undefined }} className={navLinkClass}>
                 <FileText className="size-3.5 shrink-0" />
                 <Text.Label as="span">Технические условия</Text.Label>
             </Link>

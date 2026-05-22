@@ -81,6 +81,9 @@ const technicalConditionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/technical-conditions',
   component: TechnicalConditionsPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    tcId: typeof search.tcId === 'string' ? search.tcId : undefined,
+  }),
 });
 
 const adminRoute = createRoute({
