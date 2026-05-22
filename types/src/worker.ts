@@ -72,21 +72,16 @@ export type LlmVisionTcWorkerData = BaseWorkerData & {
 
 /**
  * Читает уже извлечённый текст ТУ из FileContent (через TC.fileId).
- * Вызывает Yandex LLM text (async) — разбивает текст на TechnicalConditionRule[]
- * и извлекает DesignationSlot[] из раздела «Условное обозначение».
- * В apply() обновляет TC.rules и TC.designationSlots.
+ * Вызывает Yandex LLM text (async) — разбивает текст на TechnicalConditionRule[].
+ * В apply() обновляет только TC.rules; designationSlots не трогает.
  */
 export type TCDetailsWorkerData = BaseWorkerData & {
     type: 'tc-details-worker';
-    /** TC, чьи rules и designationSlots нужно заполнить. */
+    /** TC, чьи rules нужно заполнить. */
     tcId: string;
     /** ID асинхронной операции Yandex — сохраняется для восстановления после перезапуска. */
     cloudOperationId?: string;
-    /**
-     * JSON-строка с результатом LLM до apply().
-     * Структура: { rules: RawRule[], designationSlots: RawSlot[] }
-     * где RawSlot.ruleIndexes (number[]) разрешаются в ruleIds в apply().
-     */
+    /** JSON-строка с результатом LLM до apply(). Структура: { sections: RawSection[] } */
     operationResult?: string;
     /** Сообщение об ошибке при неуспешном завершении. */
     errorMessage?: string;
@@ -202,7 +197,7 @@ export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanRea
             return {
                 'TC': worker.tcId,
                 ...(worker.cloudOperationId != null && { 'LLM операция': worker.cloudOperationId }),
-                ...(worker.operationResult != null && { 'Результат (правил/слотов)': tryParseJson(worker.operationResult) }),
+                ...(worker.operationResult != null && { 'Результат (разделы)': tryParseJson(worker.operationResult) }),
                 ...(worker.errorMessage != null && { 'Ошибка': tryParseJson(worker.errorMessage) }),
             };
 

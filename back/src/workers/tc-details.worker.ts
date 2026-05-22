@@ -2,12 +2,7 @@ import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ExtractionStatus, WorkerStatus } from '@miracle/types';
-import type {
-    DesignationSlot,
-    Stored,
-    TCDetailsWorkerData,
-    TechnicalConditionRule,
-} from '@miracle/types';
+import type { Stored, TCDetailsWorkerData, TechnicalConditionRule } from '@miracle/types';
 import { filesContentService } from '../databases/file-content.db.js';
 import { technicalConditionsService } from '../databases/technical-condition.db.js';
 import { workersService } from '../databases/workers.db.js';
@@ -45,18 +40,6 @@ const TCDetailsZodSchema = z.object({
             }),
         )
         .describe('Все разделы документа ТУ в порядке появления в тексте'),
-    designationSlots: z
-        .array(
-            z.object({
-                index: z.number()
-                    .describe('Позиция параметра в условном обозначении (0-based, по порядку в примере из ТУ)'),
-                name: z.string()
-                    .describe('Читаемое название параметра обозначения'),
-                ruleIndexes: z.array(z.number())
-                    .describe('Индексы (поле index) из массива sections, описывающих правила выбора этого параметра'),
-            }),
-        )
-        .describe('Параметры условного обозначения из раздела «Условное обозначение» или аналогичного'),
 });
 
 type TCDetailsResult = z.infer<typeof TCDetailsZodSchema>;
@@ -64,39 +47,30 @@ const TCDetailsJsonSchema = zodToJsonSchema(TCDetailsZodSchema);
 
 // ─── Промпт ───────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Ты разбиваешь текст Технического Условия (ТУ) на структурированные разделы.
+const SYSTEM_PROMPT = `Ты разбиваешь текст Технического Условия (ТУ) на структурированные разделы для последующей работы с ними.
 
-=== РАЗДЕЛЫ (sections) ===
-Пройди по тексту ТУ строго последовательно сверху вниз.
-Каждый нумерованный пункт, подпункт и каждая таблица — отдельный раздел в массиве sections.
-Ничего не пропускай и не объединяй.
+Идёшь по тексту сверху вниз и для каждой смысловой единицы создаёшь один элемент в массиве sections.
 
-Раздел может содержать:
-- нумерованный или ненумерованный текстовый пункт
-- подпункт с перечнем условий или требований
-- таблицу с данными (классификация, параметры, размеры и т.п.)
-- примечание или сноску
-- пример условного обозначения
+Что считается отдельным разделом:
+- нумерованный пункт или подпункт
+- ненумерованный абзац, представляющий самостоятельную мысль
+- таблица (классификация, параметры, размеры, варианты исполнения и т.п.)
+- примечание, сноска или ссылка на нормативный документ
+- пример условного обозначения с расшифровкой
 
-Поля каждого раздела:
-- index: порядковый номер в порядке появления в тексте (0, 1, 2, ...)
-- title: краткое смысловое резюме раздела в 5–10 слов; формулируй сам о чём раздел, не копируй первую строку; пустая строка только если раздел не имеет темы
-- content: полный текст раздела дословно; таблицы — в markdown с разделителем и всеми строками данных; переносы строк — символ \\n
+Как заполнять поля:
+- index — порядковый номер по тексту, начиная с 0
+- title — твоя формулировка темы раздела в 5–10 слов; не первая строка дословно. Пустая строка допустима, если у раздела нет внятной темы (например, обособленная таблица без заголовка).
+- content — текст раздела дословно, без перефразирования; переносы строк — \\n.
 
-=== ПАРАМЕТРЫ УСЛОВНОГО ОБОЗНАЧЕНИЯ (designationSlots) ===
-Условное обозначение — это короткий код продукта, например "НЭМС-700-1-У-КС-1-1-1",
-где каждая часть через дефис — отдельный параметр с определённым смыслом.
+Особое внимание таблицам:
+- оформляй таблицу как markdown с шапкой и строкой-разделителем |---|
+- переноси ВСЕ строки данных, ничего не сокращай и не пропускай
+- если у таблицы есть подпись или номер ("Таблица 1 — …"), включай её в content перед таблицей
+- если таблица разорвана разрывом страницы или повторяющейся шапкой — собирай её обратно в одну, в один раздел
+- объединённые ячейки разворачивай, дублируя значение в каждую строку, к которой оно относится
 
-Найди в тексте ТУ раздел, который описывает структуру такого кода
-(обычно называется "Условное обозначение" и содержит пример с расшифровкой каждой части).
-Если в тексте указано несколько вариантов обозначения (полное, краткое и т.п.) — используй только полный вариант, содержащий наибольшее количество параметров.
-
-Для каждого параметра (части) условного обозначения заполни:
-- index: порядковый номер параметра в коде (0-based, слева направо по примеру из ТУ)
-- name: название этого параметра, например "Климатическое исполнение", "Номинальное давление"
-- ruleIndexes: индексы (поле index) разделов из sections, в которых описаны возможные значения и правила выбора этого параметра
-
-Текст Технического Условия:`;
+Если сомневаешься, где граница между двумя смысловыми блоками, лучше создай два раздела, чем один объединённый.`;
 
 // ─── Воркер ───────────────────────────────────────────────────────────────
 
@@ -226,21 +200,6 @@ export class TCDetailsWorker extends BaseWorker {
             content: r.content,
         }));
 
-        // Строим map: ruleIndex (из LLM) → сгенерированный ruleId
-        const indexToId = new Map<number, string>(
-            sortedRawRules.map((r, pos) => [r.index, rules[pos].id]),
-        );
-
-        // Конвертируем ruleIndexes → ruleIds
-        const designationSlots: DesignationSlot[] = parsed.designationSlots.map((s) => ({
-            index: s.index,
-            name: s.name,
-            ruleIds: s.ruleIndexes
-                .map((idx) => indexToId.get(idx))
-                .filter((id): id is string => id !== undefined),
-        }));
-
-        // Получаем текущее TC чтобы сохранить остальные поля
         const tc = await technicalConditionsService.getById(this.data.tcId);
         if (!tc) throw new Error(`TC "${this.data.tcId}" не найдено`);
 
@@ -250,12 +209,12 @@ export class TCDetailsWorker extends BaseWorker {
             productTypeId: tc.productTypeId,
             lastProductTypeName: tc.lastProductTypeName,
             rules,
-            designationSlots,
+            designationSlots: tc.designationSlots ?? [],
             displayTemplates: tc.displayTemplates ?? [],
         });
 
         logger.info(
-            `[TCDetailsWorker] TC "${this.data.tcId}" обновлён: ${rules.length} правил, ${designationSlots.length} слотов`,
+            `[TCDetailsWorker] TC "${this.data.tcId}" обновлён: ${rules.length} правил`,
         );
     }
 
