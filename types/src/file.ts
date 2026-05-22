@@ -14,6 +14,11 @@ export type FileModel = {
         complexLayout?: boolean;
         /** Файл является документом технических условий. */
         isTechnicalCondition?: boolean;
+        /**
+         * Диапазоны страниц для vision/OCR, синтаксис как при печати: "1-3, 5, 6-9".
+         * Не задано или пустая строка — все страницы. Применяется только к PDF.
+         */
+        usedPages?: string;
     };
 }
 

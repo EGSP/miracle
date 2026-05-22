@@ -1,5 +1,5 @@
 import fs from 'fs/promises';
-import { ExtractionStatus, ExtractionType, WorkerStatus } from '@miracle/types';
+import { ExtractionStatus, ExtractionType, WorkerStatus, validatePageRanges } from '@miracle/types';
 import type { LlmVisionTcWorkerData, Stored } from '@miracle/types';
 import { filesContentService } from '../../databases/file-content.db.js';
 import { filesService, getFilePath } from '../../databases/file.db.js';
@@ -171,7 +171,19 @@ export class LlmVisionTcWorker extends BaseWorker {
 
         if (ext === 'pdf') {
             const buffer = await fs.readFile(filePath);
-            return pdfToImages(buffer, { scale: 2.5 });
+            const spec = file.settings?.usedPages?.trim();
+            let pageNumbers: number[] | undefined;
+
+            if (spec) {
+                const result = validatePageRanges(spec);
+                if (!result.ok) throw new Error(`Настройка usedPages: ${result.message}`);
+                pageNumbers = result.pages;
+            }
+
+            const images = await pdfToImages(buffer, { scale: 2.5, pageNumbers });
+            const pagesLabel = spec ? `usedPages "${spec}" → ${images.length} стр.` : `все страницы → ${images.length} стр.`;
+            logger.info(`[LlmVisionTcWorker] файл "${file.id}": ${pagesLabel}`);
+            return images;
         }
 
         const buffer = await fs.readFile(filePath);

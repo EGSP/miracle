@@ -1,14 +1,15 @@
 ﻿import { createContext, useContext, type PropsWithChildren } from "react";
 import { IconIndicator, Layer, Stack, Text } from "@miracle/aramid";
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types";
-import { Eye, ScanText, Trash2, Upload } from "lucide-react";
+import { AlertCircle, Eye, ScanText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileDropZone } from "@/components/ui/file-dropzone";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/api"
 import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification";
-import { getFileDomain, FileDomain } from "@miracle/types";
+import { getFileDomain, FileDomain, validatePageRanges } from "@miracle/types";
 import { useState } from "react";
 import {
     useExtractFileContent,
@@ -105,6 +106,15 @@ function FileCardSettings() {
         "isTechnicalCondition",
         file.settings?.isTechnicalCondition ?? false,
     );
+    const usedPages = useField<string>(
+        "usedPages",
+        file.settings?.usedPages ?? "",
+    );
+
+    const isPdf = file.extension.toLowerCase() === "pdf";
+    const usedPagesSpec = usedPages.value.trim();
+    const usedPagesValidation = usedPagesSpec ? validatePageRanges(usedPagesSpec) : null;
+    const usedPagesError = usedPagesValidation && !usedPagesValidation.ok ? usedPagesValidation.message : null;
 
     useContribute(contribute, "settings", (draft) => ({
         ...draft,
@@ -112,24 +122,47 @@ function FileCardSettings() {
             ...draft.settings,
             complexLayout: complexLayout.value,
             isTechnicalCondition: isTechnicalCondition.value,
+            ...(isPdf && !usedPagesError && {
+                usedPages: usedPagesSpec || undefined,
+            }),
         },
     }));
 
     return (
-        <Checkbox.Group label="Настройки" direction="vertical">
-            <Checkbox.Item
-                label="Сложная структура (LLM вместо OCR)"
-                checked={complexLayout.value}
-                disabled={isSaving || readonly}
-                onChange={complexLayout.onChange}
-            />
-            <Checkbox.Item
-                label="Технические условия"
-                checked={isTechnicalCondition.value}
-                disabled={isSaving || readonly}
-                onChange={isTechnicalCondition.onChange}
-            />
-        </Checkbox.Group>
+        <>
+            <Checkbox.Group label="Настройки" direction="vertical">
+                <Checkbox.Item
+                    label="Сложная структура (LLM вместо OCR)"
+                    checked={complexLayout.value}
+                    disabled={isSaving || readonly}
+                    onChange={complexLayout.onChange}
+                />
+                <Checkbox.Item
+                    label="Технические условия"
+                    checked={isTechnicalCondition.value}
+                    disabled={isSaving || readonly}
+                    onChange={isTechnicalCondition.onChange}
+                />
+            </Checkbox.Group>
+            {isPdf && (
+                <div className="checkbox-field">
+                    <Input
+                        label="Страницы для распознавания"
+                        placeholder="например: 1-3, 5, 6-9"
+                        value={usedPages.value}
+                        disabled={isSaving || readonly}
+                        onChange={usedPages.onInputChange}
+
+                    />
+                    {usedPagesError && (
+                        <p className="checkbox-message checkbox-message--error">
+                            <span aria-hidden="true"><AlertCircle /></span>
+                            {usedPagesError}
+                        </p>
+                    )}
+                </div>
+            )}
+        </>
     );
 }
 
@@ -216,14 +249,9 @@ function FileCardBody() {
                         />
                         <FileCardSettings />
                         {!readonly && (
-                            <>
-                                <Stack orientation="horizontal" gap={2} className="items-center">
-
-                                </Stack>
-                                <InlineMutationNotification
-                                    mutation={{ isError: !!saveError, isSuccess: false, error: saveError }}
-                                />
-                            </>
+                            <InlineMutationNotification
+                                mutation={{ isError: !!saveError, isSuccess: false, error: saveError }}
+                            />
                         )}
                     </Stack>
                 )}
@@ -254,14 +282,11 @@ function FileCardBody() {
                     </Stack>
                 )}
 
-                <Stack gap={1}>
-
-                    {latestContent?.meta?.extractionFailedMessage && (
-                        <Text as="span" compact className="text-destructive">
-                            {latestContent.meta.extractionFailedMessage}
-                        </Text>
-                    )}
-                </Stack>
+                {latestContent?.meta?.extractionFailedMessage && (
+                    <Text as="p" compact className="text-destructive wrap-anywhere">
+                        {latestContent.meta.extractionFailedMessage}
+                    </Text>
+                )}
 
                 <Stack orientation="horizontal" gap={2}>
                     <Button variant="secondary" size="sm" label="Сканировать" icon={<ScanText />} disabled={!canRead} onClick={() => extractMutation.mutate()} />

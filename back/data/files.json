@@ -210,10 +210,11 @@
       "bytes": 13180948,
       "authorId": "d33eec57-bdc8-49fe-8901-ffcbdd89417b",
       "createdAt": 1779368187646,
-      "updatedAt": 1779368202411,
+      "updatedAt": 1779445210428,
       "settings": {
         "complexLayout": false,
-        "isTechnicalCondition": true
+        "isTechnicalCondition": true,
+        "usedPages": "3-6, 26"
       }
     }
   ]

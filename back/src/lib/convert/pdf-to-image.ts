@@ -18,6 +18,8 @@ type PdfToImagesOptions = {
     scale?: number;
     /** Качество JPEG: 0.0–1.0. По умолчанию 0.92. */
     quality?: number;
+    /** Список номеров страниц для рендеринга (1-based). Не задан — все страницы. */
+    pageNumbers?: number[];
 };
 
 /**
@@ -35,7 +37,8 @@ export async function pdfToImages(
     pdfBuffer: Buffer,
     options: PdfToImagesOptions = {},
 ): Promise<PdfPageImage[]> {
-    const { scale = 2.0, quality = 0.92 } = options;
+    const { scale = 2.0, quality = 0.92, pageNumbers } = options;
+    const pageSet = pageNumbers ? new Set(pageNumbers) : null;
 
     const doc = await getDocument({
         data: new Uint8Array(pdfBuffer),
@@ -56,6 +59,7 @@ export async function pdfToImages(
     const pages: PdfPageImage[] = [];
 
     for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+        if (pageSet && !pageSet.has(pageNum)) continue;
         const page = await doc.getPage(pageNum);
         const viewport = page.getViewport({ scale });
 
