@@ -110,8 +110,8 @@ function AnalyseDesignationForm({
                 </Text.Helper>
 
                 <Stack gap={1}>
-                    <Text.Label as="span">Заказ</Text.Label>
                     <Input.Dropdown<Stored<Order>>
+                        label="Заказ"
                         items={orders}
                         value={selectedOrder}
                         onChange={(next) => {
@@ -138,8 +138,8 @@ function AnalyseDesignationForm({
                 </Stack>
 
                 <Stack gap={1}>
-                    <Text.Label as="span">Тех. условие</Text.Label>
                     <Input.Dropdown<Stored<TechnicalCondition>>
+                        label="Техническое условие"
                         items={tcs}
                         value={selectedTc}
                         onChange={(next) => setTcId(next?.id)}
@@ -147,12 +147,12 @@ function AnalyseDesignationForm({
                         disabled={tcsQuery.isLoading || analyseMutation.isPending}
                         renderSelectedItem={(item) => (
                             <Text as="span" compact>
-                                {item?.name ?? item?.lastProductTypeName ?? 'ТУ не выбрано'}
+                                {getTcLabel(item)}
                             </Text>
                         )}
                         renderListItem={(item) => (
                             <Text as="span" compact>
-                                {item?.name ?? item?.lastProductTypeName ?? ''}
+                                {getTcLabel(item)}
                             </Text>
                         )}
                     >
@@ -184,4 +184,10 @@ function AnalyseDesignationForm({
             </DialogFooter>
         </>
     );
+}
+
+function getTcLabel(tc: Stored<TechnicalCondition> | null) {
+    if (!tc) return 'ТУ не выбрано';
+    if (!tc.name && !tc.lastProductTypeName) return 'У ТУ нет названия';
+    return (tc?.name + ' ' + tc?.lastProductTypeName).trim();
 }
