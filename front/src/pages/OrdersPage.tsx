@@ -4,7 +4,7 @@ import { ListOrdered, Plus } from 'lucide-react';
 import { Column, Grid, IconIndicator, Stack, Text } from '@miracle/aramid';
 import type { FileWithMeta, Order, Stored } from '@miracle/types';
 import { Checkbox, type TriStateValue } from '@/components/ui/checkbox';
-import { ListBox } from '@/components/ui/listbox';
+import { StructuredList, type ListDefinition, type StructuredListKey } from '@/components/ui/structured-list';
 import { Button } from '@/components/ui/button';
 import { OrderCard } from '@/components/blocks/order-card/OrderCard';
 import { DirtyGuardProvider, useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
@@ -21,60 +21,70 @@ function formatCreatedAt(unixMs: number): string {
 }
 
 function getFileIndicator(file: FileWithMeta | null): { kind: 'succeeded' | 'failed' | 'unknown'; label: string } {
-    if (!file) {
-        return { kind: 'unknown', label: 'Файл не прикреплен' };
-    }
-
-    if (file.meta?.available === true) {
-        return { kind: 'succeeded', label: 'Файл доступен' };
-    }
-
-    if (file.meta?.available === false) {
-        return { kind: 'failed', label: 'Файл недоступен' };
-    }
-
+    if (!file) return { kind: 'unknown', label: 'Файл не прикреплен' };
+    if (file.meta?.available === true) return { kind: 'succeeded', label: 'Файл доступен' };
+    if (file.meta?.available === false) return { kind: 'failed', label: 'Файл недоступен' };
     return { kind: 'unknown', label: 'Статус файла неизвестен' };
 }
 
-function OrderListItem({ order, file }: { order: Stored<Order>; file: FileWithMeta | null }) {
-    const indicator = getFileIndicator(file);
-    const { data: author } = useGetUser(order.authorId);
-
-    return (
-        <Stack
-            orientation="horizontal"
-            gap={3}
-            className="min-w-0 items-center border border-border px-3 py-2.5"
-        >
-            <ListOrdered className="size-4 shrink-0" />
-            <span className="shrink-0">
-                <Text.Label as="span">{formatCreatedAt(order.createdAt)}</Text.Label>
-            </span>
-            <span className="min-w-0 flex-1 truncate">
-                <Text as="span" compact>
-                    Автор: {author?.login ?? order.authorId}
-                </Text>
-            </span>
-            {file ? (
-                <Stack orientation="horizontal" gap={2} className="min-w-0 items-center">
-                    <IconIndicator
-                        kind={indicator.kind}
-                        label={indicator.label}
-                        size={16}
-                        className="shrink-0"
-                    />
-                    <span className="min-w-0 truncate">
-                        <Text.Label as="span">{file.name}</Text.Label>
-                    </span>
-                </Stack>
-            ) : (
-                <Stack orientation="horizontal" gap={2} className="items-center">
-                    <IconIndicator kind={indicator.kind} label={indicator.label} size={16} className="shrink-0" />
-                </Stack>
-            )}
-        </Stack>
-    );
+function OrderAuthorCell({ authorId }: { authorId: string }) {
+    const { data: author } = useGetUser(authorId);
+    return <Text as="span" compact>Автор: {author?.login ?? authorId}</Text>;
 }
+
+function OrderFileCell({ fileId }: { fileId?: string | null }) {
+    const { data: files } = useGetFiles({ includeMeta: true });
+    const file = fileId ? (files?.find((f) => f.id === fileId) ?? null) : null;
+    const indicator = getFileIndicator(file);
+    if (file) {
+        return (
+            <Stack orientation="horizontal" gap={2} className="min-w-0 items-center">
+                <IconIndicator kind={indicator.kind} label={indicator.label} size={16} className="shrink-0" />
+                <span className="min-w-0 truncate">
+                    <Text.Label as="span">{file.name}</Text.Label>
+                </span>
+            </Stack>
+        );
+    }
+    return <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />;
+}
+
+const orderListDefinition: ListDefinition<Stored<Order>> = {
+    getKey: (order) => order.id,
+    columns: [
+        {
+            key: 'icon',
+            width: '32px',
+            render: () => <ListOrdered className="size-4 shrink-0 text-muted-foreground" />,
+        },
+        {
+            key: 'info',
+            width: '1fr',
+            rows: [
+                {
+                    key: 'date',
+                    label: 'Дата',
+                    weight: '1fr',
+                    render: (order) => (
+                        <Text.Label as="span">{formatCreatedAt(order.createdAt)}</Text.Label>
+                    ),
+                },
+                {
+                    key: 'author',
+                    label: 'Автор',
+                    weight: '1fr',
+                    render: (order) => <OrderAuthorCell authorId={order.authorId} />,
+                },
+            ],
+        },
+        {
+            key: 'file',
+            label: 'Файл',
+            width: '1fr',
+            render: (order) => <OrderFileCell fileId={order.fileId} />,
+        },
+    ],
+};
 
 function OrdersPageContent() {
     const { orderId: orderIdParam } = useSearch({ from: '/orders' });
@@ -85,53 +95,47 @@ function OrdersPageContent() {
 
     const { data: orders, isLoading: isOrdersLoading, error: ordersError } = useGetOrders();
     const createOrderMutation = useCreateOrder();
-    const { data: files, isLoading: isFilesLoading, error: filesError } = useGetFiles({
-        includeMeta: true,
-    });
+    const { data: files, isLoading: isFilesLoading, error: filesError } = useGetFiles({ includeMeta: true });
     const { isDirtyAnywhere } = useGuardState();
 
-    const filesById = useMemo(() => {
-        return new Map((files ?? []).map((file) => [file.id, file] as const));
-    }, [files]);
+    const filesById = useMemo(
+        () => new Map((files ?? []).map((file) => [file.id, file] as const)),
+        [files],
+    );
 
     const filteredOrders = useFilteredOrders(orders, { myOrdersOnly, withFileOnly }, filesById);
 
+    const selected: StructuredListKey[] = useMemo(
+        () => selectedOrder ? [selectedOrder.id] : [],
+        [selectedOrder],
+    );
+
     const handleCreateOrder = () => {
         createOrderMutation.mutate(undefined, {
-            onSuccess: (createdOrder) => {
-                setSelectedOrder(createdOrder);
-            },
+            onSuccess: (createdOrder) => setSelectedOrder(createdOrder),
         });
     };
 
-    const handleSelectedOrderChange = useCallback((next: Stored<Order> | null) => {
+    const handleSelected = useCallback((keys: StructuredListKey[]) => {
         if (isDirtyAnywhere) return;
+        const next = orders?.find((o) => o.id === keys[0]) ?? null;
         setSelectedOrder(next);
         void navigate({ search: (prev) => ({ ...prev, orderId: next?.id }) });
-    }, [isDirtyAnywhere, navigate]);
+    }, [isDirtyAnywhere, orders, navigate]);
 
-    // Синхронизация URL-параметра с выбором при загрузке заказов (без лишнего setState при том же снимке сущности)
+    // Синхронизация URL-параметра с выбором при загрузке заказов
     useEffect(() => {
         if (!orderIdParam || !orders) return;
         const match = orders.find((o) => o.id === orderIdParam);
         if (!match) return;
         setSelectedOrder((prev) => {
-            if (prev?.id === match.id && prev.updatedAt === match.updatedAt) {
-                return prev;
-            }
+            if (prev?.id === match.id && prev.updatedAt === match.updatedAt) return prev;
             return match;
         });
     }, [orderIdParam, orders]);
 
-    const getOrderListKey = useCallback((item: Stored<Order>) => item.id, []);
-
-
     return (
-        <Grid
-            as="main"
-            fullWidth
-            withRowGap
-        >
+        <Grid as="main" fullWidth withRowGap>
             <Column span={16}>
                 <Text.Heading as="h1" variant="02">
                     Заказы
@@ -158,33 +162,18 @@ function OrdersPageContent() {
 
                     {(isOrdersLoading || isFilesLoading) && <Text.Label as="p">Загрузка...</Text.Label>}
                     {(ordersError || filesError) && (
-                        <Text.Label as="p">
-                            Ошибка: {ordersError?.message ?? filesError?.message}
-                        </Text.Label>
+                        <Text.Label as="p">Ошибка: {ordersError?.message ?? filesError?.message}</Text.Label>
                     )}
                     {!isOrdersLoading && !ordersError && filteredOrders.length === 0 && (
                         <Text.Label as="p">Нет заказов</Text.Label>
                     )}
                     {!isOrdersLoading && !ordersError && filteredOrders.length > 0 && (
-                        <ListBox
+                        <StructuredList
+                            definition={orderListDefinition}
                             items={filteredOrders}
-                            value={selectedOrder}
-                            onChange={handleSelectedOrderChange}
-                            getKey={getOrderListKey}
-                            className="flex flex-col gap-1 outline-none"
-                        >
-                            <ListBox.Items>
-                                {(item: Stored<Order>, index) => (
-                                    <ListBox.Item
-                                        item={item}
-                                        index={index}
-                                        className="cursor-default data-active:bg-muted/60 data-selected:border-primary data-selected:bg-primary/5"
-                                    >
-                                        <OrderListItem order={item} file={item.fileId ? filesById.get(item.fileId) ?? null : null} />
-                                    </ListBox.Item>
-                                )}
-                            </ListBox.Items>
-                        </ListBox>
+                            selected={selected}
+                            onSelected={handleSelected}
+                        />
                     )}
                 </Stack>
             </Column>
@@ -194,9 +183,7 @@ function OrdersPageContent() {
                     <OrderCard
                         order={selectedOrder}
                         files={files ?? []}
-                        onOrderSaved={(updatedOrder) => {
-                            setSelectedOrder(updatedOrder);
-                        }}
+                        onOrderSaved={(updatedOrder) => setSelectedOrder(updatedOrder)}
                     />
                 ) : (
                     <Stack className="border border-border p-4">

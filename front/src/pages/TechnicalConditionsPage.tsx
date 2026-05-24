@@ -4,30 +4,44 @@ import { Column, Grid, Stack, Text } from '@miracle/aramid';
 import type { Stored, TechnicalCondition } from '@miracle/types';
 import { CreateTechnicalConditionDialog } from '@/components/blocks/tc-card/CreateTechnicalConditionDialog';
 import { TechnicalConditionCard } from '@/components/blocks/tc-card/TechnicalConditionCard';
-import { ListBox } from '@/components/ui/listbox';
+import { StructuredList, type ListDefinition, type StructuredListKey } from '@/components/ui/structured-list';
 import { DirtyGuardProvider, useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
 import { useTechnicalConditions } from '@/lib/queries/technical-condition.query';
 
-const COL_CARD = "75%" as const;
-const COL_LIST = "25%" as const;
+const COL_CARD = '75%' as const;
+const COL_LIST = '25%' as const;
 
-function TcListItem({ tc }: { tc: Stored<TechnicalCondition> }) {
-    const tcName = tc.name ?? "Без названия";
-    const tcProductTypeName = tc.lastProductTypeName ?? "Без типа продукции";
-
-    return (
-        <Stack gap={1} className="min-w-0 px-2 py-1.5">
-            <Text.Label as="span" className="truncate" expressive>
-                {tcName}
-            </Text.Label>
-            {tcProductTypeName && (
-                <Text.Helper as="span" className="truncate text-muted-foreground">
-                    {tcProductTypeName}
-                </Text.Helper>
-            )}
-        </Stack>
-    );
-}
+const tcListDefinition: ListDefinition<Stored<TechnicalCondition>> = {
+    getKey: (tc) => tc.id,
+    columns: [
+        {
+            key: 'info',
+            width: '1fr',
+            rows: [
+                {
+                    key: 'name',
+                    label: 'Название',
+                    weight: '1fr',
+                    render: (tc) => (
+                        <Text.Label as="span" className="truncate" expressive>
+                            {tc.name ?? 'Без названия'}
+                        </Text.Label>
+                    ),
+                },
+                {
+                    key: 'type',
+                    label: 'Тип продукции',
+                    weight: '1fr',
+                    render: (tc) => (
+                        <Text.Helper as="span" className="truncate text-muted-foreground">
+                            {tc.lastProductTypeName ?? 'Без типа продукции'}
+                        </Text.Helper>
+                    ),
+                },
+            ],
+        },
+    ],
+};
 
 function TechnicalConditionsPageContent() {
     const { tcId: tcIdParam } = useSearch({ from: '/technical-conditions' });
@@ -38,13 +52,16 @@ function TechnicalConditionsPageContent() {
 
     const [selectedTc, setSelectedTc] = useState<Stored<TechnicalCondition> | null>(null);
 
-    const handleSelect = useCallback(
-        (next: Stored<TechnicalCondition> | null) => {
+    const selected: StructuredListKey[] = selectedTc ? [selectedTc.id] : [];
+
+    const handleSelected = useCallback(
+        (keys: StructuredListKey[]) => {
             if (isDirtyAnywhere) return;
+            const next = technicalConditions?.find((tc) => tc.id === keys[0]) ?? null;
             setSelectedTc(next);
             void navigate({ search: (prev) => ({ ...prev, tcId: next?.id }) });
         },
-        [isDirtyAnywhere, navigate],
+        [isDirtyAnywhere, technicalConditions, navigate],
     );
 
     // Синхронизация URL-параметра с состоянием при загрузке списка
@@ -58,11 +75,8 @@ function TechnicalConditionsPageContent() {
         });
     }, [tcIdParam, technicalConditions]);
 
-    const getTcKey = useCallback((tc: Stored<TechnicalCondition>) => tc.id, []);
-
     return (
         <Grid as="main" fullWidth withRowGap>
-            {/* Шапка */}
             <Column span="100%">
                 <Stack orientation="vertical" gap={3}>
                     <Text.Heading as="h1" variant="02">
@@ -72,16 +86,13 @@ function TechnicalConditionsPageContent() {
                 </Stack>
             </Column>
 
-            {/* Список ТУ */}
             <Column span={COL_LIST}>
                 <Stack as="section" gap={3}>
                     <Text.Heading as="h2" variant="compact-01">
                         Список ТУ
                     </Text.Heading>
 
-                    {isLoading && (
-                        <Text.Label as="p">Загрузка…</Text.Label>
-                    )}
+                    {isLoading && <Text.Label as="p">Загрузка…</Text.Label>}
                     {error && (
                         <Text as="p" compact className="text-destructive">
                             Ошибка: {error.message}
@@ -93,30 +104,16 @@ function TechnicalConditionsPageContent() {
                         </Text.Label>
                     )}
                     {technicalConditions && technicalConditions.length > 0 && (
-                        <ListBox
+                        <StructuredList
+                            definition={tcListDefinition}
                             items={technicalConditions}
-                            value={selectedTc}
-                            onChange={handleSelect}
-                            getKey={getTcKey}
-                            className="flex flex-col gap-1 outline-none"
-                        >
-                            <ListBox.Items>
-                                {(item: Stored<TechnicalCondition>, index) => (
-                                    <ListBox.Item
-                                        item={item}
-                                        index={index}
-                                        className="cursor-default data-active:bg-muted/60 data-selected:border-primary data-selected:bg-primary/5"
-                                    >
-                                        <TcListItem tc={item} />
-                                    </ListBox.Item>
-                                )}
-                            </ListBox.Items>
-                        </ListBox>
+                            selected={selected}
+                            onSelected={handleSelected}
+                        />
                     )}
                 </Stack>
             </Column>
 
-            {/* Карточка выбранного ТУ */}
             <Column span={COL_CARD}>
                 {selectedTc ? (
                     <TechnicalConditionCard

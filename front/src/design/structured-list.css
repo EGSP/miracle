@@ -4,7 +4,7 @@
 ────────────────────────────────────────────────────────────────────────────── */
 
 .structured-list {
-  --structured-list-row-h: 60px;
+  --structured-list-row-h: var(--aramid-spacing-9);   /* 48px */
 
   display: flex;
   flex-direction: column;
@@ -12,7 +12,7 @@
 }
 
 .structured-list--condensed {
-  --structured-list-row-h: 36px;
+  --structured-list-row-h: var(--aramid-spacing-7);   /* 32px */
 }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */
@@ -25,12 +25,12 @@
 .structured-list-header-cell {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding-inline: var(--aramid-spacing-3);        /* 8px */
   padding-block: var(--aramid-spacing-3);
   font-family: var(--aramid-font-family-sans);
   font-size: var(--aramid-font-size-xs);          /* 12px */
-  font-weight: var(--aramid-font-weight-medium);
+  font-weight: var(--aramid-font-weight-semibold);
   color: var(--aramid-color-gray-60);
   line-height: var(--aramid-font-line-height-tight);
 }
@@ -42,8 +42,8 @@
 
 .structured-list-header-sub {
   display: flex;
-  align-items: flex-end;
-  padding-block-end: var(--aramid-spacing-2);    /* 4px */
+  align-items: flex-start;
+  padding-block-start: var(--aramid-spacing-2);  /* 4px */
 }
 
 /* ─── Item ───────────────────────────────────────────────────────────────── */
@@ -51,7 +51,8 @@
 .structured-list-item {
   display: grid;
   align-items: center;
-  min-height: var(--structured-list-row-h);
+  height: var(--structured-list-row-h);
+  overflow: hidden;
   border-bottom: 1px solid var(--aramid-color-gray-20);
   cursor: pointer;
   outline: none;

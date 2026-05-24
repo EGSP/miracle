@@ -19,7 +19,7 @@
       "fileId": "5db9f8f0-93c9-4226-8c5f-ea209264f868",
       "id": "69952e8e-f066-4683-92b1-57955f81062b",
       "createdAt": 1778530564156,
-      "updatedAt": 1779290417779,
+      "updatedAt": 1779640083585,
       "details": {
         "clientCompanyName": {
           "ai": "ООО «Черноморнефтегаз»"
@@ -220,7 +220,62 @@
               "used": true
             }
           }
-        ]
+        ],
+        "designation": {
+          "ai": {
+            "tcId": "4360be54-5e83-4bde-a182-eacc7158bc67",
+            "values": [
+              {
+                "slotIndex": 0,
+                "value": "НЭМС",
+                "confidence": 1,
+                "reasoning": "Первый параметр всегда 'НЭМС'"
+              },
+              {
+                "slotIndex": 1,
+                "value": "500",
+                "confidence": 1,
+                "reasoning": "В заявке указан номинальный диаметр DN500"
+              },
+              {
+                "slotIndex": 2,
+                "value": "P25",
+                "confidence": 1,
+                "reasoning": "Рабочее давление 2,0 МПа соответствует классу давления P25"
+              },
+              {
+                "slotIndex": 5,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "В заявке указано 'надземно'"
+              },
+              {
+                "slotIndex": 7,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "В заявке указано 'без внутреннего покрытия'"
+              },
+              {
+                "slotIndex": 8,
+                "value": "5",
+                "confidence": 1,
+                "reasoning": "В заявке указано 'Система защитного покрытия 'СпецПротект 007/109' тощиной не менее 160 мкм (для надземной установки)'"
+              },
+              {
+                "slotIndex": 9,
+                "value": null,
+                "confidence": 1,
+                "reasoning": "В заявке не указано иное, поэтому предполагается отсутствие клемм"
+              },
+              {
+                "slotIndex": 10,
+                "value": "У",
+                "confidence": 1,
+                "reasoning": "Климатическое исполнение – У (от -40°C до +60°C); категория размещения – 1"
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -228,7 +283,130 @@
       "fileId": "0981f2f6-696e-40d7-888b-5bf14ccd15a8",
       "id": "f2a58625-3f6e-43b8-a67e-69a3a790cb4a",
       "createdAt": 1778530758947,
-      "updatedAt": 1778603655178
+      "updatedAt": 1779639905411,
+      "details": {
+        "clientCompanyName": {
+          "ai": "ООО ОБИС ЭНЕРГОМОНТАЖ"
+        },
+        "productCategory": {
+          "ai": "НЭМС"
+        },
+        "requirements": [
+          {
+            "ai": {
+              "index": 0,
+              "parameterName": "Размеры стального трубопровода D*s, мм",
+              "requiredValue": "∅159х4,5",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 1,
+              "parameterName": "Марка стали трубопровода",
+              "requiredValue": "В-10",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 2,
+              "parameterName": "Размеры полиэтиленовой трубы D*s, мм",
+              "requiredValue": "160x14,6",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 3,
+              "parameterName": "SDR и марка полиэтиленового трубопровода",
+              "requiredValue": "ПЭ100 ГАЗ SDR11",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 4,
+              "parameterName": "Количество, шт.",
+              "requiredValue": "1",
+              "used": true
+            }
+          }
+        ],
+        "designation": {
+          "ai": {
+            "tcId": "4360be54-5e83-4bde-a182-eacc7158bc67",
+            "values": [
+              {
+                "slotIndex": 0,
+                "value": "НЭМС",
+                "confidence": 1,
+                "reasoning": "Первый параметр всегда 'НЭМС'"
+              },
+              {
+                "slotIndex": 1,
+                "value": "159",
+                "confidence": 1,
+                "reasoning": "Берется значение диаметра из заявки клиента (без округления)"
+              },
+              {
+                "slotIndex": 2,
+                "value": "P6",
+                "confidence": 1,
+                "reasoning": "Класс давления не указан в требованиях, но по умолчанию для НЭМС на объектах ПАО 'Газпром' используется стандартное исполнение, соответствующее классу P6"
+              },
+              {
+                "slotIndex": 3,
+                "value": "null",
+                "confidence": 1,
+                "reasoning": "Длина изделия берется из заявки (не округлять)"
+              },
+              {
+                "slotIndex": 4,
+                "value": "МГ",
+                "confidence": 1,
+                "reasoning": "Тип транспортируемого продукта — подготовленный газ и стабильный конденсат с парциальным давлением H₂S не более 0,0003 МПа и CO₂ – не более 0,2 МПа"
+              },
+              {
+                "slotIndex": 5,
+                "value": "5",
+                "confidence": 1,
+                "reasoning": "Место размещения на трубопроводе — подземное/наземное, подводное"
+              },
+              {
+                "slotIndex": 6,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "По конструктивному исполнению НЭМС — стандартное, с патрубками под сварное соединение"
+              },
+              {
+                "slotIndex": 7,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "Внутреннее защитное покрытие — без покрытия"
+              },
+              {
+                "slotIndex": 8,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "На наружную поверхность НЭМС наносят консервационное покрытие"
+              },
+              {
+                "slotIndex": 9,
+                "value": "null",
+                "confidence": 1,
+                "reasoning": "Клеммы не указаны в требованиях, но по умолчанию НЭМС не оснащают клеммами"
+              },
+              {
+                "slotIndex": 10,
+                "value": "УХЛ, ХЛ",
+                "confidence": 1,
+                "reasoning": "Климатическое исполнение — УХЛ, ХЛ"
+              }
+            ]
+          }
+        }
+      }
     },
     {
       "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",

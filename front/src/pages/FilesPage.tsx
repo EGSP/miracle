@@ -265,15 +265,15 @@ const COL_UPLOAD = 5 as const;
 export default function FilesPage() {
     return (
         <Grid as="main" withRowGap>
-            <Column span={16}>
+            <Column span="100%">
                 <Text.Heading as="h1" variant="02">
                     Файлы
                 </Text.Heading>
             </Column>
-            <Column span={COL_LIST}>
+            <Column span="50%">
                 <FileListSection />
             </Column>
-            <Column span={COL_UPLOAD}>
+            <Column span="50%">
                 <FileUploadSection />
             </Column>
         </Grid>
