@@ -69,7 +69,8 @@
       "WebFetch(domain:www.carbondesignsystem.com)",
       "WebFetch(domain:api.github.com)",
       "Bash(npm --prefix front exec -- tsc -p front/tsconfig.json --noEmit)",
-      "Bash(echo \"EXIT: $?\")"
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(Get-Content \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\front\\\\src\\\\design\\\\button-group.css\")"
     ]
   }
 }

@@ -3,6 +3,7 @@ import { IconIndicator, Layer, Stack, Text } from "@miracle/aramid";
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types";
 import { AlertCircle, Eye, ScanText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileDropZone } from "@/components/ui/file-dropzone";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -288,13 +289,13 @@ function FileCardBody() {
                     </Text>
                 )}
 
-                <Stack orientation="horizontal" gap={2}>
-                    <Button variant="secondary" size="sm" label="Сканировать" icon={<ScanText />} disabled={!canRead} onClick={() => extractMutation.mutate()} />
-                    <Button variant="secondary" size="sm" label="Сканировать ещё раз" icon={<ScanText />} disabled={!canReread} onClick={() => extractMutation.mutate()} />
+                <ButtonGroup wrap condensed>
+                    <Button variant="secondary" size="md" label="Сканировать" icon={<ScanText />} disabled={!canRead} onClick={() => extractMutation.mutate()} />
+                    <Button variant="secondary" size="md" label="Сканировать ещё раз" icon={<ScanText />} disabled={!canReread} onClick={() => extractMutation.mutate()} />
                     <Button
                         type="button"
                         variant="danger"
-                        size="sm"
+                        size="md"
                         icon={<Trash2 />}
                         label={softDeleteMutation.isPending ? "Очищение..." : "Очистить скан"}
                         disabled={!canMarkContentDeleted}
@@ -307,7 +308,7 @@ function FileCardBody() {
                     <Dialog>
                         <DialogTrigger
                             render={
-                                <Button variant="tertiary" size="sm" icon={<Eye />} label="Увидеть" disabled={!hasContent} />
+                                <Button variant="tertiary" size="md" icon={<Eye />} label="Увидеть" disabled={!hasContent} />
                             }
                         />
                         <DialogContent
@@ -354,7 +355,7 @@ function FileCardBody() {
                             </section>
                         </DialogContent>
                     </Dialog>
-                </Stack>
+                </ButtonGroup>
 
                 <InlineMutationNotification mutation={extractMutation} />
                 <InlineMutationNotification mutation={softDeleteMutation} />

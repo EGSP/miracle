@@ -1,5 +1,5 @@
 /* ─── Button ──────────────────────────────────────────────────────────────────
-   Carbon-aligned button. Размер md / variant primary / fixed width по умолчанию.
+   Carbon-aligned button. Размер md / variant primary по умолчанию.
    Токены: Aramid spacing + color.
 ───────────────────────────────────────────────────────────────────────────── */
 
@@ -10,8 +10,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: space-between;               /* label прижат влево, иконка — вправо */
-  width: var(--button-fixed-width);             /* 160px, одинаково для всех размеров */
-  min-height: var(--button-h);
+  height: var(--button-h);                       /* высота жёстко фиксирована по размеру */
+  min-width: max-content;                        /* не уже своего контента */
   padding-block: 0;
   padding-inline: var(--aramid-spacing-5);       /* 16px */
   gap: var(--aramid-spacing-3);                  /* 8px */
@@ -56,8 +56,7 @@
 }
 
 /* ─── Sizes ─────────────────────────────────────────────────────────────── */
-/* Ширина фиксирована через --button-fixed-width и одинакова для всех размеров.
-   Размер управляет высотой, отступами и шрифтом. */
+/* Размер управляет высотой, отступами и шрифтом. Ширина авто (по контенту). */
 
 .button--xs {
   --button-h: var(--aramid-spacing-6);           /* 24px */
