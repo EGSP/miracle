@@ -4,7 +4,8 @@ import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@mirac
 import { AlertCircle, Eye, ScanText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/modal-dialog";
+import { useDialog } from "@/lib/hooks/use-dialog";
 import { FileDropZone } from "@/components/ui/file-dropzone";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -190,6 +191,7 @@ function FileCardBody() {
     const softDeleteMutation = useSoftDeleteFileContent(file.id);
     const restoreMutation = useRestoreFile(file.id);
     const [restoreFile, setRestoreFile] = useState<File | null>(null);
+    const { open } = useDialog();
 
     const isVisual = getFileDomain(file.extension) === FileDomain.VISUAL;
     const latestContent = contentList?.[0];
@@ -197,18 +199,13 @@ function FileCardBody() {
     const indicator = getExtractionIndicator(latestContent);
     const isFileAvailable = file.meta?.available !== false;
 
-    const canRead =
+    const canScan =
         isFileAvailable
         && !extractMutation.isPending
         && !softDeleteMutation.isPending
         && !isLoading
-        && !status;
-    const canReread =
-        isFileAvailable
-        && !extractMutation.isPending
-        && !softDeleteMutation.isPending
-        && !isLoading
-        && (status === "completed" || status === "failed");
+        && (!status || status === "completed" || status === "failed");
+    const willOverwrite = status === "completed" || status === "failed";
     const hasContent =
         status === "completed"
         && Boolean(latestContent?.content?.some((item) => Boolean(item.text)));
@@ -221,6 +218,25 @@ function FileCardBody() {
     const handleRestore = () => {
         if (!restoreFile) return;
         restoreMutation.mutate(restoreFile, { onSuccess: () => setRestoreFile(null) });
+    };
+
+    const handleScanClick = () => {
+        if (willOverwrite) {
+            open(({ close }) => (
+                <Dialog
+                    label="Сканирование"
+                    title="Запустить сканирование заново?"
+                    size="sm"
+                    onClose={close}
+                    actions={[
+                        { label: 'Отмена', onClick: close, variant: 'secondary' },
+                        { label: 'Сканировать', onClick: () => { extractMutation.mutate({ retryIfLastFailed: true }); close(); } },
+                    ]}
+                />
+            ));
+        } else {
+            extractMutation.mutate();
+        }
     };
 
     return (
@@ -290,8 +306,14 @@ function FileCardBody() {
                 )}
 
                 <ButtonGroup wrap condensed>
-                    <Button variant="secondary" size="md" label="Сканировать" icon={<ScanText />} disabled={!canRead} onClick={() => extractMutation.mutate()} />
-                    <Button variant="secondary" size="md" label="Сканировать ещё раз" icon={<ScanText />} disabled={!canReread} onClick={() => extractMutation.mutate()} />
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        label={extractMutation.isPending ? "Сканирование..." : "Сканировать"}
+                        icon={<ScanText />}
+                        disabled={!canScan}
+                        onClick={handleScanClick}
+                    />
                     <Button
                         type="button"
                         variant="danger"
@@ -305,56 +327,40 @@ function FileCardBody() {
                             }
                         }}
                     />
-                    <Dialog>
-                        <DialogTrigger
-                            render={
-                                <Button variant="tertiary" size="md" icon={<Eye />} label="Увидеть" disabled={!hasContent} />
-                            }
-                        />
-                        <DialogContent
-                            size="large"
-                            className="overflow-hidden p-0"
-                            showCloseButton={false}
-                        >
-                            <section className="flex h-[calc(100vh-4rem)] max-h-208 w-full overflow-hidden">
-                                <aside className="w-28 shrink-0 border-r border-border p-3">
-                                    <Stack gap={2}>
-                                        <DialogClose
-                                            render={
-                                                <Button variant="tertiary" size="sm" label="Закрыть" />
-                                            }
-                                        />
-                                    </Stack>
-                                </aside>
-                                <div className="min-h-0 min-w-0 flex-1 p-3">
-                                    <Stack gap={2} className="h-full min-h-0">
-                                        <DialogTitle>{file.name}</DialogTitle>
-                                        <div className="min-h-0 flex-1 overflow-auto border border-border bg-muted/20 p-3">
-                                            <Stack gap={3}>
-                                                {latestContent?.content?.map((chunk, index) => (
-                                                    <Stack
-                                                        key={`${index}-${chunk.page ?? "no-page"}`}
-                                                        gap={1}
-                                                    >
-                                                        {chunk.page ? (
-                                                            <Text.Label as="span">
-                                                                Часть {chunk.page}
-                                                            </Text.Label>
-                                                        ) : (
-                                                            <Text.Label as="span">Контент</Text.Label>
-                                                        )}
-                                                        <pre className="w-full overflow-x-auto whitespace-pre-wrap wrap-break-word text-xs">
-                                                            {chunk.text ?? ""}
-                                                        </pre>
-                                                    </Stack>
-                                                ))}
-                                            </Stack>
-                                        </div>
-                                    </Stack>
-                                </div>
-                            </section>
-                        </DialogContent>
-                    </Dialog>
+                    <Button
+                        type="button"
+                        variant="tertiary"
+                        size="md"
+                        icon={<Eye />}
+                        label="Увидеть"
+                        disabled={!hasContent}
+                        onClick={() => open(({ close }) => (
+                            <Dialog
+                                label="Содержимое файла"
+                                title={file.name}
+                                size="xl"
+                                onClose={close}
+                            >
+                                <Stack gap={3}>
+                                    {latestContent?.content?.map((chunk, index) => (
+                                        <Stack
+                                            key={`${index}-${chunk.page ?? "no-page"}`}
+                                            gap={1}
+                                        >
+                                            {chunk.page ? (
+                                                <Text.Label as="span">Часть {chunk.page}</Text.Label>
+                                            ) : (
+                                                <Text.Label as="span">Контент</Text.Label>
+                                            )}
+                                            <pre className="w-full overflow-x-auto whitespace-pre-wrap wrap-break-word text-xs">
+                                                {chunk.text ?? ""}
+                                            </pre>
+                                        </Stack>
+                                    ))}
+                                </Stack>
+                            </Dialog>
+                        ))}
+                    />
                 </ButtonGroup>
 
                 <InlineMutationNotification mutation={extractMutation} />

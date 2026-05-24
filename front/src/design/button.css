@@ -5,6 +5,7 @@
 
 .button {
   --button-h: var(--aramid-spacing-8);           /* 40px (md) */
+  --button-focus-ring: var(--aramid-color-sand-60); /* фокус-кольцо без синего */
 
   position: relative;
   display: inline-flex;
@@ -132,7 +133,7 @@
 }
 
 .button--primary:focus-visible {
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--button-focus-ring);
   outline-offset: 2px;
   box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
 }
@@ -159,7 +160,7 @@
 }
 
 .button--secondary:focus-visible {
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--button-focus-ring);
   outline-offset: 2px;
   box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
 }
@@ -192,7 +193,7 @@
 .button--tertiary:focus-visible {
   background-color: var(--aramid-color-brand);
   color: var(--aramid-color-white-0);
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--button-focus-ring);
   outline-offset: 2px;
   box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
 }
@@ -207,21 +208,21 @@
 
 .button--ghost {
   background-color: transparent;
-  color: var(--aramid-color-blue-60);
+  color: var(--aramid-color-brand);
 }
 
 .button--ghost:hover:not(:disabled) {
-  background-color: var(--aramid-color-blue-10);
-  color: var(--aramid-color-blue-70);
+  background-color: var(--aramid-color-sand-10);
+  color: var(--aramid-color-sand-60);
 }
 
 .button--ghost:active:not(:disabled) {
-  background-color: var(--aramid-color-blue-20);
-  color: var(--aramid-color-blue-80);
+  background-color: var(--aramid-color-sand-20);
+  color: var(--aramid-color-sand-70);
 }
 
 .button--ghost:focus-visible {
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--button-focus-ring);
   outline-offset: 2px;
 }
 
@@ -247,7 +248,7 @@
 }
 
 .button--danger:focus-visible {
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--button-focus-ring);
   outline-offset: 2px;
   box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
 }
@@ -280,7 +281,7 @@
 .button--danger-tertiary:focus-visible {
   background-color: var(--aramid-color-semantic-danger);
   color: var(--aramid-color-white-0);
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--button-focus-ring);
   outline-offset: 2px;
   box-shadow: inset 0 0 0 2px var(--aramid-color-white-0);
 }
@@ -295,21 +296,21 @@
 
 .button--icon-button {
   background-color: transparent;
-  color: var(--aramid-color-blue-60);
+  color: var(--aramid-color-brand);
 }
 
 .button--icon-button:hover:not(:disabled) {
-  background-color: var(--aramid-color-blue-10);
-  color: var(--aramid-color-blue-70);
+  background-color: var(--aramid-color-sand-10);
+  color: var(--aramid-color-sand-60);
 }
 
 .button--icon-button:active:not(:disabled) {
-  background-color: var(--aramid-color-blue-20);
-  color: var(--aramid-color-blue-80);
+  background-color: var(--aramid-color-sand-20);
+  color: var(--aramid-color-sand-70);
 }
 
 .button--icon-button:focus-visible {
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--button-focus-ring);
   outline-offset: 2px;
 }
 

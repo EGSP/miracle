@@ -19,11 +19,12 @@ export const useGetFileContentTokens = (fileId: string, contentId: string | unde
     });
 };
 
-export const useExtractFileContent = (fileId: string, retryIfLastFailed = true) => {
+export const useExtractFileContent = (fileId: string) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: () => filesContent.extractContent({ fileId }, { retryIfLastFailed }),
+        mutationFn: ({ retryIfLastFailed = false }: { retryIfLastFailed?: boolean } = {}) =>
+            filesContent.extractContent({ fileId }, { retryIfLastFailed }),
         onSuccess: async () => {
             await queryClient.invalidateQueries({
                 queryKey: [...FILE_CONTENT_QUERY_KEY, fileId],

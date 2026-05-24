@@ -1,0 +1,104 @@
+/* ─── Modal Dialog ──────────────────────────────────────────────────────────
+   Carbon-aligned modal dialog. Нативный <dialog> + showModal().
+   Токены: Aramid spacing + color + layer.
+─────────────────────────────────────────────────────────────────────────── */
+
+.modal-dialog {
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--aramid-layer-1-background);
+  overflow: hidden;
+}
+
+.modal-dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+body:has(dialog.modal-dialog[open]) {
+  overflow: hidden;
+}
+
+/* ─── Sizes (spacing-13 = 160px) ────────────────────────────────────────── */
+
+.modal-dialog[data-size="sm"] {
+  width:      calc(var(--aramid-spacing-13) * 3); /* 480px */
+  height:     calc(var(--aramid-spacing-13) * 2); /* 320px */
+  max-height: calc(var(--aramid-spacing-13) * 2);
+}
+
+.modal-dialog[data-size="md"] {
+  width:      calc(var(--aramid-spacing-13) * 4); /* 640px */
+  height:     calc(var(--aramid-spacing-13) * 3); /* 480px */
+  max-height: calc(var(--aramid-spacing-13) * 3);
+}
+
+.modal-dialog[data-size="lg"] {
+  width:      calc(var(--aramid-spacing-13) * 5); /* 800px */
+  height:     calc(var(--aramid-spacing-13) * 4); /* 640px */
+  max-height: calc(var(--aramid-spacing-13) * 4);
+}
+
+.modal-dialog[data-size="xl"] {
+  width:      calc(var(--aramid-spacing-13) * 7); /* 1120px */
+  height:     calc(var(--aramid-spacing-13) * 5); /* 800px */
+  max-height: calc(var(--aramid-spacing-13) * 5);
+}
+
+/* Программный focus() не триггерит :focus-visible — явно показываем outline на крестике */
+.modal-dialog [data-modal-close]:focus {
+  outline: 2px solid var(--aramid-color-sand-60);
+  outline-offset: 2px;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────── */
+
+.modal-dialog-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--aramid-spacing-3);                   /* 8px между текстом и крестиком */
+  padding: var(--aramid-spacing-5) var(--aramid-spacing-4) var(--aramid-spacing-5) var(--aramid-spacing-7);
+}
+
+.modal-dialog-header-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2);                   /* 4px между label и title */
+}
+
+.modal-dialog-label {
+  margin: 0;
+  color: var(--aramid-color-gray-60);
+}
+
+.modal-dialog-title {
+  margin: 0;
+}
+
+/* ─── Body ──────────────────────────────────────────────────────────────── */
+
+.modal-dialog-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--aramid-spacing-5) var(--aramid-spacing-7);
+}
+
+/* ─── Actions ───────────────────────────────────────────────────────────── */
+
+.modal-dialog-actions {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--aramid-layer-1-border-strong);
+}
+
+.modal-dialog-actions .button-group {
+  width: 100%;
+}
+
+.modal-dialog-actions .button {
+  flex: 1;
+}
