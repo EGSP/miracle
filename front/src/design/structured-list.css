@@ -1,0 +1,164 @@
+/* ─── StructuredList ──────────────────────────────────────────────────────────
+   Carbon-aligned structured list. Адаптирован под дизайн-систему Aramid.
+   Токены: Aramid spacing + color.
+────────────────────────────────────────────────────────────────────────────── */
+
+.structured-list {
+  --structured-list-row-h: 60px;
+
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+
+.structured-list--condensed {
+  --structured-list-row-h: 36px;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.structured-list-header {
+  display: grid;
+  border-bottom: 1px solid var(--aramid-color-gray-30);
+}
+
+.structured-list-header-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-inline: var(--aramid-spacing-3);        /* 8px */
+  padding-block: var(--aramid-spacing-3);
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs);          /* 12px */
+  font-weight: var(--aramid-font-weight-medium);
+  color: var(--aramid-color-gray-60);
+  line-height: var(--aramid-font-line-height-tight);
+}
+
+/* Заголовок с несколькими sub-строками */
+.structured-list-header-cell .structured-list-cell-inner {
+  width: 100%;
+}
+
+.structured-list-header-sub {
+  display: flex;
+  align-items: flex-end;
+  padding-block-end: var(--aramid-spacing-2);    /* 4px */
+}
+
+/* ─── Item ───────────────────────────────────────────────────────────────── */
+
+.structured-list-item {
+  display: grid;
+  align-items: center;
+  min-height: var(--structured-list-row-h);
+  border-bottom: 1px solid var(--aramid-color-gray-20);
+  cursor: pointer;
+  transition: background-color 70ms;
+  outline: none;
+}
+
+.structured-list-item:hover:not([data-disabled]) {
+  background-color: var(--aramid-color-gray-10);
+}
+
+/* Focus: outline внутри строки при keyboard-навигации */
+.structured-list-item[data-active] {
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: -2px;
+}
+
+/* Selected: фон через inline style (layering-aware), дополнительный индикатор слева */
+.structured-list-item[data-selected] {
+  position: relative;
+}
+
+.structured-list-item[data-selected]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background-color: var(--aramid-color-brand);
+}
+
+/* Disabled */
+.structured-list-item[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Отключённый список */
+.structured-list[aria-disabled="true"] .structured-list-item {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── Cell ───────────────────────────────────────────────────────────────── */
+
+.structured-list-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-inline: var(--aramid-spacing-3);
+  padding-block: var(--aramid-spacing-2);
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-sm);          /* 14px */
+  color: var(--aramid-color-gray-100);
+  line-height: var(--aramid-font-line-height-normal);
+}
+
+/* Ячейка с вертикальным grid (несколько строк) */
+.structured-list-cell--multi {
+  align-items: stretch;
+  padding-block: 0;
+  height: var(--structured-list-row-h);
+}
+
+/* Вертикальный grid внутри ячейки */
+.structured-list-cell-inner {
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+
+.structured-list-sub-cell {
+  display: flex;
+  align-items: center;
+  padding-inline: 0;
+  padding-block: var(--aramid-spacing-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ─── Checkbox column (multiselect) ─────────────────────────────────────── */
+
+.structured-list-checkbox-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--aramid-spacing-3);
+}
+
+.structured-list-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--aramid-color-gray-50);
+  background-color: transparent;
+  transition: border-color 70ms, background-color 70ms;
+  pointer-events: none;
+}
+
+.structured-list-checkbox[data-checked] {
+  background-color: var(--aramid-color-brand);
+  border-color: var(--aramid-color-brand);
+}
+
+.structured-list-item:hover:not([data-disabled]) .structured-list-checkbox:not([data-checked]) {
+  border-color: var(--aramid-color-sand-60);
+}
