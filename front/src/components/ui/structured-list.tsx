@@ -34,6 +34,8 @@
  *
  * Фокус на корневом элементе (`role="listbox"`), активный элемент управляется через
  * `aria-activedescendant`. Клавиши: `ArrowUp/Down`, `Home`, `End`, `Enter`/`Space`.
+ * Состояние активного элемента (data-active) записывается напрямую в DOM — без
+ * React-ре-рендеров. Ховер обрабатывается CSS `:hover`.
  *
  * ## Высота строк
  *
@@ -52,7 +54,6 @@ import {
   useId,
   useMemo,
   useRef,
-  useState,
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
@@ -127,14 +128,15 @@ function buildGridTemplate(cols: Array<{ width: ColumnWidth }>, multiselect: boo
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
+// activeIndex намеренно исключён из контекста — он меняется при каждом движении
+// мышки/нажатии стрелки и вызвал бы ре-рендер всех итемов. Вместо этого
+// data-active выставляется напрямую в DOM через moveToIndex().
 
 type StructuredListContextValue<T> = {
   definition: ListDefinition<T>
   normalizedColumns: NormalizedColumn<T>[]
   gridTemplate: string
   selected: StructuredListKey[]
-  activeIndex: number | null
-  setActiveIndex: (i: number | null) => void
   toggle: (item: T) => void
   getItemId: (item: T) => string
   multiselect: boolean
@@ -181,11 +183,40 @@ function StructuredListRoot<T>({
   className,
 }: StructuredListProps<T>) {
   const listId = useId()
-  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const { layerBackground } = useNextLayerTokens()
 
+  // Refs для стабильных замыканий в обработчиках событий
+  const rootRef = useRef<HTMLDivElement>(null)
+  const activeElRef = useRef<Element | null>(null)
+  const activeIndexRef = useRef<number | null>(null)
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+  const selectedRef = useRef(selected)
+  selectedRef.current = selected
+  const definitionRef = useRef(definition)
+  definitionRef.current = definition
   const onSelectedRef = useRef(onSelected)
   onSelectedRef.current = onSelected
+
+  // Записывает data-active напрямую в DOM — без React ре-рендеров
+  const moveToIndex = useCallback((index: number | null) => {
+    activeElRef.current?.removeAttribute('data-active')
+    activeIndexRef.current = index
+
+    if (index === null || !rootRef.current) {
+      activeElRef.current = null
+      rootRef.current?.removeAttribute('aria-activedescendant')
+      return
+    }
+
+    // children[0] — заголовок, children[index + 1] — итем
+    const el = rootRef.current.children[index + 1]
+    if (el) {
+      el.setAttribute('data-active', '')
+      activeElRef.current = el
+      rootRef.current.setAttribute('aria-activedescendant', el.id)
+    }
+  }, [])
 
   const normalizedColumns = useMemo(
     () => definition.columns.map((c) => normalizeColumn(c)),
@@ -200,18 +231,17 @@ function StructuredListRoot<T>({
   const toggle = useCallback(
     (item: T) => {
       if (disabled) return
-      if (definition.itemDisabled?.(item)) return
-      const key = definition.getKey(item)
+      if (definitionRef.current.itemDisabled?.(item)) return
+      const key = definitionRef.current.getKey(item)
+      const cur = selectedRef.current
       if (multiselect) {
-        const next = selected.includes(key)
-          ? selected.filter((k) => k !== key)
-          : [...selected, key]
+        const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]
         onSelectedRef.current?.(next)
       } else {
-        onSelectedRef.current?.(selected.includes(key) ? [] : [key])
+        onSelectedRef.current?.(cur.includes(key) ? [] : [key])
       }
     },
-    [disabled, definition, multiselect, selected],
+    [disabled, multiselect],
   )
 
   const getItemId = useCallback(
@@ -221,12 +251,13 @@ function StructuredListRoot<T>({
   )
 
   const move = (delta: number) => {
-    if (!items.length) return
+    const cur = itemsRef.current
+    if (!cur.length) return
     const next =
-      activeIndex === null
+      activeIndexRef.current === null
         ? 0
-        : Math.min(Math.max(activeIndex + delta, 0), items.length - 1)
-    setActiveIndex(next)
+        : Math.min(Math.max(activeIndexRef.current + delta, 0), cur.length - 1)
+    moveToIndex(next)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -242,27 +273,22 @@ function StructuredListRoot<T>({
         break
       case 'Home':
         event.preventDefault()
-        if (items.length) setActiveIndex(0)
+        if (itemsRef.current.length) moveToIndex(0)
         break
       case 'End':
         event.preventDefault()
-        if (items.length) setActiveIndex(items.length - 1)
+        if (itemsRef.current.length) moveToIndex(itemsRef.current.length - 1)
         break
       case 'Enter':
       case ' ':
         event.preventDefault()
-        if (activeIndex !== null) {
-          const item = items[activeIndex]
+        if (activeIndexRef.current !== null) {
+          const item = itemsRef.current[activeIndexRef.current]
           if (item) toggle(item)
         }
         break
     }
   }
-
-  const activeKey =
-    activeIndex !== null && items[activeIndex]
-      ? String(definition.getKey(items[activeIndex]!))
-      : null
 
   const contextValue = useMemo<StructuredListContextValue<T>>(
     () => ({
@@ -270,35 +296,36 @@ function StructuredListRoot<T>({
       normalizedColumns,
       gridTemplate,
       selected,
-      activeIndex,
-      setActiveIndex,
       toggle,
       getItemId,
       multiselect,
       disabled,
       selectedBackground: layerBackground,
     }),
-    [definition, normalizedColumns, gridTemplate, selected, activeIndex, toggle, getItemId, multiselect, disabled, layerBackground],
+    [definition, normalizedColumns, gridTemplate, selected, toggle, getItemId, multiselect, disabled, layerBackground],
   )
 
   return (
     <StructuredListContext.Provider value={contextValue as StructuredListContextValue<unknown>}>
       <div
+        ref={rootRef}
         role="listbox"
         aria-multiselectable={multiselect || undefined}
         aria-disabled={disabled || undefined}
         tabIndex={disabled ? -1 : 0}
-        aria-activedescendant={
-          activeKey ? `${listId}-option-${encodeURIComponent(activeKey)}` : undefined
-        }
         onKeyDown={handleKeyDown}
         onFocus={() => {
-          if (disabled || activeIndex !== null || !items.length) return
-          setActiveIndex(0)
+          if (disabled || activeIndexRef.current !== null || !itemsRef.current.length) return
+          const sel = selectedRef.current
+          const def = definitionRef.current
+          const firstSelected = sel.length > 0
+            ? itemsRef.current.findIndex((item) => sel.includes(def.getKey(item)))
+            : -1
+          moveToIndex(firstSelected >= 0 ? firstSelected : 0)
         }}
         onBlur={(e) => {
           if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
-          setActiveIndex(null)
+          moveToIndex(null)
         }}
         className={cn('structured-list', condensed && 'structured-list--condensed', className)}
       >
@@ -357,8 +384,6 @@ function StructuredListItem<T>({ item, index }: { item: T; index: number }) {
     normalizedColumns,
     gridTemplate,
     selected,
-    activeIndex,
-    setActiveIndex,
     toggle,
     getItemId,
     multiselect,
@@ -368,7 +393,6 @@ function StructuredListItem<T>({ item, index }: { item: T; index: number }) {
 
   const key = definition.getKey(item)
   const isSelected = selected.includes(key)
-  const isActive = index === activeIndex
   const isItemDisabled = Boolean(disabled || definition.itemDisabled?.(item))
 
   return (
@@ -378,15 +402,11 @@ function StructuredListItem<T>({ item, index }: { item: T; index: number }) {
       aria-selected={isSelected}
       aria-disabled={isItemDisabled || undefined}
       data-selected={isSelected || undefined}
-      data-active={isActive || undefined}
       data-disabled={isItemDisabled || undefined}
       className="structured-list-item"
       style={{
         gridTemplateColumns: gridTemplate,
         backgroundColor: isSelected ? selectedBackground : undefined,
-      }}
-      onMouseEnter={() => {
-        if (!disabled && !isItemDisabled) setActiveIndex(index)
       }}
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => {

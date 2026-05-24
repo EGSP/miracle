@@ -54,17 +54,16 @@
   min-height: var(--structured-list-row-h);
   border-bottom: 1px solid var(--aramid-color-gray-20);
   cursor: pointer;
-  transition: background-color 70ms;
   outline: none;
 }
 
 .structured-list-item:hover:not([data-disabled]) {
-  background-color: var(--aramid-color-gray-10);
+  background-color: var(--aramid-color-sand-20);
 }
 
 /* Focus: outline внутри строки при keyboard-навигации */
 .structured-list-item[data-active] {
-  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline: 2px solid var(--aramid-color-sand-60);
   outline-offset: -2px;
 }
 
