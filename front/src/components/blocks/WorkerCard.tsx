@@ -1,4 +1,4 @@
-﻿import { IconIndicator, Layer, Stack, Text } from '@miracle/aramid';
+﻿import { CodeSnippet, IconIndicator, Layer, Stack, Text } from '@miracle/aramid';
 import { Link } from '@tanstack/react-router';
 import { FileIcon } from 'lucide-react';
 import { WorkerStatus, getHumanReadableWorkerData } from '@miracle/types';
@@ -100,9 +100,9 @@ export function WorkerCard({ worker }: WorkerCardProps) {
                 </Stack>
 
                 <div className="border border-border bg-muted/20 p-2 w-full">
-                    <Text.Code as="pre" language="json" variant="md">
+                    <CodeSnippet language="json" variant="md">
                         {JSON.stringify(hrData, null, 2)}
-                    </Text.Code>
+                    </CodeSnippet>
                 </div>
                 
                 {showApplyButton || showDeleteButton || showPreviewPromptButton ? (

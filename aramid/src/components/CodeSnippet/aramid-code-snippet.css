@@ -1,0 +1,26 @@
+/* Блок кода: ограниченная высота и скролл (типографика — классы aramid-text-code-*) */
+
+.aramid-code-snippet--md {
+  --_size: var(--aramid-spacing-13);
+}
+
+.aramid-code-snippet--lg {
+  --_size: calc(var(--aramid-spacing-13) * 2);
+}
+
+.aramid-code-snippet--md,
+.aramid-code-snippet--lg {
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: var(--_size);
+  padding: var(--aramid-spacing-3);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.aramid-code-snippet--scroll-x {
+  overflow-x: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+}

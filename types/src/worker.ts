@@ -182,7 +182,7 @@ function tryParseJson(value: string): unknown {
  * @example
  * // В компоненте карточки воркера:
  * const hrData = getHumanReadableWorkerData(worker);
- * <Text.Code language="json" as="pre">{JSON.stringify(hrData, null, 2)}</Text.Code>
+ * <CodeSnippet language="json" variant="md">{JSON.stringify(hrData, null, 2)}</CodeSnippet>
  */
 export function getHumanReadableWorkerData(worker: Stored<WorkerData>): HumanReadableWorkerData {
     switch (worker.type) {

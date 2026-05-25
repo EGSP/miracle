@@ -134,33 +134,6 @@
   letter-spacing: 0.32px;
 }
 
-/* Контейнер: блок кода с ограниченной высотой и скроллом */
-
-.aramid-text-code--md {
-  --_size: var(--aramid-spacing-13);
-}
-
-.aramid-text-code--lg {
-  --_size: calc(var(--aramid-spacing-13) * 2);
-}
-
-.aramid-text-code--md,
-.aramid-text-code--lg {
-  display: block;
-  overflow-y: auto;
-  overflow-x: hidden;
-  height: var(--_size);
-  padding: var(--aramid-spacing-3);
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-}
-
-.aramid-text-code--scroll-x {
-  overflow-x: auto;
-  white-space: pre;
-  overflow-wrap: normal;
-}
-
 /* Утилита: подпись (label) */
 
 .aramid-text-label-01 {

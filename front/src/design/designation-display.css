@@ -38,8 +38,3 @@
   flex: 0 0 auto;
   color: var(--aramid-color-gray-60);
 }
-
-.designation-display-part .aramid-text-code-01,
-.designation-display-separator .aramid-text-code-01 {
-  width: fit-content;
-}

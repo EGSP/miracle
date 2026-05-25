@@ -47,10 +47,20 @@
 - *«This is for inline code snippets and smaller code elements.»* — продуктивный (`code-01`).
 - *«This is for large code snippets and larger code elements.»* — экспрессивный (`code-02`).
 
-Проп **`language`** включает подсветку синтаксиса (highlight.js, тема `ascetic`). Поддерживаемые значения: `json`, `typescript`, `javascript`, `bash`, `xml`, `html`. При использовании `language` `children` должен быть строкой; для блочного кода передавайте `as="pre"`.
+Только типографика (моноширинный шрифт, кегль). Для блочного кода с подсветкой, скроллом и ограничением высоты — **`CodeSnippet`**.
 
 ```tsx
-<Text.Code language="json" as="pre" expressive>{'{ "key": "value" }'}</Text.Code>
+<Text.Code as="span">slot-1</Text.Code>
+```
+
+### `CodeSnippet` — блок кода
+
+Подсветка синтаксиса (highlight.js, тема `ascetic`), ограничение высоты (`variant`), горизонтальный скролл (`scrollX`). По умолчанию `as="pre"`.
+
+Проп **`language`**: `json`, `typescript`, `javascript`, `bash`, `xml`, `html`. При использовании `language` `children` должен быть строкой.
+
+```tsx
+<CodeSnippet language="json" variant="md">{JSON.stringify(data, null, 2)}</CodeSnippet>
 ```
 
 ### `Text.Area` — текстовая область
@@ -83,5 +93,6 @@
 | `Text.Label` | Лейблы, ошибки, captions — не body copy. |
 | `Text.Helper` | Текст под заголовком поля. |
 | `Text.Legal` | Юридический мелкий текст (продукт vs веб — через `expressive`). |
-| `Text.Code` | Инлайн и блоки кода; `language` включает подсветку; крупнее — `expressive`. |
+| `Text.Code` | Моноширинный текст (инлайн и короткие значения); крупнее — `expressive`. |
+| `CodeSnippet` | Блок кода с подсветкой, `variant` и `scrollX`. |
 | `Text.Area` | Read-only прокручиваемый блок текста; `variant` — высота; `resizable` — растяжка вверх. |
