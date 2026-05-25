@@ -1,15 +1,9 @@
 ﻿import { Column, Grid, Stack, Text } from '@miracle/aramid';
-import type {
-    Designation,
-    DesignationSlot,
-    DesignationValue,
-    Dual,
-    OrderRequirement,
-} from '@miracle/types';
+import type { Designation, Dual, OrderRequirement } from '@miracle/types';
 import { useOrderCardContext } from './OrderCard';
 import { useMemo } from 'react';
-import { useTechnicalCondition } from '@/lib/queries/technical-condition.query';
 import { DesignationDisplay } from './DesignationDisplay';
+import { DesignationInspector } from './DesignationInspector';
 
 
 
@@ -45,30 +39,9 @@ function OrderRequirementItem({ requirement }: { requirement: Dual<OrderRequirem
     }
 }
 
-/**
- * Блок «Условное обозначение». Источник данных:
- * - details.designation.human (если есть) — итог конструктора;
- * - иначе details.designation.ai — ответ DesignationWorker.
- *
- * Названия слотов и их порядок берутся из TC.designationSlots (резолвим по
- * designation.tcId). Если TC ещё не загружено или у слота нет соответствия в TC —
- * рендерим slotIndex.
- */
+/** Блок «Условное обозначение»: компактный display + таблица проблемных слотов. */
 function DesignationSection({ designation }: { designation: Designation }) {
-    const tcQuery = useTechnicalCondition(designation.tcId);
-    const tcSlots: DesignationSlot[] = useMemo(
-        () => tcQuery.data?.designationSlots ?? [],
-        [tcQuery.data],
-    );
-    const slotByIndex = useMemo(
-        () => new Map(tcSlots.map((s) => [s.index, s])),
-        [tcSlots],
-    );
-
-    const orderedValues = useMemo(
-        () => [...designation.values].sort((a, b) => a.slotIndex - b.slotIndex),
-        [designation.values],
-    );
+    const hasValues = designation.values.length > 0;
 
     return (
         <Stack gap={2}>
@@ -76,56 +49,13 @@ function DesignationSection({ designation }: { designation: Designation }) {
                 Условное обозначение
             </Text.Heading>
             <DesignationDisplay designation={designation} />
-            {orderedValues.length === 0 ? (
+            {!hasValues ? (
                 <Text.Label as="p" className="text-muted-foreground">
                     Нет значений
                 </Text.Label>
             ) : (
-                <Stack gap={3}>
-                    {orderedValues.map((dv) => (
-                        <DesignationValueRow
-                            key={dv.slotIndex}
-                            value={dv}
-                            slotName={slotByIndex.get(dv.slotIndex)?.name}
-                        />
-                    ))}
-                </Stack>
+                <DesignationInspector designation={designation} />
             )}
-        </Stack>
-    );
-}
-
-function DesignationValueRow({
-    value,
-    slotName,
-}: {
-    value: DesignationValue;
-    slotName?: string;
-}) {
-    const isLowConfidence = value.confidence < 0.7;
-    const isUnknown = value.value === null;
-    const confidencePct = Math.round(value.confidence * 100);
-
-    return (
-        <Stack gap={1} className={isLowConfidence ? 'border-l-2 border-amber-500 pl-2' : ''}>
-            <Stack orientation="horizontal" gap={3}>
-                <Text.Label as="span" expressive>
-                    {`№${value.slotIndex}${slotName ? ` — ${slotName}` : ''}`}
-                </Text.Label>
-                <Text.Label as="span" className="text-muted-foreground">
-                    {`${confidencePct}%`}
-                </Text.Label>
-            </Stack>
-            {isUnknown ? (
-                <Text.Label as="p" className="text-muted-foreground">
-                    не определено
-                </Text.Label>
-            ) : (
-                <Text.Code as="p">{value.value}</Text.Code>
-            )}
-            <Text.Helper as="p" className="text-muted-foreground">
-                {value.reasoning}
-            </Text.Helper>
         </Stack>
     );
 }

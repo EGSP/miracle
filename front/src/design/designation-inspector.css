@@ -1,0 +1,31 @@
+.designation-inspector {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.designation-inspector th {
+  padding: var(--aramid-spacing-2) var(--aramid-spacing-2);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--aramid-color-gray-20);
+}
+
+.designation-inspector td {
+  padding: var(--aramid-spacing-2) var(--aramid-spacing-2);
+  vertical-align: top;
+  border-bottom: 1px solid var(--aramid-color-gray-20);
+}
+
+.designation-inspector-slot-position {
+  width: 1%;
+  white-space: nowrap;
+  padding-inline-start: 0;
+}
+
+.designation-inspector-slot-name {
+  min-width: 12rem;
+}
+
+.designation-inspector-detail {
+  min-width: 16rem;
+}

@@ -10,8 +10,8 @@ export type DesignationDisplayPart = {
 };
 
 /** Пороги подсветки (согласованы с DesignationValue.confidence в типах). */
-const CONFIDENCE_WARN = 0.7;
-const CONFIDENCE_CRITICAL = 0.5;
+export const DESIGNATION_CONFIDENCE_WARN = 0.7;
+export const DESIGNATION_CONFIDENCE_CRITICAL = 0.5;
 
 /** `null`, пустая строка и литерал `"null"` (иногда приходит от LLM) — «не задано». */
 export function isUnsetDesignationValue(value: string | null | undefined): boolean {
@@ -35,10 +35,10 @@ export function designationDisplayTone(value: DesignationValue | undefined): Des
     if (!value || isUnsetDesignationValue(value.value)) {
         return 'warn';
     }
-    if (value.confidence < CONFIDENCE_CRITICAL) {
+    if (value.confidence < DESIGNATION_CONFIDENCE_CRITICAL) {
         return 'critical';
     }
-    if (value.confidence < CONFIDENCE_WARN) {
+    if (value.confidence < DESIGNATION_CONFIDENCE_WARN) {
         return 'warn';
     }
     return 'none';
@@ -85,4 +85,76 @@ export function buildDesignationDisplayParts(designation: Designation): Designat
         }
     }
     return parts;
+}
+
+export function designationToneClassName(tone: DesignationDisplayTone): string {
+    if (tone === 'warn') {
+        return 'designation-display-part designation-display-part--warn';
+    }
+    if (tone === 'critical') {
+        return 'designation-display-part designation-display-part--critical';
+    }
+    return 'designation-display-part';
+}
+
+/** Слот попадает в инспектор: пропуск в диапазоне, пустое значение или confidence < 0.5 при заданном value. */
+export function isDesignationInspectorIssue(entry: DesignationValue | undefined): boolean {
+    if (!entry) {
+        return true;
+    }
+    if (isUnsetDesignationValue(entry.value)) {
+        return true;
+    }
+    return entry.confidence < DESIGNATION_CONFIDENCE_CRITICAL;
+}
+
+export type DesignationInspectorRow = {
+    slotIndex: number;
+    slotName: string | null;
+    tone: DesignationDisplayTone;
+    confidence: number | null;
+    reasoning: string | null;
+};
+
+/**
+ * Строки инспектора: слоты min…max с проблемами (пропуск, пусто, critical).
+ * `slotNames` — DesignationSlot.name по index из TC.
+ */
+export function buildDesignationInspectorRows(
+    designation: Designation,
+    slotNames: ReadonlyMap<number, string>,
+): DesignationInspectorRow[] {
+    const { values } = designation;
+    if (values.length === 0) {
+        return [];
+    }
+
+    const bySlot = new Map<number, DesignationValue>();
+    for (const entry of values) {
+        bySlot.set(entry.slotIndex, entry);
+    }
+
+    let min = values[0].slotIndex;
+    let max = values[0].slotIndex;
+    for (const entry of values) {
+        if (entry.slotIndex < min) min = entry.slotIndex;
+        if (entry.slotIndex > max) max = entry.slotIndex;
+    }
+
+    const rows: DesignationInspectorRow[] = [];
+    for (let slotIndex = min; slotIndex <= max; slotIndex++) {
+        const entry = bySlot.get(slotIndex);
+        if (!isDesignationInspectorIssue(entry)) {
+            continue;
+        }
+
+        rows.push({
+            slotIndex,
+            slotName: slotNames.get(slotIndex) ?? null,
+            tone: designationDisplayTone(entry),
+            confidence: entry?.confidence ?? null,
+            reasoning: entry?.reasoning ?? 'Параметр отсутствует в заявке',
+        });
+    }
+    return rows;
 }

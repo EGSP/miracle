@@ -250,14 +250,12 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 
 ---
 
-## DesignationDisplay
+## DesignationDisplay / DesignationInspector
 
-- Путь: `components/blocks/order-card/DesignationDisplay.tsx`, стили: `design/designation-display.css`
-- Принимает `Designation` (без Dual, без резолва TC)
-- Раскладка: `inline-flex`, ширина по контенту; высота и фон/граница — как у `Input` (`spacing-8`, `useFieldLayerStyle`)
-- Ячейки и `-` — `Text.Code` (типографика `code-01`), без отдельных CSS-классов Aramid
-- Логика частей: `lib/designation-display.ts` (`buildDesignationDisplayParts`)
-- Подсветка: `warn` — пустое/`"null"` или `confidence < 0.7`; `critical` — есть значение и `confidence < 0.5`
+- **Display** — `DesignationDisplay.tsx`, `design/designation-display.css`: компактная строка, без резолва TC.
+- **Inspector** — `DesignationInspector.tsx`, `design/designation-inspector.css`: таблица проблемных слотов; имена из TC по `tcId`.
+- Логика: `lib/designation-display.ts` (пороги, `buildDesignationDisplayParts`, `buildDesignationInspectorRows`, `designationToneClassName`).
+- Подсветка: `warn` — пустое/`"null"` или `confidence < 0.7`; `critical` — значение есть и `confidence < 0.5`. В инспектор попадают пропуски, пустые и critical (не warn 0.5–0.7).
 
 ---
 
