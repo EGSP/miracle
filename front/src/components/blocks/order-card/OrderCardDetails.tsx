@@ -81,9 +81,10 @@ export function OrderCardDetails() {
             <Text.Heading as="h3" variant="compact-01">
                 Детали заказа
             </Text.Heading>
+            {designation && <DesignationSection designation={designation} />}
             <Stack gap={2}>
                 <Text.Heading as="h4" variant="compact-01">
-                    Требования
+                    Требования заказчика
                 </Text.Heading>
                 {requirements.length > 0 ? (
                     <Stack gap={5}>
@@ -102,8 +103,6 @@ export function OrderCardDetails() {
                     </Text.Label>
                 )}
             </Stack>
-
-            {designation && <DesignationSection designation={designation} />}
         </Stack>
     );
 }
