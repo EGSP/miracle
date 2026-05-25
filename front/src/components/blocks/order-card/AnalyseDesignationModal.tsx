@@ -82,8 +82,8 @@ export function AnalyseDesignationModal({
                 </Text.Helper>
 
                 <Stack gap={1}>
-                    <Text.Label as="span">Заказ</Text.Label>
                     <Input.Dropdown<Stored<Order>>
+                        label="Заказ"
                         items={orders}
                         value={selectedOrder}
                         onChange={(next) => {
@@ -102,6 +102,7 @@ export function AnalyseDesignationModal({
                                 {item ? `Заказ ${item.id.slice(0, 8)}…` : ''}
                             </Text>
                         )}
+                        full
                     >
                         <Input.Dropdown.Selected />
                         <Input.Dropdown.List emptyText="Нет заказов" />
@@ -109,8 +110,8 @@ export function AnalyseDesignationModal({
                 </Stack>
 
                 <Stack gap={1}>
-                    <Text.Label as="span">Техническое условие</Text.Label>
                     <Input.Dropdown<Stored<TechnicalCondition>>
+                        label="Техническое условие"
                         items={tcs}
                         value={selectedTc}
                         onChange={(next) => setTcId(next?.id)}
@@ -126,6 +127,7 @@ export function AnalyseDesignationModal({
                                 {getTcLabel(item)}
                             </Text>
                         )}
+                        full
                     >
                         <Input.Dropdown.Selected />
                         <Input.Dropdown.List emptyText="Нет доступных ТУ" />

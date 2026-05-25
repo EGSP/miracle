@@ -10,17 +10,17 @@ import { DesignationInspector } from './DesignationInspector';
 function OrderRequirementItem({ requirement }: { requirement: Dual<OrderRequirement> }) {
 
     return (
-        <Grid condensed fullWidth>
-            <Column span={8}>
+        <Grid condensed narrow fullWidth>
+            <Column span="100%">
                 {requirement.ai ? (
                     <OrderRequirementHalf requirement={requirement.ai} label="AI" />
                 ) : null}
             </Column>
-            <Column span={8}>
+            {/* <Column span={8}>
                 {requirement.human ? (
                     <OrderRequirementHalf requirement={requirement.human} label="Human" />
                 ) : null}
-            </Column>
+            </Column> */}
         </Grid>
     );
 

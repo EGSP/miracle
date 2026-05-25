@@ -20,7 +20,7 @@
 ## Именование CSS-классов
 
 - Полные слова, BEM-стиль: `.block`, `.block--modifier`, `.block-element`, `.block-element--modifier`
-- Примеры: `.input`, `.input--sm`, `.input--full`, `.input-field`, `.input-dropdown-list`, `.input-dropdown-item--active`
+- Примеры: `.input`, `.input--sm`, `.input--full`, `.input-field`, `.input-dropdown-list`, `.input-dropdown-item:hover`
 - Никаких сокращений (не `.inp`, не `.txa`, не `.btn`)
 
 ---

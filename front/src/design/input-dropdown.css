@@ -57,6 +57,11 @@
   font-family: var(--aramid-font-family-sans);
   font-size: var(--aramid-font-size-xs);
   color: var(--aramid-color-gray-100);
+  outline: none;
+}
+
+.input-dropdown-item:hover {
+  background-color: var(--aramid-color-sand-20);
 }
 
 .input-dropdown-empty {

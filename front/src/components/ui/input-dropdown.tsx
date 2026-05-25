@@ -1,6 +1,6 @@
 import * as React from "react"
 import { ChevronDownIcon } from "lucide-react"
-import { Text, useLayerTokens, useNextLayerTokens } from "@miracle/aramid"
+import { Text, useNextLayerTokens } from "@miracle/aramid"
 
 import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
 import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
@@ -265,7 +265,6 @@ function InputDropdownList<T>({
     useDropdownContext<T>()
 
   const { layerBackground } = useNextLayerTokens()
-  const { fieldBackground } = useLayerTokens()
 
   if (!isOpen) return null
 
@@ -278,6 +277,7 @@ function InputDropdownList<T>({
         event.preventDefault()
         onMouseDown?.(event)
       }}
+      onMouseEnter={() => setActiveIndex(-1)}
       className={cn("input-dropdown-list", className)}
       style={{ backgroundColor: layerBackground, ...style }}
     >
@@ -293,10 +293,8 @@ function InputDropdownList<T>({
               id={item != null ? `${listId}-option-${encodeURIComponent(getItemKey(item))}` : undefined}
               role="option"
               aria-selected={isSelected}
-              onMouseEnter={() => setActiveIndex(index)}
               onClick={() => selectByIndex(index)}
-              className={cn("input-dropdown-item", isActive && "input-dropdown-item--active")}
-              style={isActive ? { backgroundColor: fieldBackground } : undefined}
+              className="input-dropdown-item"
             >
               {renderListItem(item ?? null, { isSelected, isActive, index })}
             </div>

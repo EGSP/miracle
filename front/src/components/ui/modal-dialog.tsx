@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useEffect, useRef } from 'react'
 import { XIcon } from 'lucide-react'
-import { Text } from '@miracle/aramid'
+import { Layer, Text } from '@miracle/aramid'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import type { ButtonVariant } from '@/components/ui/button-variants'
@@ -66,7 +66,9 @@ function PrivateHeader({ label, title, onClose }: PrivateHeaderProps) {
 function PrivateBody({ children }: { children?: React.ReactNode }) {
     return (
         <div className="modal-dialog-body">
-            {children}
+            <Layer level={1}>
+                {children}
+            </Layer>
         </div>
     )
 }
