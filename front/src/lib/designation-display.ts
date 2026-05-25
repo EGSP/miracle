@@ -15,16 +15,20 @@ const CONFIDENCE_CRITICAL = 0.5;
 
 /** `null`, пустая строка и литерал `"null"` (иногда приходит от LLM) — «не задано». */
 export function isUnsetDesignationValue(value: string | null | undefined): boolean {
+    return !isSetDesignationValue(value);
+}
+
+export function isSetDesignationValue(value: string | null | undefined): value is string {
     if (value === null || value === undefined) {
-        return true;
+        return false;
     }
     const trimmed = value.trim();
-    return trimmed === '' || trimmed.toLowerCase() === 'null';
+    return trimmed !== '' && trimmed.toLowerCase() !== 'null';
 }
 
 /** Текст ячейки: незаданные значения → «?». */
 export function designationDisplayText(value: string | null): string {
-    return isUnsetDesignationValue(value) ? '?' : value;
+    return isSetDesignationValue(value) ? value : '?';
 }
 
 export function designationDisplayTone(value: DesignationValue | undefined): DesignationDisplayTone {

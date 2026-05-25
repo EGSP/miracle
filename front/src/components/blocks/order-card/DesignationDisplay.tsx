@@ -52,7 +52,7 @@ export function DesignationDisplay({ designation }: DesignationDisplayProps) {
                                 : `designation-display-part designation-display-part--${part.tone}`
                         }
                     >
-                        <Text.Code as="span">{part.text}</Text.Code>
+                        <Text.Code as="span" expressive>{part.text}</Text.Code>
                     </span>
                 </Fragment>
             ))}
