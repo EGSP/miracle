@@ -235,7 +235,7 @@ function FileCardBody() {
                 />
             ));
         } else {
-            extractMutation.mutate();
+            extractMutation.mutate({ retryIfLastFailed: false });
         }
     };
 
