@@ -4,7 +4,7 @@ import { UsersList } from './UsersList';
 
 export function UsersTab() {
     return (
-        <Grid withRowGap>
+        <Grid withRowGap fullWidth narrow>
             <Column span={8}>
                 <Stack gap={4}>
                     <CreateUserForm />

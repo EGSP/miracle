@@ -9,7 +9,7 @@ export default function ProductTypesPage() {
 
     return (
         <DirtyGuardProvider>
-            <Grid as="main" withRowGap>
+            <Grid as="main" withRowGap fullWidth>
                 <Column span={16}>
                     <Stack gap={3}>
                         <Text.Heading as="h1" variant="02">

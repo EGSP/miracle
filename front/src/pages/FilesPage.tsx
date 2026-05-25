@@ -264,7 +264,7 @@ const COL_UPLOAD = 5 as const;
 
 export default function FilesPage() {
     return (
-        <Grid as="main" withRowGap>
+        <Grid as="main" withRowGap fullWidth>
             <Column span="100%">
                 <Text.Heading as="h1" variant="02">
                     Файлы

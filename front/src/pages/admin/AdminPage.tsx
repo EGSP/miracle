@@ -20,7 +20,7 @@ export default function AdminPage() {
     }
 
     return (
-        <Grid as="main" withRowGap>
+        <Grid as="main" withRowGap fullWidth>
             <Column span={16}>
                 <Stack gap={4}>
                     <Stack gap={1}>

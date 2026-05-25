@@ -15,7 +15,7 @@ export default function HomePage() {
     }, [data?.timestamp]);
 
     return (
-        <Grid as="main">
+        <Grid as="main" fullWidth>
             <Column span={16}>
                 <Stack gap={6}>
                     <Stack gap={1}>
@@ -28,7 +28,7 @@ export default function HomePage() {
                     </Stack>
 
                     {isAuthenticated && (
-                        <Stack as="section" gap={3}>
+                        <Stack as="section" gap={3} className='items-start'>
                             <Text.Heading as="h2" variant="compact-01">
                                 Проверка состояния сервера
                             </Text.Heading>
@@ -45,7 +45,7 @@ export default function HomePage() {
                                     </Text>
                                 )}
                             </Stack>
-                            <Button type="button" label="Проверить" onClick={refetchHealth} />
+                            <Button type="button" size='xs' label="Проверить" onClick={refetchHealth} />
                         </Stack>
                     )}
 

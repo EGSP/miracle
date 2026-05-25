@@ -89,7 +89,7 @@ export default function WorkersPage() {
     const selectedGroup = WORKER_GROUPS.find((g) => g.status === selectedStatus)!;
 
     return (
-        <Grid as="main" withRowGap>
+        <Grid as="main" withRowGap fullWidth>
             {/* Шапка */}
             <Column span={16}>
                 <Text.Heading as="h1" variant="02">
