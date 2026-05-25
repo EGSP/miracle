@@ -24,6 +24,7 @@ function formatConfidence(confidence: number | null): string {
  * Таблица слотов, требующих проверки: пропуск в диапазоне, пустое значение,
  * низкая уверенность при заданном value (confidence < 0.5).
  * Имена параметров — из TC по `designation.tcId`.
+ * Колонка «Позиция» — 1-based (как в редакторе слотов ТУ), в данных остаётся `slotIndex` 0-based.
  */
 export function DesignationInspector({ designation }: DesignationInspectorProps) {
     const tcQuery = useTechnicalCondition(designation.tcId);
@@ -69,16 +70,18 @@ export function DesignationInspector({ designation }: DesignationInspectorProps)
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((row) => (
+                    {rows.map((row) => {
+                        const position = row.slotIndex + 1;
+                        return (
                         <tr key={row.slotIndex}>
                             <td className="designation-inspector-slot-position">
                                 <span className={designationToneClassName(row.tone)}>
-                                    <Text.Code as="span">{`#${row.slotIndex}`}</Text.Code>
+                                    <Text.Code as="span">{`#${position}`}</Text.Code>
                                 </span>
                             </td>
                             <td className="designation-inspector-slot-name">
                                 <Text.Label as="span">
-                                    {row.slotName ?? `Слот ${row.slotIndex}`}
+                                    {row.slotName ?? `Слот ${position}`}
                                 </Text.Label>
                             </td>
                             <td className="designation-inspector-detail">
@@ -92,7 +95,8 @@ export function DesignationInspector({ designation }: DesignationInspectorProps)
                                 </Stack>
                             </td>
                         </tr>
-                    ))}
+                        );
+                    })}
                 </tbody>
             </table>
         </Stack>
