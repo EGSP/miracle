@@ -1,42 +1,32 @@
-﻿import { Column, Grid, Stack, Text } from '@miracle/aramid';
+﻿import { Stack, Text } from '@miracle/aramid';
 import type { Designation, Dual, OrderRequirement } from '@miracle/types';
 import { useOrderCardContext } from './OrderCard';
 import { useMemo } from 'react';
 import { DesignationDisplay } from './DesignationDisplay';
 import { DesignationInspector } from './DesignationInspector';
+import { OrderRequirementItem } from './OrderRequirementItem';
 
+import '@/design/order-requirements-table.css';
 
-
-function OrderRequirementItem({ requirement }: { requirement: Dual<OrderRequirement> }) {
-
+function OrderRequirementsTable({ requirements }: { requirements: OrderRequirement[] }) {
     return (
-        <Grid condensed narrow fullWidth>
-            <Column span="100%">
-                {requirement.ai ? (
-                    <OrderRequirementHalf requirement={requirement.ai} label="AI" />
-                ) : null}
-            </Column>
-            {/* <Column span={8}>
-                {requirement.human ? (
-                    <OrderRequirementHalf requirement={requirement.human} label="Human" />
-                ) : null}
-            </Column> */}
-        </Grid>
+        <div className="order-requirements-table" role="table">
+            <div className="order-requirements-table-header" role="row">
+                <div className="order-requirements-table-header-cell" role="columnheader">
+                    Требование
+                </div>
+                <div className="order-requirements-table-header-cell" role="columnheader">
+                    Значение
+                </div>
+            </div>
+            {requirements.map((requirement) => (
+                <OrderRequirementItem
+                    key={requirement.index}
+                    requirement={requirement}
+                />
+            ))}
+        </div>
     );
-
-    function OrderRequirementHalf({ requirement, label }: { requirement: OrderRequirement, label: 'AI' | 'Human' }) {
-        return (
-            <Stack gap={1}>
-                <Stack orientation="horizontal" gap={3}>
-                    <Text.Label as="span" expressive>{requirement.parameterName}</Text.Label>
-                    <Text.Label as="span">{label}</Text.Label>
-                </Stack>
-                <Text.Code as="p">
-                    {requirement.requiredValue}
-                </Text.Code>
-            </Stack>
-        );
-    }
 }
 
 /** Блок «Условное обозначение»: компактный display + таблица проблемных слотов. */
@@ -64,21 +54,26 @@ export function OrderCardDetails() {
     const { order } = useOrderCardContext();
     const details = useMemo(() => order?.details, [order?.id]);
 
-    const requirements = useMemo(() => {
-        if (!details || !details.requirements) return [];
-        return details.requirements;
-    }, [details])
+    const aiRequirements = useMemo(() => {
+        if (!details?.requirements) {
+            return [];
+        }
+        return details.requirements
+            .map((dual: Dual<OrderRequirement>) => dual.ai)
+            .filter((ai): ai is OrderRequirement => ai != null && ai.used !== false);
+    }, [details?.requirements]);
 
     const designation = useMemo(() => {
         return details?.designation?.human ?? details?.designation?.ai ?? null;
     }, [details?.designation]);
 
-    if (!details || order === null)
+    if (!details || order === null) {
         return null;
+    }
 
     return (
-        <Stack gap={3} className="border border-border p-3">
-            <Text.Heading as="h3" variant="compact-01">
+        <Stack gap={6} className="border border-border p-3">
+            <Text.Heading as="h3" variant="03">
                 Детали заказа
             </Text.Heading>
             {details.productTypeName ? (
@@ -91,17 +86,8 @@ export function OrderCardDetails() {
                 <Text.Heading as="h4" variant="compact-01">
                     Требования заказчика
                 </Text.Heading>
-                {requirements.length > 0 ? (
-                    <Stack gap={5}>
-                        {requirements.map((requirement, index) => (
-                            requirement.ai || requirement.human ? (
-                                <OrderRequirementItem
-                                    key={`${order.id}-req-${index}`}
-                                    requirement={requirement}
-                                />
-                            ) : null
-                        ))}
-                    </Stack>
+                {aiRequirements.length > 0 ? (
+                    <OrderRequirementsTable requirements={aiRequirements} />
                 ) : (
                     <Text.Label as="p" className="text-muted-foreground">
                         Нет требований

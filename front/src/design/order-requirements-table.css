@@ -1,0 +1,50 @@
+/* ─── Таблица требований заказа (OrderCardDetails) ───────────────────────── */
+
+.order-requirements-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.order-requirements-table-header,
+.order-requirements-table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  width: 100%;
+  min-width: 0;
+  column-gap: var(--aramid-spacing-3);
+}
+
+.order-requirements-table-header {
+  padding-block-end: var(--aramid-spacing-3);
+  border-bottom: 1px solid var(--aramid-color-gray-30);
+}
+
+.order-requirements-table-header-cell {
+  min-width: 0;
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs);
+  font-weight: var(--aramid-font-weight-semibold);
+  color: var(--aramid-color-gray-60);
+  line-height: var(--aramid-font-line-height-tight);
+}
+
+.order-requirements-table-row {
+  padding-block: var(--aramid-spacing-3);
+  border-bottom: 1px solid var(--aramid-color-gray-20);
+}
+
+.order-requirements-table-row:last-child {
+  border-bottom: none;
+}
+
+.order-requirements-table-cell {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.order-requirements-table-cell--value {
+  color: var(--aramid-color-gray-100);
+}

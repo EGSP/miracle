@@ -2138,6 +2138,16 @@
       },
       "cloudOperationId": "d7q47et5qokrugfqqu1g",
       "operationResult": "{\"values\":[{\"slotIndex\":0,\"value\":\"НЭМС\",\"confidence\":1,\"reasoning\":\"Первый параметр всегда 'НЭМС'\"},{\"slotIndex\":1,\"value\":\"500\",\"confidence\":1,\"reasoning\":\"В заявке указан номинальный диаметр DN500\"},{\"slotIndex\":2,\"value\":\"P25\",\"confidence\":1,\"reasoning\":\"Рабочее давление 2,0 МПа соответствует классу давления P25\"},{\"slotIndex\":5,\"value\":\"1\",\"confidence\":1,\"reasoning\":\"В заявке указано 'надземно'\"},{\"slotIndex\":7,\"value\":\"1\",\"confidence\":1,\"reasoning\":\"В заявке указано 'без внутреннего покрытия'\"},{\"slotIndex\":8,\"value\":\"5\",\"confidence\":1,\"reasoning\":\"В заявке указано 'Система защитного покрытия 'СпецПротект 007/109' тощиной не менее 160 мкм (для надземной установки)'\"},{\"slotIndex\":9,\"value\":null,\"confidence\":1,\"reasoning\":\"В заявке не указано иное, поэтому предполагается отсутствие клемм\"},{\"slotIndex\":10,\"value\":\"У\",\"confidence\":1,\"reasoning\":\"Климатическое исполнение – У (от -40°C до +60°C); категория размещения – 1\"}]}"
+    },
+    {
+      "type": "order-details-worker",
+      "status": "failed",
+      "orderId": "be9cf280-0c2a-4af6-b107-4b2e99615cf3",
+      "id": "dff23360-2af5-46a2-80de-eb05b3fb0974",
+      "createdAt": 1779699680065,
+      "updatedAt": 1779699682687,
+      "cloudOperationId": "d7q5efacujbcaf7ophs6",
+      "errorMessage": "Операция LLM \"d7q5efacujbcaf7ophs6\" завершилась с ошибкой: Error in session internal_id=8fc0939f-c4605367-977131b-281bbc1e&request_id=3a16195a-0e78-439d-88c9-1053bc792d03&client_request_id=undefined&client_id=b1gojojef5kc786v3hgp: Invalid JSON Schema: all fields must be required, 'clientCompanyName' is optional"
     }
   ]
 }
