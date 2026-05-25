@@ -9,6 +9,7 @@ import type {
 import { useOrderCardContext } from './OrderCard';
 import { useMemo } from 'react';
 import { useTechnicalCondition } from '@/lib/queries/technical-condition.query';
+import { DesignationDisplay } from './DesignationDisplay';
 
 
 
@@ -74,6 +75,7 @@ function DesignationSection({ designation }: { designation: Designation }) {
             <Text.Heading as="h4" variant="compact-01">
                 Условное обозначение
             </Text.Heading>
+            <DesignationDisplay designation={designation} />
             {orderedValues.length === 0 ? (
                 <Text.Label as="p" className="text-muted-foreground">
                     Нет значений

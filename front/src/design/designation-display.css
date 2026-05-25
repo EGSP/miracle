@@ -1,0 +1,45 @@
+/* Высота и layering — как у .input (md): useFieldLayerStyle + spacing-8 */
+
+.designation-display {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  height: var(--aramid-spacing-8);
+  padding-inline: var(--aramid-spacing-5);
+  gap: var(--aramid-spacing-2);
+  border: none;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+}
+
+.designation-display-part {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  flex: 0 0 auto;
+  padding-inline: var(--aramid-spacing-3);
+}
+
+.designation-display-part--warn {
+  background-color: var(--aramid-color-yellow-10);
+}
+
+.designation-display-part--critical {
+  background-color: var(--aramid-color-red-20);
+}
+
+.designation-display-separator {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  flex: 0 0 auto;
+  color: var(--aramid-color-gray-60);
+}
+
+.designation-display-part .aramid-text-code-01,
+.designation-display-separator .aramid-text-code-01 {
+  width: fit-content;
+}
