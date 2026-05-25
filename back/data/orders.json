@@ -805,6 +805,94 @@
           }
         }
       }
+    },
+    {
+      "authorId": "d33eec57-bdc8-49fe-8901-ffcbdd89417b",
+      "fileId": "05d4175b-d18c-4e6b-989a-bb97d734b628",
+      "details": {
+        "clientCompanyName": {
+          "ai": "ООО «Газпром трансгаз Казань»"
+        },
+        "productTypeId": "6c05c0a2-bfb5-4403-b0f9-d585c3d8fc89",
+        "productTypeName": "НЭМС",
+        "requirements": [
+          {
+            "ai": {
+              "index": 0,
+              "parameterName": "Установка НЭМС (подземная, надземная)",
+              "requiredValue": "подземная",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 1,
+              "parameterName": "Соединение с трубопроводом",
+              "requiredValue": "сварное",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 2,
+              "parameterName": "Наружное покрытие НЭМС (тип покрытия)",
+              "requiredValue": "антикоррозионное",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 3,
+              "parameterName": "Типоразмер заказываемого НЭМС",
+              "requiredValue": "500мм",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 4,
+              "parameterName": "Количество, шт.",
+              "requiredValue": "5",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 5,
+              "parameterName": "Климатическое исполнение (У/ХЛ)",
+              "requiredValue": "У1",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 6,
+              "parameterName": "Температура окружающей среды (min/max, °С)",
+              "requiredValue": "-33/+38",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 7,
+              "parameterName": "Тепловое воздействие (пар, горячая нефть)",
+              "requiredValue": "нет",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 8,
+              "parameterName": "Оснащение клеммами, искоразрядником",
+              "requiredValue": "искоразрядник",
+              "used": true
+            }
+          }
+        ]
+      },
+      "id": "0a975e2b-999c-4a62-9a3e-4c029033f2ee",
+      "createdAt": 1779702395217,
+      "updatedAt": 1779704323446
     }
   ]
 }

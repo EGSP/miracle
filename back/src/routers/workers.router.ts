@@ -50,11 +50,12 @@ const previewPrompt = route.get('/:id/preview-prompt', {
             return err.notFound('Worker not found');
         }
 
-        // Сейчас сохраняет finalPrompt только designation-worker. Если позже
-        // другие типы воркеров будут хранить промпт — расширить через дискриминант.
-        if (worker.type !== 'designation-worker') {
+        if (
+            worker.type !== 'designation-worker'
+            && worker.type !== 'order-details-worker'
+        ) {
             return err.badRequest(
-                `Превью промпта пока поддерживается только для designation-worker (получен ${worker.type})`,
+                `Превью промпта поддерживается только для designation-worker и order-details-worker (получен ${worker.type})`,
             );
         }
 

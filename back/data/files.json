@@ -216,6 +216,18 @@
         "isTechnicalCondition": true,
         "usedPages": "3-6, 26"
       }
+    },
+    {
+      "id": "05d4175b-d18c-4e6b-989a-bb97d734b628",
+      "name": "Газпромтрансгаз_НЭМС_1100685932000010.pdf",
+      "extension": "pdf",
+      "bytes": 560474,
+      "authorId": "d33eec57-bdc8-49fe-8901-ffcbdd89417b",
+      "createdAt": 1779702454321,
+      "updatedAt": 1779702454350,
+      "settings": {
+        "complexLayout": true
+      }
     }
   ]
 }

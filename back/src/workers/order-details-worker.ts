@@ -189,6 +189,8 @@ export class OrderDetailsWorker extends BaseWorker {
                 throw new Error('Воркер не инициализирован: ожидается вызов mount() перед run()');
             }
 
+            const workerId = this.data.id;
+
             if (!this.data.cloudOperationId) {
                 const catalog = productTypesService.getAll();
                 if (catalog.length === 0) {
@@ -197,23 +199,27 @@ export class OrderDetailsWorker extends BaseWorker {
 
                 const text = await this.getFileText();
                 const userText = buildOrderDetailsUserMessage({ catalog, applicationText: text });
+                const finalPrompt = {
+                    system: SYSTEM_PROMPT,
+                    user: userText,
+                };
+
+                const withPrompt = await workersService.update(workerId, { finalPrompt });
+                this.data = withPrompt as Stored<OrderDetailsWorkerData>;
+
                 const cloudOperationId = await yandexLlm.submitCompletion({
                     messages: [
-                        { role: 'system', text: SYSTEM_PROMPT },
-                        { role: 'user', text: userText },
+                        { role: 'system', text: finalPrompt.system },
+                        { role: 'user', text: finalPrompt.user },
                     ],
                     temperature: 0.1,
-                    maxTokens: countTokens(SYSTEM_PROMPT + userText) * 10,
+                    maxTokens: countTokens(finalPrompt.system + finalPrompt.user) * 10,
                     jsonSchema: flatOrderDetailsJsonSchema,
                 });
                 this.data.cloudOperationId = cloudOperationId;
 
-                const updatedWD = await workersService.update(this.data.id, { cloudOperationId });
+                const updatedWD = await workersService.update(workerId, { cloudOperationId });
                 this.data = updatedWD as Stored<OrderDetailsWorkerData>;
-            }
-
-            if (!this.data.id) {
-                throw new Error('Воркер не инициализирован: ожидается вызов mount() перед run()');
             }
 
             while (!this.shouldStop) {
@@ -227,7 +233,7 @@ export class OrderDetailsWorker extends BaseWorker {
                         throw new Error(`Не удалось извлечь данные из заказа: ${JSON.stringify(parsed)}`);
                     }
 
-                    const updatedWD = await workersService.update(this.data.id, { orderDetails: details });
+                    const updatedWD = await workersService.update(workerId, { orderDetails: details });
                     this.data = updatedWD as Stored<OrderDetailsWorkerData>;
                     await this.markSuccess();
                     return;

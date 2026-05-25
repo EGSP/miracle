@@ -8,8 +8,8 @@ import { useWorkerPromptPreview } from '@/lib/queries/workers.query';
  * (system + user message) ровно в том виде, в котором он уходит/уходил в LLM.
  *
  * Открывается из карточки воркера в новой вкладке по `/worker-prompt?workerId=…`.
- * Сейчас поддерживает только `designation-worker`; бэк-эндпоинт для других типов
- * вернёт 400 с осмысленным сообщением.
+ * Поддерживает `designation-worker` и `order-details-worker`; для остальных типов
+ * бэк-эндпоинт вернёт 400 с осмысленным сообщением.
  */
 export default function WorkerPromptPage() {
     const { workerId } = useSearch({ strict: false }) as { workerId?: string };

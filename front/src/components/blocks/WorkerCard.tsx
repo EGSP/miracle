@@ -57,9 +57,8 @@ export function WorkerCard({ worker }: WorkerCardProps) {
     const showApplyButton = worker.status === WorkerStatus.Success;
     const showDeleteButton = worker.status !== WorkerStatus.Active;
 
-    // Превью промпта — пока поддерживается только для designation-worker
-    // (соответствует ограничению на бэке в /workers/:id/preview-prompt).
-    const showPreviewPromptButton = worker.type === 'designation-worker';
+    const showPreviewPromptButton =
+        worker.type === 'designation-worker' || worker.type === 'order-details-worker';
     const openPromptPreview = () => {
         window.open(`/worker-prompt?workerId=${worker.id}`, '_blank', 'noopener,noreferrer');
     };

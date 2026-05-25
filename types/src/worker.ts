@@ -41,6 +41,11 @@ export type OrderDetailsWorkerData = BaseWorkerData & {
     type: 'order-details-worker';
     orderId: string;
     cloudOperationId?: string;
+    /**
+     * Собранный промпт (system + user), как он ушёл в LLM.
+     * Сохраняется до submitCompletion в run(). Показывается на /worker-prompt.
+     */
+    finalPrompt?: WorkerFinalPrompt;
     orderDetails?: OrderDetails | null;
     errorMessage?: string;
 };
