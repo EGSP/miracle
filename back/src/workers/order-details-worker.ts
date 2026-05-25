@@ -20,8 +20,8 @@ function sleep(ms: number): Promise<void> {
 const FlatOrderDetailsZodSchema = z.object({
     clientCompanyName: z
         .string()
-        .describe('Полное или сокращённое название компании-заказчика')
-        .optional(),
+        .nullable()
+        .describe('Полное или сокращённое название компании-заказчика; null если не найдено в заявке'),
     productType: z
         .object({
             id: z.string().nullable().describe('id типа продукции из справочника или null'),
@@ -40,8 +40,8 @@ const FlatOrderDetailsZodSchema = z.object({
                     .describe('Конкретное значение, требуемое заказчиком для этого параметра (например: "∅159х4,5", "Сталь 45", "ПЭ100 ГАЗ SDR11")'),
             }),
         )
-        .describe('Список технических и коммерческих требований к заказу в виде пар "название параметра" → "требуемое значение"')
-        .optional(),
+        .nullable()
+        .describe('Список требований; null если в заявке нет подходящих пар «параметр → значение»'),
 });
 type FlatOrderDetails = z.infer<typeof FlatOrderDetailsZodSchema>;
 const flatOrderDetailsJsonSchema = zodToJsonSchema(FlatOrderDetailsZodSchema);
@@ -65,7 +65,7 @@ const SYSTEM_PROMPT = `Ты — ассистент для анализа зак�
 - Не сокращай название характеристики до одного технического обозначения, если рядом есть полная формулировка.
 - Не включай пустые поля, заголовки разделов и служебный текст как требования.
 Пример: строки "Размеры стального трубопровода D*s, мм" и "∅159х4,5" должны стать {"parameterName":"Размеры стального трубопровода D*s, мм","requiredValue":"∅159х4,5"}.
-Если какое-либо поле не удаётся определить из текста — пропусти его (не включай в ответ), кроме productType: это поле всегда присутствует в ответе (см. инструкцию в сообщении пользователя).
+Поля clientCompanyName, productType и requirements всегда присутствуют в JSON: если данных нет — укажи null (для requirements — null или пустой массив [] только если в заявке действительно нет требований).
 Отвечай ТОЛЬКО валидным JSON без markdown-обёртки.`;
 
 function buildOrderDetailsUserMessage(params: {
@@ -110,24 +110,26 @@ function flatToDualOrderDetails(
 ): OrderDetails | null {
     const resolvedType = resolveProductType(flat.productType, catalog);
 
+    const requirements = flat.requirements ?? [];
+
     if (
-        flat.clientCompanyName === undefined
+        flat.clientCompanyName == null
         && resolvedType === undefined
-        && (flat.requirements === undefined || flat.requirements.length === 0)
+        && requirements.length === 0
     ) {
         return null;
     }
 
     const out: OrderDetails = {};
-    if (flat.clientCompanyName !== undefined) {
+    if (flat.clientCompanyName != null && flat.clientCompanyName.trim() !== '') {
         out.clientCompanyName = { ai: flat.clientCompanyName };
     }
     if (resolvedType !== undefined) {
         out.productTypeId = resolvedType.productTypeId;
         out.productTypeName = resolvedType.productTypeName;
     }
-    if (flat.requirements !== undefined) {
-        out.requirements = flat.requirements.map((req, i): { ai: OrderRequirement } => ({
+    if (requirements.length > 0) {
+        out.requirements = requirements.map((req, i): { ai: OrderRequirement } => ({
             ai: {
                 index: i,
                 parameterName: req.parameterName,

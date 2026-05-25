@@ -12,7 +12,121 @@
       "fileId": "c2c5d99d-2847-441c-9747-b2e2c98e76ee",
       "id": "be9cf280-0c2a-4af6-b107-4b2e99615cf3",
       "createdAt": 1777985445252,
-      "updatedAt": 1778043788563
+      "updatedAt": 1779700031370,
+      "details": {
+        "clientCompanyName": {
+          "ai": "ООО ОБИС ЭНЕРГОМОНТАЖ"
+        },
+        "productTypeId": "6c05c0a2-bfb5-4403-b0f9-d585c3d8fc89",
+        "productTypeName": "НЭМС",
+        "requirements": [
+          {
+            "ai": {
+              "index": 0,
+              "parameterName": "Размеры стального трубопровода D*s, мм",
+              "requiredValue": "∅159х4,5",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 1,
+              "parameterName": "Марка стали трубопровода",
+              "requiredValue": "В-10",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 2,
+              "parameterName": "Размеры полиэтиленовой трубы D*s, мм",
+              "requiredValue": "160x14,6",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 3,
+              "parameterName": "SDR и марка полиэтиленового трубопровода",
+              "requiredValue": "ПЭ100 ГАЗ SDR11",
+              "used": true
+            }
+          }
+        ],
+        "designation": {
+          "ai": {
+            "tcId": "4360be54-5e83-4bde-a182-eacc7158bc67",
+            "values": [
+              {
+                "slotIndex": 0,
+                "value": "НЭМС",
+                "confidence": 1,
+                "reasoning": "Первый параметр всегда 'НЭМС'"
+              },
+              {
+                "slotIndex": 1,
+                "value": "159",
+                "confidence": 1,
+                "reasoning": "Берется значение диаметра из заявки клиента (без округления)"
+              },
+              {
+                "slotIndex": 2,
+                "value": null,
+                "confidence": 1,
+                "reasoning": "Класс давления не указан в требованиях, но по умолчанию выбираем наиболее вероятный вариант исходя из контекста"
+              },
+              {
+                "slotIndex": 3,
+                "value": null,
+                "confidence": 1,
+                "reasoning": "Длина изделия берется из заявки (не округлять)"
+              },
+              {
+                "slotIndex": 4,
+                "value": "МГ",
+                "confidence": 1,
+                "reasoning": "Тип транспортируемого продукта — подготовленный газ"
+              },
+              {
+                "slotIndex": 5,
+                "value": "5",
+                "confidence": 1,
+                "reasoning": "Место размещения на трубопроводе не указано в требованиях, но по умолчанию выбираем наиболее вероятный вариант исходя из контекста"
+              },
+              {
+                "slotIndex": 6,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "Соединение с трубопроводом — стандартное, с патрубками под сварное соединение"
+              },
+              {
+                "slotIndex": 7,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "Внутреннее покрытие не указано в требованиях, но по умолчанию выбираем наиболее вероятный вариант исходя из контекста"
+              },
+              {
+                "slotIndex": 8,
+                "value": null,
+                "confidence": 1,
+                "reasoning": "Наружное покрытие не указано в требованиях, но по умолчанию выбираем наиболее вероятный вариант исходя из контекста"
+              },
+              {
+                "slotIndex": 9,
+                "value": null,
+                "confidence": 1,
+                "reasoning": "Установка клемм не указана в требованиях"
+              },
+              {
+                "slotIndex": 10,
+                "value": "УХЛ, 1",
+                "confidence": 1,
+                "reasoning": "Климатическое исполнение — УХЛ, ХЛ"
+              }
+            ]
+          }
+        }
+      }
     },
     {
       "authorId": "4eefb009-9533-4787-95d5-9de0fa05b21e",
