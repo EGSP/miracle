@@ -1,5 +1,13 @@
 /* Высота и layering — как у .input (md): useFieldLayerStyle + spacing-8 */
 
+.designation-display-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--aramid-spacing-2);
+  max-width: 100%;
+}
+
 .designation-display {
   box-sizing: border-box;
   display: inline-flex;

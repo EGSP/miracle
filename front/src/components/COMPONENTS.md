@@ -132,6 +132,20 @@ export interface BaseInputProps {
 
 ---
 
+## Производные UI (`ui/derivations`)
+
+Компоненты, собранные из примитивов `ui/` под конкретные сценарии.
+
+### `CopyButton`
+
+- Путь: `ui/derivations/copy-button.tsx`
+- Обёртка над `Button`: `variant="icon-button"`, иконка `ClipboardCopy` (lucide), проп `size`
+- Копирование: `copyTextWithExecCommand` в `lib/copy-text.ts` — только `document.execCommand('copy')`, без Clipboard API (HTTP в LAN)
+- Пропсы: `text` (обязательный), `size` (`xs`…`xl`), `label` для `aria-label` (по умолчанию «Копировать»), `onCopy?(success)`, остальные — как у `Button`
+- Импорт: `import { CopyButton } from '@/components/ui/derivations'`
+
+---
+
 ## Группировка контролов: `<fieldset>` + `<legend>`
 
 Когда несколько однотипных контролов объединены под одним смыслом (чекбоксы, радио), используется `<fieldset>/<legend>` — не `<div>/<span>`. Screen reader'ы читают имя группы перед каждым контролом внутри.
@@ -252,7 +266,7 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 
 ## DesignationDisplay / DesignationInspector
 
-- **Display** — `DesignationDisplay.tsx`, `design/designation-display.css`: компактная строка, без резолва TC.
+- **Display** — `DesignationDisplay.tsx`, `design/designation-display.css`: компактная строка, без резолва TC; справа `CopyButton` (`buildDesignationDisplayCopyText` — части через «-», «?» как на экране).
 - **Inspector** — `DesignationInspector.tsx`, `design/designation-inspector.css`: таблица проблемных слотов; имена из TC по `tcId`; колонка «Позиция» — **1-based** (`#1`, `#2`, …), как подписи слотов в карточке ТУ.
 - **Правила ТУ** (`TCCRules`) — над заголовком правила: `Text.Helper` с `Используется: #1, #2` или `Не используется` (по `DesignationSlot.ruleIds`, позиции 1-based как в редакторе параметров).
 - Логика: `lib/designation-display.ts` (пороги, `buildDesignationDisplayParts`, `buildDesignationInspectorRows`, `designationToneClassName`).

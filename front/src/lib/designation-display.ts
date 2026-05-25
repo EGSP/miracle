@@ -87,6 +87,13 @@ export function buildDesignationDisplayParts(designation: Designation): Designat
     return parts;
 }
 
+/** Плоский текст условного обозначения для буфера: части через «-», пропуски и незаданные — «?». */
+export function buildDesignationDisplayCopyText(designation: Designation): string {
+    return buildDesignationDisplayParts(designation)
+        .map((part) => part.text)
+        .join('-');
+}
+
 export function designationToneClassName(tone: DesignationDisplayTone): string {
     if (tone === 'warn') {
         return 'designation-display-part designation-display-part--warn';
