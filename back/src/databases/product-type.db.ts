@@ -1,11 +1,7 @@
-import type { ProductType, Stored } from '@miracle/types';
-import { JsonCollection, registerDb, type StoredEntity } from './db.js';
+import { hasDeletion, type ProductType, type Stored } from '@miracle/types';
+import { JsonCollection, registerDb } from './db.js';
 
 const productTypeDb = registerDb('productTypes', await JsonCollection.create<ProductType>('product-types'));
-
-function isActiveProductType(row: StoredEntity<ProductType>): boolean {
-    return row.deletedAt == null;
-}
 
 declare module './db.js' {
     interface DbRegistry {
@@ -23,12 +19,12 @@ export const productTypesService = {
     },
 
     getAll: (): Stored<ProductType>[] => {
-        return productTypeDb.list().filter(isActiveProductType);
+        return productTypeDb.list().filter((row) => !hasDeletion(row));
     },
 
     getById: async (id: string): Promise<Stored<ProductType> | undefined> => {
         const row = await productTypeDb.getById(id);
-        if (!row || !isActiveProductType(row)) {
+        if (!row || hasDeletion(row)) {
             return undefined;
         }
         return row;
@@ -36,7 +32,7 @@ export const productTypesService = {
 
     update: async (id: string, patch: Partial<ProductType>): Promise<Stored<ProductType>> => {
         const existing = await productTypeDb.getById(id);
-        if (!existing || !isActiveProductType(existing)) {
+        if (!existing || hasDeletion(existing)) {
             throw new Error('Тип продукции не найден');
         }
         const updated = await productTypeDb.update(id, patch);
@@ -59,6 +55,15 @@ export const productTypesService = {
         const normalized = normalizeName(name);
         return productTypeDb
             .ref()
-            .find((item) => isActiveProductType(item) && normalizeName(item.name) === normalized);
+            .find((item) => !hasDeletion(item) && normalizeName(item.name) === normalized);
+    },
+
+    findByNameOrSynonym: (name: string): Stored<ProductType> | undefined => {
+        const normalized = normalizeName(name);
+        return productTypeDb
+            .ref()
+            .find((item) => !hasDeletion(item)
+                && (normalizeName(item.name) === normalized
+                    || item.synonyms.some((s) => normalizeName(s) === normalized)));
     },
 };

@@ -19,8 +19,7 @@ import { useTechnicalConditions } from '@/lib/queries/technical-condition.query'
  * Диалог запуска анализа условного обозначения.
  *
  * Заказ предзаполняется текущим, но остаётся редактируемым (на случай вызова диалога
- * не из карточки заказа). Тех. условие пользователь выбирает руками — список ТУ
- * фильтруется по productTypeId выбранного заказа, если он определён.
+ * не из карточки заказа). Тех. условие пользователь выбирает из полного списка ТУ.
  */
 export function AnalyseDesignationDialog({
     orderId,
@@ -67,12 +66,7 @@ function AnalyseDesignationForm({
         [orders, orderId],
     );
 
-    // Фильтр ТУ по productTypeId выбранного заказа — если у заказа productTypeId не
-    // определён, показываем все ТУ (конструктор должен иметь возможность выбрать вручную).
-    const productTypeId = selectedOrder?.details?.productTypeId;
-    const tcsQuery = useTechnicalConditions(
-        productTypeId ? { productTypeId } : undefined,
-    );
+    const tcsQuery = useTechnicalConditions();
     const tcs = tcsQuery.data ?? [];
 
     const selectedTc = useMemo(
@@ -106,7 +100,6 @@ function AnalyseDesignationForm({
             <Stack gap={3}>
                 <Text.Helper as="p">
                     Выберите заказ и ТУ — будет запущен анализ условного обозначения.
-                    Список ТУ автоматически фильтруется по типу продукции заказа, если он определён.
                 </Text.Helper>
 
                 <Stack gap={1}>
@@ -116,7 +109,6 @@ function AnalyseDesignationForm({
                         value={selectedOrder}
                         onChange={(next) => {
                             setOrderId(next?.id);
-                            // Смена заказа → фильтр ТУ меняется → сбрасываем выбор ТУ
                             setTcId(undefined);
                         }}
                         getItemKey={(item) => item.id}
@@ -157,13 +149,7 @@ function AnalyseDesignationForm({
                         )}
                     >
                         <Input.Dropdown.Selected />
-                        <Input.Dropdown.List
-                            emptyText={
-                                productTypeId
-                                    ? 'Нет ТУ для этого типа продукции'
-                                    : 'Нет доступных ТУ'
-                            }
-                        />
+                        <Input.Dropdown.List emptyText="Нет доступных ТУ" />
                     </Input.Dropdown>
                 </Stack>
 

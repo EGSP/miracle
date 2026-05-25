@@ -1,12 +1,7 @@
-import { ExtractionStatus, FileContent, FileDomain, FileModel, getFileDomain, Stored } from "@miracle/types";
-import { registerDb, JsonCollection, CreateEntityInput, StoredEntity } from "./db.js";
+import { ExtractionStatus, FileContent, FileDomain, FileModel, getFileDomain, hasDeletion, Stored } from "@miracle/types";
+import { registerDb, JsonCollection, CreateEntityInput } from "./db.js";
 import { filesService, getFilePath } from "./file.db.js";
 import { extractDocumentContent, extractSpreadsheetContent, extractTextContent, extractVisualContentWithLLM, extractVisualContentWithOCR, extractVisualContentWithTcLLM } from "../lib/extraction/index.js";
-
-/** Запись контента считается активной, если нет мягкого удаления (`deletedAt`). */
-function isActiveFileContent(content: StoredEntity<FileContent>): boolean {
-    return content.deletedAt == null;
-}
 
 export const filesContentDb = registerDb('file-content', await JsonCollection.create<FileContent>('file-content'));
 
@@ -36,7 +31,7 @@ export const filesContentService = {
             if (content.fileId !== fileId) {
                 return false;
             }
-            if (!includeDeleted && !isActiveFileContent(content)) {
+            if (!includeDeleted && hasDeletion(content)) {
                 return false;
             }
             return true;
@@ -82,7 +77,7 @@ export const filesContentService = {
         const alreadyInProgress = filesContentDb.ref().some(
             (c) =>
                 c.fileId === fileId
-                && isActiveFileContent(c)
+                && !hasDeletion(c)
                 && c.meta?.extractionStatus === ExtractionStatus.STARTED,
         );
         if (alreadyInProgress)

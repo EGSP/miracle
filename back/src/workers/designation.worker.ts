@@ -85,7 +85,8 @@ export const DESIGNATION_SYSTEM_PROMPT = `Ты определяешь значе
  * Часть B промпта — требования заказчика.
  *
  * Правило наложения слоёв:
- * - Dual-поля clientCompanyName / productCategory: human ?? ai;
+ * - Dual-поле clientCompanyName: human ?? ai;
+ * - productTypeId / productTypeName — плоские поля из details;
  * - requirements: если есть human — используется он (used игнорируется),
  *   иначе ai при условии used !== false; если ни того ни другого — пропуск.
  *
@@ -98,7 +99,9 @@ export function formatRequirements(order: Stored<Order>): string {
         throw new Error('У заказа нет details — сначала запустите анализ заявки');
     }
 
-    const productCategory = details.productCategory?.human ?? details.productCategory?.ai;
+    const productTypeLine = details.productTypeId && details.productTypeName
+        ? `Тип продукции: ${details.productTypeName} (id: ${details.productTypeId})`
+        : 'Тип продукции: не указан';
 
     const effective: OrderRequirement[] = [];
     for (const dual of details.requirements ?? []) {
@@ -121,9 +124,7 @@ export function formatRequirements(order: Stored<Order>): string {
     const lines = [
         '=== ТРЕБОВАНИЯ ЗАКАЗЧИКА ===',
         '',
-        productCategory !== undefined
-            ? `Категория продукции: ${productCategory}`
-            : 'Категория продукции: (не указана)',
+        productTypeLine,
         '',
         'Требования:',
         ...effective.map((req) => `- ${req.parameterName}: ${req.requiredValue}`),

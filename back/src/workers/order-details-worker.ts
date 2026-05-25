@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ExtractionStatus, ProductCategory, WorkerStatus } from '@miracle/types';
-import type { OrderDetails, OrderRequirement, OrderDetailsWorkerData, Stored } from '@miracle/types';
+import { ExtractionStatus, WorkerStatus } from '@miracle/types';
+import type { OrderDetails, OrderRequirement, OrderDetailsWorkerData, ProductType, Stored } from '@miracle/types';
 import { ordersService } from '../databases/order.db.js';
 import { filesContentService } from '../databases/file-content.db.js';
 import { workersService } from '../databases/workers.db.js';
+import { productTypesService } from '../databases/product-type.db.js';
 import { yandexLlm } from '../lib/yandex/yandex-llm.js';
-import { logger } from '../logger/logger.js';
+import { resolveProductType } from '../lib/order/resolve-product-type.js';
 import { BaseWorker } from './base-worker.js';
 import { countTokens } from '../lib/tokens/tokens.js';
 
@@ -16,18 +17,18 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Значения перечисления вынесены отдельно — в будущем ожидается расширение до 4–6 категорий
-const productCategoryValues = Object.values(ProductCategory) as [ProductCategory, ...ProductCategory[]];
-
 const FlatOrderDetailsZodSchema = z.object({
     clientCompanyName: z
         .string()
         .describe('Полное или сокращённое название компании-заказчика')
         .optional(),
-    productCategory: z
-        .enum(productCategoryValues)
-        .describe(`Категория заказываемой продукции. Допустимые значения: ${productCategoryValues.join(', ')}`)
-        .optional(),
+    productType: z
+        .object({
+            id: z.string().nullable().describe('id типа продукции из справочника или null'),
+            name: z.string().nullable().describe('name типа продукции из справочника или null'),
+        })
+        .nullable()
+        .describe('Тип продукции из справочника; null если не определён'),
     requirements: z
         .array(
             z.object({
@@ -44,23 +45,6 @@ const FlatOrderDetailsZodSchema = z.object({
 });
 type FlatOrderDetails = z.infer<typeof FlatOrderDetailsZodSchema>;
 const flatOrderDetailsJsonSchema = zodToJsonSchema(FlatOrderDetailsZodSchema);
-
-/*
-const SYSTEM_PROMPT = `Ты — ассистент для анализа заказов на промышленную продукцию.
-Тебе передаётся текст, извлечённый из документа. Текст может быть получен через OCR (распознавание изображения) или парсинг (разбор структурированного файла). В обоих случаях возможны артефакты: лишние пробелы, опечатки, неверно распознанные символы (О→0, l→1 и т.п.), смещённые столбцы таблиц.
-Извлеки из текста структурированные данные строго по переданной JSON-схеме.
-Если таблица была превращена в обычный текст, соседние строки часто образуют пару "название параметра" → "требуемое значение". Восстанавливай такие пары по смыслу и близости строк.
-Для каждого элемента requirements:
-- parameterName — полное название характеристики из заявки, включая единицы измерения и техническое обозначение, если они есть.
-- requiredValue — конкретное значение, указанное заказчиком для этой характеристики.
-- Не меняй местами название характеристики и значение.
-- Не сокращай название характеристики до одного технического обозначения, если рядом есть полная формулировка.
-- Не включай пустые поля, заголовки разделов и служебный текст как требования.
-Пример: строки "Размеры стального трубопровода D*s, мм" и "∅159х4,5" должны стать {"parameterName":"Размеры стального трубопровода D*s, мм","requiredValue":"∅159х4,5"}.
-Если какое-либо поле не удаётся определить из текста — пропусти его (не включай в ответ).
-Категорию продукта выбирай только из допустимых значений схемы.
-Отвечай ТОЛЬКО валидным JSON без markdown-обёртки.`;
-*/
 
 const SYSTEM_PROMPT = `Ты — ассистент для анализа заказов на промышленную продукцию.
 Тебе передаётся текст, извлечённый из документа. Текст может быть получен через OCR (распознавание изображения) или парсинг (разбор структурированного файла). В обоих случаях возможны артефакты: лишние пробелы, опечатки, неверно распознанные символы (О→0, l→1 и т.п.), смещённые столбцы таблиц.
@@ -81,20 +65,54 @@ const SYSTEM_PROMPT = `Ты — ассистент для анализа зак�
 - Не сокращай название характеристики до одного технического обозначения, если рядом есть полная формулировка.
 - Не включай пустые поля, заголовки разделов и служебный текст как требования.
 Пример: строки "Размеры стального трубопровода D*s, мм" и "∅159х4,5" должны стать {"parameterName":"Размеры стального трубопровода D*s, мм","requiredValue":"∅159х4,5"}.
-Если какое-либо поле не удаётся определить из текста — пропусти его (не включай в ответ).
-Категорию продукта выбирай только из допустимых значений схемы.
+Если какое-либо поле не удаётся определить из текста — пропусти его (не включай в ответ), кроме productType: это поле всегда присутствует в ответе (см. инструкцию в сообщении пользователя).
 Отвечай ТОЛЬКО валидным JSON без markdown-обёртки.`;
 
+function buildOrderDetailsUserMessage(params: {
+    catalog: Stored<ProductType>[];
+    applicationText: string;
+}): string {
+    const catalogJson = JSON.stringify(
+        params.catalog.map((item) => ({
+            id: item.id,
+            name: item.name,
+            synonyms: item.synonyms,
+        })),
+        null,
+        2,
+    );
 
+    return [
+        '=== ТИП ПРОДУКЦИИ ===',
+        '',
+        'Определи тип заказываемой продукции только из справочника ниже.',
+        'В JSON-ответе поле productType обязательно:',
+        '- если тип определён — укажи id и name строго из справочника (при нескольких похожих названиях приоритет у корректного id);',
+        '- если определить нельзя — productType: null.',
+        'Не выдумывай id и name вне справочника.',
+        '',
+        'Справочник типов продукции:',
+        catalogJson,
+        '',
+        '=== ТЕКСТ ЗАЯВКИ ===',
+        '',
+        params.applicationText,
+    ].join('\n');
+}
 
 /**
  * Ответ LLM (плоский JSON по схеме выше) → доменный `OrderDetails`: только слой `ai`,
  * полностью заменяет прежние `details` заказа.
  */
-function flatToDualOrderDetails(flat: FlatOrderDetails): OrderDetails | null {
+function flatToDualOrderDetails(
+    flat: FlatOrderDetails,
+    catalog: Stored<ProductType>[],
+): OrderDetails | null {
+    const resolvedType = resolveProductType(flat.productType, catalog);
+
     if (
         flat.clientCompanyName === undefined
-        && flat.productCategory === undefined
+        && resolvedType === undefined
         && (flat.requirements === undefined || flat.requirements.length === 0)
     ) {
         return null;
@@ -104,8 +122,9 @@ function flatToDualOrderDetails(flat: FlatOrderDetails): OrderDetails | null {
     if (flat.clientCompanyName !== undefined) {
         out.clientCompanyName = { ai: flat.clientCompanyName };
     }
-    if (flat.productCategory !== undefined) {
-        out.productCategory = { ai: flat.productCategory };
+    if (resolvedType !== undefined) {
+        out.productTypeId = resolvedType.productTypeId;
+        out.productTypeName = resolvedType.productTypeName;
     }
     if (flat.requirements !== undefined) {
         out.requirements = flat.requirements.map((req, i): { ai: OrderRequirement } => ({
@@ -169,14 +188,20 @@ export class OrderDetailsWorker extends BaseWorker {
             }
 
             if (!this.data.cloudOperationId) {
+                const catalog = productTypesService.getAll();
+                if (catalog.length === 0) {
+                    throw new Error('В справочнике нет активных типов продукции');
+                }
+
                 const text = await this.getFileText();
+                const userText = buildOrderDetailsUserMessage({ catalog, applicationText: text });
                 const cloudOperationId = await yandexLlm.submitCompletion({
                     messages: [
                         { role: 'system', text: SYSTEM_PROMPT },
-                        { role: 'user', text },
+                        { role: 'user', text: userText },
                     ],
                     temperature: 0.1,
-                    maxTokens: countTokens(SYSTEM_PROMPT+text) * 10,
+                    maxTokens: countTokens(SYSTEM_PROMPT + userText) * 10,
                     jsonSchema: flatOrderDetailsJsonSchema,
                 });
                 this.data.cloudOperationId = cloudOperationId;
@@ -185,7 +210,7 @@ export class OrderDetailsWorker extends BaseWorker {
                 this.data = updatedWD as Stored<OrderDetailsWorkerData>;
             }
 
-            if(!this.data.id){
+            if (!this.data.id) {
                 throw new Error('Воркер не инициализирован: ожидается вызов mount() перед run()');
             }
 
@@ -193,9 +218,10 @@ export class OrderDetailsWorker extends BaseWorker {
                 const poll = await yandexLlm.pollCompletionJson(this.data.cloudOperationId!, FlatOrderDetailsZodSchema);
 
                 if (poll.done) {
+                    const catalog = productTypesService.getAll();
                     const parsed = FlatOrderDetailsZodSchema.parse(poll.result);
-                    const details = flatToDualOrderDetails(parsed);
-                    if(!details){
+                    const details = flatToDualOrderDetails(parsed, catalog);
+                    if (!details) {
                         throw new Error(`Не удалось извлечь данные из заказа: ${JSON.stringify(parsed)}`);
                     }
 
@@ -211,7 +237,7 @@ export class OrderDetailsWorker extends BaseWorker {
             await this.markStopped();
         } catch (error) {
             const message = OrderDetailsWorker.extractErrorMessage(error);
-            
+
             if (this.data.id) {
                 const updatedWD = await workersService.update(this.data.id, {
                     status: WorkerStatus.Failed,
@@ -233,18 +259,17 @@ export class OrderDetailsWorker extends BaseWorker {
         if (this.data.type !== 'order-details-worker') {
             throw new Error('Неверный тип воркера');
         }
-        if(!this.data.orderId){
+        if (!this.data.orderId) {
             throw new Error('Воркер не получил идентификатор заказа');
         }
-        if(!this.data.orderDetails){
+        if (!this.data.orderDetails) {
             throw new Error('Воркер не получил данные из заказа');
         }
-        // logger.info(JSON.stringify(this.data.orderDetails, null, 2));
         await ordersService.update(this.data.orderId, { details: this.data.orderDetails });
     }
 
     private async getFileText(): Promise<string> {
-        if(!this.data.orderId){
+        if (!this.data.orderId) {
             throw new Error('Воркер не получил идентификатор заказа');
         }
 

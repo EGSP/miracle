@@ -1,12 +1,6 @@
 import { Dual } from "./ai.js";
 import type { Designation } from "./designation.js";
 
-export const ProductCategory = {
-    NEMS: 'НЭМС',
-    Bushing: 'Втулка',
-} as const;
-export type ProductCategory = typeof ProductCategory[keyof typeof ProductCategory];
-
 export type OrderRequirement = {
     /** Уникальный номер требования. ИИ-требования: 0…N (воркер). Человеческие новые: 10000+. */
     index: number;
@@ -22,10 +16,10 @@ export type OrderRequirement = {
 
 export type OrderDetails = {
     clientCompanyName?: Dual<string>;
-    productCategory?: Dual<ProductCategory>;
     requirements?: Dual<OrderRequirement>[];
-    /** Тип продукции, определённый из заявки. */
+    /** Тип продукции из справочника (после анализа заявки или ручного выбора). */
     productTypeId?: string;
+    productTypeName?: string;
     /**
      * Условное обозначение.
      * ai — результат DesignationWorker.
@@ -44,4 +38,8 @@ export type OrderQuery = {
     id?: string;
     authorId?: string;
     fileId?: string;
+};
+
+export function getOrderProductTypeId(details?: OrderDetails | null): string | undefined {
+    return details?.productTypeId?.trim() || undefined;
 }

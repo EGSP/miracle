@@ -81,6 +81,11 @@ export function OrderCardDetails() {
             <Text.Heading as="h3" variant="compact-01">
                 Детали заказа
             </Text.Heading>
+            {details.productTypeName ? (
+                <Text.Label as="p">
+                    Тип продукции: {details.productTypeName}
+                </Text.Label>
+            ) : null}
             {designation && <DesignationSection designation={designation} />}
             <Stack gap={2}>
                 <Text.Heading as="h4" variant="compact-01">
