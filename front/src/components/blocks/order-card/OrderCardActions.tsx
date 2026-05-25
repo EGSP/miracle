@@ -1,36 +1,36 @@
 ﻿import { useMemo } from 'react';
-import { Column, Grid, Stack, Text } from '@miracle/aramid';
+import { Stack, Text } from '@miracle/aramid';
 import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/modal-dialog';
 import { InlineMutationNotification } from '@/components/ui/inline-mutation-notification';
 import { useGuardState } from '@/contexts/dirty-state/DirtyGuardContext';
-import { useAnalyseOrderDetails, useCanAnalyseOrderDetails, useClearAnalysedDetails } from '@/lib/queries/order.query';
+import { useDialog } from '@/lib/hooks/use-dialog';
+import { useAnalyseOrderDetails, useCanAnalyseOrderDetails } from '@/lib/queries/order.query';
 import { useOrderCardContext } from './OrderCard';
-import { AnalyseDesignationDialog } from './AnalyseDesignationDialog';
+import { AnalyseDesignationModal } from './AnalyseDesignationModal';
 
 export function OrderCardActions() {
     const { order, isSaving, save, saveError } = useOrderCardContext();
     const { isDirtyAnywhere } = useGuardState();
+    const { open } = useDialog();
 
     const details = useMemo(() => order?.details, [order?.id]);
 
     const analyseDetailsMutation = useAnalyseOrderDetails(order?.id);
     const analyseAvailabilityQuery = useCanAnalyseOrderDetails(order?.id);
-    const clearDetailsMutation = useClearAnalysedDetails(order?.id);
 
-    const canAnalyse =
-        !isDirtyAnywhere
-        && !details
-        && analyseAvailabilityQuery.data?.canAnalyse === true;
+    const availability = analyseAvailabilityQuery.data;
+    const hasExistingAnalysis = details != null;
+    const canAnalyseFirst = !isDirtyAnywhere && availability?.canAnalyse === true;
+    const canForceReanalyse = !isDirtyAnywhere && availability?.canForceReanalyse === true;
+    const canRunAnalyse = canAnalyseFirst || canForceReanalyse;
 
     const analyseDisabledMessage = isDirtyAnywhere
         ? 'Сохраните изменения перед запуском анализа'
-        : details
-            ? 'Сначала очистите детали заказа, чтобы запустить анализ снова'
-            : analyseAvailabilityQuery.data?.errorMessage;
+        : !canRunAnalyse
+            ? availability?.errorMessage
+            : undefined;
 
-    // Кнопка анализа условного обозначения доступна, когда у заказа есть хотя бы одно
-    // активное требование (human или ai с used !== false). Это совпадает с логикой
-    // валидации на бэке (см. analyseDesignation в order.router.ts).
     const hasEffectiveRequirement = useMemo(() => {
         return (details?.requirements ?? []).some(
             (dual) => dual.human !== undefined || (dual.ai !== undefined && dual.ai.used !== false),
@@ -43,6 +43,49 @@ export function OrderCardActions() {
         : !hasEffectiveRequirement
             ? 'Сначала выведите требования заказа'
             : undefined;
+
+    const handleAnalyseClick = () => {
+        if (hasExistingAnalysis) {
+            open(({ close }) => (
+                <Dialog
+                    label="Анализ заявки"
+                    title="Запустить вывод требований заново?"
+                    size="sm"
+                    onClose={close}
+                    actions={[
+                        { label: 'Отмена', onClick: close, variant: 'secondary' },
+                        {
+                            label: 'Вывести заново',
+                            onClick: () => {
+                                analyseDetailsMutation.mutate({ forceReanalyse: true });
+                                close();
+                            },
+                        },
+                    ]}
+                >
+                    <Text as="p" compact className="text-muted-foreground">
+                        Текущие результаты анализа заявки (требования, тип продукции и др.) будут удалены,
+                        после чего запустится новый вывод.
+                    </Text>
+                </Dialog>
+            ));
+            return;
+        }
+
+        analyseDetailsMutation.mutate({ forceReanalyse: false });
+    };
+
+    const handleAnalyseDesignationClick = () => {
+        if (!order?.id) {
+            return;
+        }
+        open(({ close }) => (
+            <AnalyseDesignationModal
+                defaultOrderId={order.id}
+                onClose={close}
+            />
+        ));
+    };
 
     return (
         <Stack gap={6} orientation='vertical'>
@@ -73,33 +116,20 @@ export function OrderCardActions() {
                                     ? 'Проверка...'
                                     : 'Вывести требования'
                         }
-                        disabled={!canAnalyse || analyseAvailabilityQuery.isFetching || analyseDetailsMutation.isPending}
-                        onClick={() => analyseDetailsMutation.mutate()}
-                    />
-                    <Button
-                        variant="tertiary"
-                        size="sm"
-                        label={clearDetailsMutation.isPending ? 'Очистка...' : 'Очистить анализ'}
-                        disabled={!details || clearDetailsMutation.isPending}
-                        onClick={() => clearDetailsMutation.mutate()}
+                        disabled={!canRunAnalyse || analyseAvailabilityQuery.isFetching || analyseDetailsMutation.isPending}
+                        onClick={handleAnalyseClick}
                     />
                 </Stack>
 
-                {order?.id && (
-                    <Stack gap={2}>
-                        <AnalyseDesignationDialog
-                            orderId={order.id}
-                            trigger={
-                                <Button
-                                    variant="tertiary"
-                                    size="sm"
-                                    label="Анализ заказа"
-                                    disabled={!canAnalyseDesignation}
-                                />
-                            }
-                        />
-                    </Stack>
-                )}
+                <Stack gap={2}>
+                    <Button
+                        variant="tertiary"
+                        size="sm"
+                        label="Анализ заказа"
+                        disabled={!canAnalyseDesignation}
+                        onClick={handleAnalyseDesignationClick}
+                    />
+                </Stack>
             </Stack>
             <Stack gap={2} orientation='vertical'>
                 {analyseDisabledMessage && !analyseAvailabilityQuery.isError && (
@@ -122,7 +152,6 @@ export function OrderCardActions() {
                     mutation={analyseDetailsMutation}
                     successMessage="Воркер запущен"
                 />
-                <InlineMutationNotification mutation={clearDetailsMutation} />
             </Stack>
         </Stack>
     );

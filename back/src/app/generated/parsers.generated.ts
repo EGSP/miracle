@@ -507,6 +507,31 @@ export function parseCanAnalyseOrderDetailsParams(raw: Record<string, unknown>) 
     return result;
 }
 
+export function parseAnalyseOrderDetailsQuery(raw: Record<string, unknown>) {
+    const errors: Array<{ field: string; message: string }> = [];
+    const result: Record<string, unknown> = {};
+
+    const raw_forceReanalyse = readSingleValue(raw, "forceReanalyse");
+    if (raw_forceReanalyse.missing) {
+        result["forceReanalyse"] = undefined;
+    } else if (raw_forceReanalyse.multi) {
+        errors.push({ field: "forceReanalyse", message: 'expected single value' });
+    } else {
+        const parsed = parseLiteral(raw_forceReanalyse.value, [false,true]);
+        if (parsed === undefined) {
+            errors.push({ field: "forceReanalyse", message: "expected one of: false, true" });
+        } else {
+            result["forceReanalyse"] = parsed;
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new ParseError(errors);
+    }
+
+    return result;
+}
+
 export function parseAnalyseOrderDetailsParams(raw: Record<string, unknown>) {
     const errors: Array<{ field: string; message: string }> = [];
     const result: Record<string, unknown> = {};

@@ -9,6 +9,8 @@ import { OrderDetailsWorker } from "../workers/order-details-worker.js";
 
 export type CanAnalyseOrderDetailsResult = {
     canAnalyse: boolean;
+    /** Повторный вывод: есть `details`, базовые условия выполнены (очистка выполняется при запуске с `forceReanalyse`). */
+    canForceReanalyse?: boolean;
     errorMessage?: string;
 };
 
@@ -113,27 +115,28 @@ export const ordersService = {
             return { canAnalyse: false, errorMessage: 'Файл заказа недоступен' };
         }
 
-        if (order.details?.requirements && order.details.requirements.length > 0) {
-            return {
-                canAnalyse: false,
-                errorMessage: 'Сначала очистите детали заказа, чтобы запустить анализ снова',
-            };
-        }
-
         const activeOrderDetailsWorkers = workersService.query(
             (w) => w.type === 'order-details-worker'
                 && w.status === WorkerStatus.Active
                 && w.orderId === id,
         );
         if (activeOrderDetailsWorkers.length > 0) {
-            return { canAnalyse: false, errorMessage: 'Для заказа уже выполняется анализ' };
+            return { canAnalyse: false, canForceReanalyse: false, errorMessage: 'Для заказа уже выполняется анализ' };
         }
 
-        return { canAnalyse: true };
+        if (order.details != null) {
+            return { canAnalyse: false, canForceReanalyse: true };
+        }
+
+        return { canAnalyse: true, canForceReanalyse: false };
     },
 
     // Запускает анализ деталей заказа
-    analyseOrderDetails: async (id: string): Promise<void> => {
+    analyseOrderDetails: async (id: string, options?: { forceReanalyse?: boolean }): Promise<void> => {
+        if (options?.forceReanalyse === true) {
+            await ordersService.clearAnalysedDetails(id);
+        }
+
         const availability = await ordersService.canAnalyseOrderDetails(id);
         if (!availability.canAnalyse) {
             throw new Error(availability.errorMessage ?? 'Анализ заказа недоступен');

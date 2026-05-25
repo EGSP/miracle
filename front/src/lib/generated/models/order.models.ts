@@ -7,7 +7,12 @@ export type CreateOrderDTO = {
 
 export type CanAnalyseOrderDetailsResponse = {
     canAnalyse: boolean;
+    canForceReanalyse?: boolean;
     errorMessage?: string;
+};
+
+export type AnalyseOrderDetailsQuery = {
+    forceReanalyse?: boolean;
 };
 
 export type AnalyseDesignationResponse = { workerId: string };

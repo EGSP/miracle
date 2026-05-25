@@ -27,9 +27,9 @@ export const useAnalyseOrderDetails = (orderId: string | undefined) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: () => {
+        mutationFn: ({ forceReanalyse = false }: { forceReanalyse?: boolean } = {}) => {
             if (!orderId) throw new Error('Order ID is required');
-            return order.analyseOrderDetails({ id: orderId });
+            return order.analyseOrderDetails({ id: orderId }, { forceReanalyse });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });

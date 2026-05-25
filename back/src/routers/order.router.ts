@@ -16,7 +16,12 @@ type UpdateOrderDTO = Partial<Pick<Order, 'fileId' | 'details'>>;
 
 type CanAnalyseOrderDetailsResponse = {
     canAnalyse: boolean;
+    canForceReanalyse?: boolean;
     errorMessage?: string;
+};
+
+type AnalyseOrderDetailsQuery = {
+    forceReanalyse?: boolean;
 };
 
 const createOrder = route.post('/create', {
@@ -79,9 +84,11 @@ const updateOrder = route.put('/:id', {
 });
 
 const analyseOrderDetails = route.post('/:id/analyse-details', {
-    validate: { params: true },
-    handler: async ({ params }: { params: { id: string } }) => {
-        await ordersService.analyseOrderDetails(params.id);
+    validate: { params: true, query: true },
+    handler: async ({ params, query }: { params: { id: string }, query: AnalyseOrderDetailsQuery }) => {
+        await ordersService.analyseOrderDetails(params.id, {
+            forceReanalyse: query.forceReanalyse === true,
+        });
     },
 });
 

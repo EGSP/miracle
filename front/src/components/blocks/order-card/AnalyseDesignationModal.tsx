@@ -1,59 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Stack, Text } from '@miracle/aramid';
 import type { Order, Stored, TechnicalCondition } from '@miracle/types';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/modal-dialog';
 import { InlineMutationNotification } from '@/components/ui/inline-mutation-notification';
 import { useGetOrders, useAnalyseDesignation } from '@/lib/queries/order.query';
 import { useTechnicalConditions } from '@/lib/queries/technical-condition.query';
 
-/**
- * Диалог запуска анализа условного обозначения.
- *
- * Заказ предзаполняется текущим, но остаётся редактируемым (на случай вызова диалога
- * не из карточки заказа). Тех. условие пользователь выбирает из полного списка ТУ.
- */
-export function AnalyseDesignationDialog({
-    orderId,
-    trigger,
-}: {
-    orderId: string;
-    trigger: React.ReactElement;
-}) {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={trigger} />
-            <DialogContent size="medium">
-                <DialogHeader>
-                    <DialogTitle>Анализ заказа — условное обозначение</DialogTitle>
-                </DialogHeader>
-                {open && (
-                    <AnalyseDesignationForm
-                        defaultOrderId={orderId}
-                        onDone={() => setOpen(false)}
-                    />
-                )}
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function AnalyseDesignationForm({
+export function AnalyseDesignationModal({
     defaultOrderId,
-    onDone,
+    onClose,
 }: {
     defaultOrderId: string;
-    onDone: () => void;
+    onClose: () => void;
 }) {
     const [orderId, setOrderId] = useState<string | undefined>(defaultOrderId);
     const [tcId, setTcId] = useState<string | undefined>(undefined);
@@ -84,27 +43,47 @@ function AnalyseDesignationForm({
         && !tcsQuery.isLoading;
 
     const handleSubmit = () => {
-        if (!orderId || !tcId) return;
+        if (!orderId || !tcId) {
+            return;
+        }
         analyseMutation.mutate(
             { orderId, tcId },
             {
                 onSuccess: () => {
-                    onDone();
+                    onClose();
                 },
             },
         );
     };
 
     return (
-        <>
-            <Stack gap={3}>
+        <Dialog
+            label="Условное обозначение"
+            title="Анализ заказа"
+            size="md"
+            onClose={onClose}
+            actions={[
+                {
+                    label: 'Отмена',
+                    onClick: onClose,
+                    variant: 'secondary',
+                    disabled: analyseMutation.isPending,
+                },
+                {
+                    label: analyseMutation.isPending ? 'Запуск…' : 'Анализировать',
+                    onClick: handleSubmit,
+                    disabled: !canSubmit,
+                },
+            ]}
+        >
+            <Stack gap={5}>
                 <Text.Helper as="p">
-                    Выберите заказ и ТУ — будет запущен анализ условного обозначения.
+                    Выберите заказ и техническое условие — будет запущен анализ условного обозначения.
                 </Text.Helper>
 
                 <Stack gap={1}>
+                    <Text.Label as="span">Заказ</Text.Label>
                     <Input.Dropdown<Stored<Order>>
-                        label="Заказ"
                         items={orders}
                         value={selectedOrder}
                         onChange={(next) => {
@@ -130,8 +109,8 @@ function AnalyseDesignationForm({
                 </Stack>
 
                 <Stack gap={1}>
+                    <Text.Label as="span">Техническое условие</Text.Label>
                     <Input.Dropdown<Stored<TechnicalCondition>>
-                        label="Техническое условие"
                         items={tcs}
                         value={selectedTc}
                         onChange={(next) => setTcId(next?.id)}
@@ -155,20 +134,7 @@ function AnalyseDesignationForm({
 
                 <InlineMutationNotification mutation={analyseMutation} successMessage="Анализ запущен" />
             </Stack>
-            <DialogFooter>
-                <Button
-                    variant="tertiary"
-                    label="Отмена"
-                    onClick={onDone}
-                    disabled={analyseMutation.isPending}
-                />
-                <Button
-                    label={analyseMutation.isPending ? 'Запуск…' : 'Анализировать'}
-                    onClick={handleSubmit}
-                    disabled={!canSubmit}
-                />
-            </DialogFooter>
-        </>
+        </Dialog>
     );
 }
 
