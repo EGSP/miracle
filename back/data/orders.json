@@ -813,20 +813,58 @@
         "clientCompanyName": {
           "ai": "ООО «Газпром трансгаз Казань»"
         },
-        "productTypeId": "6c05c0a2-bfb5-4403-b0f9-d585c3d8fc89",
-        "productTypeName": "НЭМС",
         "requirements": [
           {
             "ai": {
               "index": 0,
-              "parameterName": "Установка НЭМС (подземная, надземная)",
-              "requiredValue": "подземная",
+              "parameterName": "Размеры трубопровода D*s, мм",
+              "requiredValue": "57х5",
               "used": true
             }
           },
           {
             "ai": {
               "index": 1,
+              "parameterName": "Марка стали трубопровода",
+              "requiredValue": "09Г2С",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 2,
+              "parameterName": "Рабочее давление трубопровода, МПа (кгс/см2)",
+              "requiredValue": "5,4 (55)",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 3,
+              "parameterName": "Транспортируемая среда",
+              "requiredValue": "газ",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 4,
+              "parameterName": "Температура транспортируемой среды, °С",
+              "requiredValue": "-10:+15",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 5,
+              "parameterName": "Установка НЭМС",
+              "requiredValue": "подземная",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 6,
               "parameterName": "Соединение с трубопроводом",
               "requiredValue": "сварное",
               "used": true
@@ -834,49 +872,9 @@
           },
           {
             "ai": {
-              "index": 2,
+              "index": 7,
               "parameterName": "Наружное покрытие НЭМС (тип покрытия)",
               "requiredValue": "антикоррозионное",
-              "used": true
-            }
-          },
-          {
-            "ai": {
-              "index": 3,
-              "parameterName": "Типоразмер заказываемого НЭМС",
-              "requiredValue": "500мм",
-              "used": true
-            }
-          },
-          {
-            "ai": {
-              "index": 4,
-              "parameterName": "Количество, шт.",
-              "requiredValue": "5",
-              "used": true
-            }
-          },
-          {
-            "ai": {
-              "index": 5,
-              "parameterName": "Климатическое исполнение (У/ХЛ)",
-              "requiredValue": "У1",
-              "used": true
-            }
-          },
-          {
-            "ai": {
-              "index": 6,
-              "parameterName": "Температура окружающей среды (min/max, °С)",
-              "requiredValue": "-33/+38",
-              "used": true
-            }
-          },
-          {
-            "ai": {
-              "index": 7,
-              "parameterName": "Тепловое воздействие (пар, горячая нефть)",
-              "requiredValue": "нет",
               "used": true
             }
           },
@@ -887,12 +885,125 @@
               "requiredValue": "искоразрядник",
               "used": true
             }
+          },
+          {
+            "ai": {
+              "index": 9,
+              "parameterName": "Климатическое исполнение (У/ХЛ)",
+              "requiredValue": "У1",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 10,
+              "parameterName": "Температура окружающей среды (min/max, °С)",
+              "requiredValue": "-33/+38",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 11,
+              "parameterName": "Тепловое воздействие (пар, горячая нефть)",
+              "requiredValue": "нет",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 12,
+              "parameterName": "Типоразмер заказываемого НЭМС",
+              "requiredValue": "500мм",
+              "used": true
+            }
+          },
+          {
+            "ai": {
+              "index": 13,
+              "parameterName": "Количество, шт.",
+              "requiredValue": "5",
+              "used": true
+            }
           }
-        ]
+        ],
+        "designation": {
+          "ai": {
+            "tcId": "4360be54-5e83-4bde-a182-eacc7158bc67",
+            "values": [
+              {
+                "slotIndex": 0,
+                "value": "НЭМС",
+                "confidence": 1,
+                "reasoning": "Первый параметр всегда 'НЭМС'"
+              },
+              {
+                "slotIndex": 1,
+                "value": "57",
+                "confidence": 1,
+                "reasoning": "Берется значение диаметра из заявки клиента (без округления)"
+              },
+              {
+                "slotIndex": 2,
+                "value": "55",
+                "confidence": 1,
+                "reasoning": "Рабочее давление 5,4 МПа (55 кгс/см2) соответствует классу давления P55"
+              },
+              {
+                "slotIndex": 4,
+                "value": "МГ",
+                "confidence": 1,
+                "reasoning": "Транспортируемая среда — газ"
+              },
+              {
+                "slotIndex": 5,
+                "value": "5",
+                "confidence": 1,
+                "reasoning": "Установка НЭМС — подземная"
+              },
+              {
+                "slotIndex": 6,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "Соединение с трубопроводом — сварное"
+              },
+              {
+                "slotIndex": 7,
+                "value": "1",
+                "confidence": 1,
+                "reasoning": "Внутреннее покрытие не указано, но по умолчанию используется исполнение 1 — без покрытия"
+              },
+              {
+                "slotIndex": 8,
+                "value": "5",
+                "confidence": 1,
+                "reasoning": "Наружное покрытие НЭМС — антикоррозионное, что соответствует исполнению 5"
+              },
+              {
+                "slotIndex": 9,
+                "value": "КИ",
+                "confidence": 1,
+                "reasoning": "Оснащение клеммами, искоразрядником — искоразрядник"
+              },
+              {
+                "slotIndex": 10,
+                "value": "У1",
+                "confidence": 1,
+                "reasoning": "Климатическое исполнение (У/ХЛ): У1"
+              },
+              {
+                "slotIndex": 3,
+                "value": null,
+                "confidence": 1,
+                "reasoning": "Длина изделия не указана, но это значение берется из заявки (не округлять)"
+              }
+            ]
+          }
+        }
       },
       "id": "0a975e2b-999c-4a62-9a3e-4c029033f2ee",
       "createdAt": 1779702395217,
-      "updatedAt": 1779704323446
+      "updatedAt": 1779706043457
     }
   ]
 }

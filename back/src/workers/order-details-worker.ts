@@ -13,6 +13,15 @@ import { countTokens } from '../lib/tokens/tokens.js';
 
 const POLL_INTERVAL_MS = 3_000;
 
+/** Ручной переключатель: только сборка user-промпта (справочник типов); разбор ответа LLM не затрагивает. */
+/** 2026.05.25: Поставлено false, т.к. если в заявке в середине списка требований указана продукция, то LLM игнорирует параметры до указания продукции.
+ * Делает она это чтобы взять параметры касающиеся только конкретного типа продукции.
+ * Остальное ей кажется лишним. 
+ * 
+ * P.S. проверено на промпте от этого же числа.
+ */
+export const includeProductType = false;
+
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -50,6 +59,7 @@ const SYSTEM_PROMPT = `Ты — ассистент для анализа зак�
 Тебе передаётся текст, извлечённый из документа. Текст может быть получен через OCR (распознавание изображения) или парсинг (разбор структурированного файла). В обоих случаях возможны артефакты: лишние пробелы, опечатки, неверно распознанные символы (О→0, l→1 и т.п.), смещённые столбцы таблиц.
 Извлеки из текста структурированные данные строго по переданной JSON-схеме.
 Если таблица была превращена в обычный текст, соседние строки часто образуют пару "название параметра" → "требуемое значение". Восстанавливай такие пары по смыслу и близости строк.
+Пары параметр→значение могут идти и до заголовков вроде «требования», «требования к …» — включай их в requirements; заголовок раздела не отсекает текст выше.
 
 Отметки выбора (чекбоксы, галочки, крестики и аналоги):
 - В заявках часто встречаются визуальные отметки: пустой/закрашенный квадрат, ☑ ☐ ✓ ✗ ✕, «V», «+», «X», «да/нет» в отдельной ячейке, [x] / [ ] и похожие обозначения. После OCR они могут выглядеть как отдельные символы в начале/конце строки или в соседнем «столбце» текста — не игнорируй их: по ним суди, что заказчик реально выбрал или подтвердил.
@@ -69,31 +79,45 @@ const SYSTEM_PROMPT = `Ты — ассистент для анализа зак�
 Отвечай ТОЛЬКО валидным JSON без markdown-обёртки.`;
 
 function buildOrderDetailsUserMessage(params: {
+    includeProductType: boolean;
     catalog: Stored<ProductType>[];
     applicationText: string;
 }): string {
-    const catalogJson = JSON.stringify(
-        params.catalog.map((item) => ({
-            id: item.id,
-            name: item.name,
-            synonyms: item.synonyms,
-        })),
-        null,
-        2,
-    );
+    const productTypeBlock = params.includeProductType
+        ? (() => {
+            const catalogJson = JSON.stringify(
+                params.catalog.map((item) => ({
+                    id: item.id,
+                    name: item.name,
+                    synonyms: item.synonyms,
+                })),
+                null,
+                2,
+            );
+            return [
+                '=== ТИП ПРОДУКЦИИ ===',
+                '',
+                'Определи тип заказываемой продукции только из справочника ниже.',
+                'В JSON-ответе поле productType обязательно:',
+                '- если тип определён — укажи id и name строго из справочника (при нескольких похожих названиях приоритет у корректного id);',
+                '- если определить нельзя — productType: null.',
+                'Не выдумывай id и name вне справочника.',
+                '',
+                'Справочник типов продукции:',
+                catalogJson,
+                '',
+            ];
+        })()
+        : [
+            '=== ТИП ПРОДУКЦИИ ===',
+            '',
+            'Определение типа продукции для этого запроса отключено.',
+            'В JSON-ответе укажи productType: null (id и name не заполняй).',
+            '',
+        ];
 
     return [
-        '=== ТИП ПРОДУКЦИИ ===',
-        '',
-        'Определи тип заказываемой продукции только из справочника ниже.',
-        'В JSON-ответе поле productType обязательно:',
-        '- если тип определён — укажи id и name строго из справочника (при нескольких похожих названиях приоритет у корректного id);',
-        '- если определить нельзя — productType: null.',
-        'Не выдумывай id и name вне справочника.',
-        '',
-        'Справочник типов продукции:',
-        catalogJson,
-        '',
+        ...productTypeBlock,
         '=== ТЕКСТ ЗАЯВКИ ===',
         '',
         params.applicationText,
@@ -192,13 +216,17 @@ export class OrderDetailsWorker extends BaseWorker {
             const workerId = this.data.id;
 
             if (!this.data.cloudOperationId) {
-                const catalog = productTypesService.getAll();
-                if (catalog.length === 0) {
+                const catalog = includeProductType ? productTypesService.getAll() : [];
+                if (includeProductType && catalog.length === 0) {
                     throw new Error('В справочнике нет активных типов продукции');
                 }
 
                 const text = await this.getFileText();
-                const userText = buildOrderDetailsUserMessage({ catalog, applicationText: text });
+                const userText = buildOrderDetailsUserMessage({
+                    includeProductType,
+                    catalog,
+                    applicationText: text,
+                });
                 const finalPrompt = {
                     system: SYSTEM_PROMPT,
                     user: userText,
