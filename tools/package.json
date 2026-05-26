@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc",
     "generate:client": "tsx src/generate-client.ts",
+    "generate:client-nest": "tsx src/generate-client-nest.ts",
     "generate:backend-validation": "tsx src/generate-backend-validation.ts"
   },
   "devDependencies": {

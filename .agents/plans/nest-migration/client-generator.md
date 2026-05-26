@@ -162,20 +162,22 @@ export class UsersController {
 
 ### Раскладка вывода
 
-Тот же layout, что у миракла — это уже работает с фронтовым кодом:
+Тот же layout, что у миракла — это уже работает с фронтовым кодом, и сохраняет одно простое правило «все модели лежат в `models/`»:
 
 ```
 front/src/lib/generated/
   http.ts                       # formatPath helper
   index.ts                      # barrel: export * from './users.client', './orders.client', ...
   users.client.ts               # клиент конкретного контроллера
-  users.models.ts               # модели, нужные только этому контроллеру (если есть)
   orders.client.ts
-  orders.models.ts
   models/
     index.ts                    # barrel моделей (если кто-то импортит ./models)
     common.models.ts            # модели, используемые >1 контроллером
+    users.models.ts             # модели, нужные только этому контроллеру (если есть)
+    orders.models.ts
 ```
+
+Все модели — внутри `models/`, без исключений. Per-controller и common — рядом, барель собирает соседей.
 
 Имя файла `<controller>.client.ts` — это `<controllerBaseName>` в camelCase: `UsersController` → `users.client.ts`.
 
@@ -235,7 +237,7 @@ createOrder: (
 Соответствующий `orders.models.ts` для примера выше:
 
 ```ts
-// front/src/lib/generated/orders.models.ts
+// front/src/lib/generated/models/orders.models.ts
 /* eslint-disable */
 // Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
@@ -512,13 +514,13 @@ export default {
    В `front/src/lib/generated/` появляется:
    - `http.ts` с `formatPath`
    - `users.client.ts` с экспортом `users` объекта, содержащего метод `getMe`. Метод возвращает `Stored<User>`, импортируемый напрямую из `@miracle/types`.
-   - `users.models.ts` **не создаётся** — у `UsersController` нет ни DTO, ни локальных типов (response — `Stored<User>` из `@miracle/types`). Файл с моделями появится у первого контроллера с `@Body`/`@Query`-DTO (например, `OrdersController`).
+   - `models/users.models.ts` **не создаётся** — у `UsersController` нет ни DTO, ни локальных типов (response — `Stored<User>` из `@miracle/types`). Файл с моделями появится у первого контроллера с `@Body`/`@Query`-DTO (например, `OrdersController`).
    - `index.ts` с `export * from './users.client'`
    - `models/index.ts` (barrel)
 
    После миграции `orders` (или `sessions`) в `back-nest` ожидается:
-   - `orders.models.ts` с `interface CreateOrderDto extends z.infer<typeof CreateOrderSchema> {}` и `interface OrdersQueryDto extends z.infer<typeof OrdersQuerySchema> {}` (плюс импорт схем из `@miracle/types`).
-   - `orders.client.ts` с методами, использующими эти interface'ы как типы аргументов.
+   - `models/orders.models.ts` с `interface CreateOrderDto extends z.infer<typeof CreateOrderSchema> {}` и `interface OrdersQueryDto extends z.infer<typeof OrdersQuerySchema> {}` (плюс импорт схем из `@miracle/types`).
+   - `orders.client.ts` с методами, использующими эти interface'ы как типы аргументов (импорт через barrel `./models`).
 
 3. **Компиляция фронта**:
    ```bash
