@@ -5,6 +5,7 @@
   "workspaces": [
     "aramid",
     "back",
+    "back-nest",
     "front",
     "tools",
     "types"

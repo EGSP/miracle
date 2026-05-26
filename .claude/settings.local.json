@@ -70,7 +70,9 @@
       "WebFetch(domain:api.github.com)",
       "Bash(npm --prefix front exec -- tsc -p front/tsconfig.json --noEmit)",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(Get-Content \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\front\\\\src\\\\design\\\\button-group.css\")"
+      "Bash(Get-Content \"C:\\\\workroot\\\\Разработка\\\\3PlusOffer\\\\miracle\\\\front\\\\src\\\\design\\\\button-group.css\")",
+      "Bash(findstr -i \"drop\\\\|file\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\workroot\\\\Разработка\\\\Программы\\\\js\\\\miracle\" -Depth 2 -Name)"
     ]
   }
 }
