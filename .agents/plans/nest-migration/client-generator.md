@@ -37,6 +37,8 @@
 | **CLI** | `tsx index.ts [config-path]` | `cli.js --config ...` с fallback-конфигом |
 | **Pre-emit cleanup** | `rm -rf outputDir` каждый запуск | Только `.ts` в `models/` |
 
+> **Отличие нового генератора от обоих:** DTO-классы он не «разворачивает» в структуру. Все входные DTO в `back-nest` — это тонкая обёртка `class XxxDto extends createZodDto(XxxSchema) {}` над zod-схемой из `@miracle/types/src/schemas/` (см. [dto.md](./dto.md)). Поэтому генератор просто эмитит `interface XxxDto extends z.infer<typeof XxxSchema> {}`, импортируя `XxxSchema` из `@miracle/types`. Никакого type-printer для DTO, никакого BFS по полям, никакого копирования схем — единый источник правды живёт в `@miracle/types`.
+
 ## Что взять откуда
 
 ### Из миракловского (сохранить):
@@ -72,7 +74,8 @@
 3. **`modelSuffix`** — не нужно. В Miracle DTO-классы имеют осмысленные имена (`CreateOrderDto`, `PublicUserDto`), коллизии с `@miracle/types` маловероятны (там нет таких суффиксов).
 4. **`globalPrefix` и `version`** — в `back-nest` Nest запускается **без** `setGlobalPrefix` и без версионирования (см. [back-nest/src/main.ts](../../back-nest/src/main.ts)). Декоратор `@Controller({ version })` тоже не используется. URL — это просто `prefix + path`.
 5. **Plugin Prisma** — у Miracle нет Prisma.
-6. **Регенерация интерфейсов через `ModelRegistry`** для DTO — см. ниже стратегию.
+6. **Регенерация интерфейсов через `ModelRegistry`** для DTO. Не нужно: для DTO эмитим тонкий `interface … extends z.infer<typeof Schema> {}`, а schema живёт в `@miracle/types` и импортируется напрямую (см. [dto.md](./dto.md)).
+7. **Структурный type-printer для DTO** (`type.getText()` по class instance shape). Не нужно по той же причине — мы не разворачиваем DTO, а делегируем форму схеме.
 
 ## Архитектура нового генератора
 
@@ -135,28 +138,27 @@ export class UsersController {
 
 ### Извлечение типов
 
-Тут — самая важная развилка между двумя подходами.
+Развилка между «type printer» миракла и «ModelRegistry» старого генератора в новом проекте решается **за счёт архитектуры DTO**, а не за счёт умного резолва. Подробности — в [dto.md](./dto.md), здесь — следствия для генератора:
 
-**Подход миракла (type printer):**
-```ts
-parameter.getType().getText(parameter, TypeFormatFlags.NoTruncation)
-```
-TypeScript разворачивает тип как структуру + добавляет `import("path").TypeName` для импортированных. Потом нормализуем `import(...)` в обычные `import type`.
+1. **Для типов из workspace-пакетов** (`@miracle/types`, `@miracle/aramid`, …) — type printer + нормализация `import("...")`. Эти типы импортируются на фронте напрямую как есть. Это покрывает все response-типы (`User`, `Order`, `Stored<Order>`, …).
 
-**Подход старого генератора (ModelRegistry):**
-Собираем все имена, BFS по полям, topoSort, эмитим `interface` для каждого backend-local типа.
+2. **Для DTO-классов в `back-nest`** (`class XxxDto extends createZodDto(XxxSchema) {}`):
+   - Найти `ClassDeclaration` для типа параметра.
+   - Найти `extends createZodDto(<Identifier>)` — извлечь имя схемы (`<Identifier>`).
+   - Проверить, что схема импортируется из `@miracle/types` (если нет — ошибка с указанием контроллера/метода: «DTO-схема должна жить в `@miracle/types/src/schemas/`», см. dto.md).
+   - Эмитить в соответствующий `*.models.ts`:
+     ```ts
+     import type { z } from 'zod';
+     import { XxxSchema } from '@miracle/types';
+     export interface XxxDto extends z.infer<typeof XxxSchema> {}
+     ```
+   - **Никакого** type-printer'а полей, никакого BFS, никакого копирования схемы. Источник правды — schema в `@miracle/types`, и она доступна и бэку, и фронту через workspace-импорт.
 
-**Решение для нового генератора — гибрид:**
+3. **Для backend-local `type` / `interface` / `enum`** (не DTO-классы) — скопировать декларацию текстом, обернуть в `export` (как делает миракл в `getModelSourceText`). Используется редко: response-типы должны жить в `@miracle/types`, локальные алиасы появляются как исключение.
 
-1. **Для типов из workspace-пакетов** (`@miracle/types`, `@miracle/aramid`, …) — type printer + нормализация `import("...")`. Эти типы импортируются на фронте напрямую как есть.
+4. **Если тип используется в нескольких контроллерах** — вынести в `common.models.ts` (как миракл).
 
-2. **Для backend-local типов** (DTO, response-aliases, локальные `type`/`interface`/`enum`, объявленные в `back-nest/src/`):
-   - **Если это DTO-класс (`extends createZodDto(SomeSchema)`)** — нужно превратить класс в `type`-alias на фронте, потому что класс на фронт не уедет (это runtime-сущность с zod внутри).
-     - **Простейший путь:** взять класс, выписать его instance-shape через `type.getText()` (TypeScript развернёт класс в структурный тип). Это будет `{ id: string; login?: string; ... }`. Эмитим как `export type CreateOrderDto = { ... };`.
-   - **Если это `type` / `interface` / `enum`** — скопировать декларацию текстом, обернуть в `export` (как делает миракл в `getModelSourceText`).
-   - **Если тип используется в нескольких контроллерах** — вынести в `common.models.ts` (как миракл).
-
-3. **Для внешних types из `node_modules`** — `unknown` (с warning), либо ошибка при `strictTypes: true`.
+5. **Для внешних типов из `node_modules`** (не workspace) — `unknown` (с warning) либо ошибка при `strictTypes: true`.
 
 ### Раскладка вывода
 
@@ -186,18 +188,18 @@ front/src/lib/generated/
 /* eslint-disable */
 // Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
+import type { Stored, User } from '@miracle/types';
 import { customInstance } from '../api';
-import { formatPath } from './http';
-import type { PublicUserDto } from './models/users.models';
-// import type { Order } from '@miracle/types';  // если используется shared-тип
 
 export const users = {
-    getMe: () => customInstance<PublicUserDto>({
+    getMe: () => customInstance<Stored<User>>({
         method: 'GET',
         url: '/users/me',
     }),
 };
 ```
+
+Здесь нет ни `*.models.ts`, ни `formatPath`-импорта — у `getMe` нет ни DTO, ни path-params, а response (`Stored<User>`) живёт в `@miracle/types`. Импорт `formatPath` появится у первого маршрута с `@Param`, файл `*.models.ts` — у первого с DTO.
 
 Для маршрутов с path-params:
 
@@ -230,6 +232,22 @@ createOrder: (
 
 Имя аргумента — camelCase от имени именованного типа (`CreateOrderDto` → `createOrderDto`), либо fallback `'body' | 'params' | 'query'` для inline-типов. Это правило **точно** как у миракла.
 
+Соответствующий `orders.models.ts` для примера выше:
+
+```ts
+// front/src/lib/generated/orders.models.ts
+/* eslint-disable */
+// Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
+
+import type { z } from 'zod';
+import { CreateOrderSchema, OrdersQuerySchema } from '@miracle/types';
+
+export interface CreateOrderDto extends z.infer<typeof CreateOrderSchema> {}
+export interface OrdersQueryDto extends z.infer<typeof OrdersQuerySchema> {}
+```
+
+Никакого структурного дублирования полей: реальная форма — в схемах из `@miracle/types`. Если схема меняется — типы фронта обновляются автоматически через `z.infer`, генератор перезапускать **не обязательно** (хотя по конвенции прогон делается на каждое изменение бэка).
+
 ## Структура файлов нового генератора
 
 ```
@@ -240,7 +258,7 @@ tools/src/client-generator-nest/
   extract.ts                    # main parsing: AppModule walk, controllers, методы, типы
   parse-decorators.ts           # утилиты для @Controller/@Get/@Body/@Query/@Param
   parse-params.ts               # mergeMultipleQueryFields + классификация параметров
-  resolve-types.ts              # type printer + normalize import("...") + ModelRegistry для DTO
+  resolve-types.ts              # type printer + normalize import("...") + резолв DTO-классов через extends createZodDto(Schema)
   emit-client.ts                # генерация *.client.ts
   emit-models.ts                # генерация *.models.ts + common.models.ts
   emit-http.ts                  # генерация http.ts с formatPath
@@ -291,8 +309,11 @@ tools/src/client-generator-nest/
 4. resolveTypes(appModel, project)
    ├─ для каждого RouteModel:
    │  ├─ normalizeImport("...") в типах → externalTypeImports
-   │  ├─ для DTO-классов: эмитим как type из class instance shape
-   │  └─ для backend-local type/interface/enum: copy text
+   │  ├─ для DTO-классов (extends createZodDto(<Schema>)):
+   │  │  ├─ найти имя <Schema> в `extends` clause
+   │  │  ├─ убедиться что Schema импортирована из @miracle/types
+   │  │  └─ эмитить `interface <Dto> extends z.infer<typeof <Schema>> {}`
+   │  └─ для backend-local type/interface/enum: copy text (редкий случай)
    ├─ типы из @miracle/types и других workspace-пакетов — без копирования
    ├─ типы из node_modules вне workspace — unknown (или throw при strictTypes)
    └─ → commonModels (использованные >1 раз) + per-router models
@@ -346,20 +367,41 @@ export class UsersModule {}
 - Если декоратор имеет арг-литерал (`@Query('userId')`) — это field-режим.
 - Если без арга (`@Body()`, `@Query()`) — object-режим.
 
-### 3. Резолв типа DTO-класса (с `createZodDto`)
+### 3. Резолв DTO-класса через схему из `@miracle/types`
 
 ```ts
+// back-nest/src/orders/dto/create-order.dto.ts
+import { createZodDto } from 'nestjs-zod';
+import { CreateOrderSchema } from '@miracle/types';
+
 export class CreateOrderDto extends createZodDto(CreateOrderSchema) {}
 ```
 
-Через `ts-morph` тип параметра `dto: CreateOrderDto` printer'ом даёт `"CreateOrderDto"`. Но на фронте нет такого класса. Алгоритм:
+Через `ts-morph` тип параметра `dto: CreateOrderDto` printer'ом даёт `"CreateOrderDto"`. Сам класс на фронт не уезжает (это runtime-сущность с zod-валидацией). Но **исходная схема живёт в `@miracle/types/src/schemas/`** (см. [dto.md](./dto.md)) и доступна и бэку, и фронту как обычный workspace-импорт.
 
-1. Найти `ClassDeclaration` для `CreateOrderDto`.
-2. Получить его instance type: `classDecl.getType()`.
-3. Получить properties: `type.getProperties()`. Для каждого property: `prop.getValueDeclaration().getType().getText(...)`.
-4. Собрать в `{ name: type; ... }` и эмитить как `export type CreateOrderDto = { ... };`.
+Поэтому фронт получает тип через `z.infer` от той же схемы. Алгоритм:
 
-Альтернатива: попытаться найти `extends createZodDto(SOMESCHEMA)`, найти декларацию `SOMESCHEMA` (zod-схема), и эмитить через `z.infer<typeof SOMESCHEMA>` — но это требует runtime'а zod на фронте, **не делать так**.
+1. Найти `ClassDeclaration` для `CreateOrderDto` (через `symbol.getDeclarations()` типа параметра).
+2. Найти `extends`-выражение: `extends createZodDto(<expr>)`.
+   - Если родитель не `createZodDto(...)` — это не DTO-класс по конвенции, fallback на обработку как обычный класс (warning + `unknown`, либо ошибка при `strictTypes`).
+3. Из аргумента `createZodDto(<Identifier>)` извлечь имя схемы (`<Identifier>` — `CreateOrderSchema`).
+   - Если аргумент — не идентификатор (inline-выражение `createZodDto(z.object({...}))`) — ошибка «inline schema is not supported, see dto.md».
+4. Резолвить identifier: `symbol.getDeclarations()[0]` → должна быть переменная, объявленная в одном из файлов `@miracle/types/src/schemas/*.schemas.ts`.
+   - Проверить, что итоговый импорт-путь — `@miracle/types` (а не глубокий `@miracle/types/dist/...`). Если не так — ошибка с подсказкой.
+5. Эмитить в `*.models.ts`:
+   ```ts
+   import type { z } from 'zod';
+   import { CreateOrderSchema } from '@miracle/types';
+
+   export interface CreateOrderDto extends z.infer<typeof CreateOrderSchema> {}
+   ```
+   `interface … extends z.infer<typeof Schema> {}` (не `type … = z.infer<...>`) — потому что `interface` сохраняет имя в IDE-hover. Это то же правило, что описано в dto.md для ручного использования схем на фронте.
+
+**Что НЕ делать:**
+
+- Не разворачивать DTO в структуру через `type.getText()` или обход properties. Это утрачивает связь с runtime-схемой и порождает лишний код, который рассинхронизируется со схемой.
+- Не копировать саму схему в `front/src/lib/generated/`. Источник правды — `@miracle/types`, фронт импортирует её напрямую.
+- Не пытаться обрабатывать `extends createZodDto(InlineExpression)`. Такая конструкция запрещена соглашением (см. dto.md, шаг 1).
 
 ### 4. Нормализация `import("...")`
 
@@ -447,7 +489,9 @@ export default {
 5. **Тип параметра — `unknown` / `any`** — пропускать, эмитить `unknown`, warning в stdout.
 6. **`@Query()` + `@Body()` одновременно** — оба попадают в клиентский метод.
 7. **`@Query()` без аргумента + `@Query('field')` в одном методе** — конфликт, бросить ошибку с указанием контроллера/метода.
-8. **DTO-класс импортирован из другого модуля** — резолвить через `getSymbol().getDeclarations()`, эмитить в моделях того модуля, где он первый раз встретился (либо в `common.models.ts` если используется в >1 контроллере).
+8. **DTO-класс импортирован из другого модуля** — резолвить через `getSymbol().getDeclarations()`, эмитить в моделях того модуля, где он первый раз встретился (либо в `common.models.ts` если используется в >1 контроллере). Импорт самой схемы из `@miracle/types` дедуплицируется в шапке файла.
+11. **DTO-класс не наследуется от `createZodDto(...)`** — нарушение конвенции (см. dto.md). По умолчанию warning + `unknown`; при `strictTypes: true` — ошибка.
+12. **DTO наследуется от `createZodDto(SomeSchema)`, но `SomeSchema` объявлена в самом back-nest** (а не в `@miracle/types`) — нарушение архитектуры (см. dto.md, правило 1). Ошибка с указанием контроллера/метода и подсказкой «перенеси схему в `@miracle/types/src/schemas/<domain>.schemas.ts`».
 9. **`@miracle/types` импортируется через namespace** (`import * as Types from '@miracle/types'`) — не поддерживать в первой версии, бросить ошибку.
 10. **Циклические зависимости модулей** — Nest позволяет через `forwardRef`. Не разворачивать — после обнаружения `forwardRef(() => SomeModule)` пропустить такой импорт с warning'ом (не критично для клиента).
 
@@ -467,10 +511,14 @@ export default {
    ```
    В `front/src/lib/generated/` появляется:
    - `http.ts` с `formatPath`
-   - `users.client.ts` с экспортом `users` объекта, содержащего метод `getMe`
-   - `users.models.ts` с `PublicUserDto` (как type alias, не class)
+   - `users.client.ts` с экспортом `users` объекта, содержащего метод `getMe`. Метод возвращает `Stored<User>`, импортируемый напрямую из `@miracle/types`.
+   - `users.models.ts` **не создаётся** — у `UsersController` нет ни DTO, ни локальных типов (response — `Stored<User>` из `@miracle/types`). Файл с моделями появится у первого контроллера с `@Body`/`@Query`-DTO (например, `OrdersController`).
    - `index.ts` с `export * from './users.client'`
    - `models/index.ts` (barrel)
+
+   После миграции `orders` (или `sessions`) в `back-nest` ожидается:
+   - `orders.models.ts` с `interface CreateOrderDto extends z.infer<typeof CreateOrderSchema> {}` и `interface OrdersQueryDto extends z.infer<typeof OrdersQuerySchema> {}` (плюс импорт схем из `@miracle/types`).
+   - `orders.client.ts` с методами, использующими эти interface'ы как типы аргументов.
 
 3. **Компиляция фронта**:
    ```bash
@@ -498,7 +546,7 @@ export default {
 При работе агенту полезно:
 
 - **`controller.md`** — описывает паттерны декораторов, которые этот генератор должен распознать.
-- **`dto.md`** — описывает паттерн `createZodDto(Schema)`, тип `class extends createZodDto(...)`, который генератор раскрывает.
+- **`dto.md`** — описывает архитектуру: схемы живут в `@miracle/types/src/schemas/`, DTO в back-nest — тонкая обёртка `class XxxDto extends createZodDto(XxxSchema) {}`. Генератор полагается на этот контракт: имя в `extends createZodDto(...)` обязано быть identifier'ом, импортированным из `@miracle/types`.
 - **`module.md`** — описывает структуру модуля с `@Module({ controllers: [...] })`, которую генератор обходит.
 - **`auth.md`** — `@CurrentUser` и `@Req`/`@Res` — параметры, которые генератор обязан игнорировать.
 
@@ -513,7 +561,7 @@ export default {
 - `extract.ts:341-411` — `normalizeGeneratedTypeText`, `resolvePackageModuleSpecifier`, `decodeImportPath`, `findPackageJson`. Без изменений.
 - `extract.ts:432-456` — `collectExternalImportsFromSourceFile`. Без изменений.
 - `extract.ts:498-560` — `getReturnExpressions`, `unwrapSatisfiesExpression`, `unwrapExpression`, `isErrCall`, `isRouteErrorType`. **`isErrCall` и `isRouteErrorType` не нужны** (в Nest нет `err.*` returns). Остальное — без изменений.
-- `extract.ts:562-696` — `getModelSourceText`, `collectCommonModels`, `getReferencedLocalDeclarations`, `collectTypeNames`. Логика та же, адаптация только в источнике типов.
+- `extract.ts:562-696` — `getModelSourceText`, `collectCommonModels`, `getReferencedLocalDeclarations`, `collectTypeNames`. Используется только для **редких** backend-local `type`/`interface`/`enum`. DTO-классы через этот код **не проходят** — у них отдельная ветка с эмиссией `interface … extends z.infer<typeof Schema> {}`.
 - `writers.ts` целиком — структуру сохранить, поменять только парсинг роутов на парсинг контроллеров.
 - `http.ts`-генерация из `writers.ts:29-46` — без изменений.
 
@@ -532,6 +580,6 @@ export default {
 2. Возьми из миракла авто-конфиг, type printer, layout файлов, формат генерации.
 3. Возьми из старого — парсинг Nest-декораторов и `unwrapPromise`/`mergeMultipleQueryFields`.
 4. Замени **источник** правды: вместо `defineApp([...])` — обход `AppModule.imports → Module.controllers`.
-5. Для DTO-классов — раскрой instance shape и эмитируй как `type`-alias (не `interface` с suffix'ом).
+5. Для DTO-классов — **не разворачивай структуру**. Найди `extends createZodDto(<Schema>)`, проверь что `<Schema>` импортирована из `@miracle/types`, и эмитируй `interface <Dto> extends z.infer<typeof <Schema>> {}`. Источник правды — schema в `@miracle/types`, она и так доступна фронту.
 6. Не тяни plugin Prisma и `repoRoot` — Miracle живёт без этого.
-7. Verification: `back-nest` имеет `UsersController` с одним методом `getMe` — на этом контроллере и обкатывай.
+7. Verification: `back-nest` имеет `UsersController` с одним методом `getMe` (без DTO) — на этом контроллере обкатывай happy path по response-стороне. Полную цепочку с DTO обкатывай на первом мигрированном контроллере с `@Body`/`@Query` (например, `OrdersController`).
