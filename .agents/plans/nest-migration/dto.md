@@ -1,254 +1,248 @@
-# Паттерн: DTO через zod + `nestjs-zod`
+# Паттерн: DTO через zod-схемы из `@miracle/types`
 
 ## Когда применять
 
-- Описываешь форму **входных данных** эндпоинта: `@Body`, `@Query`, `@Param` с несколькими полями.
-- Описываешь форму **публичного выхода**, который отличается от типа из `@miracle/types` (например, маппинг User → без `password`).
-- В любом месте, где нужна и TS-типизация, и runtime-валидация одной и той же структуры.
+- Описываешь форму **входных данных** эндпоинта (`@Body`, `@Query`, многополевой `@Param`).
+- Думаешь, в каком виде вернуть response.
+- Нужна общая структура, которую и бэк проверяет, и фронт типизирует/валидирует в форме.
 
-## Контекст
+## Архитектурное решение
 
-В `back-nest` валидация на боундари сделана через `nestjs-zod` + `ZodValidationPipe` (включена глобально в [main.ts](../../back-nest/src/main.ts)). Это значит: если ты обернул DTO через `createZodDto(Schema)` и используешь его в сигнатуре `@Body() dto: SomeDto`, Nest **автоматически** провалидирует входное значение и выкинет `BadRequestException` с zod-ошибкой при невалидном вводе.
+**Zod-схемы общих DTO живут в `@miracle/types/src/schemas/<domain>.schemas.ts`.** Их импортируют:
 
-Канонический пример — `back-nest/src/users/dto/public-user.dto.ts`.
+- **back-nest** — оборачивает в `createZodDto(Schema)` для интеграции с `ZodValidationPipe`;
+- **front** — использует напрямую (`z.infer<typeof Schema>` для типа, сама схема — для react-hook-form/валидации).
 
-## Базовый паттерн (для нового DTO)
+Это значит: **никакого копирования схем генератором клиента**. И бэк, и фронт видят одну и ту же схему через workspace-импорт.
+
+**Response-типы — не схемы**, а обычные TS-типы в `@miracle/types` (`User`, `Order`, `Stored<Order>`, и т.п.). Runtime-валидация ответа на фронте не нужна — фронт доверяет своему же серверу.
+
+Канонический пример: для users пока нет входных эндпоинтов, поэтому каталог `back-nest/src/users/dto/` отсутствует. Response — `Stored<User>` из `@miracle/types` напрямую, без обёртки. Появится первый INPUT-эндпоинт (например, при миграции orders) — там же будет первый рабочий пример DTO.
+
+## Контекст в монорепе
+
+```
+types/src/
+  schemas/
+    index.ts                    # barrel, обязательно дописывать новые схемы
+    orders.schemas.ts           # появится при миграции orders
+    sessions.schemas.ts         # появится при миграции sessions
+    ...
+  user.ts                       # response-типы и доменные модели
+  order.ts
+  ...
+```
+
+```
+back-nest/src/<domain>/
+  dto/
+    <scenario>.dto.ts           # тонкая обёртка: extends createZodDto(SchemaFromTypes)
+```
+
+`@miracle/types` имеет zod как **runtime-зависимость** (см. `types/package.json`). Это сознательное решение — пакет перестаёт быть «только типы», теперь там и схемы. Имя пакета сохраняем для совместимости.
+
+## Шаги при добавлении нового DTO
+
+### Шаг 1 — схема в `@miracle/types/src/schemas/`
 
 ```ts
-// back-nest/src/orders/dto/create-order.dto.ts
+// types/src/schemas/orders.schemas.ts
 import { z } from 'zod';
-import { createZodDto } from 'nestjs-zod';
 
 export const CreateOrderSchema = z.object({
     fileId: z.string().uuid().optional(),
 });
-
-export class CreateOrderDto extends createZodDto(CreateOrderSchema) {}
-```
-
-В контроллере:
-
-```ts
-@Post('create')
-create(@Body() dto: CreateOrderDto) {
-    return this.orders.create(dto);
-}
-```
-
-Если запрос содержит `fileId: 123` (число вместо string), Nest вернёт 400 с zod-объяснением до того, как handler выполнится.
-
-## Когда DTO избыточен — используй `@miracle/types`
-
-Для **исходящего** значения (response эндпоинта) обычно достаточно TS-типа из `@miracle/types`. Runtime-валидация ответа не нужна — клиент доверяет серверу.
-
-```ts
-// ХОРОШО
-@Get(':id')
-getOne(@Param('id') id: string): Stored<Order> {
-    return this.orders.getOrThrow(id);  // тип из @miracle/types
-}
-
-// ИЗБЫТОЧНО (не делай так без причины)
-@Get(':id')
-getOne(@Param('id') id: string): OrderResponseDto {
-    return this.orders.getOrThrow(id);
-}
-```
-
-DTO для response создавай только если форма отличается от хранимой (как `PublicUserDto` без `password`) или если нужно публиковать схему через OpenAPI (позже).
-
-## Проблема: `z.infer` показывает развёрнутый тип в IDE
-
-Если использовать обычное `type X = z.infer<typeof XSchema>`, IDE и сообщения об ошибках разворачивают полную форму объекта вместо имени:
-
-```
-Expected type:
-{
-  fileId?: string;
-  details?: { ... raw expanded ... };
-  // ...30 полей ...
-}
-```
-
-Это нечитаемо при больших схемах. Три способа решить:
-
-### Способ 1 — `createZodDto` (предпочтительный для входов)
-
-`createZodDto(Schema)` возвращает класс. Если ты используешь его именем (`CreateOrderDto`), IDE покажет именно имя класса:
-
-```ts
-export class CreateOrderDto extends createZodDto(CreateOrderSchema) {}
-
-// В IDE на hover dto: ...
-function handle(dto: CreateOrderDto) { /* IDE: "CreateOrderDto" */ }
-```
-
-Это работает потому, что класс — это nominal type в TypeScript. Имя сохраняется в типовых сообщениях.
-
-### Способ 2 — `interface extends z.infer` (для типов без DI)
-
-Когда DTO-класс не нужен (например, внутренний тип в сервисе), используй `interface`:
-
-```ts
-const InternalShapeSchema = z.object({ a: z.string(), b: z.number() });
-
-// НЕ так — IDE покажет { a: string; b: number }
-type InternalShape = z.infer<typeof InternalShapeSchema>;
-
-// А так — IDE покажет InternalShape
-interface InternalShape extends z.infer<typeof InternalShapeSchema> {}
-```
-
-`interface` (в отличие от `type`) сохраняет имя в hover и сообщениях.
-
-### Способ 3 — `satisfies z.ZodType<T>` (когда TS-тип ведущий)
-
-Когда исходник правды — TS-тип из `@miracle/types`, а zod-схема описывает его для валидации:
-
-```ts
-import type { Order } from '@miracle/types';
-
-export const OrderSchema = z.object({
-    id: z.string(),
-    userId: z.string(),
-    details: z.object({ ... }).optional(),
-    // ...
-}) satisfies z.ZodType<Order>;
-```
-
-`satisfies` гарантирует, что схема **может** валидировать значение типа `Order`. Если схема разъедется с типом — ошибка компиляции в самом этом файле, а не в потребителях.
-
-**Минус** — приходится держать два определения. Применяй только когда `@miracle/types` действительно ведущий (типы переиспользуются на фронте, в общих пакетах) и его нельзя переписать на zod-схему.
-
-## Где какие способы применять
-
-| Сценарий | Способ |
-|---|---|
-| Входной DTO (`@Body`, `@Query`, многополевой `@Param`) | **createZodDto** |
-| Публичный response, отличный от `@miracle/types` (как `PublicUser`) | **createZodDto** (необязательно, но удобно для будущего OpenAPI) |
-| Внутренний тип в сервисе, использующий zod-схему | **interface extends z.infer** |
-| zod-схема, описывающая существующий тип из `@miracle/types` | **satisfies z.ZodType<T>** |
-| Простой response (соответствует типу из `@miracle/types`) | **Никакой DTO**, использовать тип напрямую |
-
-## Шаблоны DTO
-
-### Body DTO
-
-```ts
-// dto/create-order.dto.ts
-import { z } from 'zod';
-import { createZodDto } from 'nestjs-zod';
-
-export const CreateOrderSchema = z.object({
-    fileId: z.string().uuid().optional(),
-    details: z.object({
-        description: z.string().min(1),
-    }).optional(),
-});
-
-export class CreateOrderDto extends createZodDto(CreateOrderSchema) {}
-```
-
-### Query DTO
-
-Особенности query: всё приходит строками, нужны `z.coerce.*` для чисел/булевых.
-
-```ts
-// dto/orders-query.dto.ts
-import { z } from 'zod';
-import { createZodDto } from 'nestjs-zod';
 
 export const OrdersQuerySchema = z.object({
     userId: z.string().optional(),
     isCompleted: z.coerce.boolean().optional(),
     limit: z.coerce.number().int().positive().max(100).optional(),
 });
+```
+
+Соглашения:
+
+- **Имя файла:** `<domain>.schemas.ts` (kebab-case множественного числа).
+- **Имя схемы:** `<Scenario>Schema` (`CreateOrderSchema`, `OrdersQuerySchema`).
+- **Импорт** — только из `'zod'`. Доп. зависимостей избегать (если нужны вспомогательные типы — из соседних файлов `@miracle/types`).
+- **Для query-схем** — обязательно `z.coerce.*` для не-строковых типов (HTTP передаёт всё строками).
+
+### Шаг 2 — barrel
+
+```ts
+// types/src/schemas/index.ts
+export * from './orders.schemas.js';
+```
+
+Без этого схема не попадёт в `@miracle/types` (главный `index.ts` ре-экспортирует `./schemas/index.js`).
+
+### Шаг 3 — пересобрать `@miracle/types`
+
+```bash
+npm run build --workspace=@miracle/types
+```
+
+Обязательно, потому что back-nest и front тянут собранный `dist/`.
+
+### Шаг 4 — DTO в back-nest
+
+```ts
+// back-nest/src/orders/dto/create-order.dto.ts
+import { createZodDto } from 'nestjs-zod';
+import { CreateOrderSchema } from '@miracle/types';
+
+export class CreateOrderDto extends createZodDto(CreateOrderSchema) {}
+```
+
+```ts
+// back-nest/src/orders/dto/orders-query.dto.ts
+import { createZodDto } from 'nestjs-zod';
+import { OrdersQuerySchema } from '@miracle/types';
 
 export class OrdersQueryDto extends createZodDto(OrdersQuerySchema) {}
 ```
 
-В контроллере:
+Контроллер использует DTO как обычно:
 
 ```ts
-@Get()
-list(@Query() query: OrdersQueryDto) {
-    return this.orders.list(query);
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { CreateOrderDto } from './dto/create-order.dto.js';
+import { OrdersQueryDto } from './dto/orders-query.dto.js';
+
+@Controller('orders')
+@UseGuards(AuthGuard)
+export class OrdersController {
+    @Get()
+    list(@Query() query: OrdersQueryDto) { /* ... */ }
+
+    @Post('create')
+    create(@Body() dto: CreateOrderDto) { /* ... */ }
 }
 ```
 
-### Param DTO (если параметров несколько)
+`ZodValidationPipe` (глобальный в `main.ts`) автоматически провалидирует body/query — упадёт **до** handler-а с понятным zod-сообщением, если данные не подошли.
 
-Для одного `@Param('id')` DTO не нужен. Для нескольких:
+### Шаг 5 — на фронте
 
-```ts
-// dto/order-params.dto.ts
-export const OrderParamsSchema = z.object({
-    orderId: z.string(),
-    itemId: z.string(),
-});
-
-export class OrderParamsDto extends createZodDto(OrderParamsSchema) {}
-```
+Схема импортируется напрямую из `@miracle/types`:
 
 ```ts
-@Get(':orderId/items/:itemId')
-getItem(@Param() params: OrderParamsDto) {
-    return this.orders.getItem(params.orderId, params.itemId);
+// форма с react-hook-form
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CreateOrderSchema } from '@miracle/types';
+import type { z } from 'zod';
+
+type CreateOrderInput = z.infer<typeof CreateOrderSchema>;
+
+function CreateOrderForm() {
+    const form = useForm<CreateOrderInput>({
+        resolver: zodResolver(CreateOrderSchema),
+    });
+    // ...
 }
 ```
 
-### Public response DTO (когда выход отличается от хранимого)
+Тип для самого запроса (через сгенерированный клиент) появится автоматически — генератор клиента эмитит alias `export interface CreateOrderDto extends z.infer<typeof CreateOrderSchema> {}` в `front/src/lib/generated/models/orders.models.ts`. Подробно — в `client-generator.md`.
+
+## Response: TS-тип, не схема
+
+Response **не оборачивается** в schema. Возвращается:
+
+- готовый тип из `@miracle/types`: `User`, `Order`, `Stored<Order>` (это `Order & { id, createdAt, updatedAt }`).
+- если нужна публичная форма, отличная от хранимой (без `password`, например) — используй `Stored<User>` напрямую и в сервисе делай `delete`/`omit`.
 
 ```ts
-// dto/public-user.dto.ts
-import { z } from 'zod';
-import { createZodDto } from 'nestjs-zod';
+// back-nest/src/users/users.service.ts (живой пример)
+import type { Stored, User } from '@miracle/types';
 
-export const PublicUserSchema = z.object({
-    id: z.string(),
-    login: z.string().optional(),
-    role: z.string().optional(),
-    createdAt: z.number(),
-    updatedAt: z.number(),
-});
+@Injectable()
+export class UsersService {
+    constructor(private readonly db: DatabaseService) {}
 
-export class PublicUserDto extends createZodDto(PublicUserSchema) {}
+    getPublicById(id: string): Stored<User> {
+        const user = this.db.collections.users.getById(id);
+        if (!user) throw new NotFoundException(`User ${id} not found`);
+        const { password: _password, ...publicUser } = user;
+        return publicUser as Stored<User>;
+    }
+}
+```
+
+```ts
+// back-nest/src/users/users.controller.ts (живой пример)
+@Get('me')
+@UseGuards(AuthGuard)
+getMe(@CurrentUser() user: AuthenticatedUser): Stored<User> {
+    return this.users.getPublicById(user.id);
+}
+```
+
+Никаких `PublicUserDto` и обёрток через `createZodDto` — для response это лишнее.
+
+## Что делать, если response отличается от хранимой формы
+
+Если хранимая форма содержит поля, которые **нельзя** показывать клиенту (`password`, internal-флаги), но нет готового подходящего типа в `@miracle/types`:
+
+1. Добавить в `@miracle/types` явный public-тип:
+   ```ts
+   // types/src/order.ts
+   export type Order = { /* публичные поля */ };
+   export type OrderInternal = Order & { /* внутренние поля */ };
+   ```
+2. В `back-nest/src/database/collections.ts` коллекция типизируется через `OrderInternal`.
+3. Сервис маппит `OrderInternal → Order` при выдаче.
+4. Контроллер возвращает `Stored<Order>` (без internal).
+
+Это правило: **internal-формы у бэка, public-формы — общие**. Public всегда в `@miracle/types`.
+
+## IDE-проблема с `z.infer` — решена дизайном
+
+Раньше была проблема: `type Foo = z.infer<typeof FooSchema>` в IDE показывает развёрнутый объект, не имя `Foo`. Это решается двумя путями, оба применимы здесь:
+
+1. **На бэке** — DTO-класс через `createZodDto`. Класс `CreateOrderDto` сохраняет имя в hover/ошибках.
+2. **На фронте** — генератор эмитит `interface CreateOrderDto extends z.infer<typeof CreateOrderSchema> {}`. `interface` (в отличие от `type`) сохраняет имя.
+
+Если пишешь типы на фронте вручную (например, для форм) — тот же `interface`-приём:
+
+```ts
+import type { z } from 'zod';
+import { CreateOrderSchema } from '@miracle/types';
+
+// НЕ так — IDE покажет развёрнутый объект:
+// type CreateOrderInput = z.infer<typeof CreateOrderSchema>;
+
+// А так — IDE покажет CreateOrderInput:
+interface CreateOrderInput extends z.infer<typeof CreateOrderSchema> {}
 ```
 
 ## Правила
 
-1. **Один DTO — один файл** в `dto/`, имя `<scenario>.dto.ts` (`create-order.dto.ts`, `orders-query.dto.ts`, `public-user.dto.ts`).
-2. **Имя класса — `<Scenario>Dto`**: `CreateOrderDto`, `OrdersQueryDto`, `PublicUserDto`.
-3. **Имя экспортируемой схемы — `<Scenario>Schema`**: `CreateOrderSchema`, `OrdersQuerySchema`. Схема экспортируется, чтобы её можно было переиспользовать (например, для частичного обновления — `CreateOrderSchema.partial()`).
-4. **Always export the schema separately** — даже если он используется только в DTO-классе. Это позволит делать derivative DTO без дублирования.
-5. **Query DTO — всегда `z.coerce.*`** для не-строковых типов. Express/Fastify передают всё строками.
-6. **Не складывай несколько сценариев в один DTO.** `CreateOrderDto` и `UpdateOrderDto` — два файла, даже если поля похожи (используй `.partial()` или `.pick()` если хочешь переиспользовать).
+1. **Все общие схемы — в `@miracle/types/src/schemas/`.** Не в back-nest, не во фронте.
+2. **Один файл — один домен** (`orders.schemas.ts`, `sessions.schemas.ts`). Не «все схемы в одном файле».
+3. **DTO в back-nest — тонкая обёртка** через `createZodDto(SchemaFromTypes)`. Без локальных модификаций схемы.
+4. **Имена**: схема — `<Scenario>Schema`, класс DTO — `<Scenario>Dto`. Файлы — kebab-case (`create-order.dto.ts`, `orders-query.dto.ts`).
+5. **Query** — `z.coerce.*` обязательно для not-string полей.
+6. **Response** — без zod. Только TS-типы из `@miracle/types`.
+7. **Не дублируй схему в back-nest или front** — workspace-импорт это решает.
+8. **`@miracle/types` не имеет дополнительных зависимостей** кроме `zod`. Не подключай туда `nestjs-zod`, `@hookform/resolvers` и т.п. — они работают **поверх** zod-схемы в своём пакете.
 
 ## Типичные грабли
 
-- **Используешь `z.infer<typeof Schema>` в сигнатуре `@Body`** — пайп не активируется. Только `createZodDto` подключает валидацию.
-- **`createZodDto` импортирован, но `ZodValidationPipe` не глобален** — валидация не работает. Проверь `main.ts`, там должно быть `app.useGlobalPipes(new ZodValidationPipe())`.
-- **В query DTO используешь `z.number()` вместо `z.coerce.number()`** — валидация падает на любом запросе, потому что `?limit=10` — это строка `"10"`, не число.
-- **Схема описана как top-level `const SomeSchema = z.object(...)` без экспорта, а класс DTO — экспортируется** — кому-то понадобится переиспользовать схему (через `.partial()`, `.pick()`, `.omit()`), а не получится. Экспортируй обе.
-- **`satisfies z.ZodType<T>` падает с типовой ошибкой про variance** — обычно это сигнал, что zod-схема не покрывает все поля типа `T`. Допиши недостающие поля или используй `.passthrough()` (но это ослабляет валидацию).
+- **Забыл барель** (`schemas/index.ts`) — схема не экспортируется из `@miracle/types`. Симптом: `import { CreateOrderSchema } from '@miracle/types'` даёт `undefined`. Проверь, что в `schemas/index.ts` есть `export * from './<domain>.schemas.js'`.
+- **Забыл пересобрать `@miracle/types`** — back-nest и front видят старую версию (без новой схемы). Симптом: TS-ошибка про unknown export. Лечится `npm run build --workspace=@miracle/types`.
+- **`@Body() dto: SomeSchemaInferred`** (TS-тип, не DTO-класс) — `ZodValidationPipe` не сработает, body не валидируется. Только `extends createZodDto(...)`.
+- **`z.number()` в query вместо `z.coerce.number()`** — валидация падает на каждом запросе, потому что `?limit=10` это строка.
+- **Импорт схемы из `@miracle/types/dist/schemas/...`** — нельзя, только через корневой `'@miracle/types'`. Если IDE подставила глубокий путь — поправь руками.
+- **Схема импортирует backend-only код** — она перестаёт работать на фронте при build. Схемы должны быть чистыми zod-выражениями + импорты только из `'zod'` и соседних файлов `@miracle/types`.
 
 ## Живой пример
 
-`back-nest/src/users/dto/public-user.dto.ts`:
+В `back-nest/src/users/` входных DTO **нет** (только `GET /users/me` без body/query/params). Поэтому каталога `dto/` тоже нет — он появится с первым INPUT-эндпоинтом (например, при миграции `orders.router.ts`).
 
-```ts
-import { z } from 'zod';
-import { createZodDto } from 'nestjs-zod';
+Сейчас демо демонстрирует только response-сторону:
 
-export const PublicUserSchema = z.object({
-    id: z.string(),
-    login: z.string().optional(),
-    role: z.string().optional(),
-    createdAt: z.number(),
-    updatedAt: z.number(),
-});
+- [back-nest/src/users/users.service.ts](../../back-nest/src/users/users.service.ts) — возвращает `Stored<User>` из `@miracle/types`
+- [back-nest/src/users/users.controller.ts](../../back-nest/src/users/users.controller.ts) — `@Get('me')` без обёрток
 
-export class PublicUserDto extends createZodDto(PublicUserSchema) {}
-```
-
-Используется в response-типе [users.service.ts](../../back-nest/src/users/users.service.ts) и [users.controller.ts](../../back-nest/src/users/users.controller.ts).
+Когда первый агент мигрирует `back/src/routers/orders.router.ts` (или `sessions.router.ts`) — там появится первый рабочий пример полной цепочки `schemas/* → dto/* → controller`.

@@ -13,3 +13,4 @@ export * from './product-type.js';
 export * from './technical-condition.js';
 export * from './designation.js';
 export * from './used-pages.js';
+export * from './schemas/index.js';
