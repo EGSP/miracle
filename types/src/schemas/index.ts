@@ -48,6 +48,6 @@
  * Когда добавляешь новый файл — обязательно дописать в этот index.ts.
  */
 
+export * from './auth.schemas.js';
 // export * from './orders.schemas.js';
-// export * from './sessions.schemas.js';
 // ...

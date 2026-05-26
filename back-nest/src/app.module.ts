@@ -3,6 +3,7 @@ import { AppConfigModule } from './config/app-config.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { HealthModule } from './health/health.module.js';
+import { SessionsModule } from './sessions/sessions.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -11,6 +12,7 @@ import { UsersModule } from './users/users.module.js';
         DatabaseModule,
         AuthModule,
         HealthModule,
+        SessionsModule,
         UsersModule,
     ],
 })

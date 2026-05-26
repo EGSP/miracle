@@ -1,4 +1,4 @@
-import type { User } from '@miracle/types';
+import type { Session, User } from '@miracle/types';
 import { JsonCollection } from './json-collection.js';
 
 /**
@@ -11,6 +11,7 @@ export type UserInternal = User & { password: string };
 export async function createCollections(dbDir: string) {
     return {
         users: await JsonCollection.create<UserInternal>('users', dbDir),
+        sessions: await JsonCollection.create<Session>('sessions', dbDir),
     } as const;
 }
 

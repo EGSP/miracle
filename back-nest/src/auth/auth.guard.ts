@@ -6,7 +6,7 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { TokensService } from './tokens.service.js';
+import { TokensService } from '../tokens/tokens.service.js';
 import { DatabaseService } from '../database/database.service.js';
 import type { AuthenticatedUser } from './current-user.decorator.js';
 

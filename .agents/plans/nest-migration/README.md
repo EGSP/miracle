@@ -36,7 +36,7 @@
 - Миграция БД на Drizzle/Postgres — JSON-файлы остаются как есть.
 - Кодген клиента под Nest — фронт пока работает с прошлым API; кодген появится позже.
 - Очереди / `@nestjs/bull` — `workers/` остаются на текущей реализации.
-- Полный auth-флоу (login/logout/register/refresh) — мигрируется как обычный домен позже; сейчас в каркасе только `AuthGuard` для уже выданных токенов.
+- Дополнительные guards по ролям (`AdminGuard` и т.п.) — по мере миграции `admin.router.ts`.
 - Multipart-загрузки (`@fastify/multipart`) — отдельная фаза.
 - CI/CD, Docker, PM2-конфигурация — отдельный разговор.
 - Тесты — пишем после первой партии миграций.
@@ -83,14 +83,14 @@
 
 Старые роутеры в `back/src/routers/` переезжают **от простых к сложным**:
 
-1. `health.router.ts` (тривиально, но обкатает каркас)
-2. `session.router.ts` (минимальный, auth есть)
-3. `user.router.ts` (тривиальный, без auth)
+1. ~~`health.router.ts`~~ → `back-nest/src/health/`
+2. ~~`session.router.ts`~~ → `back-nest/src/sessions/` (`AuthGuard` + `@CurrentUser`)
+3. ~~`auth.router.ts`~~ → `back-nest/src/auth/` (login/logout/register/refresh + cookies)
+4. `user.router.ts` (тривиальный, без auth; частично — `GET /users/me` в `users/`)
 4. `product-type.router.ts` (простой CRUD)
 5. `technical-condition.router.ts` (средний CRUD)
 6. `order.router.ts` (большой, но без файлов/воркеров)
-7. `auth.router.ts` (login/logout/register/refresh — нужна работа с cookies)
-8. `admin.router.ts`
+7. `admin.router.ts`
 9. `file.router.ts` + `file-content.router.ts` — **отложено** до фазы multipart
 10. `workers.router.ts` — **отложено** до фазы очередей
 
@@ -113,7 +113,7 @@
 
 Эти правила обязательны для всех агентов:
 
-1. **Один домен — один модуль** (`back-nest/src/<domain>/`). Никаких «общих» сервисов вне модулей, кроме `database/`, `config/`, `auth/`.
+1. **Один домен — один модуль** (`back-nest/src/<domain>/`). Никаких «общих» сервисов вне модулей, кроме `database/`, `config/`, `auth/`, `tokens/`.
 2. **Сервис не создаёт `JsonCollection`** — это делает `database/collections.ts` централизованно. Сервис инжектит `DatabaseService` и работает через `this.db.collections.<name>`.
 3. **Контроллер не содержит бизнес-логики** — только парсинг запроса, вызов сервиса, возврат ответа. Любое условие/проверка/мутация → в сервис.
 4. **Input всегда через DTO** (`createZodDto`). Никаких inline-типов в сигнатуре `@Body() dto: { foo: string }`.

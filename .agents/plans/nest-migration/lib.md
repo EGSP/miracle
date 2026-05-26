@@ -28,7 +28,7 @@
 
 | Файл | Категория | Место в `back-nest/` | Фаза |
 |---|---|---|---|
-| `lib/user-role.util.ts` | чистая функция над `@miracle/types` | приватный helper в `back-nest/src/auth/` (или первого потребителя) | едет с `auth.router.ts` |
+| `lib/user-role.util.ts` | чистая функция над `@miracle/types` | `back-nest/src/sessions/user-role.util.ts` | едет с `session.router.ts` |
 | `lib/order/resolve-product-type.ts` | доменная утилита (зависит от `productTypesService`) | `back-nest/src/orders/resolve-product-type.ts` или приватный метод `OrdersService` | едет с `order.router.ts` |
 | `lib/technical-condition/prepare-payload.ts` | доменная утилита (зависит от `productTypesService`) | `back-nest/src/technical-conditions/prepare-payload.ts` или приватный метод `TechnicalConditionsService` | едет с `technical-condition.router.ts` |
 | `lib/tokens/tokens.ts` (`countTokens`) | чистая функция | helper домена-потребителя | **отложено** — сейчас зовут только воркеры |

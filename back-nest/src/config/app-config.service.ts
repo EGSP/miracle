@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import ms from 'ms';
+import type { StringValue } from 'ms';
 import type { EnvConfig } from './env.schema.js';
 
 @Injectable()
@@ -36,6 +38,14 @@ export class AppConfigService {
 
     get refreshTokenLifetime(): string {
         return this.config.get('REFRESH_TOKEN_LIFETIME', { infer: true });
+    }
+
+    get accessTokenLifetimeMs(): number {
+        return ms(this.accessTokenLifetime as StringValue);
+    }
+
+    get refreshTokenLifetimeMs(): number {
+        return ms(this.refreshTokenLifetime as StringValue);
     }
 
     get dbDir(): string | undefined {

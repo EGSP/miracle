@@ -14,13 +14,15 @@
 4. Если всё ок — на `request` навешивается `user` (без поля `password`), guard пропускает.
 5. Любая ошибка — `UnauthorizedException` (или `NotFoundException` если user удалён).
 
-Реализация — [back-nest/src/auth/auth.guard.ts](../../back-nest/src/auth/auth.guard.ts) и [back-nest/src/auth/tokens.service.ts](../../back-nest/src/auth/tokens.service.ts).
+Реализация — [back-nest/src/auth/auth.guard.ts](../../back-nest/src/auth/auth.guard.ts) и [back-nest/src/tokens/tokens.service.ts](../../back-nest/src/tokens/tokens.service.ts).
 
 Канонический пример использования — [back-nest/src/users/users.controller.ts](../../back-nest/src/users/users.controller.ts).
 
-## Что НЕ в скоупе
+## Auth-флоу (выпуск токенов)
 
-Этот паттерн описывает **только использование** уже работающего AuthGuard. Сам auth-флоу (`POST /auth/login`, `/register`, `/refresh`, `/logout`) пока не мигрирован — это будет отдельный домен `back-nest/src/auth-flow/` (или внутри `auth/`) в следующей фазе. Если твоя задача — перенести login/register, **остановись и поднимай вопрос с пользователем**; этот паттерн не покрывает выпуск токенов.
+Login/register/refresh/logout реализованы в [back-nest/src/auth/auth.controller.ts](../../back-nest/src/auth/auth.controller.ts) и [back-nest/src/auth/auth.service.ts](../../back-nest/src/auth/auth.service.ts). Cookies выставляются через `TokensService.setCookies` на `FastifyReply` (`@Res({ passthrough: true })`).
+
+Этот раздел ниже описывает **использование** `AuthGuard` на защищённых эндпоинтах (например, [back-nest/src/sessions/sessions.controller.ts](../../back-nest/src/sessions/sessions.controller.ts)).
 
 ## Применение к контроллеру
 
