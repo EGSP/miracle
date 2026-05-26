@@ -56,13 +56,15 @@
 | `database.md` | При добавлении новой коллекции или работе с существующей |
 | `auth.md` | Если эндпоинт требует аутентификации |
 | `errors.md` | При замене `err.*` из старого кода на исключения Nest |
+| `lib.md` | Если исходник импортирует из `back/src/lib/` или `back/src/logger/` — куда такие файлы переезжают и что отложено |
 | `client-generator.md` | Если задача — написать новый генератор клиента (`tools/src/client-generator-nest/`) под NestJS |
 
 ### Что читать под конкретную задачу
 
-- **«Перенеси `<x>.router.ts` в Nest»** → `controller.md` + `service.md` + `dto.md` + `errors.md` (+ `auth.md` если есть `authMiddleware` + `database.md` если нужны новые коллекции).
+- **«Перенеси `<x>.router.ts` в Nest»** → `controller.md` + `service.md` + `dto.md` + `errors.md` (+ `auth.md` если есть `authMiddleware` + `database.md` если нужны новые коллекции + `lib.md` если есть импорты из `back/src/lib/` или `back/src/logger/`).
 - **«Поднимай каркас `back-nest` с нуля»** → `bootstrap.md`.
 - **«Добавь новый домен <foo>»** → `module.md` + остальные по нужде.
+- **«Подними логгер в `back-nest`»** → `lib.md` (секция «Логгер»).
 - **«Напиши генератор клиента для `back-nest`»** → `client-generator.md`.
 - **«Подключи новую БД-сущность»** → `database.md`.
 
