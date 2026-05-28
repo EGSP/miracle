@@ -4,9 +4,11 @@ import { Fragment, useMemo } from 'react';
 import {
     buildDesignationDisplayCopyText,
     buildDesignationDisplayParts,
+    renderDesignationTemplate,
 } from '@/lib/designation-display';
 import { CopyButton } from '@/components/ui/derivations';
 import { useFieldLayerStyle } from '@/lib/use-field-layer-style';
+import { useTechnicalCondition } from '@/lib/queries/technical-condition.query';
 import '@/design/designation-display.css';
 
 export type DesignationDisplayProps = {
@@ -20,16 +22,25 @@ export type DesignationDisplayProps = {
  */
 export function DesignationDisplay({ designation }: DesignationDisplayProps) {
     const fieldStyle = useFieldLayerStyle();
+    const tcQuery = useTechnicalCondition(designation.tcId);
 
     const parts = useMemo(
         () => buildDesignationDisplayParts(designation),
         [designation],
     );
 
-    const copyText = useMemo(
-        () => buildDesignationDisplayCopyText(designation),
-        [designation],
-    );
+    const templateText = useMemo(() => {
+        const tc = tcQuery.data;
+        const template = tc?.displayTemplates?.[0]?.format;
+        if (!tc || !template) {
+            return null;
+        }
+        return renderDesignationTemplate(designation, tc, template);
+    }, [designation, tcQuery.data]);
+
+    const copyText = useMemo(() => {
+        return templateText ?? buildDesignationDisplayCopyText(designation);
+    }, [designation, templateText]);
 
     const ariaLabel = copyText || undefined;
 
@@ -38,37 +49,44 @@ export function DesignationDisplay({ designation }: DesignationDisplayProps) {
     }
 
     return (
-        <div className="designation-display-row">
-            <div
-                className="designation-display"
-                role="group"
-                aria-label={ariaLabel ? `Условное обозначение: ${ariaLabel}` : undefined}
-                style={fieldStyle}
-            >
-                {parts.map((part, index) => (
-                    <Fragment key={part.slotIndex}>
-                        {index > 0 ? (
-                            <span className="designation-display-separator">
-                                <Text.Code as="span">-</Text.Code>
+        <Fragment>
+            {templateText ? (
+                <Text.Helper as="p">
+                    По шаблону: <Text.Code as="span">{templateText}</Text.Code>
+                </Text.Helper>
+            ) : null}
+            <div className="designation-display-row">
+                <div
+                    className="designation-display"
+                    role="group"
+                    aria-label={ariaLabel ? `Условное обозначение: ${ariaLabel}` : undefined}
+                    style={fieldStyle}
+                >
+                    {parts.map((part, index) => (
+                        <Fragment key={part.slotIndex}>
+                            {index > 0 ? (
+                                <span className="designation-display-separator">
+                                    <Text.Code as="span">-</Text.Code>
+                                </span>
+                            ) : null}
+                            <span
+                                className={
+                                    part.tone === 'none'
+                                        ? 'designation-display-part'
+                                        : `designation-display-part designation-display-part--${part.tone}`
+                                }
+                            >
+                                <Text.Code as="span" expressive>{part.text}</Text.Code>
                             </span>
-                        ) : null}
-                        <span
-                            className={
-                                part.tone === 'none'
-                                    ? 'designation-display-part'
-                                    : `designation-display-part designation-display-part--${part.tone}`
-                            }
-                        >
-                            <Text.Code as="span" expressive>{part.text}</Text.Code>
-                        </span>
-                    </Fragment>
-                ))}
+                        </Fragment>
+                    ))}
+                </div>
+                <CopyButton
+                    text={copyText}
+                    size="md"
+                    label="Копировать условное обозначение"
+                />
             </div>
-            <CopyButton
-                text={copyText}
-                size="md"
-                label="Копировать условное обозначение"
-            />
-        </div>
+        </Fragment>
     );
 }

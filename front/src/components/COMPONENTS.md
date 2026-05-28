@@ -266,10 +266,10 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 
 ## DesignationDisplay / DesignationInspector
 
-- **Display** — `DesignationDisplay.tsx`, `design/designation-display.css`: компактная строка, без резолва TC; справа `CopyButton` (`buildDesignationDisplayCopyText` — части через «-», «?» как на экране).
+- **Display** — `DesignationDisplay.tsx`, `design/designation-display.css`: компактная строка; над ней `Text.Helper` с результатом шаблонизации (если у TC есть шаблон), справа `CopyButton` копирует шаблонизированный текст, иначе fallback на `buildDesignationDisplayCopyText` (части через «-», «?» как на экране).
 - **Inspector** — `DesignationInspector.tsx`, `design/designation-inspector.css`: таблица проблемных слотов; имена из TC по `tcId`; колонка «Позиция» — **1-based** (`#1`, `#2`, …), как подписи слотов в карточке ТУ.
 - **Правила ТУ** (`TCCRules`) — над заголовком правила: `Text.Helper` с `Используется: #1, #2` или `Не используется` (по `DesignationSlot.ruleIds`, позиции 1-based как в редакторе параметров).
-- Логика: `lib/designation-display.ts` (пороги, `buildDesignationDisplayParts`, `buildDesignationInspectorRows`, `designationToneClassName`).
+- Логика: `lib/designation-display.ts` (пороги, `buildDesignationDisplayParts`, `renderDesignationTemplate`, `buildDesignationInspectorRows`, `designationToneClassName`).
 - Подсветка: `warn` — пустое/`"null"` или `confidence < 0.7`; `critical` — значение есть и `confidence < 0.5`. В инспектор попадают пропуски, пустые и critical (не warn 0.5–0.7).
 
 ---

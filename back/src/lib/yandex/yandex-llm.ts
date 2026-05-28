@@ -7,7 +7,7 @@ import type { LlmRequest, LlmPollResult } from './yandex-llm.types.js';
 import { submitVisionCompletion, pollVisionCompletion } from './yandex-vision-llm.js';
 export type { VisionRequest, VisionMessage, VisionUserContent } from './yandex-vision-llm.js';
 
-const MODEL_SUFFIX = 'yandexgpt-5-lite/latest';
+const MODEL_SUFFIX = 'yandexgpt-5.1/latest';
 
 /** Удаляет markdown-обёртку ```json ... ``` если модель добавила её вопреки инструкциям. */
 function stripMarkdownFences(raw: string): string {

@@ -8,7 +8,7 @@ import { createUuid } from '@/lib/uuid';
 import { useTechnicalConditionCardContext } from './TechnicalConditionCardContext';
 
 function makeTemplate(): DisplayTemplate {
-    return { id: createUuid(), name: '', separator: '-', includedSlots: [] };
+    return { id: createUuid(), name: '', format: '' };
 }
 
 export function TCCTemplates() {
@@ -22,13 +22,6 @@ export function TCCTemplates() {
 
     const update = (i: number, patch: Partial<DisplayTemplate>) =>
         templates.onChange(templates.value.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
-
-    const updateSlotIndex = (tmplIdx: number, slotIdx: number, raw: string) => {
-        const n = parseInt(raw, 10);
-        const tmpl = templates.value[tmplIdx];
-        const next = tmpl.includedSlots.map((v, i) => (i === slotIdx ? (isNaN(n) ? v : n) : v));
-        update(tmplIdx, { includedSlots: next });
-    };
 
     useContribute(contribute, `tc-${tc.id}-templates`, (draft): Stored<TechnicalCondition> => ({
         ...draft,
@@ -54,35 +47,15 @@ export function TCCTemplates() {
                             disabled={isSaving}
                         />
                         <Input
-                            label="Разделитель"
-                            placeholder="Напр. -"
-                            value={tmpl.separator}
-                            onChange={(e) => update(i, { separator: e.target.value })}
+                            label="Строка шаблона"
+                            placeholder='Напр. [1] [2]-[3]-...-[10]'
+                            value={tmpl.format ?? ''}
+                            onChange={(e) => update(i, { format: e.target.value })}
                             disabled={isSaving}
                         />
-                        <div className="flex flex-col gap-0.5">
-                            <Text.Helper as="span">Индексы слотов</Text.Helper>
-                            <ArrayEditor
-                                items={tmpl.includedSlots}
-                                onAdd={() => update(i, { includedSlots: [...tmpl.includedSlots, 0] })}
-                                onRemove={(j) =>
-                                    update(i, {
-                                        includedSlots: tmpl.includedSlots.filter((_, idx) => idx !== j),
-                                    })
-                                }
-                                renderItem={(slotIndex, j) => (
-                                    <Input
-                                        type="number"
-                                        label={`Слот ${j + 1}`}
-                                        value={slotIndex}
-                                        onChange={(e) => updateSlotIndex(i, j, e.target.value)}
-                                        disabled={isSaving}
-                                    />
-                                )}
-                                addLabel="Добавить индекс"
-                                disabled={isSaving}
-                            />
-                        </div>
+                        <Text.Helper as="p">
+                            Используйте 1-based плейсхолдеры вида [1], [2], [3] и т.д.
+                        </Text.Helper>
                     </Stack>
                 )}
                 addLabel="Добавить шаблон"

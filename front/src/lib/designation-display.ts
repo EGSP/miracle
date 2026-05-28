@@ -1,4 +1,4 @@
-import type { Designation, DesignationValue } from '@miracle/types';
+import type { Designation, DesignationValue, TechnicalCondition } from '@miracle/types';
 
 /** Подсветка ячейки по уверенности LLM. */
 export type DesignationDisplayTone = 'none' | 'warn' | 'critical';
@@ -92,6 +92,46 @@ export function buildDesignationDisplayCopyText(designation: Designation): strin
     return buildDesignationDisplayParts(designation)
         .map((part) => part.text)
         .join('-');
+}
+
+/**
+ * Рендерит строку по шаблону вида "[1] [2]-[3]-...-[10]" (1-based).
+ * Незаполненные/пустые значения, пропуски и выход за диапазон — «?».
+ */
+export function renderDesignationTemplate(
+    designation: Designation,
+    tc: TechnicalCondition,
+    template: string | null | undefined,
+): string {
+    const format = template?.trim();
+    if (!format) {
+        return buildDesignationDisplayCopyText(designation);
+    }
+
+    const valueBySlot = new Map<number, string | null>();
+    for (const entry of designation.values) {
+        valueBySlot.set(entry.slotIndex, entry.value);
+    }
+
+    const maxSlotIndex = (tc.designationSlots ?? []).reduce(
+        (max, slot) => (slot.index > max ? slot.index : max),
+        -1,
+    );
+
+    return format.replace(/\[(\d+)]/g, (_, oneBasedRaw: string) => {
+        const oneBasedIndex = Number(oneBasedRaw);
+        if (!Number.isInteger(oneBasedIndex) || oneBasedIndex <= 0) {
+            return '?';
+        }
+
+        const slotIndex = oneBasedIndex - 1;
+        if (maxSlotIndex >= 0 && slotIndex > maxSlotIndex) {
+            return '?';
+        }
+
+        const rawValue = valueBySlot.get(slotIndex);
+        return designationDisplayText(rawValue ?? null);
+    });
 }
 
 export function designationToneClassName(tone: DesignationDisplayTone): string {

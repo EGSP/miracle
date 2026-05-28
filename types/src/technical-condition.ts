@@ -42,10 +42,11 @@ export type DisplayTemplate = {
     id: string;
     /** Читаемое название, напр. "Полное", "Краткое". */
     name: string;
-    /** Индексы DesignationSlot.index, которые включаются в обозначение. */
-    includedSlots: number[];
-    /** Разделитель между частями обозначения, обычно "-". */
-    separator: string;
+    /**
+     * Строка форматирования обозначения с 1-based плейсхолдерами:
+     * пример — "[1] [2]-[3]-...-[10]".
+     */
+    format: string;
 };
 
 /** Query для GET `/technical-conditions`. */
