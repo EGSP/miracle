@@ -1,4 +1,4 @@
-import { Text } from '@miracle/aramid';
+import { Stack, Text } from '@miracle/aramid';
 import type { Designation } from '@miracle/types';
 import { Fragment, useMemo } from 'react';
 import {
@@ -55,7 +55,7 @@ export function DesignationDisplay({ designation }: DesignationDisplayProps) {
                     По шаблону: <Text.Code as="span">{templateText}</Text.Code>
                 </Text.Helper>
             ) : null}
-            <div className="designation-display-row">
+            <Stack gap={2} orientation='horizontal'>
                 <div
                     className="designation-display"
                     role="group"
@@ -86,7 +86,7 @@ export function DesignationDisplay({ designation }: DesignationDisplayProps) {
                     size="md"
                     label="Копировать условное обозначение"
                 />
-            </div>
+            </Stack>
         </Fragment>
     );
 }
