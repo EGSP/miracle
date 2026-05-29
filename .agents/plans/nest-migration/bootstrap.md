@@ -54,8 +54,10 @@ back-nest/
       collections.ts
       database.module.ts
       database.service.ts
-    auth/
+    tokens/
       tokens.service.ts
+      tokens.module.ts
+    auth/
       auth.guard.ts
       current-user.decorator.ts
       auth.module.ts
@@ -66,8 +68,6 @@ back-nest/
       users.controller.ts
       users.service.ts
       users.module.ts
-      dto/
-        public-user.dto.ts
 ```
 
 ## Шаг 3 — `back-nest/package.json` (минимальный, до установки)
@@ -535,7 +535,9 @@ import { DatabaseService } from './database.service.js';
 export class DatabaseModule {}
 ```
 
-### `src/auth/tokens.service.ts`
+### `src/tokens/tokens.service.ts`
+
+`tokens/` — отдельный модуль (а не файл внутри `auth/`): `TokensService` нужен и `AuthGuard`, и auth-флоу (login/refresh), поэтому он живёт самостоятельно и его импортируют через `TokensModule`. Это одна из немногих не-доменных папок (см. принцип №1 в `README.md`).
 
 ```ts
 import { Injectable } from '@nestjs/common';
@@ -563,6 +565,19 @@ export class TokensService {
 }
 ```
 
+### `src/tokens/tokens.module.ts`
+
+```ts
+import { Module } from '@nestjs/common';
+import { TokensService } from './tokens.service.js';
+
+@Module({
+    providers: [TokensService],
+    exports: [TokensService],
+})
+export class TokensModule {}
+```
+
 ### `src/auth/auth.guard.ts`
 
 ```ts
@@ -574,7 +589,7 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { TokensService } from './tokens.service.js';
+import { TokensService } from '../tokens/tokens.service.js';
 import { DatabaseService } from '../database/database.service.js';
 import type { AuthenticatedUser } from './current-user.decorator.js';
 
@@ -628,12 +643,13 @@ export const CurrentUser = createParamDecorator(
 
 ```ts
 import { Module } from '@nestjs/common';
-import { TokensService } from './tokens.service.js';
+import { TokensModule } from '../tokens/tokens.module.js';
 import { AuthGuard } from './auth.guard.js';
 
 @Module({
-    providers: [TokensService, AuthGuard],
-    exports: [TokensService, AuthGuard],
+    imports: [TokensModule],
+    providers: [AuthGuard],
+    exports: [AuthGuard],
 })
 export class AuthModule {}
 ```
@@ -664,46 +680,27 @@ import { HealthController } from './health.controller.js';
 export class HealthModule {}
 ```
 
-### `src/users/dto/public-user.dto.ts`
-
-```ts
-import { z } from 'zod';
-import { createZodDto } from 'nestjs-zod';
-
-/**
- * Публичная форма пользователя для ответа эндпоинта /users/me.
- * Внутри БД хранится UserInternal с полем password; этот DTO его опускает.
- */
-export const PublicUserSchema = z.object({
-    id: z.string(),
-    login: z.string().optional(),
-    role: z.string().optional(),
-    createdAt: z.number(),
-    updatedAt: z.number(),
-});
-
-export class PublicUserDto extends createZodDto(PublicUserSchema) {}
-```
-
 ### `src/users/users.service.ts`
+
+Response — TS-тип `Stored<User>` из `@miracle/types`, **без** обёртки `createZodDto`. Поэтому у `users/` нет каталога `dto/` — он появится только с первым INPUT-эндпоинтом (см. `dto.md`).
 
 ```ts
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Stored, User } from '@miracle/types';
 import { DatabaseService } from '../database/database.service.js';
-import type { PublicUserDto } from './dto/public-user.dto.js';
 
 @Injectable()
 export class UsersService {
     constructor(private readonly db: DatabaseService) {}
 
-    getPublicById(id: string): PublicUserDto {
+    getPublicById(id: string): Stored<User> {
         const user = this.db.collections.users.getById(id);
         if (!user) {
             throw new NotFoundException(`User ${id} not found`);
         }
 
         const { password: _password, ...publicUser } = user;
-        return publicUser as PublicUserDto;
+        return publicUser as Stored<User>;
     }
 }
 ```
@@ -712,10 +709,10 @@ export class UsersService {
 
 ```ts
 import { Controller, Get, UseGuards } from '@nestjs/common';
+import type { Stored, User } from '@miracle/types';
 import { UsersService } from './users.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
-import type { PublicUserDto } from './dto/public-user.dto.js';
 
 @Controller('users')
 export class UsersController {
@@ -723,7 +720,7 @@ export class UsersController {
 
     @Get('me')
     @UseGuards(AuthGuard)
-    getMe(@CurrentUser() user: AuthenticatedUser): PublicUserDto {
+    getMe(@CurrentUser() user: AuthenticatedUser): Stored<User> {
         return this.users.getPublicById(user.id);
     }
 }

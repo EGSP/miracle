@@ -71,7 +71,7 @@
 
 1. **`repoRoot` в конфиге** — миракловский авто-резолв (`findWorkspaceRoot`) лучше.
 2. **`modelsLayout: bundle`** — миракловская раскладка (per-router) уже выбрана, она удобнее для тримшейкинга и навигации.
-3. **`modelSuffix`** — не нужно. В Miracle DTO-классы имеют осмысленные имена (`CreateOrderDto`, `PublicUserDto`), коллизии с `@miracle/types` маловероятны (там нет таких суффиксов).
+3. **`modelSuffix`** — не нужно. В Miracle DTO-классы имеют осмысленные имена (`CreateOrderDto`, `OrdersQueryDto`), коллизии с `@miracle/types` маловероятны (там нет таких суффиксов).
 4. **`globalPrefix` и `version`** — в `back-nest` Nest запускается **без** `setGlobalPrefix` и без версионирования (см. [back-nest/src/main.ts](../../back-nest/src/main.ts)). Декоратор `@Controller({ version })` тоже не используется. URL — это просто `prefix + path`.
 5. **Plugin Prisma** — у Miracle нет Prisma.
 6. **Регенерация интерфейсов через `ModelRegistry`** для DTO. Не нужно: для DTO эмитим тонкий `interface … extends z.infer<typeof Schema> {}`, а schema живёт в `@miracle/types` и импортируется напрямую (см. [dto.md](./dto.md)).
@@ -110,7 +110,7 @@ export class UsersController {
     @UseGuards(AuthGuard)
     getMe(
         @CurrentUser() user: AuthenticatedUser,  // не HTTP-параметр, пропускаем
-    ): PublicUserDto { /* ... */ }      // returnType = PublicUserDto
+    ): Stored<User> { /* ... */ }       // returnType = Stored<User> (тип из @miracle/types)
 }
 ```
 

@@ -96,7 +96,7 @@ export class AppModule {}
 
 - `users.module.ts` — модуль с `imports: [AuthModule]` (потому что контроллер использует `AuthGuard`)
 - `users.controller.ts` — один эндпоинт `GET /users/me`
-- `users.service.ts` — один метод `getPublicById`
-- `dto/public-user.dto.ts` — один DTO для response
+- `users.service.ts` — один метод `getPublicById`, возвращает `Stored<User>` из `@miracle/types`
+- каталога `dto/` **нет** — у `users` пока нет входных эндпоинтов, а response не оборачивается в DTO (см. `dto.md`)
 
 Шире вариант появится после переноса первых полноценных доменов (`product-types`, `orders`).

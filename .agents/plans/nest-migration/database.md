@@ -133,11 +133,11 @@ export type UserInternal = User & { password: string };
 // users: JsonCollection<UserInternal>
 
 // users.service.ts
-getPublicById(id: string): PublicUserDto {
+getPublicById(id: string): Stored<User> {
     const user = this.db.collections.users.getById(id);
     if (!user) throw new NotFoundException(...);
     const { password: _password, ...publicUser } = user;
-    return publicUser as PublicUserDto;
+    return publicUser as Stored<User>;
 }
 ```
 

@@ -10,6 +10,19 @@
 
 Это сознательное отступление от структуры старого `back/`. В Nest «общий код» — антипаттерн, пока он не реально общий: естественное место для функции — каталог её домена-потребителя.
 
+## Решение (2026-05-29): весь `lib/` едет по доменам, кроме вендорных SDK
+
+Принято: **функционал из `back/src/lib/` переносится в домены-потребители**, включая worker-only хелперы и конкретные воркеры. Отдельной «фазы воркеров/очередей» как поздней стадии **нет** — воркер едет вместе с доменом, который его запускает (`DesignationWorker` → `orders/`, `TCDetailsWorker` → `technical-conditions/`, `extraction/*` → `files-content/`).
+
+**Единственное исключение — внешние SDK-обёртки**, которые являются stateful-singleton'ами и реально нужны нескольким доменам: они остаются отдельными `@Global`-модулями.
+
+- `lib/yandex/*` → `back-nest/src/yandex/` — `@Global` `YandexService` (Session/токен — один на процесс).
+- `lib/convert/*` (pdfjs) → `back-nest/src/convert/` — `@Global` сервис.
+
+Эти вендор-модули **не откладываются абстрактно**, а создаются вместе с первым доменом-потребителем (извлечение контента в `files-content/`) и инжектятся в доменные сервисы/воркеры через DI.
+
+Так же отдельным `@Global`-модулем остаётся **логгер** (это инфраструктура, не вендор — см. секцию «Логгер»). Сам `worker-pool`/`base-worker` — это worker-runtime, общий для `orders` и `technical-conditions`; он мигрируется инфра-шагом перед первым доменом с воркерами (правило 5 «общий код»), тогда как **конкретные** воркеры — по доменам.
+
 ## Категории и адреса
 
 Перед переносом классифицируй файл по тому, **что он импортирует** и **кто его зовёт**:
@@ -18,8 +31,9 @@
 |---|---|---|---|
 | Доменная утилита | импортирует доменный сервис/коллекцию (`productTypesService`, `userDb`, …) | внутрь каталога домена-потребителя — отдельным файлом или приватным методом сервиса | вместе с миграцией этого домена |
 | Чистая функция над `@miracle/types` | импортирует только из `@miracle/types` или без зависимостей | приватный helper в каталоге первого потребителя | вместе с первым потребителем |
-| Внешний API/SDK | импортирует `@yandex-cloud/...`, `pdfjs-dist`, прочих вендоров | отдельный `@Global()`-модуль `back-nest/src/<vendor>/` с `<Vendor>Service` (env через `AppConfigService`) | **отложено** до фазы воркеров |
-| Worker-only helper | зовётся только из `back/src/workers/*` | в worker-каталоги, в формате Nest-провайдеров | **отложено** до фазы воркеров |
+| Внешний API/SDK | импортирует `@yandex-cloud/...`, `pdfjs-dist`, прочих вендоров | отдельный `@Global()`-модуль `back-nest/src/<vendor>/` с `<Vendor>Service` (env через `AppConfigService`) | вместе с первым доменом-потребителем |
+| Worker-only helper / конкретный воркер | зовётся только из `back/src/workers/*` | в каталог домена, который запускает воркер, в формате Nest-провайдеров | вместе с этим доменом |
+| Worker-runtime | `worker-pool.ts`, `base-worker.ts` — общий запускатель для 2+ доменов | shared worker-runtime (правило 5), инфра-шагом перед первым доменом с воркерами | перед `technical-conditions`/`orders` |
 | Логгер | `back/src/logger/logger.ts` | `back-nest/src/logger/` — глобальный модуль + `LoggerService` | отдельной микро-задачей до миграции следующих доменов |
 
 ## Карта текущего `back/src/lib/`
@@ -31,10 +45,10 @@
 | `lib/user-role.util.ts` | чистая функция над `@miracle/types` | `back-nest/src/sessions/user-role.util.ts` | едет с `session.router.ts` |
 | `lib/order/resolve-product-type.ts` | доменная утилита (зависит от `productTypesService`) | `back-nest/src/orders/resolve-product-type.ts` или приватный метод `OrdersService` | едет с `order.router.ts` |
 | `lib/technical-condition/prepare-payload.ts` | доменная утилита (зависит от `productTypesService`) | `back-nest/src/technical-conditions/prepare-payload.ts` или приватный метод `TechnicalConditionsService` | едет с `technical-condition.router.ts` |
-| `lib/tokens/tokens.ts` (`countTokens`) | чистая функция | helper домена-потребителя | **отложено** — сейчас зовут только воркеры |
-| `lib/convert/pdf-to-image.ts` | внешний API (pdfjs-dist) | `back-nest/src/convert/` как сервис | **отложено** до фазы воркеров |
-| `lib/extraction/*` | worker-only | в worker-каталоги | **отложено** |
-| `lib/yandex/*` (Session, config, llm, vision) | внешний API + singleton | `back-nest/src/yandex/` как `@Global()`-модуль с `YandexService` (env через `AppConfigService`) | **отложено**, едет вместе с первой реальной потребностью |
+| `lib/tokens/tokens.ts` (`countTokens`) | чистая функция | helper домена-потребителя | едет с первым потребителем (`files-content` — `getTokens`) |
+| `lib/convert/pdf-to-image.ts` | внешний API (pdfjs-dist) | `back-nest/src/convert/` как `@Global` сервис | едет с `files-content` (первый потребитель извлечения) |
+| `lib/extraction/*` | worker-only / зовётся из `files-content` | `back-nest/src/files-content/` (домен-потребитель), вендоры — через DI из `@Global` `yandex`/`convert` | едет с `file-content.router.ts` |
+| `lib/yandex/*` (Session, config, llm, vision) | внешний API + singleton | `back-nest/src/yandex/` как `@Global()`-модуль с `YandexService` (env через `AppConfigService`) | едет с первым потребителем (`files-content`) |
 
 ## Доменная утилита: правила переноса
 
@@ -128,14 +142,16 @@ export class OrdersService {
 ## Что НЕ делаем
 
 - **Не создаём `back-nest/src/lib/`** и **не создаём `back-nest/src/common/`** про запас. Только когда реально шарят 2+ модуля (правило 5).
-- **Не переносим заранее** worker-инфраструктуру (`extraction/`, `convert/`, `yandex/`). Её перепишет фаза воркеров под Nest-DI; копировать сейчас — значит создавать мёртвый код, который потом всё равно выбросят.
+- **Не создаём вендор-/worker-модули заранее, до их первого потребителя.** `yandex/`, `convert/`, `worker-pool` поднимаются вместе с доменом, которому они впервые нужны (`files-content`, затем `technical-conditions`/`orders`). Поднять их без потребителя — мёртвый код.
+- **Не переносим вендорные SDK внутрь домена.** `yandex`/`convert` остаются `@Global`-модулями (stateful-singleton, нужны нескольким доменам). В домен едут только их **потребители** (`extraction`, воркеры), вызывая вендор через DI.
 - **Не создаём helper-файлы внутри `dto/`** — там только классы, наследующие `createZodDto`. Утилиты живут рядом с сервисом, не в `dto/`.
 - **Не оборачиваем чистые функции в сервисы без нужды.** Если функция не имеет состояния и не зависит от других сервисов — пусть остаётся функцией, не превращай её в `@Injectable()` ради «единообразия».
 
 ## Типичные грабли
 
 - **Перенесли `lib/order/resolve-product-type.ts` в `orders/` как есть** — забыли убрать импорт `productTypesService` и переключиться на `ProductTypesService` через DI. Файл компилируется, но runtime ломается: module-level singleton не существует в `back-nest`.
-- **Скопировали `lib/yandex/*` в `back-nest/`** до фазы воркеров. Это мёртвый код, который никто не зовёт; кроме того, его всё равно перепишут под `@Global` + `AppConfigService`. Не делай.
+- **Подняли `yandex/`/`convert/` до первого потребителя** (`files-content`). Это мёртвый код, который никто не зовёт. Вендор-модуль создаётся вместе с доменом, которому он впервые нужен.
+- **Затащили `lib/yandex/*` внутрь домена** вместо `@Global`-модуля. Yandex-клиент — stateful-singleton на нескольких потребителей; ему место в `back-nest/src/yandex/` как `@Global`, а домен инжектит `YandexService`.
 - **Создали `back-nest/src/common/` с одним файлом** — преждевременная абстракция. Этот файл сядет внутрь домена-потребителя.
 - **Использовали `console.log` в `back-nest/`** после миграции логгера — это код-ревью-стоп. См. секцию «Логгер».
 - **Использовали `new Logger(SomeService.name)` из `@nestjs/common`** — запрещено: решение зафиксировано на инжект `AppLoggerService` + `forContext(...)`. Встроенный `Logger` уходит в `app.useLogger(...)` и доменам не виден.

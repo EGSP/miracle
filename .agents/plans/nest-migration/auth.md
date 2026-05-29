@@ -165,7 +165,7 @@ export class UsersController {
 
     @Get('me')
     @UseGuards(AuthGuard)
-    getMe(@CurrentUser() user: AuthenticatedUser): PublicUserDto {
+    getMe(@CurrentUser() user: AuthenticatedUser): Stored<User> {
         return this.users.getPublicById(user.id);
     }
 }

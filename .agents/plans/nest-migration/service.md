@@ -150,11 +150,11 @@ export class OrdersModule {}
 Если в БД хранится больше полей, чем нужно отдавать клиенту (как у `User` — есть `password`, отдаётся без него), маппинг — **в сервисе**:
 
 ```ts
-getPublicById(id: string): PublicUserDto {
+getPublicById(id: string): Stored<User> {
     const user = this.db.collections.users.getById(id);
     if (!user) throw new NotFoundException(`User ${id} not found`);
     const { password: _password, ...publicUser } = user;
-    return publicUser as PublicUserDto;
+    return publicUser as Stored<User>;
 }
 ```
 
@@ -178,13 +178,13 @@ getPublicById(id: string): PublicUserDto {
 export class UsersService {
     constructor(private readonly db: DatabaseService) {}
 
-    getPublicById(id: string): PublicUserDto {
+    getPublicById(id: string): Stored<User> {
         const user = this.db.collections.users.getById(id);
         if (!user) {
             throw new NotFoundException(`User ${id} not found`);
         }
         const { password: _password, ...publicUser } = user;
-        return publicUser as PublicUserDto;
+        return publicUser as Stored<User>;
     }
 }
 ```

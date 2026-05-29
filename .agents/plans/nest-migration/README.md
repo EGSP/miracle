@@ -35,9 +35,8 @@
 
 - Миграция БД на Drizzle/Postgres — JSON-файлы остаются как есть.
 - Кодген клиента под Nest — фронт пока работает с прошлым API; кодген появится позже.
-- Очереди / `@nestjs/bull` — `workers/` остаются на текущей реализации.
+- Очереди `@nestjs/bull` — **не вводим**. Существующий `worker-pool` переезжает как есть (worker-runtime + воркеры по доменам, см. `lib.md`), на bull не переписываем.
 - Дополнительные guards по ролям (`AdminGuard` и т.п.) — по мере миграции `admin.router.ts`.
-- Multipart-загрузки (`@fastify/multipart`) — отдельная фаза.
 - CI/CD, Docker, PM2-конфигурация — отдельный разговор.
 - Тесты — пишем после первой партии миграций.
 
@@ -74,27 +73,47 @@
 
 - `back-nest/src/users/users.module.ts` — структура модуля
 - `back-nest/src/users/users.controller.ts` — контроллер с `AuthGuard` + `@CurrentUser`
-- `back-nest/src/users/users.service.ts` — сервис через `DatabaseService`
-- `back-nest/src/users/dto/public-user.dto.ts` — DTO через `createZodDto`
+- `back-nest/src/users/users.service.ts` — сервис через `DatabaseService`, возвращает `Stored<User>`
+
+У `users/` **нет** каталога `dto/`: входных эндпоинтов пока нет, а response — TS-тип из `@miracle/types`, без обёртки `createZodDto` (см. `dto.md`). Первый пример DTO появится при миграции `orders`.
 
 Этот домен **обязан** оставаться эталонным. Если паттерн меняется — сначала обнови `users/`, потом паттерн-документ.
 
 ## Порядок миграции маршрутов
 
-Старые роутеры в `back/src/routers/` переезжают **от простых к сложным**:
+Порядок определяется **топологией зависимостей** (DI-граф + общие коллекции + инфраструктура), а не субъективной «сложностью». Тестирование идёт сразу на полной версии, поэтому деления «сначала проверим каркас на простом, потом возьмём жирное» нет. Единственное жёсткое правило: **домен нельзя брать раньше всего, что он инжектит и запускает**.
 
-1. ~~`health.router.ts`~~ → `back-nest/src/health/`
-2. ~~`session.router.ts`~~ → `back-nest/src/sessions/` (`AuthGuard` + `@CurrentUser`)
-3. ~~`auth.router.ts`~~ → `back-nest/src/auth/` (login/logout/register/refresh + cookies)
-4. `user.router.ts` (тривиальный, без auth; частично — `GET /users/me` в `users/`)
-4. `product-type.router.ts` (простой CRUD)
-5. `technical-condition.router.ts` (средний CRUD)
-6. `order.router.ts` (большой, но без файлов/воркеров)
-7. `admin.router.ts`
-9. `file.router.ts` + `file-content.router.ts` — **отложено** до фазы multipart
-10. `workers.router.ts` — **отложено** до фазы очередей
+### Инфраструктурные шаги (вне доменов)
 
-Перед переездом «жирных» роутеров (`file`, `workers`) каркас должен быть проверен на простых.
+Это предпосылки, а не маршруты. Делаются как только нужны первому потребителю:
+
+- **Логгер** — `@Global` `LoggerModule` отдельной микро-задачей **до** миграции следующих доменов (см. `lib.md`, секция «Логгер»). Иначе каждый агент выберет свой способ логирования и это потом долго чинить.
+- **Роль-гард** — вариант `AuthGuard` под роли (замена `adminRoleMiddleware`) — перед `admin`.
+- **Multipart** — `@fastify/multipart` — перед `files`.
+- **Вендорные `@Global`-модули** — `yandex/` (`YandexService`), `convert/` (pdf→image). Создаются вместе с первым доменом-потребителем (извлечение контента), не заранее. См. `lib.md`.
+- **Worker-runtime** — `worker-pool` + `base-worker` — перед первым доменом, запускающим воркеры (`technical-conditions`, `orders`). Конкретные воркеры едут по доменам (см. `lib.md`), а не отдельной «фазой очередей».
+
+### Маршруты — по слоям зависимостей
+
+**Слой 0 (сделано):** `health` → `sessions` → `auth`.
+
+**Слой 1 — только своя коллекция, без чужих сервисов:**
+1. `user.router.ts` → `user/` — тривиальный, без auth.
+2. `product-type.router.ts` → `product-types/` — CRUD + auth.
+3. `workers.router.ts` → `workers/` — управляющий CRUD над `workersService`. **Не зависит** от исполнения воркеров (worker-runtime здесь не нужен), поэтому едет рано, а не «в фазе очередей».
+
+**Слой 2 — одна инфра-зависимость:**
+4. `admin.router.ts` → `admin/` — нужен роль-гард.
+5. `file.router.ts` → `files/` — нужен multipart.
+
+**Слой 3 — вендор + извлечение контента:**
+6. `file-content.router.ts` → `files-content/` — тянет `extraction` (едет в этот домен) поверх `@Global` `yandex`/`convert` + чистую `countTokens`. Зависит от `files` (контент привязан к файлу).
+
+**Слой 4 — вершина DI-стека:**
+7. `technical-condition.router.ts` → `technical-conditions/` — инжектит `productTypesService`; эндпоинт `extract-details` запускает `TCDetailsWorker` (едет в этот домен) поверх worker-runtime и извлечения. Зависит от `files`/извлечения.
+8. `order.router.ts` → `orders/` — **последний**. Инжектит `FilesService` + `TechnicalConditionsService`, запускает `DesignationWorker` (едет в этот домен). Зависит от `files` + `technical-conditions` + worker-runtime. Доменная утилита `resolve-product-type` едет сюда же.
+
+> Заметь: в старом коде `order` и `technical-condition` **не** «без файлов/воркеров» — оба импортируют `workerPool` и конкретные воркеры, `order` ещё и `filesService`. Поэтому они стоят в конце, а не в середине.
 
 ## Где живут данные
 
@@ -120,6 +139,6 @@
 5. **Output — TS-тип** (обычно из `@miracle/types`). Runtime-валидация ответа не нужна.
 6. **Ошибки — throw `*Exception`**, а не `return err.*`. См. `errors.md`.
 7. **Импорты внутри пакета — относительные с `.js`-суффиксом** (NodeNext-ESM): `import { X } from './foo.js'`. Импорты из workspace-пакетов — без суффикса: `import { User } from '@miracle/types'`.
-8. **Имена файлов — kebab-case с суффиксом роли**: `users.controller.ts`, `users.service.ts`, `users.module.ts`, `public-user.dto.ts`, `auth.guard.ts`, `current-user.decorator.ts`.
-9. **Имена классов — PascalCase с тем же суффиксом**: `UsersController`, `UsersService`, `UsersModule`, `PublicUserDto`, `AuthGuard`.
+8. **Имена файлов — kebab-case с суффиксом роли**: `users.controller.ts`, `users.service.ts`, `users.module.ts`, `create-order.dto.ts`, `auth.guard.ts`, `current-user.decorator.ts`.
+9. **Имена классов — PascalCase с тем же суффиксом**: `UsersController`, `UsersService`, `UsersModule`, `CreateOrderDto`, `AuthGuard`.
 10. **Комментарии — на русском**, только когда объясняют **почему**, а не **что**. Если код самоочевиден — без комментариев.

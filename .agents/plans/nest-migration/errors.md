@@ -218,7 +218,7 @@ if (!user) {
 [back-nest/src/users/users.service.ts](../../back-nest/src/users/users.service.ts) — пример сервисного `throw`:
 
 ```ts
-getPublicById(id: string): PublicUserDto {
+getPublicById(id: string): Stored<User> {
     const user = this.db.collections.users.getById(id);
     if (!user) {
         throw new NotFoundException(`User ${id} not found`);
