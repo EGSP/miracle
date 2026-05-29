@@ -49,5 +49,6 @@
  */
 
 export * from './auth.schemas.js';
-// export * from './orders.schemas.js';
+export * from './product-types.schemas.js';
+export * from './workers.schemas.js';
 // ...

@@ -100,7 +100,7 @@
 **Слой 1 — только своя коллекция, без чужих сервисов:**
 1. `user.router.ts` → `user/` — тривиальный, без auth.
 2. `product-type.router.ts` → `product-types/` — CRUD + auth.
-3. `workers.router.ts` → `workers/` — управляющий CRUD над `workersService`. **Не зависит** от исполнения воркеров (worker-runtime здесь не нужен), поэтому едет рано, а не «в фазе очередей».
+3. `workers.router.ts` → `workers/` — управляющий CRUD над `workersService`. Эндпоинты `GET /`, `DELETE /:id`, `GET /:id/preview-prompt` **не зависят** от исполнения воркеров (worker-runtime здесь не нужен), поэтому едут рано, а не «в фазе очередей». **Исключение:** `POST /:id/apply-worker-data` вызывает `workerPool.applyByWorkerId`, который инстанцирует все конкретные классы воркеров и зовёт `apply()` — это тянет worker-runtime + домены `orders`/`technical-conditions`/извлечение. Поэтому этот **один** эндпоинт отложен до слоя 4 (вместе с worker-runtime), а в слое 1 переезжает только управляющий CRUD.
 
 **Слой 2 — одна инфра-зависимость:**
 4. `admin.router.ts` → `admin/` — нужен роль-гард.

@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import type { Stored, User } from '@miracle/types';
 import { UsersService } from './users.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
@@ -12,5 +12,11 @@ export class UsersController {
     @UseGuards(AuthGuard)
     getMe(@CurrentUser() user: AuthenticatedUser): Stored<User> {
         return this.users.getPublicById(user.id);
+    }
+
+    // Публичный (без AuthGuard) — переезд старого GET /user/:id.
+    @Get(':id')
+    getById(@Param('id') id: string): Stored<User> {
+        return this.users.getPublicById(id);
     }
 }
