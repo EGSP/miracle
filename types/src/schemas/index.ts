@@ -51,4 +51,6 @@
 export * from './auth.schemas.js';
 export * from './product-types.schemas.js';
 export * from './workers.schemas.js';
+export * from './users.schemas.js';
+export * from './files.schemas.js';
 // ...

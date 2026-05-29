@@ -3,9 +3,11 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app.module.js';
 import { AppConfigService } from './config/app-config.service.js';
+import { FILE_UPLOAD_CONFIG } from './files/file-upload.config.js';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestFastifyApplication>(
@@ -14,6 +16,9 @@ async function bootstrap() {
     );
 
     await app.register(fastifyCookie);
+    await app.register(fastifyMultipart, {
+        limits: { fileSize: FILE_UPLOAD_CONFIG.maxSizeBytes },
+    });
 
     const config = app.get(AppConfigService);
 

@@ -102,9 +102,9 @@
 2. `product-type.router.ts` → `product-types/` — CRUD + auth.
 3. `workers.router.ts` → `workers/` — управляющий CRUD над `workersService`. Эндпоинты `GET /`, `DELETE /:id`, `GET /:id/preview-prompt` **не зависят** от исполнения воркеров (worker-runtime здесь не нужен), поэтому едут рано, а не «в фазе очередей». **Исключение:** `POST /:id/apply-worker-data` вызывает `workerPool.applyByWorkerId`, который инстанцирует все конкретные классы воркеров и зовёт `apply()` — это тянет worker-runtime + домены `orders`/`technical-conditions`/извлечение. Поэтому этот **один** эндпоинт отложен до слоя 4 (вместе с worker-runtime), а в слое 1 переезжает только управляющий CRUD.
 
-**Слой 2 — одна инфра-зависимость:**
-4. `admin.router.ts` → `admin/` — нужен роль-гард.
-5. `file.router.ts` → `files/` — нужен multipart.
+**Слой 2 (сделано) — одна инфра-зависимость:**
+4. `admin.router.ts` → **свёрнут в `users/`**: отдельный admin-модуль не делали (был чистый pass-through к `UsersService`). Эндпоинты переехали на `UsersController` как `GET /users` и `POST /users` под `@UseGuards(AuthGuard, AdminGuard)` (роль-гард на уровне метода). Схема — `CreateUserSchema` в `users.schemas.ts`. **Изменение путей:** `/admin/users` → `/users` (фронт правится позже).
+5. `file.router.ts` → `files/` — нужен multipart (`@fastify/multipart` через `req.file()`; multer заменён). Range-стриминг контента через `@Res() FastifyReply`; mkdir uploads + fix-кодировки имён на `OnApplicationBootstrap`.
 
 **Слой 3 — вендор + извлечение контента:**
 6. `file-content.router.ts` → `files-content/` — тянет `extraction` (едет в этот домен) поверх `@Global` `yandex`/`convert` + чистую `countTokens`. Зависит от `files` (контент привязан к файлу).

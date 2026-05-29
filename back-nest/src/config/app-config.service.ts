@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import path from 'path';
 import ms from 'ms';
 import type { StringValue } from 'ms';
 import type { EnvConfig } from './env.schema.js';
@@ -50,5 +51,10 @@ export class AppConfigService {
 
     get dbDir(): string | undefined {
         return this.config.get('DB_DIR', { infer: true });
+    }
+
+    /** Резолвнутая директория данных: DB_DIR (если задан) либо `<cwd>/data`. */
+    get dataDir(): string {
+        return this.dbDir ? path.resolve(this.dbDir) : path.resolve(process.cwd(), 'data');
     }
 }

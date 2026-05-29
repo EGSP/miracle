@@ -1,4 +1,4 @@
-import type { ProductType, Session, User, WorkerData } from '@miracle/types';
+import type { FileModel, ProductType, Session, User, WorkerData } from '@miracle/types';
 import { JsonCollection } from './json-collection.js';
 
 /**
@@ -14,6 +14,7 @@ export async function createCollections(dbDir: string) {
         sessions: await JsonCollection.create<Session>('sessions', dbDir),
         productTypes: await JsonCollection.create<ProductType>('product-types', dbDir),
         workers: await JsonCollection.create<WorkerData>('workers', dbDir),
+        files: await JsonCollection.create<FileModel>('files', dbDir),
     } as const;
 }
 

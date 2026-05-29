@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
+    "@fastify/multipart": "^10.0.0",
     "@miracle/types": "^1.0.0",
     "@nestjs/common": "^11.1.24",
     "@nestjs/config": "^4.0.4",
