@@ -1,0 +1,125 @@
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+    NotImplementedException,
+} from '@nestjs/common';
+import {
+    ExtractionStatus,
+    FileDomain,
+    getFileDomain,
+    hasDeletion,
+    type FileContent,
+    type FileModel,
+    type Stored,
+} from '@miracle/types';
+import { FilesService } from '../../files/files.service.js';
+import { AppLoggerService, type AppLogger } from '../../logger/app-logger.service.js';
+import { FilesContentService } from '../files-content.service.js';
+import { extractDocumentContent } from './extract-document.js';
+import { extractSpreadsheetContent } from './extract-spreadsheet.js';
+import { extractTextContent } from './extract-text.js';
+
+type ContentGenerator = (
+    dbFile: Stored<FileModel>,
+    filePath: string,
+) => AsyncGenerator<Omit<FileContent, 'id'>, void, void>;
+
+/**
+ * Оркестрация извлечения содержимого файла: определить домен, запустить нужный экстрактор,
+ * записать результат через {@link FilesContentService}.
+ *
+ * Generator-путь (DOCUMENT/SPREADSHEET/TEXT) реализован. VISUAL (OCR/LLM Vision) тянет
+ * worker-runtime + scan-воркеры + `yandex`/`convert` — отложен на слой 4.
+ */
+@Injectable()
+export class ExtractionService {
+    private readonly logger: AppLogger;
+
+    constructor(
+        private readonly files: FilesService,
+        private readonly filesContent: FilesContentService,
+        loggerFactory: AppLoggerService,
+    ) {
+        this.logger = loggerFactory.forContext(ExtractionService.name);
+    }
+
+    /**
+     * Гейт «уже извлечено / повтор после ошибки» + запуск извлечения.
+     * @throws BadRequestException если контент уже извлечён (и повтор не запрошен/не применим).
+     */
+    async extract(fileId: string, options?: { retryIfLastFailed?: boolean }): Promise<void> {
+        const others = this.filesContent.getContent(fileId);
+        if (others.length > 0) {
+            const last = others[0];
+            if (options?.retryIfLastFailed === true && last?.meta?.extractionStatus === ExtractionStatus.FAILED) {
+                this.logger.info('Повторная попытка извлечения после ошибки', { fileId });
+                await this.runExtraction(fileId);
+                return;
+            }
+            throw new BadRequestException('Содержимое файла уже извлечено');
+        }
+
+        await this.runExtraction(fileId);
+    }
+
+    private async runExtraction(fileId: string): Promise<void> {
+        const file = this.files.get(fileId);
+        if (!file) {
+            throw new NotFoundException('Файл не найден');
+        }
+
+        const domain = getFileDomain(file.extension);
+        if (!domain) {
+            throw new BadRequestException(`Тип файла с расширением «${file.extension}» не поддерживается`);
+        }
+
+        // Защита от дублирующего запуска: если уже идёт извлечение — выходим без действий.
+        // Статус FAILED не блокирует — повторная попытка разрешена.
+        const alreadyInProgress = this.filesContent.getContent(fileId).some(
+            (c) => !hasDeletion(c) && c.meta?.extractionStatus === ExtractionStatus.STARTED,
+        );
+        if (alreadyInProgress) {
+            return;
+        }
+
+        if (domain === FileDomain.VISUAL) {
+            // VISUAL запускает scan-воркеры (Yandex OCR / LLM Vision) поверх worker-runtime.
+            // Тот переезжает в слое 4 вместе с `yandex`/`convert`; до тех пор — не поддержано.
+            throw new NotImplementedException(
+                'Извлечение для изображений/сканов (OCR, LLM Vision) появится в слое 4 вместе с worker-runtime',
+            );
+        }
+
+        const extractor = this.pickGeneratorExtractor(domain);
+        if (!extractor) {
+            return;
+        }
+
+        const pathToFile = this.files.getFilePath(file);
+
+        let created: Stored<FileContent> | undefined;
+        // Первый yield сразу пишем как новую запись (фиксируем состояние STARTED в БД),
+        // последующие — обновляем ту же запись.
+        for await (const content of extractor(file, pathToFile)) {
+            if (!created) {
+                created = await this.filesContent.create(content);
+            } else {
+                created = await this.filesContent.update({ id: created.id, ...content });
+            }
+        }
+    }
+
+    private pickGeneratorExtractor(domain: FileDomain): ContentGenerator | undefined {
+        switch (domain) {
+            case FileDomain.DOCUMENT:
+                return extractDocumentContent;
+            case FileDomain.SPREADSHEET:
+                return extractSpreadsheetContent;
+            case FileDomain.TEXT:
+                return extractTextContent;
+            default:
+                return undefined;
+        }
+    }
+}

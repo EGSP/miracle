@@ -7,13 +7,17 @@ import fastifyMultipart from '@fastify/multipart';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app.module.js';
 import { AppConfigService } from './config/app-config.service.js';
+import { AppLoggerService } from './logger/app-logger.service.js';
 import { FILE_UPLOAD_CONFIG } from './files/file-upload.config.js';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
         new FastifyAdapter(),
+        { bufferLogs: true },
     );
+
+    app.useLogger(app.get(AppLoggerService));
 
     await app.register(fastifyCookie);
     await app.register(fastifyMultipart, {
