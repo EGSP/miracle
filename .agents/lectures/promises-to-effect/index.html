@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>От промисов к Effect: миграция кода и интеграция Promise-библиотек</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f7f8fa; --ink: #19191c; --muted: #6c707e;
+    --accent: #7048e8; --accent2: #3573f0; --warn: #b25f00; --line: #ebecf0;
+    --code-bg: #f7f8fa; --code-ink: #19191c; --cmt: #8c8c8c; --kw: #0033b3;
+    --str: #067d17; --fn: #00627a;
+    --maxw: 980px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.7 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 120px; }
+  header.top {
+    border-bottom: 1px solid var(--line); margin-bottom: 28px;
+    padding: 40px 22px 26px; background: linear-gradient(180deg, #ffffff, #f7f8fa);
+  }
+  header.top .inner { max-width: var(--maxw); margin: 0 auto; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -.2px; color: var(--ink); }
+  .sub { color: var(--muted); font-size: 16px; margin: 0; }
+  .badge {
+    display: inline-block; margin-top: 14px; padding: 5px 11px; border-radius: 999px;
+    background: #f1f2f4; border: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  h2 {
+    font-size: 23px; margin: 52px 0 14px; padding-top: 14px; letter-spacing: -.2px;
+    border-top: 1px solid var(--line);
+  }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 10px; }
+  h3 { font-size: 18px; margin: 28px 0 10px; color: #383a42; }
+  p { margin: 12px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code.inl {
+    background: #f1f2f4; border: 1px solid #e3e5e8; border-radius: 5px;
+    padding: 1px 6px; font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: .88em;
+    color: #0a3069;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.62;
+    color: var(--code-ink);
+  }
+  pre .c { color: var(--cmt); font-style: italic; }
+  pre .k { color: var(--kw); }
+  pre .s { color: var(--str); }
+  pre .f { color: var(--fn); }
+  .lead { font-size: 18px; color: #383a42; }
+  .why, .note, .warnbox {
+    border-radius: 10px; padding: 14px 16px 14px 18px; margin: 18px 0;
+    border: 1px solid var(--line);
+  }
+  .why { border-left: 3px solid var(--accent); background: #f4f1fd; }
+  .note { border-left: 3px solid var(--accent2); background: #eef3fe; }
+  .warnbox { border-left: 3px solid var(--warn); background: #fff7ea; }
+  .why .t, .note .t, .warnbox .t {
+    display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+  .why .t { color: var(--accent); }
+  .note .t { color: var(--accent2); }
+  .warnbox .t { color: var(--warn); }
+  nav.toc {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; margin: 8px 0 10px;
+  }
+  nav.toc h2 { border: 0; margin: 0 0 10px; padding: 0; font-size: 16px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc li { margin: 3px 0; }
+  nav.toc .part { list-style: none; margin: 12px 0 4px -22px; font-weight: 600; color: #383a42; }
+  table.cmp { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px; }
+  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+  table.cmp th { background: #f2f3f5; color: var(--ink); }
+  table.cmp td code { white-space: nowrap; }
+  hr.soft { border: 0; border-top: 1px dashed var(--line); margin: 26px 0; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:6px; background:#f1f2f4; border:1px solid var(--line); font-size:12.5px; color:var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .col h4 { margin: 0 0 6px; font-size: 14px; letter-spacing:.3px; text-transform: uppercase; color: var(--muted); }
+  .before h4 { color: #c9362c; } .after h4 { color: var(--str); }
+  footer { color: var(--muted); font-size: 14px; margin-top: 60px; border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <h1>От промисов к Effect: миграция кода и интеграция Promise-библиотек</h1>
+    <p class="sub">Практическое руководство: как код из одних промисов превращается в Effect и что делать с инструментами, которые уже работают на <code class="inl" style="color:#0a3069">Promise</code>.</p>
+    <span class="badge">Ориентир — Effect ≈ 3.21. Дополняет лекцию о пайплайнах задач (Job).</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <h2>Содержание</h2>
+  <ol>
+    <li class="part">Часть I. Один промис</li>
+    <li><a href="#s1">1. Промис уже запущен, Effect — ещё нет</a></li>
+    <li><a href="#s2">2. Обернуть вызов: tryPromise и promise</a></li>
+    <li><a href="#s3">3. Функция-промис → функция-Effect</a></li>
+    <li class="part">Часть II. Цепочки и управляющие конструкции</li>
+    <li><a href="#s4">4. async/await → Effect.gen</a></li>
+    <li><a href="#s5">5. try/catch/finally → catch и ensuring</a></li>
+    <li><a href="#s6">6. Promise.all и Promise.race</a></li>
+    <li><a href="#s7">7. setTimeout, ручной повтор и таймаут</a></li>
+    <li class="part">Часть III. Библиотеки на промисах</li>
+    <li><a href="#s8">8. Отмена: проброс AbortSignal в библиотеку</a></li>
+    <li><a href="#s9">9. Колбэчные API → Effect.async</a></li>
+    <li><a href="#s10">10. Ресурсы и клиенты: acquireRelease и Layer.scoped</a></li>
+    <li><a href="#s11">11. SDK как сервис: обёртка через Context и Layer</a></li>
+    <li class="part">Часть IV. Стратегия</li>
+    <li><a href="#s12">12. Как мигрировать постепенно</a></li>
+    <li><a href="#s13">13. Памятка соответствий</a></li>
+  </ol>
+</nav>
+
+<p class="lead">Типичная ситуация при первом знакомстве с Effect: на руках уже есть масса рабочих инструментов на промисах — клиенты баз данных, HTTP-обёртки, облачные SDK. Возникает вопрос: всё переписать или как-то ужиться? Хорошая новость в том, что переход — не «всё или ничего». Промис заворачивается в Effect одной строкой, а библиотеки прячутся за тонкими адаптерами. Эта лекция показывает, как именно — от единичного вызова до stateful-клиента. Она продолжает <a href="../../plans/nest-migration/worker-rework/index.html">лекцию о пайплайнах задач</a>, где сервис <code class="inl">Llm</code> как раз и был такой обёрткой над промисным SDK.</p>
+
+<!-- ================= ЧАСТЬ I ================= -->
+<h2 id="s1"><span class="num">1</span>Промис уже запущен, Effect — ещё нет</h2>
+<p>Первое, что нужно усвоить, — глубинная разница между промисом и эффектом. <strong>Промис «горячий»</strong>: в момент создания связанное с ним действие уже стартовало. <code class="inl">const p = fetch(url)</code> — запрос ушёл, отменить или повторить его как значение нельзя. <strong>Effect «холодный»</strong>: это лишь описание, которое ничего не делает, пока его не запустят. Поэтому его можно повторять, прерывать, комбинировать.</p>
+<p>Практическое следствие, из-за которого ломаются первые попытки: оборачивать в Effect нужно <strong>не промис, а функцию, которая его создаёт</strong>. Иначе действие запустится сразу и преимущества «холодности» потеряются.</p>
+<div class="grid2">
+  <div class="col before"><h4>Неверно: промис уже создан</h4>
+  <pre><span class="k">const</span> p = <span class="f">fetch</span>(url);            <span class="c">// запрос УЖЕ ушёл</span>
+Effect.<span class="f">tryPromise</span>(() =&gt; p);     <span class="c">// обернули запущенное —</span>
+                              <span class="c">// повтор/отмена уже не работают</span></pre></div>
+  <div class="col after"><h4>Верно: оборачиваем функцию</h4>
+  <pre>Effect.<span class="f">tryPromise</span>(() =&gt; <span class="f">fetch</span>(url));
+<span class="c">// действие стартует только при запуске эффекта,</span>
+<span class="c">// поэтому его можно повторять и прерывать</span></pre></div>
+</div>
+
+<h2 id="s2"><span class="num">2</span>Обернуть вызов: tryPromise и promise</h2>
+<p>Есть два конструктора, и выбор между ними — это решение «может ли вызов упасть».</p>
+<pre><span class="k">import</span> { Effect, Data } <span class="k">from</span> <span class="s">'effect'</span>;
+
+<span class="c">// промис, который МОЖЕТ отклониться → ошибку ловим в типизированный канал E</span>
+<span class="k">class</span> <span class="f">NetworkError</span> <span class="k">extends</span> Data.<span class="f">TaggedError</span>(<span class="s">'NetworkError'</span>)&lt;{ cause: unknown }&gt; {}
+
+<span class="k">const</span> getJson = Effect.<span class="f">tryPromise</span>({
+  try: () =&gt; fetch(url).<span class="f">then</span>((r) =&gt; r.json()),
+  catch: (cause) =&gt; <span class="k">new</span> NetworkError({ cause }),   <span class="c">// отказ промиса → наша ошибка</span>
+});                                            <span class="c">// Effect&lt;unknown, NetworkError&gt;</span>
+
+<span class="c">// промис, который НЕ должен отклоняться (отказ = дефект программы)</span>
+<span class="k">const</span> readClock = Effect.<span class="f">promise</span>(() =&gt; clock.now());  <span class="c">// Effect&lt;Date&gt;</span>
+</pre>
+<div class="why"><span class="t">Почему именно так</span>Без <code class="inl">catch</code> отказ промиса осел бы в типе как абстрактная ошибка; передав <code class="inl">catch</code>, мы переводим любой отказ в <em>осмысленную</em> ошибку домена — её видно в сигнатуре и нельзя молча проигнорировать. Это первый шаг к тому, чтобы ошибки перестали «теряться», как теряются в необработанном <code class="inl">await</code>.</div>
+
+<h2 id="s3"><span class="num">3</span>Функция-промис → функция-Effect</h2>
+<p>Любую функцию, возвращающую промис, превращаем в функцию, возвращающую Effect: тело остаётся прежним, меняется только обёртка. Это и есть базовая единица миграции — мигрируем по одной функции.</p>
+<div class="grid2">
+  <div class="col before"><h4>Было</h4>
+  <pre><span class="k">function</span> <span class="f">loadUser</span>(id: string): Promise&lt;User&gt; {
+  <span class="k">return</span> api.<span class="f">get</span>(<span class="s">`/users/`</span> + id);
+}</pre></div>
+  <div class="col after"><h4>Стало</h4>
+  <pre><span class="k">const</span> loadUser = (id: string) =&gt;
+  Effect.<span class="f">tryPromise</span>({
+    try: () =&gt; api.<span class="f">get</span>&lt;User&gt;(<span class="s">`/users/`</span> + id),
+    catch: (e) =&gt; <span class="k">new</span> ApiError({ cause: e }),
+  });</pre></div>
+</div>
+
+<!-- ================= ЧАСТЬ II ================= -->
+<h2 id="s4"><span class="num">4</span>async/await → Effect.gen</h2>
+<p>Когда у вас цепочка из нескольких <code class="inl">await</code>, переписывание почти механическое: <code class="inl">async function</code> становится <code class="inl">Effect.gen(function* ...)</code>, а каждый <code class="inl">await x</code> — это <code class="inl">yield* x</code> (где <code class="inl">x</code> уже обёрнут в Effect по правилам разделов 2–3).</p>
+<div class="grid2">
+  <div class="col before"><h4>Было: async/await</h4>
+  <pre><span class="k">async function</span> <span class="f">checkout</span>(id) {
+  <span class="k">const</span> cart  = <span class="k">await</span> <span class="f">loadCart</span>(id);
+  <span class="k">const</span> price = <span class="k">await</span> <span class="f">quote</span>(cart);
+  <span class="k">const</span> order = <span class="k">await</span> <span class="f">pay</span>(price);
+  <span class="k">return</span> order;
+}</pre></div>
+  <div class="col after"><h4>Стало: Effect.gen</h4>
+  <pre><span class="k">const</span> checkout = (id) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> cart  = <span class="k">yield*</span> <span class="f">loadCart</span>(id);
+  <span class="k">const</span> price = <span class="k">yield*</span> <span class="f">quote</span>(cart);
+  <span class="k">const</span> order = <span class="k">yield*</span> <span class="f">pay</span>(price);
+  <span class="k">return</span> order;
+});</pre></div>
+</div>
+<div class="note"><span class="t">Подсказка</span>Структура кода сохраняется один-в-один, поэтому строки читаются так же сверху вниз. Разница лишь в том, что результат — это <em>значение</em>-эффект: его теперь можно повторить, прервать или обернуть в таймаут, не трогая тело.</div>
+
+<h2 id="s5"><span class="num">5</span>try/catch/finally → catch и ensuring</h2>
+<p>Императивная обработка ошибок переезжает на комбинаторы. Перехват по типу — <code class="inl">catchTag</code>; перехват всего — <code class="inl">catchAll</code>; гарантированная очистка (аналог <code class="inl">finally</code>) — <code class="inl">ensuring</code>, причём финализатор сработает и при ошибке, и при <em>прерывании</em>.</p>
+<div class="grid2">
+  <div class="col before"><h4>Было</h4>
+  <pre><span class="k">try</span> {
+  <span class="k">return</span> <span class="k">await</span> <span class="f">risky</span>();
+} <span class="k">catch</span> (e) {
+  <span class="k">return</span> fallback;
+} <span class="k">finally</span> {
+  <span class="f">cleanup</span>();
+}</pre></div>
+  <div class="col after"><h4>Стало</h4>
+  <pre><span class="f">risky</span>().<span class="f">pipe</span>(
+  Effect.<span class="f">catchAll</span>(() =&gt; Effect.<span class="f">succeed</span>(fallback)),
+  Effect.<span class="f">ensuring</span>(Effect.<span class="f">sync</span>(() =&gt; <span class="f">cleanup</span>())),
+);</pre></div>
+</div>
+
+<h2 id="s6"><span class="num">6</span>Promise.all и Promise.race</h2>
+<p>Параллельные комбинаторы тоже имеют прямые аналоги — но с важным выигрышем: степенью параллелизма можно управлять, а при сбое одной ветви остальные корректно прерываются.</p>
+<pre><span class="c">// Promise.all([a, b, c])  →</span>
+Effect.<span class="f">all</span>([a, b, c]);                          <span class="c">// по умолчанию последовательно</span>
+Effect.<span class="f">all</span>([a, b, c], { concurrency: <span class="s">'unbounded'</span> }); <span class="c">// как Promise.all</span>
+Effect.<span class="f">all</span>(tasks, { concurrency: 5 });           <span class="c">// не больше пяти одновременно</span>
+
+<span class="c">// Promise.race([a, b])  →</span>
+Effect.<span class="f">race</span>(a, b);                              <span class="c">// проигравшая ветвь будет прервана</span>
+</pre>
+<div class="why"><span class="t">Чего не умеет Promise.all</span>У <code class="inl">Promise.all</code> нет ограничения степени параллелизма (ставите тысячу запросов — уйдут все сразу), а отклонение одного промиса не останавливает остальные — они продолжают работать «в пустоту». <code class="inl">Effect.all</code> решает обе проблемы по умолчанию.</div>
+
+<h2 id="s7"><span class="num">7</span>setTimeout, ручной повтор и таймаут</h2>
+<p>Самописные задержки, циклы повторов и «гонки с таймером» — частый рукотворный код вокруг промисов. В Effect это готовые комбинаторы.</p>
+<div class="grid2">
+  <div class="col before"><h4>Было: руками</h4>
+  <pre><span class="c">// задержка</span>
+<span class="k">await</span> <span class="k">new</span> <span class="f">Promise</span>((r) =&gt; <span class="f">setTimeout</span>(r, 1000));
+
+<span class="c">// таймаут — гонка с таймером</span>
+<span class="k">await</span> Promise.<span class="f">race</span>([work, <span class="f">timer</span>(5000)]);
+
+<span class="c">// повтор — цикл с try/catch и счётчиком</span></pre></div>
+  <div class="col after"><h4>Стало: комбинаторы</h4>
+  <pre><span class="k">import</span> { Effect, Schedule } <span class="k">from</span> <span class="s">'effect'</span>;
+
+Effect.<span class="f">sleep</span>(<span class="s">'1 second'</span>);
+work.<span class="f">pipe</span>(Effect.<span class="f">timeout</span>(<span class="s">'5 seconds'</span>));
+work.<span class="f">pipe</span>(Effect.<span class="f">retry</span>(
+  Schedule.<span class="f">exponential</span>(<span class="s">'200 millis'</span>).<span class="f">pipe</span>(
+    Schedule.<span class="f">compose</span>(Schedule.<span class="f">recurs</span>(4)))));</pre></div>
+</div>
+
+<!-- ================= ЧАСТЬ III ================= -->
+<h2 id="s8"><span class="num">8</span>Отмена: проброс AbortSignal в библиотеку</h2>
+<p>Главный вопрос при оборачивании промис-библиотек: что произойдёт с уже летящим запросом, если Effect прервут? Сам по себе промис прервать нельзя. Но многие библиотеки (<code class="inl">fetch</code>, <code class="inl">axios</code>, облачные SDK) принимают <code class="inl">AbortSignal</code>. Effect передаёт такой сигнал прямо в функцию <code class="inl">try</code>, и при прерывании эффекта сигнал срабатывает — библиотека отменяет операцию по-настоящему.</p>
+<pre><span class="k">const</span> getJson = Effect.<span class="f">tryPromise</span>({
+  try: (signal) =&gt; fetch(url, { signal }),   <span class="c">// Effect отдаёт сюда AbortSignal</span>
+  catch: (cause) =&gt; <span class="k">new</span> NetworkError({ cause }),
+});
+<span class="c">// если этот эффект прервут (таймаут, race, отмена) — fetch получит abort</span>
+</pre>
+<div class="warnbox"><span class="t">Если библиотека не умеет AbortSignal</span>Тогда отмена эффекта остановит <em>ожидание</em> результата, но фоновую работу библиотека продолжит — обещание не пропадёт. Это не катастрофа, но об этом нужно знать: «прервал эффект» не всегда равно «остановил действие». По возможности выбирайте методы с поддержкой сигнала.</div>
+
+<h2 id="s9"><span class="num">9</span>Колбэчные API → Effect.async</h2>
+<p>Не всё в экосистеме — промисы. Старые библиотеки и узлы событий работают на колбэках. Их заворачивает <code class="inl">Effect.async</code>: вы получаете функцию <code class="inl">resume</code>, которой сообщаете об успехе или ошибке, и можете вернуть эффект-очистку для прерывания.</p>
+<pre><span class="k">const</span> readFile = (path: string) =&gt;
+  Effect.<span class="f">async</span>&lt;Buffer, ReadError&gt;((resume) =&gt; {
+    fs.<span class="f">readFile</span>(path, (err, data) =&gt; {
+      <span class="k">if</span> (err) <span class="f">resume</span>(Effect.<span class="f">fail</span>(<span class="k">new</span> ReadError({ cause: err })));
+      <span class="k">else</span>     <span class="f">resume</span>(Effect.<span class="f">succeed</span>(data));
+    });
+    <span class="c">// при желании вернуть Effect-очистку, который вызовут при прерывании</span>
+  });
+</pre>
+
+<h2 id="s10"><span class="num">10</span>Ресурсы и клиенты: acquireRelease и Layer.scoped</h2>
+<p>Многие библиотеки дают <em>ресурс</em> с жизненным циклом: соединение с базой, пул, файловый дескриптор, веб-сокет. Их нужно надёжно закрывать — даже при ошибке и прерывании. За это отвечает <code class="inl">acquireRelease</code>: пара «захватить / освободить», привязанная к области видимости (англ. <em>scope</em>).</p>
+<pre><span class="k">const</span> connection = Effect.<span class="f">acquireRelease</span>(
+  Effect.<span class="f">promise</span>(() =&gt; pool.<span class="f">connect</span>()),          <span class="c">// захват</span>
+  (conn) =&gt; Effect.<span class="f">promise</span>(() =&gt; conn.<span class="f">close</span>()),    <span class="c">// освобождение — гарантировано</span>
+);
+
+<span class="c">// использовать в пределах области; по выходе соединение закроется само</span>
+<span class="k">const</span> program = Effect.<span class="f">scoped</span>(Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> conn = <span class="k">yield*</span> connection;
+  <span class="k">return</span> <span class="k">yield*</span> Effect.<span class="f">promise</span>(() =&gt; conn.<span class="f">query</span>(sql));
+}));
+</pre>
+<div class="why"><span class="t">Почему это лучше try/finally</span>Ручной <code class="inl">finally</code> легко забыть или не довести при вложенных ресурсах. <code class="inl">acquireRelease</code> делает освобождение частью значения: какой бы путь ни выбрала программа — успех, ошибка, прерывание — финализатор гарантированно отработает в правильном порядке.</div>
+
+<h2 id="s11"><span class="num">11</span>SDK как сервис: обёртка через Context и Layer</h2>
+<p>Это кульминация для нашего случая. Не нужно «обиффектить» каждый вызов SDK по месту. Правильнее один раз описать <strong>сервис</strong> — тег с интерфейсом, методы которого возвращают эффекты, — а конкретную реализацию-адаптер над промисным SDK подключить слоем. Дальше весь код зависит от тега, а не от библиотеки.</p>
+<pre><span class="k">import</span> { Context, Effect, Layer, Data } <span class="k">from</span> <span class="s">'effect'</span>;
+
+<span class="c">// 1) интерфейс домена в терминах Effect (никаких промисов наружу)</span>
+<span class="k">class</span> <span class="f">Llm</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'Llm'</span>)&lt;Llm, {
+  submit(req: SubmitReq): Effect.Effect&lt;string, LlmError&gt;;
+  poll(opId: string): Effect.Effect&lt;PollResult, LlmError&gt;;
+}&gt;() {}
+
+<span class="c">// 2) адаптер над промисным SDK — здесь, и только здесь, живут промисы</span>
+<span class="k">const</span> LlmLive = Layer.<span class="f">succeed</span>(Llm, {
+  submit: (req) =&gt; Effect.<span class="f">tryPromise</span>({
+    try: (signal) =&gt; sdk.<span class="f">createOperation</span>(req, { signal }),
+    catch: (cause) =&gt; <span class="k">new</span> LlmError({ cause }),
+  }),
+  poll: (opId) =&gt; Effect.<span class="f">tryPromise</span>({
+    try: (signal) =&gt; sdk.<span class="f">getOperation</span>(opId, { signal }),
+    catch: (cause) =&gt; <span class="k">new</span> LlmError({ cause }),
+  }),
+});
+
+<span class="c">// 3) прикладной код знает только тег — SDK невидим</span>
+<span class="k">const</span> ask = Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> llm = <span class="k">yield*</span> Llm;
+  <span class="k">return</span> <span class="k">yield*</span> llm.<span class="f">submit</span>(req);
+});
+</pre>
+<div class="note"><span class="t">Связь с проектом</span>Именно так сервис <code class="inl">Llm</code> из <a href="../../plans/nest-migration/worker-rework/index.html">первой лекции</a> и появляется: промисный Yandex/OpenAI-клиент прячется за адаптером-слоем. Если клиент имеет жизненный цикл (создаётся/закрывается), вместо <code class="inl">Layer.succeed</code> берут <code class="inl">Layer.scoped</code> и собирают его через <code class="inl">acquireRelease</code> (раздел 10). В связке с NestJS этот слой строит обычная фабрика-провайдер.</div>
+
+<!-- ================= ЧАСТЬ IV ================= -->
+<h2 id="s12"><span class="num">12</span>Как мигрировать постепенно</h2>
+<p>Переписывать всё разом не нужно и вредно. Effect отлично сосуществует с промисами; держитесь нескольких правил.</p>
+<ul>
+  <li><strong>Оборачивайте на границе.</strong> Промис-библиотеки прячьте за сервисами (раздел 11); внутри домена работайте уже с эффектами. Граница тонкая и в одном месте.</li>
+  <li><strong>Мигрируйте от листьев к корню.</strong> Сначала превращайте в Effect самые нижние функции-обёртки вызовов, затем — то, что их вызывает. Так типы естественно «протекают» вверх.</li>
+  <li><strong>Промис на самом краю.</strong> Там, где Effect должен встретиться со старым промисным миром (контроллер, обработчик, тест), запускайте его через <code class="inl">Effect.runPromise</code> — и снаружи снова обычный <code class="inl">await</code>.</li>
+  <li><strong>Не «обиффичивайте» чистые функции.</strong> Синхронный код без побочных эффектов и без возможности упасть в Effect заворачивать не нужно — он и так композируется.</li>
+</ul>
+<pre><span class="c">// Effect → Promise на краю системы (контроллер, тест, интеграция со старым кодом)</span>
+<span class="k">const</span> user = <span class="k">await</span> Effect.<span class="f">runPromise</span>(<span class="f">loadUser</span>(id).<span class="f">pipe</span>(Effect.<span class="f">provide</span>(ApiLive)));
+</pre>
+<div class="why"><span class="t">Образ для запоминания</span>«Функциональное ядро, императивная оболочка». Внутри — эффекты: композируемые, типизированные, прерываемые. По краям — тонкий слой, где эффект запускается в промис, а промис библиотеки заворачивается в эффект. Мигрировать можно годами по одной функции — и всё это время система остаётся рабочей.</div>
+
+<h2 id="s13"><span class="num">13</span>Памятка соответствий</h2>
+<table class="cmp">
+  <tr><th>Мир промисов</th><th>Мир Effect</th></tr>
+  <tr><td><code class="inl">fn(): Promise&lt;T&gt;</code></td><td><code class="inl">() =&gt; Effect.tryPromise({ try, catch })</code></td></tr>
+  <tr><td><code class="inl">await x</code></td><td><code class="inl">yield* x</code> внутри <code class="inl">Effect.gen</code></td></tr>
+  <tr><td><code class="inl">try / catch</code></td><td><code class="inl">Effect.catchTag</code> / <code class="inl">catchAll</code></td></tr>
+  <tr><td><code class="inl">finally</code></td><td><code class="inl">Effect.ensuring</code></td></tr>
+  <tr><td><code class="inl">Promise.all</code></td><td><code class="inl">Effect.all(..., { concurrency })</code></td></tr>
+  <tr><td><code class="inl">Promise.race</code></td><td><code class="inl">Effect.race</code></td></tr>
+  <tr><td><code class="inl">setTimeout</code> / задержка</td><td><code class="inl">Effect.sleep</code></td></tr>
+  <tr><td>гонка с таймером</td><td><code class="inl">Effect.timeout</code></td></tr>
+  <tr><td>ручной цикл повтора</td><td><code class="inl">Effect.retry(Schedule…)</code></td></tr>
+  <tr><td>колбэк / событие</td><td><code class="inl">Effect.async</code></td></tr>
+  <tr><td>соединение, пул, дескриптор</td><td><code class="inl">Effect.acquireRelease</code> + <code class="inl">scoped</code></td></tr>
+  <tr><td>клиент / SDK (синглтон)</td><td><code class="inl">Context.Tag</code> + <code class="inl">Layer</code> (адаптер)</td></tr>
+  <tr><td>запустить (на краю)</td><td><code class="inl">Effect.runPromise</code></td></tr>
+</table>
+
+<footer>
+  Учебная страница. Ориентир — Effect ≈ 3.21; конкретные сигнатуры API могут уточняться по версии. Главная мысль: переход от промисов к Effect делается постепенно — обёрткой на границе, а не переписыванием всего сразу.
+</footer>
+
+</div>
+</body>
+</html>

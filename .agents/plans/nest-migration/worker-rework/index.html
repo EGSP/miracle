@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>От примитивов Effect — к пайплайнам задач (Job)</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f7f8fa; --ink: #19191c; --muted: #6c707e;
+    --accent: #3573f0; --accent2: #2e7d32; --warn: #b25f00; --line: #ebecf0;
+    --code-bg: #f7f8fa; --code-ink: #19191c; --cmt: #8c8c8c; --kw: #0033b3;
+    --str: #067d17; --fn: #00627a;
+    --maxw: 980px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.7 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 120px; }
+  header.top {
+    border-bottom: 1px solid var(--line); margin-bottom: 28px;
+    padding: 40px 22px 26px; background: linear-gradient(180deg, #ffffff, #f7f8fa);
+  }
+  header.top .inner { max-width: var(--maxw); margin: 0 auto; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -.2px; color: var(--ink); }
+  .sub { color: var(--muted); font-size: 16px; margin: 0; }
+  .badge {
+    display: inline-block; margin-top: 14px; padding: 5px 11px; border-radius: 999px;
+    background: #f1f2f4; border: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  h2 {
+    font-size: 23px; margin: 52px 0 14px; padding-top: 14px; letter-spacing: -.2px;
+    border-top: 1px solid var(--line);
+  }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 10px; }
+  h3 { font-size: 18px; margin: 28px 0 10px; color: #383a42; }
+  p { margin: 12px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code.inl {
+    background: #f1f2f4; border: 1px solid #e3e5e8; border-radius: 5px;
+    padding: 1px 6px; font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: .88em;
+    color: #0a3069;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.62;
+    color: var(--code-ink);
+  }
+  pre .c { color: var(--cmt); font-style: italic; }
+  pre .k { color: var(--kw); }
+  pre .s { color: var(--str); }
+  pre .f { color: var(--fn); }
+  .lead { font-size: 18px; color: #383a42; }
+  .why, .note, .warnbox {
+    border-radius: 10px; padding: 14px 16px 14px 18px; margin: 18px 0;
+    border: 1px solid var(--line);
+  }
+  .why { border-left: 3px solid var(--accent2); background: #f1f8f3; }
+  .note { border-left: 3px solid var(--accent); background: #eef3fe; }
+  .warnbox { border-left: 3px solid var(--warn); background: #fff7ea; }
+  .why .t, .note .t, .warnbox .t {
+    display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+  .why .t { color: var(--accent2); }
+  .note .t { color: var(--accent); }
+  .warnbox .t { color: var(--warn); }
+  nav.toc {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; margin: 8px 0 10px;
+  }
+  nav.toc h2 { border: 0; margin: 0 0 10px; padding: 0; font-size: 16px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc li { margin: 3px 0; }
+  nav.toc .part { list-style: none; margin: 12px 0 4px -22px; font-weight: 600; color: #383a42; }
+  table.cmp { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px; }
+  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+  table.cmp th { background: #f2f3f5; color: var(--ink); }
+  .step { color: var(--muted); font-size: 14px; margin: 2px 0 0; }
+  hr.soft { border: 0; border-top: 1px dashed var(--line); margin: 26px 0; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:6px; background:#f1f2f4; border:1px solid var(--line); font-size:12.5px; color:var(--muted); }
+  footer { color: var(--muted); font-size: 14px; margin-top: 60px; border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <h1>От примитивов Effect — к пайплайнам задач (Job)</h1>
+    <p class="sub">Проектная лекция к переработке воркеров перед миграцией на NestJS. Сначала основания, затем — решение: композиция задач, опрос, отмена, прогресс и долговечность.</p>
+    <span class="badge">Ориентир — Effect ≈ 3.21. Важны идеи; конкретный синтаксис версии может отличаться.</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <h2>Содержание</h2>
+  <ol>
+    <li class="part">Часть I. Основания Effect</li>
+    <li><a href="#s1">1. Зачем «эффект как значение»</a></li>
+    <li><a href="#s2">2. Создание эффектов: примитивы</a></li>
+    <li><a href="#s3">3. Запуск: эффект ленив</a></li>
+    <li><a href="#s4">4. Композиция: map, flatMap, pipe</a></li>
+    <li><a href="#s5">5. Генераторы: Effect.gen и yield*</a></li>
+    <li><a href="#s6">6. Типизированные ошибки</a></li>
+    <li><a href="#s7">7. Зависимости: Context и Layer</a></li>
+    <li><a href="#s8">8. Расписания и повтор: Schedule</a></li>
+    <li><a href="#s9">9. Отмена (прерываемость)</a></li>
+    <li class="part">Часть II. Решение: Job и пайплайны</li>
+    <li><a href="#s10">10. Job как Effect</a></li>
+    <li><a href="#s11">11. Комбинатор poll</a></li>
+    <li><a href="#s12">12. Прогресс</a></li>
+    <li><a href="#s13">13. Долговечность и контрольные точки</a></li>
+    <li><a href="#s14">14. Сквозной пример и сценарий перезапуска</a></li>
+    <li><a href="#s15">15. Код до и после</a></li>
+    <li><a href="#s16">16. Открытые вопросы и риски</a></li>
+  </ol>
+</nav>
+
+<p class="lead">Цель переработки — превратить воркеры из многословных классов, где 70&nbsp;% кода занимает повторяющаяся церемония, в небольшие надёжные задачи, которые легко соединять в цепочки. Инструментом выбран Effect. Эта страница сперва объясняет, из чего складываются его примитивы и почему они устроены так, а лишь затем приходит к нашей конструкции — задаче (англ. <em>Job</em>) и пайплайну (англ. <em>pipeline</em>) с восстановлением после сбоя.</p>
+
+<!-- ================= ЧАСТЬ I ================= -->
+<h2 id="s1"><span class="num">1</span>Зачем «эффект как значение»</h2>
+<p>Представим привычный асинхронный код. Когда мы пишем <code class="inl">const text = await fetchText()</code>, происходит сразу несколько вещей, и все они неявные. Во-первых, побочное действие (запрос в сеть) запускается немедленно — выражение нельзя «подержать в руках», не выполнив его. Во-вторых, тип результата — <code class="inl">string</code>, и из него никак не видно, что вызов может выбросить ошибку. В-третьих, откуда взялся <code class="inl">fetchText</code> — из импорта; то есть зависимость зашита намертво и в тесте её трудно подменить. В-четвёртых, прервать такой вызов извне нельзя.</p>
+<p>Effect предлагает иной взгляд: программа — это <strong>описание</strong> вычисления, а не само вычисление. Значение типа <code class="inl">Effect&lt;A, E, R&gt;</code> читается как «программа, которая при запуске даст значение <code class="inl">A</code>, может завершиться ошибкой <code class="inl">E</code> и требует для работы окружение <code class="inl">R</code>». Пока программу не запустили, она остаётся обычным значением: его можно передавать, комбинировать, оборачивать и видоизменять.</p>
+<div class="why"><span class="t">Почему так</span>Три буквы <code class="inl">A, E, R</code> — это и есть тот честный контракт, которого не хватает в <code class="inl">async/await</code>: что вернётся, чем может упасть и что для этого нужно. Компилятор начинает следить за ошибками и зависимостями так же строго, как за обычными типами, — а значит, целый класс оплошностей по невнимательности отлавливается ещё до запуска.</div>
+
+<h2 id="s2"><span class="num">2</span>Создание эффектов: примитивы</h2>
+<p>Эффекты не создаются «из воздуха» — для каждого источника значения есть свой конструктор. Их несколько именно для того, чтобы тип точно отражал природу шага: чистый он или способен упасть.</p>
+<pre><span class="k">import</span> { Effect } <span class="k">from</span> <span class="s">'effect'</span>;
+
+<span class="c">// готовое значение — никогда не падает</span>
+<span class="k">const</span> a = Effect.<span class="f">succeed</span>(42);              <span class="c">// Effect&lt;number&gt;</span>
+<span class="k">const</span> e = Effect.<span class="f">fail</span>(<span class="k">new</span> NotFound());     <span class="c">// Effect&lt;never, NotFound&gt;</span>
+
+<span class="c">// чистая синхронная функция без выбросов</span>
+<span class="k">const</span> now = Effect.<span class="f">sync</span>(() =&gt; Date.<span class="f">now</span>());  <span class="c">// Effect&lt;number&gt;</span>
+
+<span class="c">// промис, который НЕ должен падать (ошибку считаем дефектом)</span>
+<span class="k">const</span> p = Effect.<span class="f">promise</span>(() =&gt; readClock());    <span class="c">// Effect&lt;Date&gt;</span>
+
+<span class="c">// промис, ошибку которого ловим в типизированный канал E</span>
+<span class="k">const</span> t = Effect.<span class="f">tryPromise</span>({
+  try: () =&gt; fetch(url),
+  catch: (cause) =&gt; <span class="k">new</span> NetworkError({ cause }),
+});                                       <span class="c">// Effect&lt;Response, NetworkError&gt;</span>
+</pre>
+<div class="why"><span class="t">Почему несколько конструкторов</span>Разделение <code class="inl">promise</code> и <code class="inl">tryPromise</code> заставляет в момент написания ответить на вопрос «а может ли этот шаг провалиться?». Если да — ошибка немедленно появляется в типе <code class="inl">E</code> и её нельзя молча забыть. Если нет — мы это явно декларируем.</div>
+
+<h2 id="s3"><span class="num">3</span>Запуск: эффект ленив</h2>
+<p>Ключевое следствие «эффекта как значения»: пока его не запустили, ничего не происходит. Запуск — отдельный, обычно единственный, шаг на краю программы.</p>
+<pre><span class="k">const</span> result = <span class="k">await</span> Effect.<span class="f">runPromise</span>(program);   <span class="c">// выполнить и получить промис</span>
+<span class="k">const</span> fiber  = Effect.<span class="f">runFork</span>(program);          <span class="c">// запустить «волокно» в фоне</span>
+</pre>
+<div class="why"><span class="t">Почему это важно для нас</span>Ленивость означает, что задачу можно собрать, проверить типами, обернуть в повтор и отдать раннеру — и лишь он решит, когда и как её исполнить. Именно это позволит нам останавливать, возобновлять и сохранять прогресс, не переписывая саму задачу.</div>
+
+<h2 id="s4"><span class="num">4</span>Композиция: map, flatMap, pipe</h2>
+<p>Маленькие эффекты соединяются в большие. <code class="inl">map</code> преобразует успешное значение; <code class="inl">flatMap</code> сцепляет шаг, который сам возвращает эффект (то есть зависимый от предыдущего). Чтобы цепочки читались сверху вниз, Effect использует «данные последним аргументом» и функцию <code class="inl">pipe</code>.</p>
+<pre><span class="c">// flatMap сцепляет зависимые шаги, но в цепочке рождается «лесенка»</span>
+<span class="k">const</span> len = Effect.<span class="f">flatMap</span>(fetchUser, (user) =&gt;
+  Effect.<span class="f">flatMap</span>(fetchOrders(user.id), (orders) =&gt;
+    Effect.<span class="f">succeed</span>(orders.length)));
+
+<span class="c">// pipe выпрямляет запись: «значение, затем операции над ним»</span>
+<span class="k">const</span> len2 = fetchUser.<span class="f">pipe</span>(
+  Effect.<span class="f">flatMap</span>((user) =&gt; fetchOrders(user.id)),
+  Effect.<span class="f">map</span>((orders) =&gt; orders.length),
+);
+</pre>
+<p>Даже с <code class="inl">pipe</code> длинные зависимые цепочки остаются неудобными: каждый следующий шаг хочет видеть результаты всех предыдущих. Эту проблему решают генераторы.</p>
+
+<h2 id="s5"><span class="num">5</span>Генераторы: Effect.gen и yield*</h2>
+<p>Это главный приём, на котором держится вся дальнейшая конструкция. <code class="inl">Effect.gen</code> позволяет писать последовательный зависимый код плоско — почти как <code class="inl">async/await</code>, — но результат остаётся <em>значением</em> типа <code class="inl">Effect</code>. Оператор <code class="inl">yield*</code> «извлекает» успешное значение вложенного эффекта; если тот падает, выполнение генератора прекращается, и ошибка уходит в канал <code class="inl">E</code>.</p>
+<pre><span class="k">const</span> program = Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> user   = <span class="k">yield*</span> fetchUser;            <span class="c">// извлекаем успех</span>
+  <span class="k">const</span> orders = <span class="k">yield*</span> fetchOrders(user.id);  <span class="c">// шаг зависит от предыдущего</span>
+  <span class="k">return</span> orders.length;                       <span class="c">// обычный return — это успех A</span>
+});
+</pre>
+<div class="why"><span class="t">Почему генераторы, а не async/await</span>Внешне похоже, но разница принципиальна: <code class="inl">await</code> немедленно запускает и теряет тип ошибки, а <code class="inl">yield*</code> лишь <em>описывает</em> шаг внутри значения-эффекта. Поэтому ошибки и зависимости каждого <code class="inl">yield*</code> аккуратно накапливаются в итоговом типе <code class="inl">Effect&lt;A, E, R&gt;</code>, а сам блок можно повторять, прерывать и комбинировать как любое другое значение.</div>
+
+<h2 id="s6"><span class="num">6</span>Типизированные ошибки</h2>
+<p>Ошибка в Effect — не выпавшее откуда-то исключение, а часть сигнатуры. Удобнее всего описывать ошибки как помеченные классы: тогда их можно различать по «метке» (англ. <em>tag</em>) и обрабатывать выборочно.</p>
+<pre><span class="k">import</span> { Data, Effect } <span class="k">from</span> <span class="s">'effect'</span>;
+
+<span class="k">class</span> <span class="f">NetworkError</span> <span class="k">extends</span> Data.<span class="f">TaggedError</span>(<span class="s">'NetworkError'</span>)&lt;{ cause: unknown }&gt; {}
+<span class="k">class</span> <span class="f">NotFound</span>     <span class="k">extends</span> Data.<span class="f">TaggedError</span>(<span class="s">'NotFound'</span>)&lt;{ id: string }&gt; {}
+
+<span class="k">const</span> safe = program.<span class="f">pipe</span>(
+  Effect.<span class="f">catchTag</span>(<span class="s">'NotFound'</span>, (err) =&gt; Effect.<span class="f">succeed</span>(fallbackFor(err.id))),
+  <span class="c">// NetworkError намеренно оставляем — пусть всплывает выше</span>
+);
+</pre>
+<div class="why"><span class="t">Почему это снижает ошибки по невнимательности</span>Если шаг может вернуть <code class="inl">NotFound</code>, это написано в его типе. Забыть обработать такую ситуацию нельзя молча — компилятор будет видеть необработанную ошибку в канале <code class="inl">E</code> до самого края программы.</div>
+
+<h2 id="s7"><span class="num">7</span>Зависимости: Context и Layer</h2>
+<p>Вместо того чтобы импортировать сервис как глобальный одиночка (англ. <em>singleton</em>), в Effect зависимость объявляется <strong>тегом</strong> (<code class="inl">Context.Tag</code>). Когда эффект обращается к тегу, требование автоматически попадает в третий канал типа — <code class="inl">R</code>. Конкретную реализацию подставляют «слоем» (<code class="inl">Layer</code>) в момент запуска.</p>
+<pre><span class="k">import</span> { Context, Effect, Layer } <span class="k">from</span> <span class="s">'effect'</span>;
+
+<span class="c">// объявляем зависимость как тег с её интерфейсом</span>
+<span class="k">class</span> <span class="f">Llm</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'Llm'</span>)&lt;Llm, {
+  submit(req: SubmitReq): Promise&lt;string&gt;;
+  poll(opId: string): Promise&lt;{ done: boolean; result?: TcRules }&gt;;
+}&gt;() {}
+
+<span class="c">// обращение к зависимости внутри эффекта — требование уходит в канал R</span>
+<span class="k">const</span> ask = Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> llm = <span class="k">yield*</span> Llm;                  <span class="c">// Effect&lt;..., ..., Llm&gt;</span>
+  <span class="k">return</span> <span class="k">yield*</span> Effect.<span class="f">promise</span>(() =&gt; llm.<span class="f">submit</span>(req));
+});
+
+<span class="c">// реализацию подставляем слоем — здесь же мост из Nest</span>
+<span class="k">const</span> LlmLive = Layer.<span class="f">succeed</span>(Llm, nestYandexLlmService);  <span class="c">// объект-реализация</span>
+<span class="k">const</span> runnable = ask.<span class="f">pipe</span>(Effect.<span class="f">provide</span>(LlmLive));         <span class="c">// R закрыт → можно запускать</span>
+</pre>
+<div class="note"><span class="t">Мост Nest ↔ Effect</span>В нашем случае реализацию тега даёт обычный Nest-провайдер: фабрика (которую мы и договорились использовать) инжектит нужные сервисы и заворачивает их в <code class="inl">Layer</code>. Так Effect отвечает за композицию задач, а Nest — за жизненный цикл и внедрение зависимостей; границы не пересекаются.</div>
+
+<h2 id="s8"><span class="num">8</span>Расписания и повтор: Schedule</h2>
+<p>«Когда повторять» в Effect — это отдельное композируемое описание, <code class="inl">Schedule</code>. Его можно соединять с любым эффектом через <code class="inl">repeat</code> (повторять успех) или <code class="inl">retry</code> (повторять при ошибке).</p>
+<pre><span class="k">import</span> { Effect, Schedule } <span class="k">from</span> <span class="s">'effect'</span>;
+
+Schedule.<span class="f">spaced</span>(<span class="s">'3 seconds'</span>);     <span class="c">// фиксированная пауза между попытками</span>
+Schedule.<span class="f">exponential</span>(<span class="s">'1 second'</span>); <span class="c">// растущая пауза (для retry внешних сбоев)</span>
+Schedule.<span class="f">recurs</span>(5);              <span class="c">// не более пяти повторов</span>
+
+<span class="c">// повторять опрос с паузой, пока не вернётся done=true</span>
+<span class="k">const</span> awaited = checkOnce.<span class="f">pipe</span>(
+  Effect.<span class="f">repeat</span>({ schedule: Schedule.<span class="f">spaced</span>(<span class="s">'3 seconds'</span>), until: (r) =&gt; r.done }),
+);
+</pre>
+<div class="why"><span class="t">Почему отдельно</span>Логика «что делаем» (один опрос) и политика «как часто и до каких пор» (расписание) развязаны. Поэтому один и тот же опрос можно повторять с разной стратегией, не трогая его код, — а сами стратегии переиспользовать между задачами.</div>
+
+<h2 id="s9"><span class="num">9</span>Отмена (прерываемость)</h2>
+<p>Эффекты прерываемы по своей природе: между шагами Effect может корректно остановить вычисление, освободив ресурсы. Не нужно вручную тащить флаг вроде <code class="inl">shouldStop</code>, как в нынешних воркерах.</p>
+<pre><span class="c">// прервать, если не уложились в срок</span>
+<span class="k">const</span> bounded = program.<span class="f">pipe</span>(Effect.<span class="f">timeout</span>(<span class="s">'30 seconds'</span>));
+
+<span class="c">// запустить в фоне и прервать извне</span>
+<span class="k">const</span> fiber = Effect.<span class="f">runFork</span>(program);
+<span class="k">await</span> Effect.<span class="f">runPromise</span>(Fiber.<span class="f">interrupt</span>(fiber));
+</pre>
+<div class="note"><span class="t">Связь с восстановлением</span>Прерывание останавливает вычисление, но не стирает то, что мы уже сохранили на диск. Если задача успела записать контрольную точку (см. раздел&nbsp;13), после отмены или падения процесса она продолжится именно с неё.</div>
+
+<!-- ================= ЧАСТЬ II ================= -->
+<h2 id="s10"><span class="num">10</span>Job как Effect</h2>
+<p>Теперь соберём из оснований нашу единицу работы. <strong>Job</strong> — это функция, превращающая вход в эффект, дающий выход:</p>
+<pre><span class="k">type</span> Job&lt;I, O, R = never&gt; = (input: I) =&gt; Effect.Effect&lt;O, JobError, R&gt;;</pre>
+<p>Поскольку тело Job — это <code class="inl">Effect.gen</code>, внутри него можно вызывать другие Job через <code class="inl">yield*</code>. Значит, цепочка задач — это снова Job. Композиция рекурсивна и единообразна: «атом» и «конвейер» имеют один тип, и пайплайн всегда можно вложить в больший пайплайн.</p>
+<pre><span class="k">const</span> loadTcText:  Job&lt;{ tcId: string }, { text: string }, Files&gt; = (<span class="c">/* ... */</span>) =&gt; <span class="c">/* ... */</span>;
+<span class="k">const</span> applyTcRules: Job&lt;TcRules, void, Tc&gt;                     = (<span class="c">/* ... */</span>) =&gt; <span class="c">/* ... */</span>;
+
+<span class="c">// пайплайн — это тоже Job: вход первого, выход последнего</span>
+<span class="k">const</span> tcDetailsJob: Job&lt;{ tcId: string }, void, Files | Tc | Llm | Checkpoint&gt; =
+  ({ tcId }) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+    <span class="k">const</span> { text } = <span class="k">yield*</span> <span class="f">loadTcText</span>({ tcId });
+    <span class="k">const</span> rules    = <span class="k">yield*</span> <span class="f">tcDetailsLlm</span>({ text });   <span class="c">// см. раздел 11</span>
+    <span class="k">yield*</span> <span class="f">applyTcRules</span>(rules);
+  });
+</pre>
+<div class="why"><span class="t">Что мы выиграли</span>Стыки проверяет компилятор: выход <code class="inl">loadTcText</code> обязан совпасть со входом следующего шага. Все требуемые зависимости (<code class="inl">Files | Tc | Llm | Checkpoint</code>) собираются в канале <code class="inl">R</code> автоматически — забыть подключить сервис не выйдет, программа просто не запустится без нужного слоя.</div>
+
+<h2 id="s11"><span class="num">11</span>Комбинатор poll</h2>
+<p>Опрос длительной облачной операции встречается в нескольких воркерах. Вынесем его в один переиспользуемый кирпич, собранный из <code class="inl">Schedule</code> и <code class="inl">repeat</code>. Любая задача затем строит свой опрос из него, не переписывая цикл.</p>
+<pre><span class="k">const</span> pollUntilDone = &lt;O&gt;(opId: string) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> llm = <span class="k">yield*</span> Llm;
+  <span class="k">const</span> last = <span class="k">yield*</span> Effect.<span class="f">tryPromise</span>({
+    try: () =&gt; llm.<span class="f">poll</span>&lt;O&gt;(opId),
+    catch: (cause) =&gt; <span class="k">new</span> PollError({ opId, cause }),
+  }).<span class="f">pipe</span>(
+    Effect.<span class="f">repeat</span>({ schedule: Schedule.<span class="f">spaced</span>(<span class="s">'3 seconds'</span>), until: (r) =&gt; r.done }),
+  );
+  <span class="k">return</span> last.result!;
+});
+</pre>
+<p>Это и есть «отдельная область, переиспользуемая каждым воркером», о которой шла речь: <code class="inl">pollUntilDone</code> ничего не знает о конкретной задаче — только о том, как опрашивать операцию по её идентификатору.</p>
+
+<h2 id="s12"><span class="num">12</span>Прогресс</h2>
+<p>Чтобы наблюдать ход работы, заведём ещё один сервис в контексте — <code class="inl">Progress</code>. Задача сообщает о фазах, а раннер агрегирует прогресс по всему пайплайну (завершённые этапы плюс прогресс текущего). Снаружи (HTTP, интерфейс) прогресс читается из записи прогона.</p>
+<pre><span class="k">class</span> <span class="f">Progress</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'Progress'</span>)&lt;Progress, {
+  report(p: { phase: string; pct?: number }): Effect.Effect&lt;void&gt;;
+}&gt;() {}
+
+<span class="c">// внутри опроса можно докладывать фазу</span>
+<span class="k">const</span> step = Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> progress = <span class="k">yield*</span> Progress;
+  <span class="k">yield*</span> progress.<span class="f">report</span>({ phase: <span class="s">'polling'</span> });
+  <span class="c">// ...</span>
+});
+</pre>
+<div class="note"><span class="t">Замечание</span>Прогресс — это <em>наблюдаемость</em>, а не состояние для возобновления. Для восстановления служат контрольные точки (следующий раздел); прогресс лишь показывает, на каком шаге мы сейчас.</div>
+
+<h2 id="s13"><span class="num">13</span>Долговечность и контрольные точки</h2>
+<p class="lead">Это центральный раздел. Effect прекрасно описывает вычисление, но его «волокно» живёт в оперативной памяти: если процесс упал посреди опроса, волокно исчезает. А у нас жёсткое требование — пережить перезапуск и продолжить работу (нынешний механизм <code class="inl">restore()</code>). Значит, слой долговечности (англ. <em>durability</em>) мы строим сами, поверх Effect.</p>
+
+<h3>Что именно мы храним</h3>
+<p>На каждый запуск пайплайна заводится запись прогона в нашей <code class="inl">JsonCollection</code>. Она хранит курсор (индекс текущего этапа) и состояние каждого этапа — статус, выход (для завершённых) и контрольную точку (для незавершённого).</p>
+<pre><span class="k">type</span> StageState =
+  | { status: <span class="s">'pending'</span> }
+  | { status: <span class="s">'running'</span>; checkpoint: Record&lt;string, unknown&gt; }
+  | { status: <span class="s">'done'</span>; output: unknown }
+  | { status: <span class="s">'failed'</span>; error: string };
+
+<span class="k">type</span> PipelineRun = {
+  id: string; pipeline: string; input: unknown;
+  cursor: number;            <span class="c">// индекс текущего этапа</span>
+  stages: StageState[];      <span class="c">// по одному на этап</span>
+  status: <span class="s">'running'</span> | <span class="s">'done'</span> | <span class="s">'failed'</span> | <span class="s">'cancelled'</span>;
+};
+</pre>
+
+<h3>Контрольная точка как сервис</h3>
+<p>Доступ к контрольной точке текущего этапа даёт сервис <code class="inl">Checkpoint</code>. Его реализация привязана к конкретной паре «прогон + индекс этапа», а запись <code class="inl">set</code> сразу сохраняется на диск (durable).</p>
+<pre><span class="k">class</span> <span class="f">Checkpoint</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'Checkpoint'</span>)&lt;Checkpoint, {
+  get&lt;T&gt;(key: string): Effect.Effect&lt;Option.Option&lt;T&gt;&gt;;
+  set&lt;T&gt;(key: string, value: T): Effect.Effect&lt;void&gt;;   <span class="c">// пишет в запись прогона</span>
+}&gt;() {}
+</pre>
+
+<h3>Идемпотентная отправка</h3>
+<p>Главный приём восстановления — сделать отправку операции <em>идемпотентной</em>: при возобновлении задача сперва смотрит, нет ли уже сохранённого идентификатора операции, и если есть — не отправляет запрос повторно, а сразу переходит к опросу.</p>
+<pre><span class="k">const</span> submitOnce = (req: SubmitReq) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> cp    = <span class="k">yield*</span> Checkpoint;
+  <span class="k">const</span> saved = <span class="k">yield*</span> cp.<span class="f">get</span>&lt;string&gt;(<span class="s">'opId'</span>);
+  <span class="k">if</span> (Option.<span class="f">isSome</span>(saved)) <span class="k">return</span> saved.value;   <span class="c">// возобновление: НЕ отправляем заново</span>
+
+  <span class="k">const</span> llm  = <span class="k">yield*</span> Llm;
+  <span class="k">const</span> opId = <span class="k">yield*</span> Effect.<span class="f">promise</span>(() =&gt; llm.<span class="f">submit</span>(req));
+  <span class="k">yield*</span> cp.<span class="f">set</span>(<span class="s">'opId'</span>, opId);                    <span class="c">// durable ДО начала опроса</span>
+  <span class="k">return</span> opId;
+});
+
+<span class="c">// собранный этап опроса переиспользует submitOnce + pollUntilDone</span>
+<span class="k">const</span> tcDetailsLlm: Job&lt;{ text: string }, TcRules, Llm | Checkpoint&gt; =
+  ({ text }) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+    <span class="k">const</span> opId = <span class="k">yield*</span> <span class="f">submitOnce</span>({ system, user: text, jsonSchema });
+    <span class="k">return</span> <span class="k">yield*</span> <span class="f">pollUntilDone</span>&lt;TcRules&gt;(opId);
+  });
+</pre>
+
+<h3>Раннер: пропустить завершённое, возобновить текущее</h3>
+<p>Сам пайплайн исполняет раннер, который смотрит на запись прогона. Завершённые этапы он не перезапускает — их сохранённый выход подаётся дальше. Незавершённый этап он запускает, подставив слой <code class="inl">Checkpoint</code>, привязанный к этому этапу, — и задача внутри сама решает, начать заново или продолжить по контрольной точке.</p>
+<pre><span class="k">const</span> runPipeline = (run: PipelineRun, jobs: AnyJob[]) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">let</span> input = run.input;
+  <span class="k">for</span> (<span class="k">let</span> i = run.cursor; i &lt; jobs.length; i++) {
+    <span class="k">const</span> st = run.stages[i];
+    <span class="k">if</span> (st.status === <span class="s">'done'</span>) { input = st.output; <span class="k">continue</span>; }   <span class="c">// не перезапускаем</span>
+
+    <span class="k">const</span> cpLayer = <span class="f">makeCheckpointLayer</span>(run.id, i);            <span class="c">// get/set → JsonCollection.update</span>
+    <span class="k">const</span> output  = <span class="k">yield*</span> <span class="f">jobs</span>[i](input).<span class="f">pipe</span>(Effect.<span class="f">provide</span>(cpLayer));
+
+    <span class="k">yield*</span> <span class="f">persistStageDone</span>(run.id, i, output);             <span class="c">// статус+выход+курсор (durable)</span>
+    input = output;
+  }
+});
+</pre>
+
+<h3>Порядок записи — где это важно</h3>
+<p>Долговечность держится на двух правилах порядка. Первое: контрольную точку (<code class="inl">opId</code>) сохраняем <strong>до</strong> начала опроса — иначе при падении мы потеряем ссылку на уже запущенную облачную операцию. Второе: курсор продвигаем <strong>после</strong> того, как получили и сохранили выход этапа, — иначе пропустим невыполненную работу.</p>
+<div class="warnbox"><span class="t">Честная оговорка</span>Между строкой «операция отправлена» и строкой «opId сохранён» есть крошечное окно. Если процесс умрёт ровно в нём, при перезапуске мы отправим операцию повторно (потеряв первую). Сузить окно можно либо ключом идемпотентности на стороне облака (повторная отправка с тем же ключом не создаёт новую операцию), либо предварительной меткой «собираюсь отправить» с последующей выверкой. Это сознательный компромисс: без распределённого журнала транзакций окно нельзя свести строго к нулю, но можно сделать его практически безопасным.</div>
+
+<h2 id="s14"><span class="num">14</span>Сквозной пример и сценарий перезапуска</h2>
+<p>Соберём пайплайн обработки технического условия: распознать файл, разбить текст на разделы, применить результат к сущности ТУ.</p>
+<pre><span class="k">const</span> tcPipeline = [
+  ocrJob,         <span class="c">// Job&lt;{ fileId }, { text }&gt;   — внутри submitOnce + pollUntilDone (OCR)</span>
+  tcDetailsLlm,   <span class="c">// Job&lt;{ text }, TcRules&gt;      — внутри submitOnce + pollUntilDone (LLM)</span>
+  applyTcRules,   <span class="c">// Job&lt;TcRules, void&gt;          — запись в доменную сущность</span>
+];
+</pre>
+<p>Теперь проследим сбой во время второго этапа (опрос LLM):</p>
+<pre class="step">1. ocrJob завершился → stages[0] = done(output: { text }), cursor = 1, всё сохранено.
+2. tcDetailsLlm: submitOnce отправил запрос, получил opId, записал checkpoint.opId, начал опрос.
+3. ⛔ процесс упал во время опроса.
+4. Перезапуск: restore() находит прогон в статусе running, зовёт runPipeline(run).
+5. i=0: stages[0].status === 'done' → этап пропущен, его { text } подан дальше.
+6. i=1: запускается tcDetailsLlm; submitOnce видит сохранённый opId → НЕ отправляет заново,
+        сразу переходит к pollUntilDone(opId) → опрос продолжается.
+7. Операция завершилась → stages[1] = done(rules), cursor = 2.
+8. i=2: applyTcRules пишет результат в ТУ. Пайплайн завершён.</pre>
+<div class="why"><span class="t">Здесь сошлось всё</span>Опрос (<code class="inl">pollUntilDone</code>), отмена (вычисление прервалось при падении), прогресс (его читали по записи) и контрольные точки (по ним мы и продолжили). Это прямой ответ на исходный вопрос: «продолжить опрос либо сразу перейти к нему, если предыдущий этап завершён».</div>
+
+<h2 id="s15"><span class="num">15</span>Код до и после</h2>
+<p>Нынешний <code class="inl">TCDetailsWorker</code> — около 270 строк, из которых уникальны лишь промпт, схема ответа и применение результата; остальное — мутабельное состояние с приведениями типов, ручные статусы, скопированные <code class="inl">markSuccess</code>/<code class="inl">markStopped</code>, цикл опроса и блок <code class="inl">try/catch</code>.</p>
+<table class="cmp">
+  <tr><th>Было (класс-воркер)</th><th>Стало (Job на Effect)</th></tr>
+  <tr>
+    <td>
+      <span class="pill">~270 строк</span>
+      <ul>
+        <li>мутабельное <code class="inl">Partial&lt;Stored&lt;Data&gt;&gt;</code>, всюду <code class="inl">!</code> и <code class="inl">as</code></li>
+        <li>триплет «обновить → переприсвоить → скастовать» ×6–8</li>
+        <li>конструктор двойной формы; <code class="inl">mount</code>; <code class="inl">markSuccess</code>/<code class="inl">markStopped</code>; <code class="inl">getWorkerRecordId</code></li>
+        <li>собственный цикл опроса и <code class="inl">try/catch → Failed</code></li>
+        <li>статусы и контрольные точки пишутся вручную</li>
+      </ul>
+    </td>
+    <td>
+      <span class="pill">~40–60 строк уникального</span>
+      <ul>
+        <li>состояние — в записи прогона, не в объекте; приведений нет</li>
+        <li>опрос — из общего <code class="inl">pollUntilDone</code></li>
+        <li>отправка — из общего <code class="inl">submitOnce</code> (идемпотентна)</li>
+        <li>статусы/курсор/ошибки — на стороне раннера, единообразно</li>
+        <li>уникальны лишь промпт, схема и <code class="inl">applyTcRules</code></li>
+      </ul>
+    </td>
+  </tr>
+</table>
+<pre><span class="c">// «после» целиком — это сборка из готовых кирпичей:</span>
+<span class="k">const</span> tcDetailsJob = (tcId: string) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+  <span class="k">const</span> { text } = <span class="k">yield*</span> <span class="f">loadTcText</span>(tcId);
+  <span class="k">const</span> opId     = <span class="k">yield*</span> <span class="f">submitOnce</span>({ system, user: text, jsonSchema });
+  <span class="k">const</span> rules    = <span class="k">yield*</span> <span class="f">pollUntilDone</span>&lt;TcRules&gt;(opId);
+  <span class="k">yield*</span> <span class="f">applyTcRules</span>(rules);
+});
+</pre>
+
+<h2 id="s16"><span class="num">16</span>Открытые вопросы и риски</h2>
+<ul>
+  <li><strong>Порог входа.</strong> Effect — мощная, но непривычная модель; команде нужно освоить хотя бы основания из Части&nbsp;I. Это инвестиция, оправданная только если механизмы (композиция, отмена, повторы, типизированные ошибки) реально используются — а у нас используются.</li>
+  <li><strong>Мост Nest ↔ Effect.</strong> Нужно аккуратно описать, как Nest-провайдеры превращаются в <code class="inl">Layer</code> и где находится единая точка запуска/восстановления (вероятно, сервис-раннер с <code class="inl">OnApplicationBootstrap</code>).</li>
+  <li><strong>Гранулярность контрольных точек.</strong> Что считать атомарным шагом: чем мельче точки, тем надёжнее возобновление, но тем чаще запись на диск.</li>
+  <li><strong>Политика повторов.</strong> Где уместен <code class="inl">retry</code> с нарастающей паузой (сетевые сбои), а где — нет (бизнес-ошибка, которую повтор не исправит).</li>
+  <li><strong>Реестр Job и восстановление.</strong> Как сопоставлять сохранённый прогон с кодом пайплайна (по имени), и что делать, если набор этапов изменился между версиями.</li>
+  <li><strong>Окно идемпотентности отправки</strong> (см. раздел&nbsp;13) — выбрать конкретную стратегию для облачных операций Yandex.</li>
+</ul>
+
+<footer>
+  Документ для проектного решения. Код миграции из него пока не следует — сначала договариваемся об архитектуре, затем переносим воркеры на эту модель.
+</footer>
+
+</div>
+</body>
+</html>

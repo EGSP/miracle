@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Отзывчивый React-интерфейс: ре-рендеры, передача данных, состояния</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f7f8fa; --ink: #19191c; --muted: #6c707e;
+    --accent: #167b73; --accent2: #3573f0; --warn: #b25f00; --line: #ebecf0;
+    --code-bg: #f7f8fa; --code-ink: #19191c; --cmt: #8c8c8c; --kw: #0033b3;
+    --str: #067d17; --fn: #00627a;
+    --maxw: 980px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.7 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 120px; }
+  header.top {
+    border-bottom: 1px solid var(--line); margin-bottom: 28px;
+    padding: 40px 22px 26px; background: linear-gradient(180deg, #ffffff, #f7f8fa);
+  }
+  header.top .inner { max-width: var(--maxw); margin: 0 auto; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -.2px; color: var(--ink); }
+  .sub { color: var(--muted); font-size: 16px; margin: 0; }
+  .badge {
+    display: inline-block; margin-top: 14px; padding: 5px 11px; border-radius: 999px;
+    background: #f1f2f4; border: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  h2 {
+    font-size: 23px; margin: 52px 0 14px; padding-top: 14px; letter-spacing: -.2px;
+    border-top: 1px solid var(--line);
+  }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 10px; }
+  h3 { font-size: 18px; margin: 28px 0 10px; color: #383a42; }
+  p { margin: 12px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code.inl {
+    background: #f1f2f4; border: 1px solid #e3e5e8; border-radius: 5px;
+    padding: 1px 6px; font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: .88em;
+    color: #0a3069;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.62;
+    color: var(--code-ink);
+  }
+  pre .c { color: var(--cmt); font-style: italic; }
+  pre .k { color: var(--kw); }
+  pre .s { color: var(--str); }
+  pre .f { color: var(--fn); }
+  .lead { font-size: 18px; color: #383a42; }
+  .why, .note, .warnbox {
+    border-radius: 10px; padding: 14px 16px 14px 18px; margin: 18px 0;
+    border: 1px solid var(--line);
+  }
+  .why { border-left: 3px solid var(--accent); background: #eef6f5; }
+  .note { border-left: 3px solid var(--accent2); background: #eef3fe; }
+  .warnbox { border-left: 3px solid var(--warn); background: #fff7ea; }
+  .why .t, .note .t, .warnbox .t {
+    display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+  .why .t { color: var(--accent); }
+  .note .t { color: var(--accent2); }
+  .warnbox .t { color: var(--warn); }
+  nav.toc {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; margin: 8px 0 10px;
+  }
+  nav.toc h2 { border: 0; margin: 0 0 10px; padding: 0; font-size: 16px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc li { margin: 3px 0; }
+  nav.toc .part { list-style: none; margin: 12px 0 4px -22px; font-weight: 600; color: #383a42; }
+  table.cmp { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px; }
+  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+  table.cmp th { background: #f2f3f5; color: var(--ink); }
+  table.cmp td b { color: var(--accent2); }
+  hr.soft { border: 0; border-top: 1px dashed var(--line); margin: 26px 0; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:6px; background:#f1f2f4; border:1px solid var(--line); font-size:12.5px; color:var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .col h4 { margin: 0 0 6px; font-size: 14px; letter-spacing:.3px; text-transform: uppercase; color: var(--muted); }
+  .bad h4 { color: #c9362c; } .good h4 { color: var(--accent); }
+  footer { color: var(--muted); font-size: 14px; margin-top: 60px; border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <h1>Отзывчивый React-интерфейс: ре-рендеры, передача данных и отображение состояний</h1>
+    <p class="sub">Лекция о том, как строить компоненты, которые остаются отзывчивыми и явно показывают своё состояние, балансируя скорость отрисовки и сложность кода.</p>
+    <span class="badge">Ориентир — React 19.2 и Zustand 5. Только клиентская часть, без серверных эффектов.</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <h2>Содержание</h2>
+  <ol>
+    <li class="part">Часть I. Модель отрисовки и передача данных</li>
+    <li><a href="#s1">1. Как React решает, что перерисовать</a></li>
+    <li><a href="#s2">2. Как уменьшить лишние ре-рендеры</a></li>
+    <li><a href="#s3">3. Куда положить состояние: props, контекст, хранилище</a></li>
+    <li class="part">Часть II. Отзывчивость</li>
+    <li><a href="#s4">4. Срочные и несрочные обновления: useTransition</a></li>
+    <li><a href="#s5">5. Отложенное значение: useDeferredValue</a></li>
+    <li class="part">Часть III. Компоненты, показывающие состояния</li>
+    <li><a href="#s6">6. Состояние как размеченное объединение</a></li>
+    <li><a href="#s7">7. Декларативные загрузка и ошибка: Suspense и границы</a></li>
+    <li><a href="#s8">8. Действия и формы: useActionState, useFormStatus, useOptimistic</a></li>
+    <li><a href="#s9">9. Переиспользуемый компонент-переключатель состояний</a></li>
+    <li><a href="#s10">10. Памятка</a></li>
+  </ol>
+</nav>
+
+<p class="lead">«Отзывчивый» интерфейс — это интерфейс, который не замирает: поле ввода реагирует на каждое нажатие, кнопка показывает, что запрос идёт, а тяжёлый список не блокирует остальную страницу. Чтобы добиться этого без хаоса в коде, нужно понимать две вещи: <strong>когда</strong> React перерисовывает компоненты и <strong>как</strong> передавать данные так, чтобы перерисовок было ровно столько, сколько нужно. С этого и начнём, а затем перейдём к компонентам, которые честно отображают своё состояние — загрузку, ошибку, пустоту, успех.</p>
+
+<!-- ================= ЧАСТЬ I ================= -->
+<h2 id="s1"><span class="num">1</span>Как React решает, что перерисовать</h2>
+<p>Базовое правило простое: когда у компонента меняется состояние (англ. <em>state</em>) или входные свойства (англ. <em>props</em>), React заново вызывает его функцию и функции всех его потомков. «Перерисовка» (англ. <em>re-render</em>) здесь — это не обновление страницы в браузере, а повторный вызов функции-компонента, чтобы вычислить, как должно выглядеть дерево. Реальные изменения в DOM React внесёт только там, где результат отличается.</p>
+<p>Важное следствие, которое часто упускают: <strong>родитель перерисовывает детей по факту своей перерисовки</strong>, даже если их собственные props не менялись. Сравнение props спасает не само по себе, а только если компонент обёрнут в <code class="inl">memo</code>.</p>
+<pre><span class="k">function</span> <span class="f">Parent</span>() {
+  <span class="k">const</span> [n, setN] = <span class="f">useState</span>(0);
+  <span class="k">return</span> (
+    &lt;<span class="f">div</span> onClick={() =&gt; <span class="f">setN</span>(n + 1)}&gt;
+      &lt;<span class="f">Expensive</span> /&gt;   <span class="c">// перерисовывается на каждый клик, хотя props не менялись</span>
+    &lt;/<span class="f">div</span>&gt;
+  );
+}
+</pre>
+<div class="why"><span class="t">Почему это так</span>React не знает заранее, зависит ли <code class="inl">Expensive</code> от чего-то изменившегося. Дешевле перерисовать (вызвать функцию) и сравнить результат, чем доказывать ненужность. Наша задача — расставить подсказки там, где перерисовка действительно дорогая, а не везде подряд.</div>
+
+<h2 id="s2"><span class="num">2</span>Как уменьшить лишние ре-рендеры</h2>
+<p>Есть три приёма, и применять их стоит именно в таком порядке — от самого дешёвого по сложности к самому затратному.</p>
+
+<h3>2.1. Колокация: держите состояние как можно ниже</h3>
+<p>Если состояние нужно одному небольшому поддереву, опустите его туда. Тогда перерисовываться будет только это поддерево, а не вся страница. Частая ошибка — хранить «всё подряд» в самом верхнем компоненте.</p>
+
+<h3>2.2. Композиция: передавайте содержимое через children</h3>
+<p>Если стейт меняется в обёртке, но дорогое содержимое от него не зависит — вынесите содержимое в <code class="inl">children</code>. Элемент, созданный снаружи, не пересоздаётся при перерисовке обёртки.</p>
+<div class="grid2">
+  <div class="col bad"><h4>Лишняя перерисовка</h4>
+  <pre><span class="k">function</span> <span class="f">Panel</span>() {
+  <span class="k">const</span> [open, setOpen] = <span class="f">useState</span>(0);
+  <span class="k">return</span> &lt;<span class="f">div</span>&gt;&lt;<span class="f">Expensive</span> /&gt;&lt;/<span class="f">div</span>&gt;;
+}</pre></div>
+  <div class="col good"><h4>Содержимое снаружи</h4>
+  <pre><span class="k">function</span> <span class="f">Panel</span>({ children }) {
+  <span class="k">const</span> [open, setOpen] = <span class="f">useState</span>(0);
+  <span class="k">return</span> &lt;<span class="f">div</span>&gt;{children}&lt;/<span class="f">div</span>&gt;;
+}
+&lt;<span class="f">Panel</span>&gt;&lt;<span class="f">Expensive</span> /&gt;&lt;/<span class="f">Panel</span>&gt; <span class="c">// не ре-рендерится</span></pre></div>
+</div>
+
+<h3>2.3. Мемоизация: memo, useMemo, useCallback</h3>
+<p>Когда первые два приёма исчерпаны, помогает мемоизация. <code class="inl">memo</code> пропускает перерисовку компонента, если его props не изменились по ссылке. <code class="inl">useMemo</code> кэширует результат тяжёлого вычисления, <code class="inl">useCallback</code> — стабильную ссылку на функцию (нужно, когда функцию передаём в <code class="inl">memo</code>-компонент или в зависимости хука).</p>
+<pre><span class="k">const</span> Row = <span class="f">memo</span>(<span class="k">function</span> <span class="f">Row</span>({ item, onPick }) { <span class="c">/* ... */</span> });
+
+<span class="k">function</span> <span class="f">List</span>({ items }) {
+  <span class="k">const</span> onPick = <span class="f">useCallback</span>((id) =&gt; <span class="c">/* ... */</span>, []);      <span class="c">// стабильная ссылка</span>
+  <span class="k">const</span> sorted = <span class="f">useMemo</span>(() =&gt; [...items].<span class="f">sort</span>(byName), [items]); <span class="c">// кэш вычисления</span>
+  <span class="k">return</span> sorted.<span class="f">map</span>((it) =&gt; &lt;<span class="f">Row</span> key={it.id} item={it} onPick={onPick} /&gt;);
+}</pre>
+<div class="warnbox"><span class="t">Когда НЕ нужно</span>Не оборачивайте всё подряд. Мемоизация сама по себе стоит памяти и усложняет чтение; для маленьких деревьев перерисовка дешевле, чем сравнение. Сначала — колокация и композиция (раздел 2.1–2.2), и лишь для доказанно дорогих участков — <code class="inl">memo</code>. «Преждевременная мемоизация» — частый источник сложного и хрупкого кода.</div>
+
+<h2 id="s3"><span class="num">3</span>Куда положить состояние: props, контекст, хранилище</h2>
+<p class="lead">Это центральный вопрос баланса «скорость отрисовки против сложности кода». Есть три способа доставить данные компоненту, и у каждого своя цена.</p>
+
+<h3>3.1. Свойства (props) — выбор по умолчанию</h3>
+<p>Передача через props — самая простая, явная и быстрая: видно, откуда пришли данные, и легко тестировать. Единственная проблема появляется, когда данные нужно «протащить» через много уровней (англ. <em>prop drilling</em>) — тогда промежуточные компоненты обрастают свойствами, которые им самим не нужны.</p>
+
+<h3>3.2. Контекст (context) — для «окружения», а не для частых изменений</h3>
+<p>Контекст устраняет протаскивание: значение объявляется наверху и доступно любому потомку. Он хорошо подходит для редко меняющегося «окружения» — тема оформления, текущий пользователь, язык, общие зависимости.</p>
+<div class="warnbox"><span class="t">Главная ловушка контекста</span>У контекста нет выборочной подписки: <strong>при изменении значения перерисовываются все потребители</strong>, даже те, кто читает лишь его часть. Поэтому в контекст не кладут часто меняющееся состояние (позицию курсора, ввод, прогресс). Если значение всё же меняется — мемоизируйте его и при необходимости разделяйте на два контекста: отдельно данные, отдельно функции их изменения.</div>
+<pre><span class="c">// объект-значение пересоздаётся каждый рендер → все потребители ре-рендерятся</span>
+&lt;<span class="f">ThemeContext.Provider</span> value={{ theme, setTheme }}&gt;
+
+<span class="c">// мемоизируем; функции стабильны, данные отдельно от действий</span>
+<span class="k">const</span> value = <span class="f">useMemo</span>(() =&gt; ({ theme }), [theme]);
+&lt;<span class="f">ThemeContext.Provider</span> value={value}&gt;</pre>
+
+<h3>3.3. Хранилище (store) — для частого и «сквозного» состояния</h3>
+<p>Когда состояние меняется часто, нужно многим далеко отстоящим компонентам, или это «сквозная» доменная сущность (корзина, сессия, открытый диалог) — выгоднее внешнее хранилище. В проекте это <strong>Zustand</strong>. Его ключевое отличие от контекста — <em>выборочная подписка через селектор</em>: компонент перерисовывается только когда меняется именно тот срез, который он читает.</p>
+<pre><span class="k">const</span> useCartStore = <span class="f">create</span>&lt;CartState&gt;((set) =&gt; ({
+  items: [],
+  addItem: (it) =&gt; <span class="f">set</span>((s) =&gt; ({ items: [...s.items, it] })),
+}));
+
+<span class="c">// подписка на срез: ре-рендер только при изменении количества</span>
+<span class="k">const</span> count = <span class="f">useCartStore</span>((s) =&gt; s.items.length);</pre>
+<div class="warnbox"><span class="t">Правило стабильности селектора (из практики проекта)</span>Zustand построен на <code class="inl">useSyncExternalStore</code>, который сравнивает результат селектора по ссылке. Если селектор возвращает <strong>новый объект или функцию на каждый рендер</strong>, React считает значение изменившимся — это лишние ре-рендеры, а иногда и предупреждение о «бесконечном» обновлении. Возвращайте примитивы отдельными вызовами либо используйте <code class="inl">useShallow</code> для поверхностного сравнения.</div>
+<div class="grid2">
+  <div class="col bad"><h4>Плохо: новый объект</h4>
+  <pre><span class="k">const</span> { items, addItem } =
+  <span class="f">useStore</span>((s) =&gt; ({
+    items: s.items,
+    addItem: s.addItem,
+  })); <span class="c">// новая ссылка каждый рендер</span></pre></div>
+  <div class="col good"><h4>Хорошо: примитивы или useShallow</h4>
+  <pre><span class="k">import</span> { useShallow } <span class="k">from</span> <span class="s">'zustand/react/shallow'</span>;
+
+<span class="k">const</span> items   = <span class="f">useStore</span>((s) =&gt; s.items);
+<span class="k">const</span> addItem = <span class="f">useStore</span>((s) =&gt; s.addItem);
+<span class="c">// или одним селектором с поверхностным сравнением:</span>
+<span class="k">const</span> { items, addItem } =
+  <span class="f">useStore</span>(<span class="f">useShallow</span>((s) =&gt; ({ items: s.items, addItem: s.addItem })));</pre></div>
+</div>
+
+<h3>3.4. Как выбрать — таблица решений</h3>
+<table class="cmp">
+  <tr><th>Способ</th><th>Когда уместен</th><th>Цена</th></tr>
+  <tr><td><b>props</b></td><td>почти всегда; данные нужны рядом, дерево неглубокое</td><td>протаскивание через много уровней</td></tr>
+  <tr><td><b>context</b></td><td>редко меняющееся «окружение» (тема, пользователь, язык, зависимости)</td><td>перерисовка всех потребителей при изменении; нет срезов</td></tr>
+  <tr><td><b>store (Zustand)</b></td><td>частое / сквозное / далеко расположенное состояние</td><td>внешняя зависимость, косвенность; нужна дисциплина селекторов</td></tr>
+</table>
+<div class="why"><span class="t">Баланс</span>Двигайтесь от простого к сложному: начните с props; перешли в протаскивание — посмотрите, не «окружение» ли это (тогда контекст); если состояние частое или сквозное — хранилище с селекторами. Не тащите всё в глобальный store «на всякий случай»: глобальное состояние, которое могло бы быть локальным, — это и лишние ре-рендеры, и труднее отслеживаемые зависимости.</div>
+
+<!-- ================= ЧАСТЬ II ================= -->
+<h2 id="s4"><span class="num">4</span>Срочные и несрочные обновления: useTransition</h2>
+<p>Иногда одно действие пользователя порождает два обновления разной срочности. Набор текста в поле — <strong>срочное</strong>: поле обязано реагировать мгновенно. Перестроение тяжёлого списка по этому тексту — <strong>несрочное</strong>: его не страшно отрисовать чуть позже. Если делать оба синхронно, ввод начнёт «заедать», потому что React будет занят тяжёлым списком.</p>
+<p>Хук <code class="inl">useTransition</code> помечает обновление как несрочное (переход, англ. <em>transition</em>). React сначала отрисует срочное (поле), сохранит отзывчивость, а тяжёлое посчитает в фоне и при необходимости прервёт, если придёт новый ввод.</p>
+<pre><span class="k">const</span> [query, setQuery] = <span class="f">useState</span>(<span class="s">''</span>);
+<span class="k">const</span> [results, setResults] = <span class="f">useState</span>([]);
+<span class="k">const</span> [isPending, startTransition] = <span class="f">useTransition</span>();
+
+<span class="k">function</span> <span class="f">onChange</span>(e) {
+  <span class="f">setQuery</span>(e.target.value);                      <span class="c">// срочно: поле ввода</span>
+  <span class="f">startTransition</span>(() =&gt; {
+    <span class="f">setResults</span>(<span class="f">filterHugeList</span>(e.target.value));    <span class="c">// несрочно: тяжёлый список</span>
+  });
+}
+
+<span class="k">return</span> (
+  &lt;&gt;
+    &lt;<span class="f">input</span> value={query} onChange={onChange} /&gt;
+    {isPending &amp;&amp; &lt;<span class="f">Spinner</span> /&gt;}            <span class="c">// честно показываем: список догоняет</span>
+    &lt;<span class="f">Results</span> data={results} /&gt;
+  &lt;/&gt;
+);</pre>
+<div class="note"><span class="t">React 19</span>В переход можно завернуть и асинхронное действие — тогда <code class="inl">isPending</code> остаётся истинным на всё время операции. Это основа «действий» (англ. <em>Actions</em>), к которым придём в разделе 8.</div>
+
+<h2 id="s5"><span class="num">5</span>Отложенное значение: useDeferredValue</h2>
+<p>Иногда мы не управляем местом, где запускается обновление (значение приходит сверху как prop). Тогда вместо того чтобы помечать обновление, можно пометить <em>значение</em> как «допустимо отстающее». <code class="inl">useDeferredValue</code> возвращает версию значения, которая обновится с небольшим запозданием, пока React занят срочным.</p>
+<pre><span class="k">function</span> <span class="f">Results</span>({ query }) {
+  <span class="k">const</span> deferred = <span class="f">useDeferredValue</span>(query);          <span class="c">// «отстающая» копия</span>
+  <span class="k">const</span> list = <span class="f">useMemo</span>(() =&gt; <span class="f">filterHugeList</span>(deferred), [deferred]);
+  <span class="k">const</span> stale = deferred !== query;                  <span class="c">// показываем, что данные устаревают</span>
+  <span class="k">return</span> &lt;<span class="f">div</span> style={{ opacity: stale ? 0.6 : 1 }}&gt;&lt;<span class="f">Rows</span> data={list} /&gt;&lt;/<span class="f">div</span>&gt;;
+}</pre>
+<div class="why"><span class="t">useTransition или useDeferredValue</span>Правило простое: если вы сами вызываете обновление — оборачивайте его в <code class="inl">startTransition</code>. Если значение приходит извне и вы лишь реагируете — используйте <code class="inl">useDeferredValue</code>. Оба держат интерфейс отзывчивым; разница лишь в том, на чьей стороне источник изменения.</div>
+
+<!-- ================= ЧАСТЬ III ================= -->
+<h2 id="s6"><span class="num">6</span>Состояние как размеченное объединение</h2>
+<p>Компонент, загружающий данные, имеет несколько взаимоисключающих состояний: ожидание, успех, ошибка, иногда «пусто». Частая ошибка — описывать их набором булевых флагов (<code class="inl">isLoading</code>, <code class="inl">isError</code>, <code class="inl">data</code>). Такой «булев суп» допускает невозможные сочетания (<code class="inl">isLoading &amp;&amp; isError</code>) и легко приводит к ошибкам по невнимательности.</p>
+<p>Надёжнее описать состояние <strong>размеченным объединением</strong> (англ. <em>discriminated union</em>): одно поле-метка <code class="inl">status</code>, и для каждого значения метки — только релевантные данные. Невозможные состояния становятся невыразимыми, а компилятор заставляет обработать все случаи.</p>
+<div class="grid2">
+  <div class="col bad"><h4>Булев суп</h4>
+  <pre><span class="k">type</span> State = {
+  isLoading: boolean;
+  isError: boolean;
+  data?: User;
+  error?: Error;
+}; <span class="c">// допускает невозможное</span></pre></div>
+  <div class="col good"><h4>Размеченное объединение</h4>
+  <pre><span class="k">type</span> Async&lt;T&gt; =
+  | { status: <span class="s">'idle'</span> }
+  | { status: <span class="s">'pending'</span> }
+  | { status: <span class="s">'success'</span>; data: T }
+  | { status: <span class="s">'error'</span>; error: Error };</pre></div>
+</div>
+
+<h2 id="s7"><span class="num">7</span>Декларативные загрузка и ошибка: Suspense и границы</h2>
+<p>Размеченное объединение хорошо, когда состоянием управляем мы сами. Но часть состояний React умеет отображать <em>декларативно</em>, без ручных флагов. <code class="inl">Suspense</code> показывает запасной интерфейс (англ. <em>fallback</em>), пока данные «приостановлены», а <strong>граница ошибок</strong> (англ. <em>error boundary</em>) перехватывает сбой и показывает запасной экран. В React 19 хук <code class="inl">use</code> позволяет прямо «прочитать» промис, приостановив компонент до его разрешения.</p>
+<pre><span class="k">function</span> <span class="f">Profile</span>({ userPromise }) {
+  <span class="k">const</span> user = <span class="f">use</span>(userPromise);   <span class="c">// приостанавливает, пока промис не разрешится</span>
+  <span class="k">return</span> &lt;<span class="f">h1</span>&gt;{user.name}&lt;/<span class="f">h1</span>&gt;;
+}
+
+&lt;<span class="f">ErrorBoundary</span> fallback={&lt;<span class="f">ErrorView</span> /&gt;}&gt;   <span class="c">// перехват ошибки</span>
+  &lt;<span class="f">Suspense</span> fallback={&lt;<span class="f">Skeleton</span> /&gt;}&gt;       <span class="c">// заглушка на время загрузки</span>
+    &lt;<span class="f">Profile</span> userPromise={userPromise} /&gt;
+  &lt;/<span class="f">Suspense</span>&gt;
+&lt;/<span class="f">ErrorBoundary</span>&gt;</pre>
+<div class="why"><span class="t">Почему это удобно</span>Состояния «загрузка» и «ошибка» вынесены из компонента в его окружение. Сам <code class="inl">Profile</code> пишется так, будто данные уже есть, — меньше веток, меньше шансов забыть случай. Состоянием же «успех/пусто» по-прежнему управляем явно (раздел 6).</div>
+<div class="note"><span class="t">Замечание</span>Граница ошибок в React реализуется компонентом-классом (или готовой из библиотеки) — это единственное место, где класс ещё нужен. Достаточно одной такой границы на крупный участок интерфейса.</div>
+
+<h2 id="s8"><span class="num">8</span>Действия и формы: useActionState, useFormStatus, useOptimistic</h2>
+<p>Отправка формы или мутация — это тоже состояние: «отправляется», «успех», «ошибка». React 19 даёт под это связку хуков, чтобы не собирать её вручную из <code class="inl">useState</code> и <code class="inl">try/catch</code>.</p>
+
+<h3>useActionState — состояние действия</h3>
+<p>Принимает асинхронную функцию-действие и начальное состояние, возвращает текущее состояние, обёртку для формы и признак выполнения <code class="inl">isPending</code>.</p>
+<pre><span class="k">const</span> [state, formAction, isPending] = <span class="f">useActionState</span>(
+  <span class="k">async</span> (prev, formData) =&gt; {
+    <span class="k">try</span> { <span class="k">await</span> <span class="f">saveProfile</span>(formData); <span class="k">return</span> { ok: <span class="k">true</span> }; }
+    <span class="k">catch</span> (e) { <span class="k">return</span> { ok: <span class="k">false</span>, error: <span class="f">message</span>(e) }; }
+  },
+  { ok: <span class="k">false</span> },
+);
+
+<span class="k">return</span> (
+  &lt;<span class="f">form</span> action={formAction}&gt;
+    &lt;<span class="f">input</span> name=<span class="s">"name"</span> /&gt;
+    {state.error &amp;&amp; &lt;<span class="f">p</span> className=<span class="s">"err"</span>&gt;{state.error}&lt;/<span class="f">p</span>&gt;}
+    &lt;<span class="f">SubmitButton</span> /&gt;
+  &lt;/<span class="f">form</span>&gt;
+);</pre>
+
+<h3>useFormStatus — состояние ближайшей формы</h3>
+<p>Позволяет вложенной кнопке узнать, идёт ли отправка родительской формы, не прокидывая признак через props.</p>
+<pre><span class="k">import</span> { useFormStatus } <span class="k">from</span> <span class="s">'react-dom'</span>;
+
+<span class="k">function</span> <span class="f">SubmitButton</span>() {
+  <span class="k">const</span> { pending } = <span class="f">useFormStatus</span>();
+  <span class="k">return</span> &lt;<span class="f">button</span> disabled={pending}&gt;{pending ? <span class="s">'Сохраняю…'</span> : <span class="s">'Сохранить'</span>}&lt;/<span class="f">button</span>&gt;;
+}</pre>
+
+<h3>useOptimistic — оптимистичный интерфейс</h3>
+<p>Показывает результат действия <em>сразу</em>, ещё до ответа сервера, а при ошибке React сам откатит оптимистичное значение к реальному. Это резко повышает ощущение отзывчивости.</p>
+<pre><span class="k">const</span> [optimisticTodos, addOptimistic] = <span class="f">useOptimistic</span>(
+  todos,
+  (current, draft) =&gt; [...current, { ...draft, sending: <span class="k">true</span> }],
+);
+
+<span class="k">async</span> <span class="k">function</span> <span class="f">submit</span>(formData) {
+  <span class="k">const</span> draft = { text: formData.<span class="f">get</span>(<span class="s">'text'</span>) };
+  <span class="f">addOptimistic</span>(draft);          <span class="c">// мгновенно дорисовали «отправляется»</span>
+  <span class="k">await</span> <span class="f">saveTodo</span>(draft);          <span class="c">// при ошибке оптимистичный элемент откатится</span>
+}</pre>
+
+<h2 id="s9"><span class="num">9</span>Переиспользуемый компонент-переключатель состояний</h2>
+<p>Когда состоянием управляем сами (раздел 6), удобно иметь один компонент, который по метке <code class="inl">status</code> выбирает, что показать. Тогда каждая страница не повторяет одинаковые ветки «загрузка/ошибка/пусто».</p>
+<pre><span class="k">function</span> <span class="f">Async</span>&lt;T&gt;({ state, children, empty }: {
+  state: Async&lt;T&gt;;
+  children: (data: T) =&gt; React.ReactNode;
+  empty?: React.ReactNode;
+}) {
+  <span class="k">switch</span> (state.status) {
+    <span class="k">case</span> <span class="s">'idle'</span>:
+    <span class="k">case</span> <span class="s">'pending'</span>: <span class="k">return</span> &lt;<span class="f">Skeleton</span> /&gt;;
+    <span class="k">case</span> <span class="s">'error'</span>:   <span class="k">return</span> &lt;<span class="f">ErrorView</span> error={state.error} /&gt;;
+    <span class="k">case</span> <span class="s">'success'</span>:
+      <span class="k">return</span> <span class="f">isEmpty</span>(state.data) ? (empty ?? &lt;<span class="f">Empty</span> /&gt;) : <span class="f">children</span>(state.data);
+  }
+}
+
+<span class="c">// применение — чтение остаётся коротким и без веток</span>
+&lt;<span class="f">Async</span> state={users}&gt;
+  {(list) =&gt; &lt;<span class="f">UserTable</span> rows={list} /&gt;}
+&lt;/<span class="f">Async</span>&gt;</pre>
+<div class="why"><span class="t">Что мы выиграли</span>Ветвление состояний собрано в одном месте и описано через размеченное объединение, поэтому компилятор проверит, что обработаны все случаи. Страница же читается декларативно: «вот данные — вот таблица», без переплетения с загрузкой и ошибками.</div>
+
+<h2 id="s10"><span class="num">10</span>Памятка</h2>
+<table class="cmp">
+  <tr><th>Цель</th><th>Приём</th></tr>
+  <tr><td>Меньше лишних перерисовок</td><td>сперва колокация и композиция (children), затем точечно <code class="inl">memo</code>/<code class="inl">useMemo</code>/<code class="inl">useCallback</code></td></tr>
+  <tr><td>Передать данные</td><td>props по умолчанию → контекст для «окружения» → store (Zustand) для частого/сквозного</td></tr>
+  <tr><td>Контекст без лишних ре-рендеров</td><td>мемоизировать значение; разделять данные и действия по разным контекстам</td></tr>
+  <tr><td>Zustand без лишних ре-рендеров</td><td>селектор возвращает примитивы либо <code class="inl">useShallow</code>; никаких новых объектов в селекторе</td></tr>
+  <tr><td>Интерфейс не «заедает»</td><td><code class="inl">useTransition</code> для своих обновлений; <code class="inl">useDeferredValue</code> для внешних значений</td></tr>
+  <tr><td>Честно показать состояние</td><td>размеченное объединение вместо булевых флагов; компонент-переключатель</td></tr>
+  <tr><td>Загрузка/ошибка декларативно</td><td><code class="inl">Suspense</code> + граница ошибок (+ <code class="inl">use</code> для промиса)</td></tr>
+  <tr><td>Формы и мутации</td><td><code class="inl">useActionState</code>, <code class="inl">useFormStatus</code>, <code class="inl">useOptimistic</code></td></tr>
+</table>
+
+<footer>
+  Учебная страница. Ориентир — React 19.2 и Zustand 5; конкретные сигнатуры API могут уточняться по версии. Цель — общая модель принятия решений, а не догма: на маленьких деревьях простой код важнее микрооптимизаций.
+</footer>
+
+</div>
+</body>
+</html>
