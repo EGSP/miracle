@@ -4,6 +4,7 @@ export * from './user-role.js';
 export * from './user.js';
 export * from './file.js';
 export * from './file-types.js';
+export * from './job-run.js';
 export * from './worker.js';
 export * from './order.js';
 export * from './db.js';

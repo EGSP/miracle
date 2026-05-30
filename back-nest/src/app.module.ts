@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from './logger/logger.module.js';
+import { JobsModule } from './jobs/jobs.module.js';
 import { AppConfigModule } from './config/app-config.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -14,6 +15,7 @@ import { FilesContentModule } from './files-content/files-content.module.js';
 @Module({
     imports: [
         LoggerModule,
+        JobsModule,
         AppConfigModule,
         DatabaseModule,
         AuthModule,
