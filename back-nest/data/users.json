@@ -1,3 +1,12 @@
 {
-  "items": []
+  "items": [
+    {
+      "login": "tatapstar",
+      "password": "$argon2id$v=19$m=65536,t=3,p=4$aZjRuEmjL/bKsC/LhL7oHQ$cpaB0Td3HFGyFRuwRAOVakKiX6g2xKCVIvvNHk+CjEM",
+      "role": "EMPLOYEE",
+      "id": "21ba40d8-eeb4-4232-ba14-541f54182241",
+      "createdAt": 1780234131656,
+      "updatedAt": 1780234131656
+    }
+  ]
 }

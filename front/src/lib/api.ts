@@ -1,7 +1,7 @@
-import axios, { type AxiosError, type AxiosRequestConfig, AxiosResponse } from "axios"
+import axios, { type AxiosError, type AxiosRequestConfig } from "axios"
 import { frontConfig } from "./config"
 import { auth } from "./generated"
-import type { RefreshTokensResponse } from "./generated/models"
+import type { AuthSuccessResponse } from "./generated/models"
 import { useAuthStore } from "./stores/auth.store"
 
 const api = axios.create({
@@ -60,7 +60,7 @@ export default api
 /// Перехватчик обновления refresh-токена
 
 // Этот promise используется для запуска refreshTokenPair в единственном экземпляре.
-let sharedRefreshPromise: Promise<RefreshTokensResponse> | null = null
+let sharedRefreshPromise: Promise<AuthSuccessResponse> | null = null
 
 /**
  * Проверяет необходимость обновления, запускает refresh и обновляет authState.
@@ -68,7 +68,7 @@ let sharedRefreshPromise: Promise<RefreshTokensResponse> | null = null
  * @returns Новый accessToken
  * @throws При ошибке обновления — вызывает logout и пробрасывает ошибку
  */
-export async function refreshTokenPair(): Promise<RefreshTokensResponse> {
+export async function refreshTokenPair(): Promise<AuthSuccessResponse> {
   const authState = useAuthStore.getState()
 
   if (authState.status === "unauthorized") {
@@ -85,7 +85,7 @@ export async function refreshTokenPair(): Promise<RefreshTokensResponse> {
       // если ответ будет с ошибкой (например 401).
       // Поэтому в интерсепторе мы учитываем конкретный api-путь /api/v1/auth/refresh.
       // чтобы не зациклиться на обновлении токена при вызове refreshTokenPair.
-      const refreshTokensResponse: RefreshTokensResponse = await auth.refreshTokens()
+      const refreshTokensResponse: AuthSuccessResponse = await auth.refreshTokens()
 
       if (refreshTokensResponse.status !== "success") throw new Error("Failed to refresh tokens")
 

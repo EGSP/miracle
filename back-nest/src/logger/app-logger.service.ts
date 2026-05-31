@@ -24,7 +24,7 @@ const consoleFormat = winston.format.combine(
 
 /**
  * Лёгкая обёртка над winston-логгером с прибитым контекстом.
- * Создаётся через {@link AppLoggerService.forContext} один раз в конструкторе доменного сервиса.
+ * Создаётся через {@link AppLoggerService["forContext"]} один раз в конструкторе доменного сервиса.
  */
 export interface AppLogger {
     info(message: string, meta?: Record<string, unknown>): void;

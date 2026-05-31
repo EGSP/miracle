@@ -23,9 +23,11 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (session) {
       activate(session.userId, session.role)
-    } else {
+    } else if (error) {
+      // Не трогаем authStore.status — интерсептор уже выставил "unauthorized"
       deactivate()
     }
+    // Если ни session, ни error — запрос ещё в процессе, ничего не делаем
   }, [session, error])
 
   const activate = (userId: string, role: UserRole) => {
@@ -35,7 +37,6 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
   }
 
   const deactivate = () => {
-    authStore.setStatus(undefined)
     setIsAuthenticated(false)
     setUserId(undefined)
     setRole(undefined)

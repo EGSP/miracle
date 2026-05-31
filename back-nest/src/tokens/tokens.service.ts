@@ -59,6 +59,7 @@ export class TokensService {
             httpOnly: true,
             secure,
             sameSite: 'lax',
+            path: '/',
             maxAge: this.config.accessTokenLifetimeMs,
         });
 
@@ -67,6 +68,7 @@ export class TokensService {
                 httpOnly: true,
                 secure,
                 sameSite: 'lax',
+                path: '/',
                 maxAge: this.config.refreshTokenLifetimeMs,
             });
         }
