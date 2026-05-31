@@ -111,6 +111,8 @@ interface FileInputProps {
   onFilesApplied: (files: AppliedFile[]) => void
   onRemove: (id: string) => void
 
+  /** Растянуть на всю ширину родителя. По умолчанию фиксированная ширина как у инпутов. */
+  fluid?: boolean
   children: ReactNode
   className?: string
 }
@@ -129,6 +131,7 @@ function FileInputRoot({
   fileStates,
   onFilesApplied,
   onRemove,
+  fluid = false,
   children,
   className,
 }: FileInputProps) {
@@ -152,7 +155,7 @@ function FileInputRoot({
         description,
       }}
     >
-      <div className={cn("file-input", className)}>{children}</div>
+      <div className={cn("file-input", fluid && "file-input--fluid", className)}>{children}</div>
     </FileInputContext.Provider>
   )
 }

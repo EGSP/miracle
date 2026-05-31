@@ -5,4 +5,5 @@
   flex-direction: var(--stack-direction, column);
   gap: var(--stack-gap, var(--aramid-spacing-5));
   flex-wrap: wrap;
+  align-items: flex-start
 }
