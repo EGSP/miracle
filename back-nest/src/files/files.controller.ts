@@ -24,6 +24,7 @@ import type { FileModel, FileWithMeta } from '@miracle/types';
 import { getContentType } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
+import { BinaryResponse } from '../common/binary-response.decorator.js';
 import { UploadedFile } from '../common/uploaded-file.decorator.js';
 import { FilesService } from './files.service.js';
 import { FILE_UPLOAD_CONFIG } from './file-upload.config.js';
@@ -140,6 +141,7 @@ export class FilesController {
     }
 
     @Get(':id/content')
+    @BinaryResponse()
     streamContent(
         @Param('id') id: string,
         @Req() req: FastifyRequest,

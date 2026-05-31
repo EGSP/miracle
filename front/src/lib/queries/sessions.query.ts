@@ -1,10 +1,10 @@
 import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
-import { session } from "../generated"
+import { sessions } from "../generated"
 
 export function useGetCookieSession() {
   return useQuery({
     queryKey: ["cookie-session"],
-    queryFn: () => session.getCookieSession(),
+    queryFn: () => sessions.getCookieSession(),
   })
 }
 

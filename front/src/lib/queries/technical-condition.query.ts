@@ -1,6 +1,6 @@
 import type { TechnicalCondition, TechnicalConditionsQuery } from "@miracle/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { technicalCondition } from "../generated"
+import { technicalConditions } from "../generated"
 
 export const TECHNICAL_CONDITIONS_ROOT_KEY = ["technical-conditions"] as const
 
@@ -14,7 +14,7 @@ export const useTechnicalConditions = (filters?: { productTypeId?: string }) => 
 
   return useQuery({
     queryKey: technicalConditionsListKey(filters),
-    queryFn: () => technicalCondition.getTechnicalConditions(query),
+    queryFn: () => technicalConditions.list(query),
   })
 }
 
@@ -26,7 +26,7 @@ export const useTechnicalCondition = (id: string | undefined) => {
     queryKey: technicalConditionItemKey(id),
     queryFn: () => {
       if (!id) throw new Error("TC id is required")
-      return technicalCondition.getTechnicalCondition({ id })
+      return technicalConditions.getOne(id)
     },
     enabled: !!id,
   })
@@ -36,7 +36,7 @@ export const useCreateTechnicalCondition = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: TechnicalCondition) => technicalCondition.createTechnicalCondition(data),
+    mutationFn: (data: TechnicalCondition) => technicalConditions.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TECHNICAL_CONDITIONS_ROOT_KEY })
     },
@@ -47,8 +47,7 @@ export const useReplaceTechnicalCondition = (id: string) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (body: TechnicalCondition) =>
-      technicalCondition.replaceTechnicalCondition({ id }, body),
+    mutationFn: (body: TechnicalCondition) => technicalConditions.replace(id, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TECHNICAL_CONDITIONS_ROOT_KEY })
     },
@@ -57,6 +56,6 @@ export const useReplaceTechnicalCondition = (id: string) => {
 
 export const useExtractTcDetails = (id: string) => {
   return useMutation({
-    mutationFn: () => technicalCondition.extractTcDetails({ id }),
+    mutationFn: () => technicalConditions.extractDetails(id),
   })
 }

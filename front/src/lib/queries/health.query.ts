@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { health } from "../generated/health.client"
+import { health } from "../generated"
 
 export const useCheckHealth = () => {
   return useQuery({
     queryKey: ["health"],
-    queryFn: () => health.checkHealth(),
+    queryFn: () => health.check(),
   })
 }
 

@@ -2,28 +2,25 @@
 // Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
 import { customInstance } from '../api';
-import type { LoginDto, RegisterDto, AuthSuccessResponse } from './models';
+import type { LoginDto, AuthSuccessResponse, RegisterDto } from './models';
 
 export const auth = {
-    login: (loginDto: LoginDto) => customInstance<Blob>({
+    login: (loginDto: LoginDto) => customInstance<AuthSuccessResponse>({
         method: 'POST',
         url: '/auth/login',
         data: loginDto,
-        responseType: 'blob',
     }),
     register: (registerDto: RegisterDto) => customInstance<AuthSuccessResponse>({
         method: 'POST',
         url: '/auth/register',
         data: registerDto,
     }),
-    refreshTokens: () => customInstance<Blob>({
+    refreshTokens: () => customInstance<AuthSuccessResponse>({
         method: 'POST',
         url: '/auth/refresh-tokens',
-        responseType: 'blob',
     }),
-    logout: () => customInstance<Blob>({
+    logout: () => customInstance<AuthSuccessResponse>({
         method: 'POST',
         url: '/auth/logout',
-        responseType: 'blob',
     }),
 };

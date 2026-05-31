@@ -10,7 +10,7 @@ export const workersQueryKey = (params: WorkersQuery) => ["workers", params] as 
 export const useGetWorkers = (params: WorkersQuery = {}) => {
   return useQuery({
     queryKey: workersQueryKey(params),
-    queryFn: () => workers.getWorkers(params),
+    queryFn: () => workers.list(params),
     refetchInterval: 3_000,
   })
 }
@@ -20,7 +20,7 @@ export const useApplyWorkerData = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (workerId: string) => workers.applyWorkerData({ id: workerId }),
+    mutationFn: (workerId: string) => workers.applyWorkerData(workerId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["workers"] }),
@@ -37,7 +37,7 @@ export const useWorkerPromptPreview = (workerId: string | undefined) => {
     queryKey: ["workers", workerId, "preview-prompt"] as const,
     queryFn: () => {
       if (!workerId) throw new Error("Worker id required")
-      return workers.previewPrompt({ id: workerId })
+      return workers.previewPrompt(workerId)
     },
     enabled: !!workerId,
     // Промпт собирается по текущим Order/TC — иногда хочется свежий, иногда нет.
@@ -50,7 +50,7 @@ export const useDeleteWorker = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (workerId: string) => workers.deleteWorker({ id: workerId }),
+    mutationFn: (workerId: string) => workers.remove(workerId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workers"] })
     },

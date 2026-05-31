@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { auth } from "../generated"
-import type { LoginDTO, RegisterDTO } from "../generated/models"
+import type { LoginDto, RegisterDto } from "../generated/models"
 import { useAuthStore } from "../stores/auth.store"
 import { invalidateCookieSession } from "./sessions.query"
 
-export const useLogin = ({ login, password }: LoginDTO) => {
+export const useLogin = ({ login, password }: LoginDto) => {
   const authStore = useAuthStore()
   const queryClient = useQueryClient()
 
@@ -24,7 +24,7 @@ export const useLogin = ({ login, password }: LoginDTO) => {
   })
 }
 
-export const useRegister = ({ login, password }: RegisterDTO) => {
+export const useRegister = ({ login, password }: RegisterDto) => {
   const authStore = useAuthStore()
   return useMutation({
     mutationFn: async () => {

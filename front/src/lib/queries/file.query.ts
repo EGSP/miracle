@@ -1,7 +1,7 @@
 import type { FileModel, FilesQuery } from "@miracle/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { file } from "../generated"
-import type { PatchFileDTO } from "../generated/models/file.models"
+import { files } from "../generated"
+import type { PatchFileDto } from "../generated/models"
 
 export const FILES_QUERY_KEY = ["files"] as const
 
@@ -15,7 +15,7 @@ export const useGetFiles = (query: FilesQuery = {}) => {
       query.includeMeta,
       query.isTechnicalCondition,
     ] as const,
-    queryFn: () => file.getFiles(query),
+    queryFn: () => files.getFiles(query),
   })
 }
 
@@ -23,11 +23,7 @@ export const useUploadFile = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (fileToUpload: File) => {
-      const formData = new FormData()
-      formData.append("file", fileToUpload)
-      return file.uploadFile(formData)
-    },
+    mutationFn: (fileToUpload: File) => files.upload(fileToUpload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEY })
     },
@@ -45,13 +41,11 @@ export const useUploadFileWithSettings = () => {
       fileToUpload: File
       settings?: FileModel["settings"]
     }) => {
-      const formData = new FormData()
-      formData.append("file", fileToUpload)
-      const uploaded = await file.uploadFile(formData)
+      const uploaded = await files.upload(fileToUpload)
 
       const hasSettings = settings && Object.values(settings).some(Boolean)
       if (hasSettings) {
-        await file.patchFile({ id: uploaded.id }, { settings })
+        await files.patch(uploaded.id, { settings })
       }
 
       return uploaded
@@ -66,7 +60,7 @@ export const usePatchFile = (fileId: string) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (dto: PatchFileDTO) => file.patchFile({ id: fileId }, dto),
+    mutationFn: (dto: PatchFileDto) => files.patch(fileId, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEY })
     },
@@ -77,11 +71,7 @@ export const useRestoreFile = (fileId: string) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (fileToRestore: File) => {
-      const formData = new FormData()
-      formData.append("file", fileToRestore)
-      return file.restoreFile({ id: fileId }, formData)
-    },
+    mutationFn: (fileToRestore: File) => files.restore(fileId, fileToRestore),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEY })
     },

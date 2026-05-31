@@ -475,12 +475,7 @@ function resolveResponseType(
 }
 
 function hasBinaryResponse(method: MethodDeclaration): boolean {
-    return method.getParameters().some((parameter) => (
-        parameter.getDecorators().some((decorator) => {
-            const name = decorator.getName();
-            return name === 'Res' || name === 'Response';
-        })
-    ));
+    return method.getDecorators().some((decorator) => decorator.getName() === 'BinaryResponse');
 }
 
 function isInlinePrimitiveResponseType(typeText: string): boolean {

@@ -1,13 +1,13 @@
 import type { ProductType } from "@miracle/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { productType } from "../generated"
+import { productTypes } from "../generated"
 
 export const PRODUCT_TYPES_QUERY_KEY = ["product-types"] as const
 
 export const useProductTypes = () => {
   return useQuery({
     queryKey: PRODUCT_TYPES_QUERY_KEY,
-    queryFn: () => productType.getProductTypes(),
+    queryFn: () => productTypes.list(),
   })
 }
 
@@ -15,7 +15,7 @@ export const useCreateProductType = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: ProductType) => productType.createProductType(data),
+    mutationFn: (data: ProductType) => productTypes.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PRODUCT_TYPES_QUERY_KEY })
     },
@@ -27,7 +27,7 @@ export const useUpdateProductType = (id: string) => {
 
   return useMutation({
     mutationFn: (body: Partial<Pick<ProductType, "name" | "synonyms">>) =>
-      productType.updateProductType({ id }, body),
+      productTypes.update(id, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PRODUCT_TYPES_QUERY_KEY })
     },
@@ -38,7 +38,7 @@ export const useSoftDeleteProductType = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => productType.deleteProductType({ id }),
+    mutationFn: (id: string) => productTypes.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PRODUCT_TYPES_QUERY_KEY })
     },
