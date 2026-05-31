@@ -1,76 +1,79 @@
 import {
-    BadRequestException,
     ConflictException,
     Injectable,
     InternalServerErrorException,
     NotFoundException,
 } from '@nestjs/common';
-import {
-    WorkerStatus,
-    type DesignationWorkerData,
-    type OrderDetailsWorkerData,
-    type Stored,
-    type WorkerData,
-    type WorkerFinalPrompt,
-} from '@miracle/types';
+import type { JobRun, Stored, WorkerFinalPrompt } from '@miracle/types';
 import { DatabaseService } from '../database/database.service.js';
-import type { WorkersQueryDto } from './dto/workers-query.dto.js';
+import { JobRuntimeService } from '../jobs/job-runtime.service.js';
 
+/** Рекурсивно ищет сохранённый промпт (`memo.finalPrompt`) в дереве прогона. */
+function findFinalPrompt(node: JobRun): WorkerFinalPrompt | undefined {
+    const prompt = node.memo?.['finalPrompt'];
+    if (prompt && typeof prompt === 'object') {
+        return prompt as WorkerFinalPrompt;
+    }
+    for (const child of node.steps ?? []) {
+        const found = findFinalPrompt(child);
+        if (found) {
+            return found;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Обслуживает прогоны durable-движка (`JobRun`). Заменяет прежнюю работу с `WorkerData`
+ * (см. BREAKING-CHANGES.md): список прогонов, превью промпта, удаление, повторное применение.
+ */
 @Injectable()
 export class WorkersService {
-    constructor(private readonly db: DatabaseService) {}
+    constructor(
+        private readonly db: DatabaseService,
+        private readonly runtime: JobRuntimeService,
+    ) {}
 
-    list(query: WorkersQueryDto): Stored<WorkerData>[] {
-        let result = this.db.collections.workers
-            .ref()
-            .filter((worker) => (query.status ? worker.status === query.status : true));
+    list(query: { status?: string; sort?: 'asc' | 'desc' | string }): Stored<JobRun>[] {
+        let result = this.db.collections.jobRuns
+            .list()
+            .filter((run) => (query.status ? run.status === query.status : true));
 
         if (query.sort === 'desc') {
             result = [...result].sort((a, b) => b.createdAt - a.createdAt);
         } else if (query.sort === 'asc') {
             result = [...result].sort((a, b) => a.createdAt - b.createdAt);
         }
-
         return result;
     }
 
     getPromptPreview(id: string): WorkerFinalPrompt {
-        const worker = this.db.collections.workers.getById(id);
-        if (!worker) {
-            throw new NotFoundException('Воркер не найден');
+        const run = this.db.collections.jobRuns.getById(id);
+        if (!run) {
+            throw new NotFoundException('Прогон не найден');
         }
-
-        if (worker.type !== 'designation-worker' && worker.type !== 'order-details-worker') {
-            throw new BadRequestException(
-                `Превью промпта поддерживается только для designation-worker и order-details-worker (получен ${worker.type})`,
-            );
+        const prompt = findFinalPrompt(run);
+        if (!prompt) {
+            throw new NotFoundException('У прогона ещё нет сохранённого промпта');
         }
+        return prompt;
+    }
 
-        // StoredEntity<WorkerData> теряет discriminated-union-нарроуинг (Omit & DbEntity),
-        // поэтому приводим к типам воркеров, у которых поле finalPrompt существует.
-        const promptWorker = worker as Stored<DesignationWorkerData | OrderDetailsWorkerData>;
-        if (!promptWorker.finalPrompt) {
-            throw new NotFoundException(
-                'У воркера ещё нет сохранённого промпта (возможно, run() не успел стартовать или упал до сборки промпта)',
-            );
-        }
-
-        return promptWorker.finalPrompt;
+    applyWorkerData(id: string): Promise<void> {
+        return this.runtime.applyById(id);
     }
 
     async delete(id: string): Promise<void> {
-        const worker = this.db.collections.workers.getById(id);
-        if (!worker) {
-            throw new NotFoundException('Воркер не найден');
+        const run = this.db.collections.jobRuns.getById(id);
+        if (!run) {
+            throw new NotFoundException('Прогон не найден');
         }
-
-        if (worker.status === WorkerStatus.Active) {
-            throw new ConflictException('Нельзя удалить активный воркер');
+        if (run.status === 'running') {
+            throw new ConflictException('Нельзя удалить активный прогон');
         }
-
-        const isDeleted = await this.db.collections.workers.delete(id);
+        const isDeleted = await this.db.collections.jobRuns.delete(id);
         if (!isDeleted) {
-            throw new InternalServerErrorException('Не удалось удалить воркер');
+            throw new InternalServerErrorException('Не удалось удалить прогон');
         }
     }
 }

@@ -45,7 +45,7 @@
 | `lib/user-role.util.ts` | чистая функция над `@miracle/types` | `back-nest/src/sessions/user-role.util.ts` | едет с `session.router.ts` |
 | `lib/order/resolve-product-type.ts` | доменная утилита (зависит от `productTypesService`) | `back-nest/src/orders/resolve-product-type.ts` или приватный метод `OrdersService` | едет с `order.router.ts` |
 | `lib/technical-condition/prepare-payload.ts` | доменная утилита (зависит от `productTypesService`) | `back-nest/src/technical-conditions/prepare-payload.ts` или приватный метод `TechnicalConditionsService` | едет с `technical-condition.router.ts` |
-| `lib/tokens/tokens.ts` (`countTokens`) | чистая функция | **сделано:** `back-nest/src/files-content/count-tokens.ts` (локально). В слое 4 её начнут звать воркеры orders/TC → тогда поднять в `back-nest/src/common/count-tokens.ts` (правило 5) | едет с первым потребителем (`files-content` — `getTokens`) |
+| `lib/tokens/tokens.ts` (`countTokens`) | чистая функция | **сделано:** `back-nest/src/common/count-tokens.ts` (поднят в слое 4 — зовут джобы orders/TC + `files-content`) | слой 3→4 |
 | `lib/convert/pdf-to-image.ts` | внешний API (pdfjs-dist) | `back-nest/src/convert/` как `@Global` сервис | едет с `files-content` (первый потребитель извлечения) |
 | `lib/extraction/*` | worker-only / зовётся из `files-content` | `back-nest/src/files-content/` (домен-потребитель), вендоры — через DI из `@Global` `yandex`/`convert` | едет с `file-content.router.ts` |
 | `lib/yandex/*` (Session, config, llm, vision) | внешний API + singleton | `back-nest/src/yandex/` как `@Global()`-модуль с `YandexService` (env через `AppConfigService`) | едет с первым потребителем (`files-content`) |

@@ -1,4 +1,14 @@
-import type { FileContent, FileModel, JobRun, ProductType, Session, User, WorkerData } from '@miracle/types';
+import type {
+    FileContent,
+    FileModel,
+    JobRun,
+    Order,
+    ProductType,
+    Session,
+    TechnicalCondition,
+    User,
+    WorkerData,
+} from '@miracle/types';
 import { JsonCollection } from './json-collection.js';
 
 /**
@@ -17,6 +27,8 @@ export async function createCollections(dbDir: string) {
         files: await JsonCollection.create<FileModel>('files', dbDir),
         filesContent: await JsonCollection.create<FileContent>('file-content', dbDir),
         jobRuns: await JsonCollection.create<JobRun>('job-runs', dbDir),
+        technicalConditions: await JsonCollection.create<TechnicalCondition>('technical-conditions', dbDir),
+        orders: await JsonCollection.create<Order>('orders', dbDir),
     } as const;
 }
 

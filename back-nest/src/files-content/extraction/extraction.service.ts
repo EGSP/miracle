@@ -1,11 +1,7 @@
-import {
-    BadRequestException,
-    Injectable,
-    NotFoundException,
-    NotImplementedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
     ExtractionStatus,
+    ExtractionType,
     FileDomain,
     getFileDomain,
     hasDeletion,
@@ -15,7 +11,9 @@ import {
 } from '@miracle/types';
 import { FilesService } from '../../files/files.service.js';
 import { AppLoggerService, type AppLogger } from '../../logger/app-logger.service.js';
+import { JobRuntimeService } from '../../jobs/job-runtime.service.js';
 import { FilesContentService } from '../files-content.service.js';
+import { ScanJobs } from '../scan-jobs.service.js';
 import { extractDocumentContent } from './extract-document.js';
 import { extractSpreadsheetContent } from './extract-spreadsheet.js';
 import { extractTextContent } from './extract-text.js';
@@ -39,6 +37,8 @@ export class ExtractionService {
     constructor(
         private readonly files: FilesService,
         private readonly filesContent: FilesContentService,
+        private readonly runtime: JobRuntimeService,
+        private readonly scanJobs: ScanJobs,
         loggerFactory: AppLoggerService,
     ) {
         this.logger = loggerFactory.forContext(ExtractionService.name);
@@ -84,11 +84,22 @@ export class ExtractionService {
         }
 
         if (domain === FileDomain.VISUAL) {
-            // VISUAL запускает scan-воркеры (Yandex OCR / LLM Vision) поверх worker-runtime.
-            // Тот переезжает в слое 4 вместе с `yandex`/`convert`; до тех пор — не поддержано.
-            throw new NotImplementedException(
-                'Извлечение для изображений/сканов (OCR, LLM Vision) появится в слое 4 вместе с worker-runtime',
-            );
+            // VISUAL — асинхронный durable-прогон: isTechnicalCondition → LLM Vision ТУ;
+            // complexLayout → LLM Vision; иначе → Yandex OCR. Запись STARTED создаём заранее,
+            // job обновит её до COMPLETED/FAILED.
+            const useLlm = Boolean(file.settings?.isTechnicalCondition || file.settings?.complexLayout);
+            const extractionType = useLlm ? ExtractionType.LLM : ExtractionType.OCR;
+            const record = await this.filesContent.create({
+                fileId,
+                meta: { extractionType, extractionStatus: ExtractionStatus.STARTED },
+            });
+            const job = file.settings?.isTechnicalCondition
+                ? this.scanJobs.llmVisionTc
+                : file.settings?.complexLayout
+                  ? this.scanJobs.llmVision
+                  : this.scanJobs.ocr;
+            await this.runtime.start(job, { fileId, fileContentId: record.id });
+            return;
         }
 
         const extractor = this.pickGeneratorExtractor(domain);

@@ -13,6 +13,12 @@ export const envSchema = z.object({
     ACCESS_TOKEN_SECRET: z.string().min(1).default('access_token_secret'),
     REFRESH_TOKEN_SECRET: z.string().min(1).default('refresh_token_secret'),
     DB_DIR: z.string().optional(),
+    /**
+     * Yandex Cloud — опциональны на старте: приложение поднимается без них, но Job, использующие
+     * Yandex (OCR/LLM/Vision), упадут с понятной ошибкой при первом обращении (см. YandexService).
+     */
+    YANDEX_CLOUD_API_KEY: z.string().optional(),
+    YANDEX_CLOUD_FOLDER_ID: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

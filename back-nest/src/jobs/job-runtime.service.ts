@@ -1,16 +1,16 @@
 import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
-import { Cause, Effect, Fiber, Layer } from 'effect';
+import { Cause, Effect, Fiber } from 'effect';
 import type { JobRun, JobStatus } from '@miracle/types';
 import { DatabaseService } from '../database/database.service.js';
 import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
-import type { AnyJob } from './job.js';
+import type { AnyJob, Job } from './job.js';
 import { getJob } from './registry.js';
 import { runNode } from './runner.js';
 
 /**
  * `@Global` мост Effect↔Nest: запускает durable-прогоны Job, трекает волокна, восстанавливает
- * незавершённые прогоны при старте. Доменные сервисы/вендоры подаются Effect-слоем
- * (`servicesLayer`) — он наполняется по мере появления доменов (под-шаги 4.1+).
+ * незавершённые прогоны при старте, поддерживает отмену и повторное применение результата.
+ * Доменные сервисы/вендоры приходят в листья Job замыканием (фабрики доменов), не через Effect-слой.
  */
 @Injectable()
 export class JobRuntimeService implements OnApplicationBootstrap {
@@ -24,17 +24,12 @@ export class JobRuntimeService implements OnApplicationBootstrap {
         this.logger = loggerFactory.forContext(JobRuntimeService.name);
     }
 
-    /** Слой реализаций сервисов/вендоров для Effect. Наполняется по мере миграции доменов. */
-    private servicesLayer(): Layer.Layer<never> {
-        return Layer.empty;
-    }
-
     private persist = async (root: JobRun): Promise<void> => {
         await this.db.collections.jobRuns.update(root.id, root);
     };
 
     /** Запускает прогон Job: создаёт корневую запись и форкает исполнение. */
-    async start(job: AnyJob, input: unknown): Promise<JobRun> {
+    async start<Input>(job: Job<Input, unknown, any>, input: Input): Promise<JobRun> {
         const root = await this.db.collections.jobRuns.create({
             job: job.id,
             status: 'queued' satisfies JobStatus,
@@ -45,8 +40,9 @@ export class JobRuntimeService implements OnApplicationBootstrap {
     }
 
     private launch(job: AnyJob, root: JobRun): void {
+        // Сервисы/вендоры приходят в листья замыканием (через фабрики доменов); раннер сам
+        // провайдит Memo/Progress, поэтому к моменту запуска требований (R) у эффекта нет.
         const runnable = runNode(job, root, root, this.persist).pipe(
-            Effect.provide(this.servicesLayer()),
             Effect.catchAllCause((cause) =>
                 Effect.sync(() =>
                     this.logger.error(`прогон "${root.id}" (${root.job}) упал`, Cause.squash(cause)),
@@ -61,13 +57,61 @@ export class JobRuntimeService implements OnApplicationBootstrap {
         });
     }
 
-    /** Повторно применяет результат (терминальный apply-узел) — для apply-worker-data (под-шаг 4.6). */
-    async applyById(_runId: string): Promise<void> {
-        // Реализация в под-шаге 4.6.
+    /** Отменяет прогон: прерывает волокно и помечает запись `cancelled`. */
+    async cancel(runId: string): Promise<void> {
+        const fiber = this.fibers.get(runId);
+        if (fiber) {
+            await Effect.runPromise(Fiber.interrupt(fiber));
+        }
+        const run = this.db.collections.jobRuns.getById(runId);
+        if (run && (run.status === 'running' || run.status === 'queued')) {
+            run.status = 'cancelled';
+            await this.persist(run);
+        }
     }
 
+    /**
+     * Повторно применяет результат: сбрасывает терминальный (apply) шаг в `queued` и заново гоняет прогон.
+     * Раннер пропустит ранее завершённые шаги (их выход переиспользуется) и выполнит только apply.
+     */
+    async applyById(runId: string): Promise<void> {
+        const run = this.db.collections.jobRuns.getById(runId);
+        if (!run) {
+            throw new Error('Прогон не найден');
+        }
+        if (run.status !== 'succeeded') {
+            throw new Error('Применение возможно только для завершённого (succeeded) прогона');
+        }
+        const job = getJob(run.job);
+        if (!job) {
+            throw new Error(`Нет определения job "${run.job}" — применение невозможно`);
+        }
+
+        if (run.steps && run.steps.length > 0) {
+            const last = run.steps[run.steps.length - 1];
+            last.status = 'queued';
+            delete last.output;
+            run.cursor = run.steps.length - 1;
+        }
+        run.status = 'running';
+        await this.persist(run);
+        this.launch(job, run);
+    }
+
+    /** Восстанавливает незавершённые прогоны (running/queued) после перезапуска процесса. */
     async onApplicationBootstrap(): Promise<void> {
-        // Восстановление прогонов running/queued — под-шаг 4.5.
-        void getJob;
+        const runs = this.db.collections.jobRuns
+            .list()
+            .filter((run) => run.status === 'running' || run.status === 'queued');
+
+        for (const run of runs) {
+            const job = getJob(run.job);
+            if (!job) {
+                this.logger.warn(`Прогон "${run.id}": нет определения job "${run.job}" — пропущен`);
+                continue;
+            }
+            this.logger.info(`Восстановление прогона "${run.id}" (${run.job})`);
+            this.launch(job, run);
+        }
     }
 }

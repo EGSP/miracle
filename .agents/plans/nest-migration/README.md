@@ -91,8 +91,8 @@
 - **Логгер** — `@Global` `LoggerModule` (`AppLoggerService`) **сделан** в слое 3 (`back-nest/src/logger/`, `app.useLogger` в `main.ts`). Канонический пример инжекта — `files-content/extraction/extraction.service.ts`. См. `lib.md`, секция «Логгер».
 - **Роль-гард** — вариант `AuthGuard` под роли (замена `adminRoleMiddleware`) — перед `admin`. **Сделано** (`AdminGuard`, слой 2).
 - **Multipart** — `@fastify/multipart` — перед `files`. **Сделано** (слой 2).
-- **Вендорные `@Global`-модули** — `yandex/` (`YandexService`), `convert/` (pdf→image). Их единственные потребители — scan-воркеры VISUAL-извлечения (worker-runtime), поэтому создаются в **слое 4** вместе с этими воркерами, не раньше (в слое 3 были бы мёртвым кодом). См. `lib.md`.
-- **Worker-runtime** — `worker-pool` + `base-worker` — перед первым доменом, запускающим воркеры (`technical-conditions`, `orders`). Конкретные воркеры едут по доменам (см. `lib.md`), а не отдельной «фазой очередей».
+- **Вендорные `@Global`-модули** — `yandex/` (`YandexService`), `convert/` (`ConvertService`, pdf→image). **Сделано** (слой 4): порт `lib/yandex/*` и `lib/convert/*`; конфиг через `AppConfigService`. Потребители — scan/LLM-джобы. См. `lib.md`.
+- **Worker-runtime** — **переписан на Effect** как durable-движок задач (`back-nest/src/jobs/`), а не `worker-pool`/`base-worker`. **Сделано** (слой 4). Единица — Job; запись об исполнении — рекурсивный `JobRun` (коллекция `jobRuns`); composition через `pipe`+`andThen`; durable-возобновление по `memo`. Полное руководство — **`job.md`**. Брейкенджи относительно старой модели воркеров — `BREAKING-CHANGES.md`.
 
 ### Маршруты — по слоям зависимостей
 
@@ -108,13 +108,19 @@
 5. `file.router.ts` → `files/` — нужен multipart (`@fastify/multipart` через `req.file()`; multer заменён). Range-стриминг контента через `@Res() FastifyReply`; mkdir uploads + fix-кодировки имён на `OnApplicationBootstrap`.
 
 **Слой 3 (сделано) — извлечение контента:**
-6. `file-content.router.ts` → `files-content/`. Зависит от `files` (контент привязан к файлу). Внутри домена **два сервиса**: `FilesContentService` (персистентность коллекции `file-content`: create/get/getContent/softDelete/update/tokens) и `ExtractionService` (оркестрация извлечения; инжектит `FilesService` + `FilesContentService`). `countTokens` — локальный чистый helper (`count-tokens.ts`). Generator-экстракторы doc/spreadsheet/text — чистые функции в каталоге домена. **Отложено на слой 4:** VISUAL-извлечение (OCR / LLM Vision / TC-LLM) — оно запускает scan-воркеры через worker-runtime; `yandex`/`convert` нужны **только** этим воркерам, поэтому в слое 3 их **не создаём** (был бы мёртвый код). До слоя 4 `ExtractionService` для VISUAL-файлов бросает `NotImplementedException`. Visual-методы добавятся прямо в `ExtractionService`, `FilesContentService` при этом не трогается.
+6. `file-content.router.ts` → `files-content/`. Зависит от `files` (контент привязан к файлу). Внутри домена **два сервиса**: `FilesContentService` (персистентность коллекции `file-content`: create/get/getContent/softDelete/update/tokens) и `ExtractionService` (оркестрация извлечения; инжектит `FilesService` + `FilesContentService`). `countTokens` — чистый helper (в слое 4 поднят в `back-nest/src/common/count-tokens.ts`). Generator-экстракторы doc/spreadsheet/text — чистые функции в каталоге домена. **Отложено на слой 4:** VISUAL-извлечение (OCR / LLM Vision / TC-LLM) — оно запускает scan-воркеры через worker-runtime; `yandex`/`convert` нужны **только** этим воркерам, поэтому в слое 3 их **не создаём** (был бы мёртвый код). До слоя 4 `ExtractionService` для VISUAL-файлов бросает `NotImplementedException`. Visual-методы добавятся прямо в `ExtractionService`, `FilesContentService` при этом не трогается.
 
-**Слой 4 — вершина DI-стека:**
-7. `technical-condition.router.ts` → `technical-conditions/` — инжектит `productTypesService`; эндпоинт `extract-details` запускает `TCDetailsWorker` (едет в этот домен) поверх worker-runtime и извлечения. Зависит от `files`/извлечения.
-8. `order.router.ts` → `orders/` — **последний**. Инжектит `FilesService` + `TechnicalConditionsService`, запускает `DesignationWorker` (едет в этот домен). Зависит от `files` + `technical-conditions` + worker-runtime. Доменная утилита `resolve-product-type` едет сюда же.
+**Слой 4 (сделано) — вершина DI-стека на durable-движке Job (Effect):**
+- **Инфра:** Job-фреймворк `back-nest/src/jobs/` (`job`/`combinators`/`context`/`runner`/`registry`/`job-runtime.service`/`progress`); коллекция `jobRuns`; тип `JobRun` в `types`. Вендоры `yandex/`, `convert/`. См. `job.md`.
+- **Джобы** (бывшие воркеры → листовые Job + apply, замыкают сервисы через провайдеры-фабрики, регистрируются в реестре): scan `ocr`/`llm-vision`/`llm-vision-tc` (в `files-content/`), `tc-extract` (в `technical-conditions/`), `order-analyse` и `designation-analyse` (в `orders/`).
+- **VISUAL-извлечение** включено в `ExtractionService` (`runtime.start` scan-джоба вместо прежнего `NotImplementedException`).
+7. `technical-condition.router.ts` → `technical-conditions/` — инжектит `ProductTypesService`; `POST /:id/extract-details` стартует джоб `tc-extract`. `prepareTechnicalConditionPayload` — приватный метод сервиса.
+8. `order.router.ts` → `orders/` — `analyse-details` стартует `order-analyse`, `analyse-designation` — `designation-analyse`; `canAnalyseOrderDetails` проверяет активные прогоны в `jobRuns`. Утилита `resolve-product-type` — в домене (DI).
+- **`workers`-домен** переведён на `JobRun` (список прогонов, preview-prompt из `memo.finalPrompt`, delete, `apply-worker-data` → `runtime.applyById`). **Брейкендж** — см. `BREAKING-CHANGES.md`.
+- **Restore + отмена:** `JobRuntimeService` восстанавливает `running`/`queued` прогоны на `OnApplicationBootstrap`; `cancel(runId)` прерывает волокно.
+- **`countTokens`** поднят в `back-nest/src/common/count-tokens.ts` (его зовут джобы orders/TC).
 
-> Заметь: в старом коде `order` и `technical-condition` **не** «без файлов/воркеров» — оба импортируют `workerPool` и конкретные воркеры, `order` ещё и `filesService`. Поэтому они стоят в конце, а не в середине.
+> Историческая заметка: в старом коде `order`/`technical-condition` импортировали `workerPool` и конкретные воркеры, поэтому шли последними. В Nest эта связь выражена через `JobRuntimeService` + реестр джобов.
 
 ## Где живут данные
 

@@ -4,27 +4,37 @@ import {
     Get,
     HttpCode,
     Param,
+    Post,
     Query,
     UseGuards,
 } from '@nestjs/common';
-import type { Stored, WorkerData, WorkerFinalPrompt } from '@miracle/types';
+import type { JobRun, Stored, WorkerFinalPrompt } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { WorkersService } from './workers.service.js';
-import { WorkersQueryDto } from './dto/workers-query.dto.js';
 
+/**
+ * Эндпоинты прогонов durable-движка (`JobRun`). Контракт изменён относительно старого
+ * `WorkerData` — см. BREAKING-CHANGES.md. Путь маршрута пока сохранён как `/workers`.
+ */
 @Controller('workers')
 @UseGuards(AuthGuard)
 export class WorkersController {
     constructor(private readonly workers: WorkersService) {}
 
     @Get()
-    list(@Query() query: WorkersQueryDto): Stored<WorkerData>[] {
-        return this.workers.list(query);
+    list(@Query('status') status?: string, @Query('sort') sort?: string): Stored<JobRun>[] {
+        return this.workers.list({ status, sort });
     }
 
     @Get(':id/preview-prompt')
     previewPrompt(@Param('id') id: string): WorkerFinalPrompt {
         return this.workers.getPromptPreview(id);
+    }
+
+    @Post(':id/apply-worker-data')
+    @HttpCode(204)
+    async applyWorkerData(@Param('id') id: string): Promise<void> {
+        await this.workers.applyWorkerData(id);
     }
 
     @Delete(':id')

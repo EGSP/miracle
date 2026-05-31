@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { hasDeletion, type FileContent, type Stored } from '@miracle/types';
 import { DatabaseService } from '../database/database.service.js';
 import type { CreateEntityInput } from '../database/json-collection.js';
-import { countTokens } from './count-tokens.js';
+import { countTokens } from '../common/count-tokens.js';
 
 /**
  * Слой данных над коллекцией `file-content`: создание/чтение/мягкое удаление записей извлечения.

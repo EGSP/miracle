@@ -57,4 +57,12 @@ export class AppConfigService {
     get dataDir(): string {
         return this.dbDir ? path.resolve(this.dbDir) : path.resolve(process.cwd(), 'data');
     }
+
+    get yandexApiKey(): string | undefined {
+        return this.config.get('YANDEX_CLOUD_API_KEY', { infer: true });
+    }
+
+    get yandexFolderId(): string | undefined {
+        return this.config.get('YANDEX_CLOUD_FOLDER_ID', { infer: true });
+    }
 }

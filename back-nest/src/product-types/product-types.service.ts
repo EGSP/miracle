@@ -19,6 +19,11 @@ export class ProductTypesService {
         return this.db.collections.productTypes.list().filter((row) => !hasDeletion(row));
     }
 
+    getById(id: string): Stored<ProductType> | undefined {
+        const row = this.db.collections.productTypes.getById(id);
+        return row && !hasDeletion(row) ? row : undefined;
+    }
+
     getByIdOrThrow(id: string): Stored<ProductType> {
         const row = this.db.collections.productTypes.getById(id);
         if (!row || hasDeletion(row)) {
