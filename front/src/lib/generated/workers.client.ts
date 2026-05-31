@@ -1,27 +1,26 @@
 /* eslint-disable */
-// Файл сгенерирован @miracle/tools client-generator. Не редактировать вручную.
+// Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { Stored, WorkerData, WorkersQuery } from '@miracle/types';
-import type { ApplyWorkerDataResponse, DeleteWorkerResponse, WorkerPromptPreview } from './models';
+import type { JobRun, Stored, WorkerFinalPrompt } from '@miracle/types';
 
 export const workers = {
-    getWorkers: (workersQuery: WorkersQuery) => customInstance<Stored<WorkerData>[]>({
+    list: (query: { status?: string; sort?: string }) => customInstance<Stored<JobRun>[]>({
         method: 'GET',
         url: '/workers',
-        params: workersQuery,
+        params: query,
     }),
-    applyWorkerData: (params: { id: string; }) => customInstance<ApplyWorkerDataResponse>({
-        method: 'POST',
-        url: formatPath('/workers/:id/apply-worker-data', params),
-    }),
-    deleteWorker: (params: { id: string; }) => customInstance<DeleteWorkerResponse>({
-        method: 'DELETE',
-        url: formatPath('/workers/:id', params),
-    }),
-    previewPrompt: (params: { id: string; }) => customInstance<WorkerPromptPreview>({
+    previewPrompt: (id: string) => customInstance<WorkerFinalPrompt>({
         method: 'GET',
-        url: formatPath('/workers/:id/preview-prompt', params),
+        url: formatPath('/workers/:id/preview-prompt', { id }),
+    }),
+    applyWorkerData: (id: string) => customInstance<void>({
+        method: 'POST',
+        url: formatPath('/workers/:id/apply-worker-data', { id }),
+    }),
+    remove: (id: string) => customInstance<void>({
+        method: 'DELETE',
+        url: formatPath('/workers/:id', { id }),
     }),
 };

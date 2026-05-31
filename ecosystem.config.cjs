@@ -4,8 +4,8 @@ module.exports = {
   apps: [
     {
       name: 'miracle-back',
-      cwd: './back',
-      script: 'dist/index.js',
+      cwd: './back-nest',
+      script: 'dist/main.js',
       instances: 1,
       autorestart: true,
       watch: false,

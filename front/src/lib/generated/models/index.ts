@@ -1,12 +1,12 @@
 /* eslint-disable */
-// Файл сгенерирован @miracle/tools client-generator. Не редактировать вручную.
-export * from './health.models';
+// Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
+export * from './common.models';
 export * from './auth.models';
-export * from './session.models';
-export * from './file-content.models';
-export * from './file.models';
-export * from './order.models';
-export * from './workers.models';
-export * from './product-type.models';
-export * from './technical-condition.models';
-export * from './admin.models';
+export * from './health.models';
+export * from './sessions.models';
+export * from './users.models';
+export * from './productTypes.models';
+export * from './files.models';
+export * from './filesContent.models';
+export * from './technicalConditions.models';
+export * from './orders.models';

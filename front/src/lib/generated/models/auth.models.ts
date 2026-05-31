@@ -1,28 +1,10 @@
 /* eslint-disable */
-// Файл сгенерирован @miracle/tools client-generator. Не редактировать вручную.
+// Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
-export type LoginDTO = {
-    login: string;
-    password: string;
-}
+import type { z } from 'zod';
+import { LoginSchema, RegisterSchema } from '@miracle/types';
 
-export type LoginResponse = {
-    status: 'success';
-}
+export type AuthSuccessResponse = { status: 'success' };
 
-export type RefreshTokensResponse = {
-    status: 'success';
-}
-
-export type RegisterDTO = {
-    login: string;
-    password: string;
-}
-
-export type RegisterResponse = {
-    status: 'success';
-}
-
-export type LogoutResponse = {
-    status: 'success';
-}
+export interface LoginDto extends z.infer<typeof LoginSchema> {}
+export interface RegisterDto extends z.infer<typeof RegisterSchema> {}

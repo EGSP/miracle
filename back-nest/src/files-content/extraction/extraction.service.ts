@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
     ExtractionStatus,
     ExtractionType,
@@ -39,9 +39,9 @@ export class ExtractionService {
         private readonly filesContent: FilesContentService,
         private readonly runtime: JobRuntimeService,
         private readonly scanJobs: ScanJobs,
-        loggerFactory: AppLoggerService,
+        @Inject(AppLoggerService) private readonly loggerFactory: AppLoggerService,
     ) {
-        this.logger = loggerFactory.forContext(ExtractionService.name);
+        this.logger = this.loggerFactory.forContext(ExtractionService.name);
     }
 
     /**

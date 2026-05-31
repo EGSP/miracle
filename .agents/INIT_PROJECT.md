@@ -4,7 +4,7 @@
 Монорепозиторий - фронт, бек и tools (всё на typescript)
 
 Бек: 
-- Node, Express, Lowdb
+- Node, NestJS (Fastify), Lowdb — `back-nest/`
 
 Фронт:
 - React, Vite, Tanstack(query, router), zustand, lucide-icons, shadcn

@@ -35,6 +35,7 @@ async function bootstrap() {
 
     await app.listen(config.port, '0.0.0.0');
     console.log(`[back-nest] http://localhost:${config.port}`);
+    console.log('[VSCode Hook] Attach Debugger');
 }
 
 bootstrap().catch((err) => {

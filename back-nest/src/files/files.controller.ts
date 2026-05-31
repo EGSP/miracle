@@ -24,6 +24,7 @@ import type { FileModel, FileWithMeta } from '@miracle/types';
 import { getContentType } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
+import { UploadedFile } from '../common/uploaded-file.decorator.js';
 import { FilesService } from './files.service.js';
 import { FILE_UPLOAD_CONFIG } from './file-upload.config.js';
 import { fixFileNameEncoding } from './file-name-encoding.js';
@@ -45,6 +46,7 @@ export class FilesController {
     @Post('upload')
     async upload(
         @Req() req: FastifyRequest,
+        @UploadedFile() _file: unknown,
         @CurrentUser() user: AuthenticatedUser,
     ): Promise<FileModel> {
         const data = await req.file();
@@ -99,6 +101,7 @@ export class FilesController {
     @Post(':id/restore')
     async restore(
         @Param('id') id: string,
+        @UploadedFile() _file: unknown,
         @Req() req: FastifyRequest,
     ): Promise<FileModel> {
         const data = await req.file();

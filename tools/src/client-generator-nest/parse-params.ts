@@ -15,6 +15,7 @@ import {
 import type { ExternalTypeImportModel } from './types.js';
 
 const HTTP_PARAM_DECORATORS = new Set(['Body', 'Query', 'Param']);
+const UPLOAD_PARAM_DECORATORS = new Set(['UploadedFile']);
 
 type ParamKind = 'body' | 'query' | 'param' | 'skip';
 
@@ -25,9 +26,9 @@ type ParsedParamResult = {
 
 /**
  * Разбирает параметры HTTP-метода контроллера. Возвращает клиентские аргументы
- * (path-params → query → body) и собранные внешние type-импорты для типов параметров.
+ * (path-params → query → body → upload) и собранные внешние type-импорты для типов параметров.
  *
- * Игнорирует всё, что не помечено `@Body/@Query/@Param`: `@Req`, `@Res`, `@Headers`,
+ * Игнорирует всё, что не помечено `@Body/@Query/@Param/@UploadedFile`: `@Req`, `@Res`, `@Headers`,
  * `@CurrentUser` и любые кастомные декораторы серверного назначения.
  */
 export function parseMethodParams(
@@ -40,10 +41,21 @@ export function parseMethodParams(
     const queryFieldArgs: ClientArgModel[] = [];
     const queryObjectArgs: ClientArgModel[] = [];
     const bodyArgs: ClientArgModel[] = [];
+    const uploadArgs: ClientArgModel[] = [];
 
-    const queryFieldEntries: Array<{ paramName: string; queryName: string; typeText: string }> = [];
+    const queryFieldEntries: Array<{ paramName: string; queryName: string; typeText: string; optional: boolean }> = [];
 
     for (const parameter of parameters) {
+        if (findUploadDecorator(parameter)) {
+            uploadArgs.push({
+                source: 'upload',
+                name: 'file',
+                typeText: 'File',
+                referencedTypeNames: [],
+            });
+            continue;
+        }
+
         const httpDecorator = findHttpDecorator(parameter);
         if (!httpDecorator) continue;
 
@@ -51,6 +63,7 @@ export function parseMethodParams(
         if (kind === 'skip') continue;
 
         const typeText = unwrapPlainType(parameter);
+        const optional = isParameterOptional(parameter, typeText);
         const normalized = normalizeGeneratedTypeText(typeText);
         externalTypeImports.push(...normalized.externalTypeImports);
         externalTypeImports.push(
@@ -71,6 +84,8 @@ export function parseMethodParams(
                     name: parameter.getName(),
                     typeText: normalized.typeText,
                     referencedTypeNames,
+                    paramStyle: 'field',
+                    optional,
                 });
             } else {
                 pathArgs.push({
@@ -78,6 +93,8 @@ export function parseMethodParams(
                     name: clientArgName('params', normalized.typeText, parameter.getName()),
                     typeText: normalized.typeText,
                     referencedTypeNames,
+                    paramStyle: 'object',
+                    optional,
                 });
             }
             continue;
@@ -100,6 +117,7 @@ export function parseMethodParams(
                 paramName: parameter.getName(),
                 queryName: fieldName,
                 typeText: normalized.typeText,
+                optional,
             });
         } else {
             queryObjectArgs.push({
@@ -119,7 +137,7 @@ export function parseMethodParams(
 
     if (queryFieldEntries.length > 0) {
         const inlineTypeText = `{ ${queryFieldEntries
-            .map((entry) => `${entry.queryName}: ${entry.typeText}`)
+            .map((entry) => `${entry.queryName}${entry.optional ? '?' : ''}: ${entry.typeText}`)
             .join('; ')} }`;
         queryFieldArgs.push({
             source: 'query',
@@ -134,6 +152,7 @@ export function parseMethodParams(
         ...queryObjectArgs,
         ...queryFieldArgs,
         ...bodyArgs,
+        ...uploadArgs,
     ]);
 
     return {
@@ -144,6 +163,10 @@ export function parseMethodParams(
 
 function findHttpDecorator(parameter: ParameterDeclaration): Decorator | undefined {
     return parameter.getDecorators().find((decorator) => HTTP_PARAM_DECORATORS.has(decorator.getName()));
+}
+
+function findUploadDecorator(parameter: ParameterDeclaration): Decorator | undefined {
+    return parameter.getDecorators().find((decorator) => UPLOAD_PARAM_DECORATORS.has(decorator.getName()));
 }
 
 function decoratorKind(decorator: Decorator): ParamKind {
@@ -158,6 +181,12 @@ function firstStringArg(decorator: Decorator): string | undefined {
     const arg = decorator.getArguments()[0];
     if (arg && Node.isStringLiteral(arg)) return arg.getLiteralText();
     return undefined;
+}
+
+function isParameterOptional(parameter: ParameterDeclaration, typeText: string): boolean {
+    return parameter.hasQuestionToken()
+        || parameter.getInitializer() !== undefined
+        || /\bundefined\b/u.test(typeText);
 }
 
 /**

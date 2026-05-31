@@ -16,14 +16,14 @@
     
     "build:aramid": "npm run build --workspace=aramid",
     "build:types": "npm run build --workspace=types",
-    "build:back": "npm run build:types && npm run build --workspace=back",
+    "build:back": "npm run build:types && npm run build --workspace=back-nest",
 
     "launch:full": "concurrently --kill-others --names \"BACK,FRONT\" -c \"blue,green\" \"npm run launch:back\" \"npm run launch:front\"",
-    "launch:back": "npm run dev --workspace=back",
+    "launch:back": "npm run dev --workspace=back-nest",
     "launch:front": "npm run dev --workspace=front",
 
-    "generate:all": "npm run generate:client --workspace=tools && npm run generate:backend-validation --workspace=tools",
-    "generate-client": "npm run generate:client --workspace=tools",
+    "generate:all": "npm run generate:client-nest --workspace=tools",
+    "generate-client": "npm run generate:client-nest --workspace=tools",
     "generate-backend-validation": "npm run generate:backend-validation --workspace=tools",
 
     "deploy": "tsx tools/src/deploy/index.ts"

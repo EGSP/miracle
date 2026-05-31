@@ -3,6 +3,7 @@ import path from 'path';
 import { toImportPath } from './naming.js';
 import type {
     AppModel,
+    ClientArgModel,
     ControllerModel,
     ExternalTypeImportModel,
     LocalDtoModel,
@@ -138,6 +139,7 @@ async function writeControllerClient(controller: ControllerModel, config: Normal
         isSimpleIdentifier(route.responseTypeName) ? route.responseTypeName : undefined,
     ])
         .filter((typeName): typeName is string => Boolean(typeName))
+        .filter((typeName) => !config.builtinTypeNames.has(typeName))
         .filter((typeName) => !externalTypeNames.has(typeName)));
 
     const importLines = [
@@ -166,21 +168,54 @@ ${methods}
 }
 
 function writeRouteMethod(route: RouteModel): string {
-    const args = route.clientArgs.map((arg) => `${arg.name}: ${arg.typeText}`).join(', ');
-    const paramsArg = route.clientArgs.find((arg) => arg.source === 'params')?.name;
+    const args = route.clientArgs.map(formatClientArg).join(', ');
+    const uploadArg = route.clientArgs.find((arg) => arg.source === 'upload')?.name;
     const queryArg = route.clientArgs.find((arg) => arg.source === 'query')?.name;
     const bodyArg = route.clientArgs.find((arg) => arg.source === 'body')?.name;
 
     const configLines = [
         `method: '${route.method.toUpperCase()}',`,
-        `url: ${paramsArg ? `formatPath('${route.fullPath}', ${paramsArg})` : `'${route.fullPath}'`},`,
+        `url: ${buildFormatPathExpression(route)},`,
         queryArg ? `params: ${queryArg},` : undefined,
-        bodyArg ? `data: ${bodyArg},` : undefined,
+        uploadArg ? 'data: formData,' : bodyArg ? `data: ${bodyArg},` : undefined,
+        route.binaryResponse ? `responseType: 'blob',` : undefined,
     ].filter(Boolean);
 
+    const configBlock = configLines.map((line) => `        ${line}`).join('\n');
+
+    if (uploadArg) {
+        return `    ${route.name}: (${args}) => {
+        const formData = new FormData();
+        formData.append('file', ${uploadArg});
+        return customInstance<${route.responseTypeName}>({
+${configBlock}
+        });
+    },`;
+    }
+
     return `    ${route.name}: (${args}) => customInstance<${route.responseTypeName}>({
-${configLines.map((line) => `        ${line}`).join('\n')}
+${configBlock}
     }),`;
+}
+
+function formatClientArg(arg: ClientArgModel): string {
+    const optional = arg.optional ? '?' : '';
+    return `${arg.name}${optional}: ${arg.typeText}`;
+}
+
+function buildFormatPathExpression(route: RouteModel): string {
+    const pathArgs = route.clientArgs.filter((arg) => arg.source === 'params');
+    if (pathArgs.length === 0) {
+        return `'${route.fullPath}'`;
+    }
+
+    const objectArg = pathArgs.find((arg) => arg.paramStyle === 'object');
+    if (objectArg) {
+        return `formatPath('${route.fullPath}', ${objectArg.name})`;
+    }
+
+    const fieldNames = pathArgs.map((arg) => arg.name).join(', ');
+    return `formatPath('${route.fullPath}', { ${fieldNames} })`;
 }
 
 async function writeBarrelFiles(appModel: AppModel, outputDir: string): Promise<void> {

@@ -1,7 +1,4 @@
 /* eslint-disable */
 // Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
-export type HealthResponse = {
-    status: 'ok';
-    timestamp: string;
-};
+import type { CookieSessionResponse } from './common.models';

@@ -12,7 +12,7 @@ function run(label: string, cmd: string, cwd: string): void {
 
 export function buildBack(rootDir: string): void {
     run('Компилируем @miracle/types...', 'npm run build --workspace=types', rootDir);
-    run('Компилируем бекенд...', 'npm run build --workspace=back', rootDir);
+    run('Компилируем бекенд (Nest)...', 'npm run build --workspace=back-nest', rootDir);
 }
 
 export function buildFront(rootDir: string): void {

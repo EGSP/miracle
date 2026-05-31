@@ -311,7 +311,8 @@ function extractRoute(
 
     registerDtosForArgs(clientArgs, classDecl.getSourceFile(), localDtos, config, contextLabel);
 
-    const response = resolveResponseType(method, classDecl, config);
+    const binaryResponse = hasBinaryResponse(method);
+    const response = resolveResponseType(method, classDecl, config, binaryResponse);
 
     const externalTypeImports = uniqueExternalTypeImports([
         ...paramExternalImports,
@@ -341,6 +342,7 @@ function extractRoute(
         hasBody: clientArgs.some((arg) => arg.source === 'body'),
         hasQuery: clientArgs.some((arg) => arg.source === 'query'),
         hasParams: clientArgs.some((arg) => arg.source === 'params'),
+        binaryResponse,
     };
 }
 
@@ -406,13 +408,22 @@ function resolveResponseType(
     method: MethodDeclaration,
     classDecl: ClassDeclaration,
     config: NormalizedConfig,
+    binaryResponse: boolean,
 ): {
     typeName: string;
     typeText?: string;
     externalTypeImports: ExternalTypeImportModel[];
 } {
+    if (binaryResponse) {
+        return {
+            typeName: 'Blob',
+            externalTypeImports: [],
+        };
+    }
+
     const sourceFile = classDecl.getSourceFile();
     const operationTypeName = toPascalCase(method.getName());
+    const className = classDecl.getName() ?? 'Controller';
 
     // Предпочитаем синтаксическую аннотацию (если есть) — она не содержит import("...")
     // и использует уже зарегистрированные импорты файла.
@@ -448,11 +459,33 @@ function resolveResponseType(
         };
     }
 
+    if (isInlinePrimitiveResponseType(typeText)) {
+        return {
+            typeName: typeText,
+            externalTypeImports,
+        };
+    }
+
+    const controllerName = toPascalCase(controllerBasename(className));
     return {
-        typeName: `${operationTypeName}Response`,
+        typeName: `${controllerName}${operationTypeName}Response`,
         typeText,
         externalTypeImports,
     };
+}
+
+function hasBinaryResponse(method: MethodDeclaration): boolean {
+    return method.getParameters().some((parameter) => (
+        parameter.getDecorators().some((decorator) => {
+            const name = decorator.getName();
+            return name === 'Res' || name === 'Response';
+        })
+    ));
+}
+
+function isInlinePrimitiveResponseType(typeText: string): boolean {
+    const trimmed = typeText.trim();
+    return !trimmed.startsWith('{') && !trimmed.startsWith('[');
 }
 
 // ---------------------------------------------------------------------------

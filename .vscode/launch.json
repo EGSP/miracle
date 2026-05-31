@@ -5,9 +5,9 @@
       "name": "Back: Debug",
       "type": "node",
       "request": "attach",
-      "port": 9229,
+      "port": 9230,
       "restart": true,
-      "cwd": "${workspaceFolder}/back",
+      "cwd": "${workspaceFolder}/back-nest",
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "preLaunchTask": "back:dev"

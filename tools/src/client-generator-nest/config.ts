@@ -34,6 +34,10 @@ const DEFAULT_BUILTIN_TYPE_NAMES = [
     'URLSearchParams',
     'ReadableStream',
     'WritableStream',
+    'void',
+    'unknown',
+    'undefined',
+    'null',
 ];
 
 /**

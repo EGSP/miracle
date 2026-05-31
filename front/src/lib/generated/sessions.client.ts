@@ -2,11 +2,11 @@
 // Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
 import { customInstance } from '../api';
-import type { HealthResponse } from './models';
+import type { CookieSessionResponse } from './models';
 
-export const health = {
-    check: () => customInstance<HealthResponse>({
+export const sessions = {
+    getCookieSession: () => customInstance<CookieSessionResponse>({
         method: 'GET',
-        url: '/health',
+        url: '/sessions/cookie',
     }),
 };

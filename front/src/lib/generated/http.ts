@@ -1,6 +1,5 @@
 /* eslint-disable */
-// Файл сгенерирован @miracle/tools client-generator. Не редактировать вручную.
-
+// Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
 export function formatPath(path: string, params?: unknown): string {
     if (!params || typeof params !== 'object') {

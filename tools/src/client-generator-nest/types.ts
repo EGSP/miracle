@@ -22,13 +22,15 @@ export type NormalizedConfig = {
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'options' | 'head';
 
-export type ClientArgSource = 'params' | 'query' | 'body';
+export type ClientArgSource = 'params' | 'query' | 'body' | 'upload';
 
 export type ClientArgModel = {
     source: ClientArgSource;
     name: string;
     typeText: string;
     referencedTypeNames: string[];
+    paramStyle?: 'field' | 'object';
+    optional?: boolean;
 };
 
 export type ExternalTypeImportModel = {
@@ -61,6 +63,7 @@ export type RouteModel = {
     hasBody: boolean;
     hasQuery: boolean;
     hasParams: boolean;
+    binaryResponse: boolean;
 };
 
 export type ControllerModel = {

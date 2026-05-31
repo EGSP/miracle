@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "dev:debug": "tsx watch --inspect=9230 src/main.ts",
+    "dev": "nest start --watch",
+    "dev:debug": "nest start --debug 9230 --watch",
     "build": "tsc",
     "start": "node dist/main.js"
   },

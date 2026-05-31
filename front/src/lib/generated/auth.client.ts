@@ -1,26 +1,29 @@
 /* eslint-disable */
-// Файл сгенерирован @miracle/tools client-generator. Не редактировать вручную.
+// Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 
 import { customInstance } from '../api';
-import type { LoginDTO, LoginResponse, RefreshTokensResponse, RegisterDTO, RegisterResponse, LogoutResponse } from './models';
+import type { LoginDto, RegisterDto, AuthSuccessResponse } from './models';
 
 export const auth = {
-    login: (loginDTO: LoginDTO) => customInstance<LoginResponse>({
+    login: (loginDto: LoginDto) => customInstance<Blob>({
         method: 'POST',
         url: '/auth/login',
-        data: loginDTO,
+        data: loginDto,
+        responseType: 'blob',
     }),
-    refreshTokens: () => customInstance<RefreshTokensResponse>({
-        method: 'POST',
-        url: '/auth/refresh-tokens',
-    }),
-    register: (registerDTO: RegisterDTO) => customInstance<RegisterResponse>({
+    register: (registerDto: RegisterDto) => customInstance<AuthSuccessResponse>({
         method: 'POST',
         url: '/auth/register',
-        data: registerDTO,
+        data: registerDto,
     }),
-    logout: () => customInstance<LogoutResponse>({
+    refreshTokens: () => customInstance<Blob>({
+        method: 'POST',
+        url: '/auth/refresh-tokens',
+        responseType: 'blob',
+    }),
+    logout: () => customInstance<Blob>({
         method: 'POST',
         url: '/auth/logout',
+        responseType: 'blob',
     }),
 };

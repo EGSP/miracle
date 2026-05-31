@@ -1,4 +1,4 @@
-import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import { Cause, Effect, Fiber } from 'effect';
 import type { JobRun, JobStatus } from '@miracle/types';
 import { DatabaseService } from '../database/database.service.js';
@@ -19,9 +19,9 @@ export class JobRuntimeService implements OnApplicationBootstrap {
 
     constructor(
         private readonly db: DatabaseService,
-        loggerFactory: AppLoggerService,
+        @Inject(AppLoggerService) private readonly loggerFactory: AppLoggerService,
     ) {
-        this.logger = loggerFactory.forContext(JobRuntimeService.name);
+        this.logger = this.loggerFactory.forContext(JobRuntimeService.name);
     }
 
     private persist = async (root: JobRun): Promise<void> => {

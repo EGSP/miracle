@@ -2,12 +2,13 @@
 
 ## Документация
 
-- Про устройство JSON DB и различия `Stored<T>` / `StoredEntity<T>`: `back/src/databases/db.md`
+- Про устройство JSON DB и различия `Stored<T>` / `StoredEntity<T>`: `back-nest/src/database/` (коллекции и сервисы)
 
 ## Быстрый старт
 
+- Скопировать конфиг: `cp .env.example .env` (Windows: скопировать файл вручную) и при необходимости поправить значения
 - Установить зависимости: `npm run install:all`
-- Запустить backend в dev: `npm run launch:back`
+- Запустить backend в dev (`back-nest`): `npm run launch:back`
 - Запустить frontend в dev: `npm run launch:front`
 - Запустить вместе: `npm run launch:full`
 
@@ -17,17 +18,16 @@
 
 Используйте compound-конфигурацию `Full: Back + Front` из `.vscode/launch.json`.
 
-- `Back: Debug` запускает Node.js напрямую:
-  - `node --watch --import tsx/esm back/src/index.ts`
+- `Back: Debug` подключается к `back-nest` (`nest start --debug 9230 --watch` через task `back:dev`)
   - `restart: true` позволяет дебаггеру переподключаться после рестарта процесса
-  - Логи backend идут в `integratedTerminal`
+  - Логи backend идут в терминал задачи; готовность — строка `[back-nest] http://...`
 - `Front: Browser` запускает браузерный debug adapter и поднимает Vite через task `front:dev`
   - Логи Vite идут в терминал задачи
   - Frontend код отлаживается в браузерном Call Stack
 
 ### Hot reload
 
-- Backend hot reload: `node --watch` + `tsx/esm` (запуск напрямую из TypeScript, без зависимости от `dist`)
+- Backend hot reload: `nest start --watch` в `back-nest` (сборка в `dist` с корректным DI)
 - Frontend hot reload: встроенный Vite HMR
 
 Это исключает ситуацию, когда в debug запускается устаревшая сборка backend.
@@ -53,7 +53,7 @@
 
 ### Логирование ошибок backend
 
-На backend используется `winston` (`back/src/logger/logger.ts`):
+На backend используется `winston` (`back-nest/src/logger/`):
 
 - Цветной вывод в консоль
 - Уровни: `error`, `warn`, `info`, `http`
@@ -104,8 +104,8 @@ Error {
 
 | Сторона | Что нужно | Где |
 |---|---|---|
-| Backend | `cookie-parser` подключён через `app.use(cookieParser())` | `back/src/index.ts` |
-| Backend | CORS с `credentials: true` | `back/src/index.ts` |
+| Backend | `@fastify/cookie` зарегистрирован при старте | `back-nest/src/main.ts` |
+| Backend | CORS с `credentials: true` | `back-nest/src/main.ts` |
 | Frontend | Axios-инстанс с `withCredentials: true` | `front/src/lib/api.ts` |
 
 Все три условия обязательны одновременно. Без любого из них куки не будут устанавливаться или отправляться.
