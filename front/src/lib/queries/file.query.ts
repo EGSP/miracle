@@ -1,5 +1,6 @@
 import type { FileModel, FilesQuery } from "@miracle/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { customInstance } from "../api"
 import { files } from "../generated"
 import type { PatchFileDto } from "../generated/models"
 
@@ -16,6 +17,34 @@ export const useGetFiles = (query: FilesQuery = {}) => {
       query.isTechnicalCondition,
     ] as const,
     queryFn: () => files.getFiles(query),
+  })
+}
+
+export const useUploadFileWithProgress = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      file,
+      onProgress,
+    }: {
+      file: File
+      onProgress?: (percent: number) => void
+    }) => {
+      const formData = new FormData()
+      formData.append("file", file)
+      return customInstance<FileModel>({
+        method: "POST",
+        url: "/files/upload",
+        data: formData,
+        onUploadProgress: (e) => {
+          onProgress?.(Math.round((e.progress ?? 0) * 100))
+        },
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEY })
+    },
   })
 }
 

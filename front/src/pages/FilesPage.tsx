@@ -7,7 +7,7 @@ import { FileCard } from "@/components/blocks/FileCard"
 import { Button } from "@/components/ui/button"
 import { Checkbox, type TriStateValue } from "@/components/ui/checkbox"
 import { FileContentPreview } from "@/components/ui/file-content-preview"
-import { FileDropZone } from "@/components/ui/file-dropzone"
+import { FileInput } from "@/components/ui/file-input"
 import {
   type ListDefinition,
   StructuredList,
@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/structured-list"
 import { frontConfig } from "@/lib/config"
 import { useFilteredFiles } from "@/lib/hooks/useFilteredFiles"
-import { useGetFiles, useUploadFileWithSettings } from "@/lib/queries/file.query"
+import { useFileInputUpload } from "@/lib/hooks/useFileInputUpload"
+import { useGetFiles } from "@/lib/queries/file.query"
 
 // ─── Утилиты ─────────────────────────────────────────────────────────────────
 
@@ -161,89 +162,41 @@ function FileListSection() {
 function FileUploadSection() {
   const { fileId } = useSearch({ from: "/files" })
 
-  const [uploadFile, setUploadFile] = useState<File | null>(null)
-  const [complexLayout, setComplexLayout] = useState(false)
-  const [isTechnicalCondition, setIsTechnicalCondition] = useState(false)
+  const { fileStates, onFilesApplied, onRemove, upload } = useFileInputUpload({
+    id: "files-upload",
+  })
 
-  const { data: files } = useGetFiles({ includeMeta: true })
-  const uploadMutation = useUploadFileWithSettings()
+  const hasApplied = fileStates.some((s) => s.status === "applied")
+  const isUploading = fileStates.some((s) => s.status === "uploading")
 
-  const allowedExtensionsAccept = useMemo(
-    () =>
-      getAllowedExtensions()
-        .map((ext) => `.${ext}`)
-        .join(","),
-    [],
+  const { data: filesData } = useGetFiles({ includeMeta: true })
+  const selectedFile = useMemo(
+    () => filesData?.find((f) => f.id === fileId) ?? null,
+    [filesData, fileId],
   )
-
-  const selectedFile = useMemo(() => files?.find((f) => f.id === fileId) ?? null, [files, fileId])
-
-  const handleUpload = () => {
-    if (!uploadFile) return
-    uploadMutation.mutate(
-      {
-        fileToUpload: uploadFile,
-        settings: {
-          complexLayout: complexLayout || undefined,
-          isTechnicalCondition: isTechnicalCondition || undefined,
-        },
-      },
-      {
-        onSuccess: () => {
-          setUploadFile(null)
-          setComplexLayout(false)
-          setIsTechnicalCondition(false)
-        },
-      },
-    )
-  }
 
   return (
     <Stack as="aside" gap={4}>
-      <Text.Heading as="h2" variant="compact-01">
-        Загрузить файл
-      </Text.Heading>
-
-      <FileDropZone
-        value={uploadFile}
-        onChange={setUploadFile}
-        accept={allowedExtensionsAccept}
-        disabled={uploadMutation.isPending}
-      />
-
-      {uploadFile && (
-        <Stack gap={1}>
-          <span className="truncate">
-            <Text as="span" compact>
-              {uploadFile.name}
-            </Text>
-          </span>
-          <Text.Label as="span">{formatBytes(uploadFile.size)}</Text.Label>
-        </Stack>
-      )}
-
-      <Checkbox.Group label="Настройки" direction="vertical" className="border border-border p-2">
-        <Checkbox.Item
-          label="Сложная структура (LLM вместо OCR)"
-          checked={complexLayout}
-          onChange={setComplexLayout}
-          disabled={uploadMutation.isPending}
-        />
-        <Checkbox.Item
-          label="Технические условия"
-          checked={isTechnicalCondition}
-          onChange={setIsTechnicalCondition}
-          disabled={uploadMutation.isPending}
-        />
-      </Checkbox.Group>
-
-      {uploadMutation.isError && <Text.Label as="p">{uploadMutation.error.message}</Text.Label>}
+      <FileInput
+        variant="drop-zone"
+        multiple
+        extensions={getAllowedExtensions()}
+        title="Загрузить файлы"
+        description="Файлы будут загружены на сервер"
+        fileStates={fileStates}
+        onFilesApplied={onFilesApplied}
+        onRemove={onRemove}
+        disabled={isUploading}
+      >
+        <FileInput.Zone />
+        <FileInput.List />
+      </FileInput>
 
       <Button
         icon={<Upload />}
-        label={uploadMutation.isPending ? "Загрузка..." : "Загрузить"}
-        onClick={handleUpload}
-        disabled={!uploadFile || uploadMutation.isPending}
+        label={isUploading ? "Загрузка..." : "Загрузить"}
+        disabled={!hasApplied || isUploading}
+        onClick={upload}
       />
 
       <Stack as="section" gap={2}>

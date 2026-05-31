@@ -1,0 +1,169 @@
+/* ─── FileInput ────────────────────────────────────────────────────────────────
+   Compound file input: Zone (button / drop-zone) + List.
+   Токены: Aramid spacing + color.
+──────────────────────────────────────────────────────────────────────────────── */
+
+/* ─── Root ───────────────────────────────────────────────────────────────── */
+
+.file-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2); /* 4px */
+}
+
+/* ─── Zone ───────────────────────────────────────────────────────────────── */
+
+.file-input-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2);
+}
+
+.file-input-zone__hidden-input {
+  display: none;
+}
+
+/* ─── Zone header (title + description) ─────────────────────────────────── */
+
+.file-input-zone__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-1); /* 2px */
+}
+
+.file-input-zone__title {
+  color: var(--aramid-color-gray-100);
+  font-weight: var(--aramid-font-weight-medium);
+}
+
+.file-input-zone__description {
+  color: var(--aramid-color-gray-60);
+}
+
+/* ─── Drop area ──────────────────────────────────────────────────────────── */
+
+.file-input-zone__drop-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--aramid-spacing-2);
+  min-height: 96px;
+  padding: var(--aramid-spacing-5); /* 16px */
+  border: 1px dashed var(--aramid-color-gray-40);
+  background-color: var(--aramid-color-gray-10);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    background-color 70ms,
+    border-color 70ms;
+}
+
+.file-input-zone__drop-area:hover:not(.file-input-zone__drop-area--disabled) {
+  background-color: var(--aramid-color-gray-20);
+  border-color: var(--aramid-color-gray-60);
+}
+
+.file-input-zone__drop-area--drag-over:not(.file-input-zone__drop-area--disabled) {
+  background-color: var(--aramid-color-sand-10);
+  border-color: var(--aramid-color-sand-60);
+}
+
+.file-input-zone__drop-area:focus-visible {
+  outline: 2px solid var(--aramid-color-sand-60);
+  outline-offset: -2px;
+}
+
+.file-input-zone__drop-area--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.file-input-zone__drop-label {
+  color: var(--aramid-color-gray-60);
+}
+
+/* ─── List ───────────────────────────────────────────────────────────────── */
+
+.file-input-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-1); /* 2px */
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Item ───────────────────────────────────────────────────────────────── */
+
+.file-input-item {
+  position: relative;
+  border: 1px solid var(--aramid-color-gray-20);
+  background-color: var(--aramid-color-gray-10);
+}
+
+.file-input-item--error {
+  border-color: var(--aramid-color-semantic-danger);
+}
+
+/* ─── Item content row ───────────────────────────────────────────────────── */
+
+.file-input-item__content {
+  display: flex;
+  align-items: center;
+  height: var(--aramid-spacing-8); /* 40px */
+  padding-inline: var(--aramid-spacing-5); /* 16px с обеих сторон */
+  gap: var(--aramid-spacing-3); /* 8px */
+}
+
+.file-input-item__name {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs); /* 12px */
+  color: var(--aramid-color-gray-100);
+  line-height: 1;
+}
+
+.file-input-item__actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--aramid-spacing-1); /* 2px */
+}
+
+/* ─── Action buttons (remove / success) ─────────────────────────────────── */
+/* Специфичность 0,2,0 — перекрывает 0,1,0 у .button--icon-button */
+
+.file-input-item__actions .file-input-item__action-btn {
+  width: auto; /* убираем фиксированную ширину icon-button */
+}
+
+.file-input-item__actions .file-input-item__action-btn--success,
+.file-input-item__actions .file-input-item__action-btn--success:hover:not(:disabled) {
+  color: var(--aramid-color-indicator-succeeded);
+}
+
+/* ─── Error panel ────────────────────────────────────────────────────────── */
+
+.file-input-item__error-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-1);
+  padding-block: var(--aramid-spacing-3);   /* 8px */
+  padding-inline: var(--aramid-spacing-5);  /* 16px */
+  border-top: 1px solid var(--aramid-color-semantic-danger);
+}
+
+.file-input-item__error-label {
+  color: var(--aramid-color-semantic-danger);
+}
+
+.file-input-item__error-description {
+  color: var(--aramid-color-gray-60);
+}

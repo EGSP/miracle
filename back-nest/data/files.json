@@ -1,3 +1,31 @@
 {
-  "items": []
+  "items": [
+    {
+      "id": "1493e4e3-18a5-4ec8-bf69-4e95a5985d4f",
+      "name": "eb7097ea13d5f88d8a7e9b4ea7cbed7f.jpg",
+      "extension": "jpg",
+      "bytes": 33754,
+      "authorId": "21ba40d8-eeb4-4232-ba14-541f54182241",
+      "createdAt": 1780251536777,
+      "updatedAt": 1780251536777
+    },
+    {
+      "id": "da22deda-3189-49aa-9a6a-a1a5175721ad",
+      "name": "efb6c536c3ef3813d2c6721c23fbed88.jpg",
+      "extension": "jpg",
+      "bytes": 288701,
+      "authorId": "21ba40d8-eeb4-4232-ba14-541f54182241",
+      "createdAt": 1780251536810,
+      "updatedAt": 1780251536810
+    },
+    {
+      "id": "4295104c-7520-4081-8b84-b361b283e13e",
+      "name": "Skan_Barsmed.pdf",
+      "extension": "pdf",
+      "bytes": 962766,
+      "authorId": "21ba40d8-eeb4-4232-ba14-541f54182241",
+      "createdAt": 1780251925257,
+      "updatedAt": 1780251925257
+    }
+  ]
 }
