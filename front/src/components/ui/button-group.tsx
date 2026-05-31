@@ -1,5 +1,5 @@
-import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import type * as React from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -9,21 +9,21 @@ const buttonGroupVariants = cva("button-group", {
   variants: {
     direction: {
       horizontal: "",
-      vertical:   "button-group--vertical",
+      vertical: "button-group--vertical",
     },
     condensed: {
-      true:  "button-group--condensed",
+      true: "button-group--condensed",
       false: "",
     },
     wrap: {
-      true:  "button-group--wrap",
+      true: "button-group--wrap",
       false: "",
     },
   },
   defaultVariants: {
     direction: "horizontal",
     condensed: false,
-    wrap:      false,
+    wrap: false,
   },
 })
 
@@ -49,5 +49,5 @@ function ButtonGroup({
   )
 }
 
-export { ButtonGroup, buttonGroupVariants }
 export type { ButtonGroupProps }
+export { ButtonGroup, buttonGroupVariants }

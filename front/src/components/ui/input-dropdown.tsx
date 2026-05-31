@@ -1,8 +1,8 @@
-import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
 import { Text, useNextLayerTokens } from "@miracle/aramid"
+import { ChevronDownIcon } from "lucide-react"
+import * as React from "react"
 
-import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
+import { type BaseInputProps, inputVariants } from "@/components/ui/input-variants"
 import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 
@@ -15,7 +15,10 @@ type InputDropdownProps<T> = BaseInputProps & {
   defaultValue?: T | null
   onChange?: (value: T | null) => void
   getItemKey: (item: T) => string
-  renderListItem: (item: T | null, state: { isSelected: boolean; isActive: boolean; index: number }) => React.ReactNode
+  renderListItem: (
+    item: T | null,
+    state: { isSelected: boolean; isActive: boolean; index: number },
+  ) => React.ReactNode
   renderSelectedItem?: ((item: T | null) => React.ReactNode) | null
   className?: string
   children: React.ReactNode
@@ -36,7 +39,10 @@ type DropdownContextValue<T> = {
   disabled: boolean
   size: BaseInputProps["size"]
   getItemKey: (item: T) => string
-  renderListItem: (item: T | null, state: { isSelected: boolean; isActive: boolean; index: number }) => React.ReactNode
+  renderListItem: (
+    item: T | null,
+    state: { isSelected: boolean; isActive: boolean; index: number },
+  ) => React.ReactNode
   renderSelectedItem: ((item: T | null) => React.ReactNode) | null
   listId: string
   triggerId: string
@@ -62,7 +68,7 @@ function InputDropdownRoot<T>({
   renderSelectedItem = null,
   ...props
 }: InputDropdownProps<T>) {
-  const isControlled = Object.prototype.hasOwnProperty.call(props, "value")
+  const isControlled = Object.hasOwn(props, "value")
   const controlledValue = props.value ?? null
   const onChange = props.onChange
   const getItemKey = props.getItemKey
@@ -96,7 +102,7 @@ function InputDropdownRoot<T>({
       if (left == null || right == null) return false
       return getItemKey(left) === getItemKey(right)
     },
-    [getItemKey]
+    [getItemKey],
   )
 
   const setSelected = React.useCallback(
@@ -105,7 +111,7 @@ function InputDropdownRoot<T>({
       if (!isControlled) setInternalValue(nextValue)
       onChange?.(nextValue)
     },
-    [isSameValue, selected, isControlled, onChange]
+    [isSameValue, selected, isControlled, onChange],
   )
 
   const selectedIndex = React.useMemo(() => {
@@ -137,7 +143,7 @@ function InputDropdownRoot<T>({
       setSelected(option)
       setIsOpen((prev) => (prev ? false : prev))
     },
-    [options, disabled, setSelected]
+    [options, disabled, setSelected],
   )
 
   const toggleOpen = React.useCallback(() => {
@@ -147,15 +153,39 @@ function InputDropdownRoot<T>({
 
   const contextValue = React.useMemo<DropdownContextValue<T>>(
     () => ({
-      items, options, value: selected, isOpen, activeIndex, disabled, size,
-      getItemKey, renderListItem, renderSelectedItem, listId, triggerId,
-      setIsOpen, setActiveIndex, selectByIndex, toggleOpen,
+      items,
+      options,
+      value: selected,
+      isOpen,
+      activeIndex,
+      disabled,
+      size,
+      getItemKey,
+      renderListItem,
+      renderSelectedItem,
+      listId,
+      triggerId,
+      setIsOpen,
+      setActiveIndex,
+      selectByIndex,
+      toggleOpen,
     }),
     [
-      items, options, selected, isOpen, activeIndex, disabled, size,
-      getItemKey, renderListItem, renderSelectedItem, listId, triggerId,
-      selectByIndex, toggleOpen,
-    ]
+      items,
+      options,
+      selected,
+      isOpen,
+      activeIndex,
+      disabled,
+      size,
+      getItemKey,
+      renderListItem,
+      renderSelectedItem,
+      listId,
+      triggerId,
+      selectByIndex,
+      toggleOpen,
+    ],
   )
 
   const wrap = (
@@ -170,7 +200,11 @@ function InputDropdownRoot<T>({
         <div className="input-field">
           {label && <Text.Helper as="span">{label}</Text.Helper>}
           {wrap}
-          {helperText && <Text.Helper as="span" className="field-helper-text">{helperText}</Text.Helper>}
+          {helperText && (
+            <Text.Helper as="span" className="field-helper-text">
+              {helperText}
+            </Text.Helper>
+          )}
         </div>
       </DropdownContext.Provider>
     )
@@ -191,9 +225,20 @@ function InputDropdownSelected<T>({
   ...props
 }: InputDropdownSelectedProps) {
   const {
-    options, value, isOpen, activeIndex, disabled, size,
-    getItemKey, renderSelectedItem, listId, triggerId,
-    setIsOpen, setActiveIndex, selectByIndex, toggleOpen,
+    options,
+    value,
+    isOpen,
+    activeIndex,
+    disabled,
+    size,
+    getItemKey,
+    renderSelectedItem,
+    listId,
+    triggerId,
+    setIsOpen,
+    setActiveIndex,
+    selectByIndex,
+    toggleOpen,
   } = useDropdownContext<T>()
 
   const hasValue = value != null
@@ -232,10 +277,18 @@ function InputDropdownSelected<T>({
           if (!isOpen) setIsOpen(true)
           else setActiveIndex(Math.max(activeIndex - 1, 0))
         } else if (event.key === "Enter") {
-          if (!isOpen) { event.preventDefault(); setIsOpen(true) }
-          else if (activeIndex >= 0) { event.preventDefault(); selectByIndex(activeIndex) }
+          if (!isOpen) {
+            event.preventDefault()
+            setIsOpen(true)
+          } else if (activeIndex >= 0) {
+            event.preventDefault()
+            selectByIndex(activeIndex)
+          }
         } else if (event.key === "Escape") {
-          if (isOpen) { event.preventDefault(); setIsOpen(false) }
+          if (isOpen) {
+            event.preventDefault()
+            setIsOpen(false)
+          }
         }
         onKeyDown?.(event)
       }}
@@ -243,11 +296,16 @@ function InputDropdownSelected<T>({
         inputVariants({ size, full: true }),
         "input-dropdown-trigger",
         !hasValue && "input-dropdown-trigger--empty",
-        className
+        className,
       )}
     >
-      <span>{renderSelectedItem ? renderSelectedItem(value) : (value == null ? "" : getItemKey(value))}</span>
-      <span aria-hidden="true" className={cn("input-dropdown-chevron", isOpen && "input-dropdown-chevron--open")}>
+      <span>
+        {renderSelectedItem ? renderSelectedItem(value) : value == null ? "" : getItemKey(value)}
+      </span>
+      <span
+        aria-hidden="true"
+        className={cn("input-dropdown-chevron", isOpen && "input-dropdown-chevron--open")}
+      >
         <ChevronDownIcon size={14} />
       </span>
     </button>
@@ -261,8 +319,17 @@ function InputDropdownList<T>({
   style,
   ...props
 }: InputDropdownListProps) {
-  const { options, value, isOpen, activeIndex, getItemKey, renderListItem, listId, setActiveIndex, selectByIndex } =
-    useDropdownContext<T>()
+  const {
+    options,
+    value,
+    isOpen,
+    activeIndex,
+    getItemKey,
+    renderListItem,
+    listId,
+    setActiveIndex,
+    selectByIndex,
+  } = useDropdownContext<T>()
 
   const { layerBackground } = useNextLayerTokens()
 
@@ -285,12 +352,17 @@ function InputDropdownList<T>({
         <div className="input-dropdown-empty">{emptyText}</div>
       ) : (
         options.map((item, index) => {
-          const isSelected = item == null ? value === null : value ? getItemKey(value) === getItemKey(item) : false
+          const isSelected =
+            item == null ? value === null : value ? getItemKey(value) === getItemKey(item) : false
           const isActive = index === activeIndex
           return (
             <div
               key={item != null ? getItemKey(item) : index}
-              id={item != null ? `${listId}-option-${encodeURIComponent(getItemKey(item))}` : undefined}
+              id={
+                item != null
+                  ? `${listId}-option-${encodeURIComponent(getItemKey(item))}`
+                  : undefined
+              }
               role="option"
               aria-selected={isSelected}
               onClick={() => selectByIndex(index)}
@@ -315,5 +387,5 @@ const InputDropdown = Object.assign(InputDropdownRoot, {
   List: InputDropdownList,
 }) as InputDropdownComponent
 
+export type { InputDropdownListProps, InputDropdownProps, InputDropdownSelectedProps }
 export { InputDropdown }
-export type { InputDropdownProps, InputDropdownSelectedProps, InputDropdownListProps }

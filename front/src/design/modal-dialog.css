@@ -25,26 +25,26 @@ body:has(dialog.modal-dialog[open]) {
 /* ─── Sizes (spacing-13 = 160px) ────────────────────────────────────────── */
 
 .modal-dialog[data-size="sm"] {
-  width:      calc(var(--aramid-spacing-13) * 3); /* 480px */
-  height:     calc(var(--aramid-spacing-13) * 2); /* 320px */
+  width: calc(var(--aramid-spacing-13) * 3); /* 480px */
+  height: calc(var(--aramid-spacing-13) * 2); /* 320px */
   max-height: calc(var(--aramid-spacing-13) * 2);
 }
 
 .modal-dialog[data-size="md"] {
-  width:      calc(var(--aramid-spacing-13) * 4); /* 640px */
-  height:     calc(var(--aramid-spacing-13) * 3); /* 480px */
+  width: calc(var(--aramid-spacing-13) * 4); /* 640px */
+  height: calc(var(--aramid-spacing-13) * 3); /* 480px */
   max-height: calc(var(--aramid-spacing-13) * 3);
 }
 
 .modal-dialog[data-size="lg"] {
-  width:      calc(var(--aramid-spacing-13) * 5); /* 800px */
-  height:     calc(var(--aramid-spacing-13) * 4); /* 640px */
+  width: calc(var(--aramid-spacing-13) * 5); /* 800px */
+  height: calc(var(--aramid-spacing-13) * 4); /* 640px */
   max-height: calc(var(--aramid-spacing-13) * 4);
 }
 
 .modal-dialog[data-size="xl"] {
-  width:      calc(var(--aramid-spacing-13) * 7); /* 1120px */
-  height:     calc(var(--aramid-spacing-13) * 5); /* 800px */
+  width: calc(var(--aramid-spacing-13) * 7); /* 1120px */
+  height: calc(var(--aramid-spacing-13) * 5); /* 800px */
   max-height: calc(var(--aramid-spacing-13) * 5);
 }
 
@@ -60,15 +60,16 @@ body:has(dialog.modal-dialog[open]) {
   flex: 0 0 auto;
   display: flex;
   align-items: flex-start;
-  gap: var(--aramid-spacing-3);                   /* 8px между текстом и крестиком */
-  padding: var(--aramid-spacing-5) var(--aramid-spacing-4) var(--aramid-spacing-5) var(--aramid-spacing-7);
+  gap: var(--aramid-spacing-3); /* 8px между текстом и крестиком */
+  padding: var(--aramid-spacing-5) var(--aramid-spacing-4) var(--aramid-spacing-5)
+    var(--aramid-spacing-7);
 }
 
 .modal-dialog-header-text {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--aramid-spacing-2);                   /* 4px между label и title */
+  gap: var(--aramid-spacing-2); /* 4px между label и title */
 }
 
 .modal-dialog-label {

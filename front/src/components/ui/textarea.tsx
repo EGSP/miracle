@@ -1,7 +1,7 @@
-import * as React from "react"
 import { Text } from "@miracle/aramid"
+import * as React from "react"
 
-import { type BaseInputProps } from "@/components/ui/input-variants"
+import type { BaseInputProps } from "@/components/ui/input-variants"
 import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 
@@ -11,9 +11,9 @@ type TextareaSize = "sm" | "md" | "lg" | "xl" | "auto"
 
 type TextareaProps = Omit<React.ComponentProps<"textarea">, "size"> &
   Omit<BaseInputProps, "size"> & {
-  size?: TextareaSize
-  resizable?: boolean
-}
+    size?: TextareaSize
+    resizable?: boolean
+  }
 
 const sizeClass: Record<TextareaSize, string> = {
   sm: "",
@@ -24,7 +24,20 @@ const sizeClass: Record<TextareaSize, string> = {
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, size = "sm", full = false, resizable = true, disabled, label, helperText, style, ...props }, ref) => {
+  (
+    {
+      className,
+      size = "sm",
+      full = false,
+      resizable = true,
+      disabled,
+      label,
+      helperText,
+      style,
+      ...props
+    },
+    ref,
+  ) => {
     const fieldStyle = useFieldLayerStyle({ disabled, style })
 
     const textarea = (
@@ -37,7 +50,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           sizeClass[size],
           full && "textarea--full",
           !resizable && "textarea--no-resize",
-          className
+          className,
         )}
         style={fieldStyle}
         {...props}
@@ -49,16 +62,20 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <div className="textarea-field">
           {label && <Text.Helper as="span">{label}</Text.Helper>}
           {textarea}
-          {helperText && <Text.Helper as="span" className="field-helper-text">{helperText}</Text.Helper>}
+          {helperText && (
+            <Text.Helper as="span" className="field-helper-text">
+              {helperText}
+            </Text.Helper>
+          )}
         </div>
       )
     }
 
     return textarea
-  }
+  },
 )
 
 Textarea.displayName = "Textarea"
 
-export { Textarea }
 export type { TextareaProps, TextareaSize }
+export { Textarea }

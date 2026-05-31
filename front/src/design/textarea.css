@@ -10,9 +10,9 @@
   display: block;
   min-width: 0;
   width: var(--input-fixed-width);
-  min-height: calc(var(--aramid-spacing-9) * 2);  /* sm = 96px */
-  padding-block: var(--aramid-spacing-3);          /* 8px */
-  padding-inline: var(--aramid-spacing-5);         /* 16px */
+  min-height: calc(var(--aramid-spacing-9) * 2); /* sm = 96px */
+  padding-block: var(--aramid-spacing-3); /* 8px */
+  padding-inline: var(--aramid-spacing-5); /* 16px */
   border: none;
   border-bottom-width: 1px;
   border-bottom-style: solid;
@@ -54,15 +54,15 @@
 /* ─── Height variants ────────────────────────────────────────────────────── */
 
 .textarea--md {
-  min-height: calc(var(--aramid-spacing-9) * 4);   /* 192px */
+  min-height: calc(var(--aramid-spacing-9) * 4); /* 192px */
 }
 
 .textarea--lg {
-  min-height: calc(var(--aramid-spacing-9) * 8);   /* 384px */
+  min-height: calc(var(--aramid-spacing-9) * 8); /* 384px */
 }
 
 .textarea--xl {
-  min-height: calc(var(--aramid-spacing-9) * 16);  /* 768px */
+  min-height: calc(var(--aramid-spacing-9) * 16); /* 768px */
 }
 
 .textarea--auto {

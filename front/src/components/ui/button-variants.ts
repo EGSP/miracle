@@ -1,7 +1,14 @@
-import type { ReactNode } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import type { ReactNode } from "react"
 
-export type ButtonVariant = "primary" | "secondary" | "tertiary" | "ghost" | "danger" | "danger-tertiary" | "icon-button"
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "ghost"
+  | "danger"
+  | "danger-tertiary"
+  | "icon-button"
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl"
 
 export interface BaseButtonProps {
@@ -17,13 +24,13 @@ export interface BaseButtonProps {
 export const buttonVariants = cva("button", {
   variants: {
     variant: {
-      primary:       "button--primary",
-      secondary:     "button--secondary",
-      tertiary:      "button--tertiary",
-      ghost:         "button--ghost",
-      danger:           "button--danger",
+      primary: "button--primary",
+      secondary: "button--secondary",
+      tertiary: "button--tertiary",
+      ghost: "button--ghost",
+      danger: "button--danger",
       "danger-tertiary": "button--danger-tertiary",
-      "icon-button":    "button--icon-button",
+      "icon-button": "button--icon-button",
     },
     size: {
       xs: "button--xs",
@@ -33,14 +40,14 @@ export const buttonVariants = cva("button", {
       xl: "button--xl",
     },
     fluid: {
-      true:  "button--fluid",
+      true: "button--fluid",
       false: "",
     },
   },
   defaultVariants: {
     variant: "primary",
-    size:    "md",
-    fluid:   false,
+    size: "md",
+    fluid: false,
   },
 })
 

@@ -6,7 +6,7 @@
 .button-group {
   display: flex;
   flex-direction: row;
-  gap: var(--aramid-spacing-5);               /* 16px = spacing-05 */
+  gap: var(--aramid-spacing-5); /* 16px = spacing-05 */
 }
 
 /* Равная ширина всех прямых потомков (кнопок).

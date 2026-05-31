@@ -40,7 +40,7 @@
   top: 100%;
   z-index: 50;
   margin-top: var(--aramid-spacing-1);
-  max-height: calc(var(--aramid-spacing-9) * 4);   /* 192px */
+  max-height: calc(var(--aramid-spacing-9) * 4); /* 192px */
   width: 100%;
   overflow-y: auto;
   border: 1px solid var(--aramid-color-gray-20);

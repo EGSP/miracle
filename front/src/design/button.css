@@ -4,29 +4,32 @@
 ───────────────────────────────────────────────────────────────────────────── */
 
 .button {
-  --button-h: var(--aramid-spacing-8);           /* 40px (md) */
+  --button-h: var(--aramid-spacing-8); /* 40px (md) */
   --button-focus-ring: var(--aramid-color-sand-60); /* фокус-кольцо без синего */
 
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;               /* label прижат влево, иконка — вправо */
-  height: var(--button-h);                       /* высота жёстко фиксирована по размеру */
-  min-width: max-content;                        /* не уже своего контента */
+  justify-content: space-between; /* label прижат влево, иконка — вправо */
+  height: var(--button-h); /* высота жёстко фиксирована по размеру */
+  min-width: max-content; /* не уже своего контента */
   padding-block: 0;
-  padding-inline: var(--aramid-spacing-5);       /* 16px */
-  gap: var(--aramid-spacing-3);                  /* 8px */
+  padding-inline: var(--aramid-spacing-5); /* 16px */
+  gap: var(--aramid-spacing-3); /* 8px */
   border: 1px solid transparent;
   background: none;
   font-family: var(--aramid-font-family-sans);
-  font-size: var(--aramid-font-size-sm);         /* 14px */
+  font-size: var(--aramid-font-size-sm); /* 14px */
   font-weight: var(--aramid-font-weight-regular);
   line-height: var(--aramid-font-line-height-tight);
   letter-spacing: 0.16px;
   cursor: pointer;
   text-decoration: none;
   outline: none;
-  transition: background-color 70ms, border-color 70ms, color 70ms;
+  transition:
+    background-color 70ms,
+    border-color 70ms,
+    color 70ms;
   user-select: none;
   -webkit-user-select: none;
   white-space: nowrap;
@@ -60,9 +63,9 @@
 /* Размер управляет высотой, отступами и шрифтом. Ширина авто (по контенту). */
 
 .button--xs {
-  --button-h: var(--aramid-spacing-6);           /* 24px */
-  padding-inline: var(--aramid-spacing-3);       /* 8px */
-  font-size: var(--aramid-font-size-xs);         /* 12px */
+  --button-h: var(--aramid-spacing-6); /* 24px */
+  padding-inline: var(--aramid-spacing-3); /* 8px */
+  font-size: var(--aramid-font-size-xs); /* 12px */
 }
 
 .button--xs .button-icon svg {
@@ -71,8 +74,8 @@
 }
 
 .button--sm {
-  --button-h: var(--aramid-spacing-7);           /* 32px */
-  padding-inline: var(--aramid-spacing-4);       /* 12px */
+  --button-h: var(--aramid-spacing-7); /* 32px */
+  padding-inline: var(--aramid-spacing-4); /* 12px */
 }
 
 .button--sm .button-icon svg {
@@ -81,19 +84,19 @@
 }
 
 .button--md {
-  --button-h: var(--aramid-spacing-8);           /* 40px */
-  padding-inline: var(--aramid-spacing-5);       /* 16px */
-  font-size: var(--aramid-font-size-sm);         /* 14px */
+  --button-h: var(--aramid-spacing-8); /* 40px */
+  padding-inline: var(--aramid-spacing-5); /* 16px */
+  font-size: var(--aramid-font-size-sm); /* 14px */
 }
 
 .button--lg {
-  --button-h: var(--aramid-spacing-9);           /* 48px */
+  --button-h: var(--aramid-spacing-9); /* 48px */
 }
 
 .button--xl {
-  --button-h: var(--aramid-spacing-10);          /* 64px */
-  padding-inline: var(--aramid-spacing-6);       /* 24px */
-  font-size: var(--aramid-font-size-md);         /* 16px */
+  --button-h: var(--aramid-spacing-10); /* 64px */
+  padding-inline: var(--aramid-spacing-6); /* 24px */
+  font-size: var(--aramid-font-size-md); /* 16px */
 }
 
 .button--xl .button-icon svg {
@@ -112,7 +115,7 @@
 /* Квадратная кнопка: только иконка, label скрыт визуально (остаётся для a11y) */
 
 .button--icon-button {
-  width: var(--button-h);                        /* переопределяет --button-fixed-width */
+  width: var(--button-h); /* переопределяет --button-fixed-width */
   padding-inline: 0;
   justify-content: center;
 }
@@ -120,7 +123,7 @@
 /* ─── Primary ───────────────────────────────────────────────────────────── */
 
 .button--primary {
-  background-color: var(--aramid-color-brand);      /* sand-50 */
+  background-color: var(--aramid-color-brand); /* sand-50 */
   color: var(--aramid-color-white-0);
 }
 

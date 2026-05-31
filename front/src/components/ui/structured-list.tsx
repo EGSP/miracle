@@ -47,29 +47,28 @@
  * Фон выбранных элементов берётся через `useNextLayerTokens().layerBackground`,
  * чтобы корректно учитывать глубину слоя Aramid.
  */
+
+import { useNextLayerTokens } from "@miracle/aramid"
 import {
   createContext,
+  type KeyboardEvent,
+  type ReactNode,
   useCallback,
   useContext,
   useId,
   useMemo,
   useRef,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react'
-import { useNextLayerTokens } from '@miracle/aramid'
-import { cn } from '@/lib/utils'
-import '@/design/structured-list.css'
+} from "react"
+import { cn } from "@/lib/utils"
+import "@/design/structured-list.css"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type StructuredListKey = string | number
 
-export type ColumnWidth =
-  | '1fr' | '2fr' | '4fr' | '6fr' | '8fr' | '12fr' | '16fr'
-  | (string & {})
+export type ColumnWidth = "1fr" | "2fr" | "4fr" | "6fr" | "8fr" | "12fr" | "16fr" | (string & {})
 
-export type RowWeight = '1fr' | '2fr'
+export type RowWeight = "1fr" | "2fr"
 
 export type ColumnRowDef<T> = {
   key: string
@@ -115,16 +114,16 @@ type NormalizedColumn<T> = {
 }
 
 function normalizeColumn<T>(col: ColumnDef<T>): NormalizedColumn<T> {
-  if ('rows' in col) return col
+  if ("rows" in col) return col
   return {
     key: col.key,
     width: col.width,
-    rows: [{ key: 'default', label: col.label, weight: '1fr', render: col.render }],
+    rows: [{ key: "default", label: col.label, weight: "1fr", render: col.render }],
   }
 }
 
 function buildGridTemplate(cols: Array<{ width: ColumnWidth }>, multiselect: boolean): string {
-  return [...(multiselect ? ['40px'] : []), ...cols.map((c) => c.width)].join(' ')
+  return [...(multiselect ? ["40px"] : []), ...cols.map((c) => c.width)].join(" ")
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -148,7 +147,7 @@ const StructuredListContext = createContext<StructuredListContextValue<unknown> 
 
 function useStructuredListContext<T>() {
   const ctx = useContext(StructuredListContext)
-  if (!ctx) throw new Error('useStructuredListContext must be used within StructuredList')
+  if (!ctx) throw new Error("useStructuredListContext must be used within StructuredList")
   return ctx as StructuredListContextValue<T>
 }
 
@@ -200,21 +199,21 @@ function StructuredListRoot<T>({
 
   // Записывает data-active напрямую в DOM — без React ре-рендеров
   const moveToIndex = useCallback((index: number | null) => {
-    activeElRef.current?.removeAttribute('data-active')
+    activeElRef.current?.removeAttribute("data-active")
     activeIndexRef.current = index
 
     if (index === null || !rootRef.current) {
       activeElRef.current = null
-      rootRef.current?.removeAttribute('aria-activedescendant')
+      rootRef.current?.removeAttribute("aria-activedescendant")
       return
     }
 
     // children[0] — заголовок, children[index + 1] — итем
     const el = rootRef.current.children[index + 1]
     if (el) {
-      el.setAttribute('data-active', '')
+      el.setAttribute("data-active", "")
       activeElRef.current = el
-      rootRef.current.setAttribute('aria-activedescendant', el.id)
+      rootRef.current.setAttribute("aria-activedescendant", el.id)
     }
   }, [])
 
@@ -245,8 +244,7 @@ function StructuredListRoot<T>({
   )
 
   const getItemId = useCallback(
-    (item: T) =>
-      `${listId}-option-${encodeURIComponent(String(definition.getKey(item)))}`,
+    (item: T) => `${listId}-option-${encodeURIComponent(String(definition.getKey(item)))}`,
     [listId, definition],
   )
 
@@ -263,24 +261,24 @@ function StructuredListRoot<T>({
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return
     switch (event.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         event.preventDefault()
         move(1)
         break
-      case 'ArrowUp':
+      case "ArrowUp":
         event.preventDefault()
         move(-1)
         break
-      case 'Home':
+      case "Home":
         event.preventDefault()
         if (itemsRef.current.length) moveToIndex(0)
         break
-      case 'End':
+      case "End":
         event.preventDefault()
         if (itemsRef.current.length) moveToIndex(itemsRef.current.length - 1)
         break
-      case 'Enter':
-      case ' ':
+      case "Enter":
+      case " ":
         event.preventDefault()
         if (activeIndexRef.current !== null) {
           const item = itemsRef.current[activeIndexRef.current]
@@ -302,7 +300,17 @@ function StructuredListRoot<T>({
       disabled,
       selectedBackground: layerBackground,
     }),
-    [definition, normalizedColumns, gridTemplate, selected, toggle, getItemId, multiselect, disabled, layerBackground],
+    [
+      definition,
+      normalizedColumns,
+      gridTemplate,
+      selected,
+      toggle,
+      getItemId,
+      multiselect,
+      disabled,
+      layerBackground,
+    ],
   )
 
   return (
@@ -318,24 +326,21 @@ function StructuredListRoot<T>({
           if (disabled || activeIndexRef.current !== null || !itemsRef.current.length) return
           const sel = selectedRef.current
           const def = definitionRef.current
-          const firstSelected = sel.length > 0
-            ? itemsRef.current.findIndex((item) => sel.includes(def.getKey(item)))
-            : -1
+          const firstSelected =
+            sel.length > 0
+              ? itemsRef.current.findIndex((item) => sel.includes(def.getKey(item)))
+              : -1
           moveToIndex(firstSelected >= 0 ? firstSelected : 0)
         }}
         onBlur={(e) => {
           if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
           moveToIndex(null)
         }}
-        className={cn('structured-list', condensed && 'structured-list--condensed', className)}
+        className={cn("structured-list", condensed && "structured-list--condensed", className)}
       >
         <StructuredListHeader<T> />
         {items.map((item, index) => (
-          <StructuredListItem<T>
-            key={String(definition.getKey(item))}
-            item={item}
-            index={index}
-          />
+          <StructuredListItem<T> key={String(definition.getKey(item))} item={item} index={index} />
         ))}
       </div>
     </StructuredListContext.Provider>
@@ -357,11 +362,11 @@ function StructuredListHeader<T>() {
       {normalizedColumns.map((col) => (
         <div key={col.key} className="structured-list-header-cell">
           {col.rows.length === 1 ? (
-            col.rows[0]!.label ?? null
+            (col.rows[0]!.label ?? null)
           ) : (
             <div
               className="structured-list-cell-inner"
-              style={{ gridTemplateRows: col.rows.map((r) => r.weight).join(' ') }}
+              style={{ gridTemplateRows: col.rows.map((r) => r.weight).join(" ") }}
             >
               {col.rows.map((row) => (
                 <span key={row.key} className="structured-list-header-sub">
@@ -426,8 +431,8 @@ function StructuredListItem<T>({ item, index }: { item: T; index: number }) {
         <div
           key={col.key}
           className={cn(
-            'structured-list-cell',
-            col.rows.length > 1 && 'structured-list-cell--multi',
+            "structured-list-cell",
+            col.rows.length > 1 && "structured-list-cell--multi",
           )}
         >
           {col.rows.length === 1 ? (
@@ -435,7 +440,7 @@ function StructuredListItem<T>({ item, index }: { item: T; index: number }) {
           ) : (
             <div
               className="structured-list-cell-inner"
-              style={{ gridTemplateRows: col.rows.map((r) => r.weight).join(' ') }}
+              style={{ gridTemplateRows: col.rows.map((r) => r.weight).join(" ") }}
             >
               {col.rows.map((row) => (
                 <div key={row.key} className="structured-list-sub-cell">

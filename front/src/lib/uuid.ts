@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid"
 
 /**
  * Генерирует UUID v4 для клиентских сущностей (правила ТУ, шаблоны отображения и т.п.).
@@ -12,5 +12,5 @@ import { v4 as uuidv4 } from 'uuid';
  * На бэкенде по-прежнему используется `randomUUID` из Node `crypto`.
  */
 export function createUuid(): string {
-    return uuidv4();
+  return uuidv4()
 }

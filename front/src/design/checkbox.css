@@ -29,7 +29,9 @@
   height: 16px;
   border: 1px solid var(--aramid-color-gray-50);
   background-color: transparent;
-  transition: border-color 70ms, background-color 70ms;
+  transition:
+    border-color 70ms,
+    background-color 70ms;
 }
 
 .checkbox-box svg {

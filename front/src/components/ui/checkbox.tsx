@@ -1,6 +1,6 @@
-import * as React from "react"
-import { Check, X, AlertCircle, AlertTriangle } from "lucide-react"
 import { Text } from "@miracle/aramid"
+import { AlertCircle, AlertTriangle, Check, X } from "lucide-react"
+import type * as React from "react"
 import { cn } from "@/lib/utils"
 
 import "@/design/checkbox.css"
@@ -22,7 +22,9 @@ function CheckboxMessages({ error, warn }: { error?: string; warn?: string }) {
   if (error) {
     return (
       <p className="checkbox-message checkbox-message--error">
-        <span aria-hidden="true"><AlertCircle /></span>
+        <span aria-hidden="true">
+          <AlertCircle />
+        </span>
         {error}
       </p>
     )
@@ -30,7 +32,9 @@ function CheckboxMessages({ error, warn }: { error?: string; warn?: string }) {
   if (warn) {
     return (
       <p className="checkbox-message checkbox-message--warn">
-        <span aria-hidden="true"><AlertTriangle /></span>
+        <span aria-hidden="true">
+          <AlertTriangle />
+        </span>
         {warn}
       </p>
     )
@@ -40,8 +44,10 @@ function CheckboxMessages({ error, warn }: { error?: string; warn?: string }) {
 
 // ─── CheckboxItem ───────────────────────────────────────────────────────────────
 
-type CheckboxItemProps =
-  Omit<React.ComponentProps<"input">, "type" | "checked" | "onChange" | "size" | "disabled"> &
+type CheckboxItemProps = Omit<
+  React.ComponentProps<"input">,
+  "type" | "checked" | "onChange" | "size" | "disabled"
+> &
   BaseCheckboxProps & {
     checked?: boolean
     onChange?: (checked: boolean) => void
@@ -76,7 +82,11 @@ function CheckboxItem({
         {...props}
       />
       <span className="checkbox-box" aria-hidden="true">
-        {checked && <span aria-hidden="true"><Check /></span>}
+        {checked && (
+          <span aria-hidden="true">
+            <Check />
+          </span>
+        )}
       </span>
       {label && <span className="checkbox-item-label">{label}</span>}
     </label>
@@ -137,8 +147,16 @@ function CheckboxTristateItem({
         }}
       />
       <span className="checkbox-box" aria-hidden="true">
-        {value === true && <span aria-hidden="true"><Check /></span>}
-        {value === false && <span aria-hidden="true"><X /></span>}
+        {value === true && (
+          <span aria-hidden="true">
+            <Check />
+          </span>
+        )}
+        {value === false && (
+          <span aria-hidden="true">
+            <X />
+          </span>
+        )}
       </span>
       {label && <span className="checkbox-item-label">{label}</span>}
     </label>
@@ -178,10 +196,12 @@ function CheckboxGroup({
   return (
     <div className={cn("checkbox-group", className)}>
       <Text.Helper as="legend">{label}</Text.Helper>
-      <div className={cn(
-        "checkbox-group-items",
-        direction === "horizontal" && "checkbox-group-items--horizontal",
-      )}>
+      <div
+        className={cn(
+          "checkbox-group-items",
+          direction === "horizontal" && "checkbox-group-items--horizontal",
+        )}
+      >
         {children}
       </div>
       <CheckboxMessages error={error} warn={warn} />

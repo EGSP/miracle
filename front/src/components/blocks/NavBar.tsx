@@ -1,49 +1,50 @@
-import { Link } from '@tanstack/react-router';
-import { FileIcon, ListOrdered, House, Settings, Tags, FileText } from 'lucide-react';
-import { Text } from '@miracle/aramid';
-import { WorkerIcon } from '@/components/blocks/WorkerIcon';
-import { useAuthContext } from '@/contexts/AuthContext';
-import { useUserIsAdmin } from '@/lib/hooks/useUserIsAdmin';
+import { Text } from "@miracle/aramid"
+import { Link } from "@tanstack/react-router"
+import { FileIcon, FileText, House, ListOrdered, Settings, Tags } from "lucide-react"
+import { WorkerIcon } from "@/components/blocks/WorkerIcon"
+import { useAuthContext } from "@/contexts/AuthContext"
+import { useUserIsAdmin } from "@/lib/hooks/useUserIsAdmin"
 
-const navLinkClass = 'flex items-center gap-1.5 px-2 py-1 transition-colors hover:bg-foreground/5 [&.active]:bg-foreground/5 [&.active]:font-medium';
+const navLinkClass =
+  "flex items-center gap-1.5 px-2 py-1 transition-colors hover:bg-foreground/5 [&.active]:bg-foreground/5 [&.active]:font-medium"
 
 export function NavBar() {
-    const { isAuthenticated } = useAuthContext();
-    const isAdmin = useUserIsAdmin();
-    if (!isAuthenticated) return null;
+  const { isAuthenticated } = useAuthContext()
+  const isAdmin = useUserIsAdmin()
+  if (!isAuthenticated) return null
 
-    return (
-        <nav className="flex items-center gap-1 border-b border-border px-4 py-1">
-            <Link to="/" className={navLinkClass}>
-                <House className="size-3.5 shrink-0" />
-                <Text.Label as="span">Главная</Text.Label>
-            </Link>
-            <Link to="/files" search={{ fileId: undefined }} className={navLinkClass}>
-                <FileIcon className="size-3.5 shrink-0" />
-                <Text.Label as="span">Файлы</Text.Label>
-            </Link>
-            <Link to="/orders" search={{ orderId: undefined }} className={navLinkClass}>
-                <ListOrdered className="size-3.5 shrink-0" />
-                <Text.Label as="span">Заказы</Text.Label>
-            </Link>
-            <Link to="/workers" className={navLinkClass}>
-                <WorkerIcon className="size-3.5 shrink-0" />
-                <Text.Label as="span">Воркеры</Text.Label>
-            </Link>
-            <Link to="/product-types" className={navLinkClass}>
-                <Tags className="size-3.5 shrink-0" />
-                <Text.Label as="span">Типы продукции</Text.Label>
-            </Link>
-            <Link to="/technical-conditions" search={{ tcId: undefined }} className={navLinkClass}>
-                <FileText className="size-3.5 shrink-0" />
-                <Text.Label as="span">Технические условия</Text.Label>
-            </Link>
-            {isAdmin && (
-                <Link to="/admin" className={navLinkClass}>
-                    <Settings className="size-3.5 shrink-0" />
-                    <Text.Label as="span">Администрирование</Text.Label>
-                </Link>
-            )}
-        </nav>
-    );
+  return (
+    <nav className="flex items-center gap-1 border-b border-border px-4 py-1">
+      <Link to="/" className={navLinkClass}>
+        <House className="size-3.5 shrink-0" />
+        <Text.Label as="span">Главная</Text.Label>
+      </Link>
+      <Link to="/files" search={{ fileId: undefined }} className={navLinkClass}>
+        <FileIcon className="size-3.5 shrink-0" />
+        <Text.Label as="span">Файлы</Text.Label>
+      </Link>
+      <Link to="/orders" search={{ orderId: undefined }} className={navLinkClass}>
+        <ListOrdered className="size-3.5 shrink-0" />
+        <Text.Label as="span">Заказы</Text.Label>
+      </Link>
+      <Link to="/workers" className={navLinkClass}>
+        <WorkerIcon className="size-3.5 shrink-0" />
+        <Text.Label as="span">Воркеры</Text.Label>
+      </Link>
+      <Link to="/product-types" className={navLinkClass}>
+        <Tags className="size-3.5 shrink-0" />
+        <Text.Label as="span">Типы продукции</Text.Label>
+      </Link>
+      <Link to="/technical-conditions" search={{ tcId: undefined }} className={navLinkClass}>
+        <FileText className="size-3.5 shrink-0" />
+        <Text.Label as="span">Технические условия</Text.Label>
+      </Link>
+      {isAdmin && (
+        <Link to="/admin" className={navLinkClass}>
+          <Settings className="size-3.5 shrink-0" />
+          <Text.Label as="span">Администрирование</Text.Label>
+        </Link>
+      )}
+    </nav>
+  )
 }

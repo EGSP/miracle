@@ -1,26 +1,32 @@
-import * as React from "react"
 import { Text, useLayerTokens, useNextLayerTokens } from "@miracle/aramid"
+import * as React from "react"
 
-import { inputVariants, type BaseInputProps } from "@/components/ui/input-variants"
+import { type BaseInputProps, inputVariants } from "@/components/ui/input-variants"
 import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 
 import "@/design/input.css"
 import "@/design/input-suggest.css"
 
-type SuggestItemRenderer<T> = (item: T, state: { isActive: boolean; index: number }) => React.ReactNode
+type SuggestItemRenderer<T> = (
+  item: T,
+  state: { isActive: boolean; index: number },
+) => React.ReactNode
 
-type InputSuggestProps<T> = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "value" | "onChange" | "onSelect"> &
+type InputSuggestProps<T> = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "size" | "value" | "onChange" | "onSelect"
+> &
   BaseInputProps & {
-  value: string
-  onChange: (value: string) => void
-  onSearch: (query: string) => T[] | Promise<T[]>
-  onSelect?: (item: T) => void
-  renderItem?: SuggestItemRenderer<T>
-  getItemValue: (item: T) => string
-  loading?: boolean
-  debounceMs?: number
-}
+    value: string
+    onChange: (value: string) => void
+    onSearch: (query: string) => T[] | Promise<T[]>
+    onSelect?: (item: T) => void
+    renderItem?: SuggestItemRenderer<T>
+    getItemValue: (item: T) => string
+    loading?: boolean
+    debounceMs?: number
+  }
 
 function InputSuggest<T>({
   value,
@@ -110,7 +116,7 @@ function InputSuggest<T>({
       setIsFocused(false)
       setActiveIndex(-1)
     },
-    [getItemValue, onChange, onSelect]
+    [getItemValue, onChange, onSelect],
   )
 
   const wrap = (
@@ -190,7 +196,11 @@ function InputSuggest<T>({
       <div className="input-field">
         {label && <Text.Helper as="span">{label}</Text.Helper>}
         {wrap}
-        {helperText && <Text.Helper as="span" className="field-helper-text">{helperText}</Text.Helper>}
+        {helperText && (
+          <Text.Helper as="span" className="field-helper-text">
+            {helperText}
+          </Text.Helper>
+        )}
       </div>
     )
   }
@@ -198,5 +208,5 @@ function InputSuggest<T>({
   return wrap
 }
 
-export { InputSuggest }
 export type { InputSuggestProps }
+export { InputSuggest }

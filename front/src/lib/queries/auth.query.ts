@@ -1,53 +1,53 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { auth } from "../generated";
-import { LoginDTO, RegisterDTO } from "../generated/models";
-import { useAuthStore } from "../stores/auth.store";
-import { invalidateCookieSession } from "./sessions.query";
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { auth } from "../generated"
+import type { LoginDTO, RegisterDTO } from "../generated/models"
+import { useAuthStore } from "../stores/auth.store"
+import { invalidateCookieSession } from "./sessions.query"
 
 export const useLogin = ({ login, password }: LoginDTO) => {
-    const authStore = useAuthStore();
-    const queryClient = useQueryClient();
+  const authStore = useAuthStore()
+  const queryClient = useQueryClient()
 
-    return useMutation({
-        mutationFn: async () => {
-            return await auth.login({ login, password });
-        },
-        onSuccess: (data) => {
-            authStore.setStatus('valid');
-        },
-        onError: (error) => {
-            authStore.setStatus('unauthorized');
-        },
-        onSettled: () => {
-            invalidateCookieSession(queryClient);
-        },
-    });
-};
+  return useMutation({
+    mutationFn: async () => {
+      return await auth.login({ login, password })
+    },
+    onSuccess: (data) => {
+      authStore.setStatus("valid")
+    },
+    onError: (error) => {
+      authStore.setStatus("unauthorized")
+    },
+    onSettled: () => {
+      invalidateCookieSession(queryClient)
+    },
+  })
+}
 
 export const useRegister = ({ login, password }: RegisterDTO) => {
-    const authStore = useAuthStore();
-    return useMutation({
-        mutationFn: async () => {
-            return await auth.register({ login, password });
-        },
-    });
-};
+  const authStore = useAuthStore()
+  return useMutation({
+    mutationFn: async () => {
+      return await auth.register({ login, password })
+    },
+  })
+}
 
 export const useLogout = () => {
-    const authStore = useAuthStore();
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: async () => {
-            return await auth.logout();
-        },
-        onSuccess: () => {
-            authStore.setStatus('unauthorized');
-        },
-        onError: () => {
-            authStore.setStatus('unauthorized');
-        },
-        onSettled: () => {
-            invalidateCookieSession(queryClient);
-        },
-    });
-};
+  const authStore = useAuthStore()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      return await auth.logout()
+    },
+    onSuccess: () => {
+      authStore.setStatus("unauthorized")
+    },
+    onError: () => {
+      authStore.setStatus("unauthorized")
+    },
+    onSettled: () => {
+      invalidateCookieSession(queryClient)
+    },
+  })
+}

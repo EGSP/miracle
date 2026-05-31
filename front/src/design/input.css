@@ -7,8 +7,8 @@
   display: block;
   min-width: 0;
   width: var(--input-fixed-width);
-  height: var(--aramid-spacing-8);           /* md = 40px */
-  padding-inline: var(--aramid-spacing-5);   /* 16px */
+  height: var(--aramid-spacing-8); /* md = 40px */
+  padding-inline: var(--aramid-spacing-5); /* 16px */
   border: none;
   border-bottom-width: 1px;
   border-bottom-style: solid;
@@ -63,8 +63,8 @@
 /* ─── Size variants ──────────────────────────────────────────────────────── */
 
 .input--sm {
-  height: var(--aramid-spacing-7);           /* 32px */
-  padding-inline: var(--aramid-spacing-4);   /* 12px */
+  height: var(--aramid-spacing-7); /* 32px */
+  padding-inline: var(--aramid-spacing-4); /* 12px */
 }
 
 .input--sm::file-selector-button {
@@ -72,7 +72,7 @@
 }
 
 .input--lg {
-  height: var(--aramid-spacing-9);           /* 48px */
+  height: var(--aramid-spacing-9); /* 48px */
 }
 
 .input--lg::file-selector-button {
