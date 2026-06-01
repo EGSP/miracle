@@ -24,8 +24,8 @@ export class FilesContentController {
     ) {}
 
     @Get('records/:contentId/tokens')
-    getTokens(@Param('contentId') contentId: string): { tokens: number } {
-        return { tokens: this.filesContent.getTokenCount(contentId) };
+    async getTokens(@Param('contentId') contentId: string): Promise<{ tokens: number }> {
+        return { tokens: await this.filesContent.getTokenCount(contentId) };
     }
 
     @Post('records/:contentId')
@@ -38,11 +38,11 @@ export class FilesContentController {
     }
 
     @Get(':fileId')
-    getContent(
+    async getContent(
         @Param('fileId') fileId: string,
         @Query() query: FileContentQueryDto,
-    ): Stored<FileContent>[] {
-        const content = this.filesContent.getContent(fileId, {
+    ): Promise<Stored<FileContent>[]> {
+        const content = await this.filesContent.getContent(fileId, {
             includeDeleted: query.includeDeleted === true,
         });
         if (query.onlyLast) {

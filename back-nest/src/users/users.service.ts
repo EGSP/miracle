@@ -1,7 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { USER_ROLES, type Stored, type User, type UserRole } from '@miracle/types';
-import { DatabaseService } from '../database/database.service.js';
-import type { UserInternal } from '../database/collections.js';
+import { PrismaService } from '../database/prisma.service.js';
 import { TokensService } from '../tokens/tokens.service.js';
 
 export type CreateUserInput = {
@@ -13,43 +12,43 @@ export type CreateUserInput = {
 @Injectable()
 export class UsersService {
     constructor(
-        private readonly db: DatabaseService,
+        private readonly prisma: PrismaService,
         private readonly tokens: TokensService,
     ) {}
 
-    getPublicById(id: string): Stored<User> {
-        const user = this.db.collections.users.getById(id);
+    async getPublicById(id: string): Promise<Stored<User>> {
+        const user = await this.prisma.user.findUnique({ where: { id } });
         if (!user) {
             throw new NotFoundException(`User ${id} not found`);
         }
-
         return this.toPublic(user);
     }
 
-    listPublic(): Stored<User>[] {
-        return this.db.collections.users.list().map((user) => this.toPublic(user));
+    async listPublic(): Promise<Stored<User>[]> {
+        const users = await this.prisma.user.findMany();
+        return users.map((u) => this.toPublic(u));
     }
 
     async createUser(input: CreateUserInput): Promise<Stored<User>> {
-        const existing = this.db.collections.users
-            .ref()
-            .find((user) => user.login === input.login);
+        const existing = await this.prisma.user.findFirst({ where: { login: input.login } });
         if (existing) {
             throw new ConflictException(`Login "${input.login}" is already taken`);
         }
 
         const hashedPassword = await this.tokens.hashPassword(input.password);
-        const created = await this.db.collections.users.create({
-            login: input.login,
-            password: hashedPassword,
-            role: input.role ?? USER_ROLES.EMPLOYEE,
+        const created = await this.prisma.user.create({
+            data: {
+                login: input.login,
+                password: hashedPassword,
+                role: (input.role ?? USER_ROLES.EMPLOYEE) as 'EMPLOYEE' | 'ADMIN',
+            },
         });
 
         return this.toPublic(created);
     }
 
-    private toPublic(user: Stored<UserInternal>): Stored<User> {
-        const { password: _password, ...publicUser } = user;
-        return publicUser as Stored<User>;
+    private toPublic(user: { id: string; login: string; role: string; password: string | null; createdAt: Date; updatedAt: Date; deletedAt: Date | null }): Stored<User> {
+        const { password: _password, ...rest } = user;
+        return rest as Stored<User>;
     }
 }

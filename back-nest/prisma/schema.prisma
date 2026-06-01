@@ -1,0 +1,153 @@
+generator client {
+  provider              = "prisma-client"
+  output                = "../src/generated/prisma"
+  moduleFormat          = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension   = "js"
+  runtime               = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Перечисления ──────────────────────────────────────────────────────────────
+
+enum UserRole {
+  EMPLOYEE
+  ADMIN
+}
+
+enum JobStatus {
+  queued
+  running
+  succeeded
+  failed
+  cancelled
+}
+
+// ── Модели ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(uuid())
+  login     String
+  role      UserRole
+  // Хранится только на бэкенде; никогда не возвращается клиенту.
+  password  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  accessToken  String
+  refreshToken String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+model ProductType {
+  id        String    @id @default(uuid())
+  name      String
+  // string[] — хранится как jsonb для единообразия с остальными вложенными структурами
+  synonyms  Json      @default("[]")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("product_types")
+}
+
+model File {
+  id        String    @id @default(uuid())
+  name      String
+  extension String
+  bytes     Int
+  pages     Int?
+  authorId  String
+  // FileModel.settings — { complexLayout?, isTechnicalCondition?, usedPages? }
+  settings  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("files")
+}
+
+// К одному файлу может быть несколько записей контента (разные попытки извлечения).
+model FileContent {
+  id      String  @id @default(uuid())
+  fileId  String
+  // Content[] — массив { page?, text? }
+  content Json?
+  // { extractionType?, extractionStatus?, extractionFailedMessage? }
+  meta    Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([fileId])
+  @@map("file_contents")
+}
+
+model Order {
+  id       String  @id @default(uuid())
+  authorId String
+  fileId   String?
+  // OrderDetails — { clientCompanyName?, requirements?, productTypeId?, ... }
+  details  Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("orders")
+}
+
+model TechnicalCondition {
+  id                  String  @id @default(uuid())
+  name                String?
+  fileId              String?
+  productTypeId       String?
+  lastProductTypeName String?
+  // TechnicalConditionRule[]
+  rules               Json?
+  // DesignationSlot[]
+  designationSlots    Json?
+  // DisplayTemplate[]
+  displayTemplates    Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("technical_conditions")
+}
+
+// Прогоны durable-движка задач (JobRun). Заменяет прежнюю коллекцию workers.
+model JobRun {
+  id       String    @id @default(uuid())
+  job      String
+  status   JobStatus
+  input    Json?
+  output   Json?
+  error    String?
+  progress Json?
+  memo     Json?
+  cursor   Int?
+  // Вложенные прогоны (рекурсивная структура хранится целиком в jsonb)
+  steps    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("job_runs")
+}

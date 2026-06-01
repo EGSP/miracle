@@ -6,8 +6,7 @@ import {
 } from '@nestjs/common';
 import { USER_ROLES } from '@miracle/types';
 import type { FastifyReply } from 'fastify';
-import { DatabaseService } from '../database/database.service.js';
-import type { UserInternal } from '../database/collections.js';
+import { PrismaService } from '../database/prisma.service.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { RegisterDto } from './dto/register.dto.js';
 import { SessionsService } from '../sessions/sessions.service.js';
@@ -18,21 +17,21 @@ type AuthSuccessResponse = { status: 'success' };
 @Injectable()
 export class AuthService {
     constructor(
-        private readonly db: DatabaseService,
+        private readonly prisma: PrismaService,
         private readonly tokens: TokensService,
         private readonly sessions: SessionsService,
     ) {}
 
     async login(dto: LoginDto, reply: FastifyReply): Promise<AuthSuccessResponse> {
-        const user = this.getInternalByLogin(dto.login);
+        const user = await this.prisma.user.findFirst({ where: { login: dto.login } });
         if (!user?.id) {
             throw new NotFoundException(`User "${dto.login}" not found`);
         }
+        if (!user.password) {
+            throw new UnauthorizedException('Invalid login or password');
+        }
 
-        const isPasswordValid = await this.tokens.verifyPassword(
-            dto.password,
-            user.password,
-        );
+        const isPasswordValid = await this.tokens.verifyPassword(dto.password, user.password);
         if (!isPasswordValid) {
             throw new UnauthorizedException('Invalid login or password');
         }
@@ -43,15 +42,18 @@ export class AuthService {
     }
 
     async register(dto: RegisterDto): Promise<AuthSuccessResponse> {
-        if (this.getInternalByLogin(dto.login)) {
+        const existing = await this.prisma.user.findFirst({ where: { login: dto.login } });
+        if (existing) {
             throw new ConflictException(`Login "${dto.login}" is already taken`);
         }
 
         const hashedPassword = await this.tokens.hashPassword(dto.password);
-        await this.db.collections.users.create({
-            login: dto.login,
-            password: hashedPassword,
-            role: USER_ROLES.EMPLOYEE,
+        await this.prisma.user.create({
+            data: {
+                login: dto.login,
+                password: hashedPassword,
+                role: USER_ROLES.EMPLOYEE,
+            },
         });
         return { status: 'success' };
     }
@@ -64,7 +66,7 @@ export class AuthService {
             throw new UnauthorizedException('Refresh token is required');
         }
 
-        const session = this.sessions.getByRefreshToken(refreshToken);
+        const session = await this.sessions.getByRefreshToken(refreshToken);
         if (!session) {
             throw new UnauthorizedException('Invalid refresh token');
         }
@@ -85,11 +87,5 @@ export class AuthService {
     logout(reply: FastifyReply): AuthSuccessResponse {
         this.tokens.clearCookies(reply);
         return { status: 'success' };
-    }
-
-    private getInternalByLogin(login: string): UserInternal | undefined {
-        return this.db.collections.users
-            .ref()
-            .find((user) => user.login === login);
     }
 }

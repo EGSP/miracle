@@ -49,13 +49,14 @@ export class AppConfigService {
         return ms(this.refreshTokenLifetime as StringValue);
     }
 
-    get dbDir(): string | undefined {
-        return this.config.get('DB_DIR', { infer: true });
+    get databaseUrl(): string {
+        return this.config.get('DATABASE_URL', { infer: true });
     }
 
-    /** Резолвнутая директория данных: DB_DIR (если задан) либо `<cwd>/data`. */
-    get dataDir(): string {
-        return this.dbDir ? path.resolve(this.dbDir) : path.resolve(process.cwd(), 'data');
+    /** Директория для хранения загружаемых файлов. */
+    get uploadsDir(): string {
+        const dir = this.config.get('UPLOADS_DIR', { infer: true });
+        return dir ? path.resolve(dir) : path.resolve(process.cwd(), 'uploads');
     }
 
     get yandexApiKey(): string | undefined {

@@ -16,3 +16,6 @@ front/dist/
 
 # Data
 */data/uploads/*
+
+# Prisma generated client (пересоздаётся командой prisma:generate)
+back-nest/src/generated/

@@ -1,67 +1,64 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Stored, TechnicalCondition } from '@miracle/types';
-import { DatabaseService } from '../database/database.service.js';
+import { PrismaService } from '../database/prisma.service.js';
 import { ProductTypesService } from '../product-types/product-types.service.js';
 
 @Injectable()
 export class TechnicalConditionsService {
     constructor(
-        private readonly db: DatabaseService,
+        private readonly prisma: PrismaService,
         private readonly productTypes: ProductTypesService,
     ) {}
 
-    getAll(): Stored<TechnicalCondition>[] {
-        return this.db.collections.technicalConditions.list();
+    async getAll(): Promise<Stored<TechnicalCondition>[]> {
+        const rows = await this.prisma.technicalCondition.findMany();
+        return rows as Stored<TechnicalCondition>[];
     }
 
-    getByProductTypeId(productTypeId: string): Stored<TechnicalCondition>[] {
-        return this.getAll().filter((row) => row.productTypeId === productTypeId);
+    async getByProductTypeId(productTypeId: string): Promise<Stored<TechnicalCondition>[]> {
+        const rows = await this.prisma.technicalCondition.findMany({ where: { productTypeId } });
+        return rows as Stored<TechnicalCondition>[];
     }
 
-    getById(id: string): Stored<TechnicalCondition> | undefined {
-        return this.db.collections.technicalConditions.getById(id);
+    async getById(id: string): Promise<Stored<TechnicalCondition> | null> {
+        const row = await this.prisma.technicalCondition.findUnique({ where: { id } });
+        return row as Stored<TechnicalCondition> | null;
     }
 
-    getByIdOrThrow(id: string): Stored<TechnicalCondition> {
-        const row = this.getById(id);
+    async getByIdOrThrow(id: string): Promise<Stored<TechnicalCondition>> {
+        const row = await this.getById(id);
         if (!row) {
             throw new NotFoundException('Технического условия не существует');
         }
         return row;
     }
 
-    create(body: TechnicalCondition): Promise<Stored<TechnicalCondition>> {
-        return this.db.collections.technicalConditions.create(this.preparePayload(body));
+    async create(body: TechnicalCondition): Promise<Stored<TechnicalCondition>> {
+        const payload = await this.preparePayload(body);
+        const row = await this.prisma.technicalCondition.create({ data: payload });
+        return row as Stored<TechnicalCondition>;
     }
 
     /** Полная замена полезной нагрузки TC (без смены id/createdAt). */
     async replace(id: string, body: TechnicalCondition): Promise<Stored<TechnicalCondition>> {
-        const existing = this.getById(id);
-        if (!existing) {
-            throw new NotFoundException('Технического условия не существует');
-        }
-        const updated = await this.db.collections.technicalConditions.update(
-            id,
-            this.preparePayload(body, existing),
-        );
-        if (!updated) {
-            throw new NotFoundException('Технического условия не существует');
-        }
-        return updated;
+        const existing = await this.getByIdOrThrow(id);
+        const payload = await this.preparePayload(body, existing);
+        const updated = await this.prisma.technicalCondition.update({ where: { id }, data: payload });
+        return updated as Stored<TechnicalCondition>;
     }
 
     /** Нормализует тело TC: trim, дефолты массивов, `lastProductTypeName` по правилам productTypeId. */
-    private preparePayload(
+    private async preparePayload(
         body: TechnicalCondition,
         existing?: Stored<TechnicalCondition>,
-    ): TechnicalCondition {
+    ): Promise<Record<string, unknown>> {
         const name = body.name?.trim() || undefined;
         const productTypeId = body.productTypeId?.trim() || undefined;
         const fileId = body.fileId?.trim() || undefined;
 
         let lastProductTypeName: string | undefined;
         if (productTypeId) {
-            const productType = this.productTypes.getById(productTypeId);
+            const productType = await this.productTypes.getById(productTypeId);
             lastProductTypeName =
                 productType?.name ?? body.lastProductTypeName?.trim() ?? existing?.lastProductTypeName;
         } else {

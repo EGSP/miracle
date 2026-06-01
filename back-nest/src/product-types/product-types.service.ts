@@ -1,77 +1,80 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { hasDeletion, type ProductType, type Stored } from '@miracle/types';
-import { DatabaseService } from '../database/database.service.js';
+import type { ProductType, Stored } from '@miracle/types';
+import { PrismaService } from '../database/prisma.service.js';
 import type { CreateProductTypeDto } from './dto/create-product-type.dto.js';
 import type { UpdateProductTypeDto } from './dto/update-product-type.dto.js';
 
 @Injectable()
 export class ProductTypesService {
-    constructor(private readonly db: DatabaseService) {}
+    constructor(private readonly prisma: PrismaService) {}
 
-    create(dto: CreateProductTypeDto): Promise<Stored<ProductType>> {
-        return this.db.collections.productTypes.create({
-            name: dto.name,
-            synonyms: dto.synonyms,
+    async create(dto: CreateProductTypeDto): Promise<Stored<ProductType>> {
+        const row = await this.prisma.productType.create({
+            data: { name: dto.name, synonyms: dto.synonyms },
         });
+        return row as Stored<ProductType>;
     }
 
-    getAll(): Stored<ProductType>[] {
-        return this.db.collections.productTypes.list().filter((row) => !hasDeletion(row));
+    async getAll(): Promise<Stored<ProductType>[]> {
+        const rows = await this.prisma.productType.findMany({
+            where: { deletedAt: null },
+        });
+        return rows as Stored<ProductType>[];
     }
 
-    getById(id: string): Stored<ProductType> | undefined {
-        const row = this.db.collections.productTypes.getById(id);
-        return row && !hasDeletion(row) ? row : undefined;
+    async getById(id: string): Promise<Stored<ProductType> | null> {
+        const row = await this.prisma.productType.findFirst({
+            where: { id, deletedAt: null },
+        });
+        return row as Stored<ProductType> | null;
     }
 
-    getByIdOrThrow(id: string): Stored<ProductType> {
-        const row = this.db.collections.productTypes.getById(id);
-        if (!row || hasDeletion(row)) {
+    async getByIdOrThrow(id: string): Promise<Stored<ProductType>> {
+        const row = await this.getById(id);
+        if (!row) {
             throw new NotFoundException(`Тип продукции ${id} не найден`);
         }
         return row;
     }
 
     async update(id: string, dto: UpdateProductTypeDto): Promise<Stored<ProductType>> {
-        this.getByIdOrThrow(id);
+        await this.getByIdOrThrow(id);
 
-        const patch: Partial<ProductType> = {};
-        if (dto.name !== undefined) {
-            patch.name = dto.name;
-        }
-        if (dto.synonyms !== undefined) {
-            patch.synonyms = dto.synonyms;
-        }
+        const data: Partial<{ name: string; synonyms: string[] }> = {};
+        if (dto.name !== undefined) data.name = dto.name;
+        if (dto.synonyms !== undefined) data.synonyms = dto.synonyms;
 
-        const updated = await this.db.collections.productTypes.update(id, patch);
-        if (!updated) {
-            throw new NotFoundException(`Тип продукции ${id} не найден`);
-        }
-        return updated;
+        const updated = await this.prisma.productType.update({ where: { id }, data });
+        return updated as Stored<ProductType>;
     }
 
     async softDelete(id: string): Promise<void> {
-        this.getByIdOrThrow(id);
-        await this.db.collections.productTypes.softDelete(id, true);
+        await this.getByIdOrThrow(id);
+        await this.prisma.productType.update({
+            where: { id },
+            data: { deletedAt: new Date() },
+        });
     }
 
     private normalizeName(value: string): string {
         return value.trim().replace(/\s+/g, ' ').toLowerCase();
     }
 
-    findByName(name: string): Stored<ProductType> | undefined {
+    async findByName(name: string): Promise<Stored<ProductType> | null> {
         const normalized = this.normalizeName(name);
-        return this.db.collections.productTypes
-            .ref()
-            .find((item) => !hasDeletion(item) && this.normalizeName(item.name) === normalized);
+        const rows = await this.prisma.productType.findMany({ where: { deletedAt: null } });
+        const found = rows.find((item) => this.normalizeName(item.name) === normalized);
+        return (found ?? null) as Stored<ProductType> | null;
     }
 
-    findByNameOrSynonym(name: string): Stored<ProductType> | undefined {
+    async findByNameOrSynonym(name: string): Promise<Stored<ProductType> | null> {
         const normalized = this.normalizeName(name);
-        return this.db.collections.productTypes
-            .ref()
-            .find((item) => !hasDeletion(item)
-                && (this.normalizeName(item.name) === normalized
-                    || item.synonyms.some((s) => this.normalizeName(s) === normalized)));
+        const rows = await this.prisma.productType.findMany({ where: { deletedAt: null } });
+        const found = rows.find((item) => {
+            if (this.normalizeName(item.name) === normalized) return true;
+            const synonyms = item.synonyms as string[];
+            return synonyms.some((s) => this.normalizeName(s) === normalized);
+        });
+        return (found ?? null) as Stored<ProductType> | null;
     }
 }

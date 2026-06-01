@@ -12,7 +12,9 @@ export const envSchema = z.object({
      */
     ACCESS_TOKEN_SECRET: z.string().min(1).default('access_token_secret'),
     REFRESH_TOKEN_SECRET: z.string().min(1).default('refresh_token_secret'),
-    DB_DIR: z.string().optional(),
+    DATABASE_URL: z.string().min(1),
+    // Директория для загружаемых файлов. По умолчанию — <cwd>/uploads.
+    UPLOADS_DIR: z.string().optional(),
     /**
      * Yandex Cloud — опциональны на старте: приложение поднимается без них, но Job, использующие
      * Yandex (OCR/LLM/Vision), упадут с понятной ошибкой при первом обращении (см. YandexService).

@@ -26,7 +26,7 @@ export class TechnicalConditionsController {
     ) {}
 
     @Get()
-    list(@Query('productTypeId') productTypeId?: string): Stored<TechnicalCondition>[] {
+    list(@Query('productTypeId') productTypeId?: string): Promise<Stored<TechnicalCondition>[]> {
         return productTypeId ? this.tc.getByProductTypeId(productTypeId) : this.tc.getAll();
     }
 
@@ -36,7 +36,7 @@ export class TechnicalConditionsController {
     }
 
     @Get(':id')
-    getOne(@Param('id') id: string): Stored<TechnicalCondition> {
+    getOne(@Param('id') id: string): Promise<Stored<TechnicalCondition>> {
         return this.tc.getByIdOrThrow(id);
     }
 
@@ -49,7 +49,7 @@ export class TechnicalConditionsController {
     @Post(':id/extract-details')
     @HttpCode(202)
     async extractDetails(@Param('id') id: string): Promise<{ runId: string }> {
-        const tc = this.tc.getByIdOrThrow(id);
+        const tc = await this.tc.getByIdOrThrow(id);
         if (!tc.fileId) {
             throw new BadRequestException('TC не имеет прикреплённого PDF-файла');
         }

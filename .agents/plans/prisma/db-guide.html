@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Работа с базой данных в miracle — практическое руководство</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f7f8fa; --ink: #19191c; --muted: #6c707e;
+    --accent: #7048e8; --accent2: #3573f0; --warn: #b25f00; --ok: #1a7f37;
+    --line: #ebecf0; --code-bg: #f7f8fa; --cmt: #8c8c8c;
+    --kw: #0033b3; --str: #067d17; --fn: #00627a; --num: #1750eb;
+    --maxw: 990px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.72 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 120px; }
+  header.top {
+    border-bottom: 1px solid var(--line); margin-bottom: 28px;
+    padding: 40px 22px 26px; background: linear-gradient(180deg,#fff,#f7f8fa);
+  }
+  header.top .inner { max-width: var(--maxw); margin: 0 auto; }
+  h1 { font-size: 29px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -.2px; }
+  .sub { color: var(--muted); font-size: 16px; margin: 0; }
+  .badge {
+    display: inline-block; margin-top: 14px; padding: 5px 11px; border-radius: 999px;
+    background: #f1f2f4; border: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  h2 {
+    font-size: 22px; margin: 52px 0 14px; padding-top: 14px; letter-spacing: -.2px;
+    border-top: 1px solid var(--line);
+  }
+  h2 .num { color: var(--accent); margin-right: 10px; }
+  h3 { font-size: 17px; margin: 30px 0 10px; color: #2d2f38; font-weight: 600; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ul, ol { margin: 10px 0; padding-left: 24px; }
+  li { margin: 5px 0; }
+  code.inl {
+    background: #f1f2f4; border: 1px solid #e3e5e8; border-radius: 5px;
+    padding: 1px 6px; font-family: "JetBrains Mono","SF Mono",Consolas,monospace;
+    font-size: .87em; color: #0a3069;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 15px 18px; overflow-x: auto; margin: 14px 0;
+    font-family: "JetBrains Mono","SF Mono",Consolas,monospace;
+    font-size: 13.5px; line-height: 1.65; color: var(--ink);
+    position: relative;
+  }
+  pre .label {
+    position: absolute; top: 8px; right: 12px;
+    font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px;
+  }
+  pre .c { color: var(--cmt); font-style: italic; }
+  pre .k { color: var(--kw); }
+  pre .s { color: var(--str); }
+  pre .f { color: var(--fn); }
+  pre .n { color: var(--num); }
+  pre .t { color: #7048e8; }   /* type / interface */
+  pre .h { color: #b25f00; }   /* highlight / важное */
+  .lead { font-size: 18px; color: #383a42; }
+  .why, .note, .warnbox, .okbox {
+    border-radius: 10px; padding: 14px 16px 14px 18px; margin: 16px 0;
+    border: 1px solid var(--line);
+  }
+  .why   { border-left: 3px solid var(--accent);  background: #f4f1fd; }
+  .note  { border-left: 3px solid var(--accent2); background: #eef3fe; }
+  .warnbox { border-left: 3px solid var(--warn);  background: #fff7ea; }
+  .okbox { border-left: 3px solid var(--ok);      background: #f0fdf4; }
+  .why .t,.note .t,.warnbox .t,.okbox .t {
+    display: block; font-weight: 600; margin-bottom: 4px; font-size: 13.5px;
+    letter-spacing: .3px; text-transform: uppercase;
+  }
+  .why .t   { color: var(--accent); }
+  .note .t  { color: var(--accent2); }
+  .warnbox .t { color: var(--warn); }
+  .okbox .t { color: var(--ok); }
+  nav.toc {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; margin: 6px 0 10px;
+  }
+  nav.toc h2 { border: 0; margin: 0 0 10px; padding: 0; font-size: 15px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc .part { list-style: none; margin: 12px 0 4px -22px; font-weight: 600; color: #383a42; font-size: 15px; }
+  table.cmp { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  table.cmp th, table.cmp td {
+    border: 1px solid var(--line); padding: 9px 12px;
+    text-align: left; vertical-align: top;
+  }
+  table.cmp th { background: #f2f3f5; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .col h4 { margin: 0 0 6px; font-size: 13px; letter-spacing: .4px;
+    text-transform: uppercase; color: var(--muted); }
+  .before h4 { color: #c9362c; } .after h4 { color: var(--ok); }
+  hr.soft { border: 0; border-top: 1px dashed var(--line); margin: 24px 0; }
+  .schema-box {
+    background: #0d1117; color: #e6edf3; border-radius: 10px;
+    padding: 16px 18px; font-family: "JetBrains Mono","SF Mono",Consolas,monospace;
+    font-size: 13px; line-height: 1.65; overflow-x: auto; margin: 14px 0;
+  }
+  .schema-box .sk { color: #ff7b72; }
+  .schema-box .sn { color: #79c0ff; }
+  .schema-box .sv { color: #a5d6ff; }
+  .schema-box .sc { color: #8b949e; font-style: italic; }
+  .schema-box .sd { color: #d2a8ff; }
+  footer { color: var(--muted); font-size: 14px; margin-top: 60px;
+    border-top: 1px solid var(--line); padding-top: 18px; }
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 5px;
+    font-size: 12px; font-weight: 600; letter-spacing: .2px;
+    vertical-align: middle; margin-left: 6px;
+  }
+  .tag-prisma { background: #f0eeff; color: var(--accent); border: 1px solid #d4c9ff; }
+  .tag-project { background: #eef3fe; color: var(--accent2); border: 1px solid #c5d8fc; }
+  .tag-warn { background: #fff7ea; color: var(--warn); border: 1px solid #ffd591; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <h1>Работа с базой данных в miracle</h1>
+    <p class="sub">Практическое руководство: как устроен слой данных после миграции на Prisma + PostgreSQL.
+    Модели, запросы, фильтры, Json-поля, паттерны — все примеры из реального кода проекта.</p>
+    <span class="badge">Prisma 7 · PostgreSQL 16 · NestJS + Fastify · ESM</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <h2>Содержание</h2>
+  <ol>
+    <li class="part">Часть I. Архитектура слоя данных</li>
+    <li><a href="#s1">1. Как устроен PrismaService</a></li>
+    <li><a href="#s2">2. Модели: схема и имена таблиц</a></li>
+    <li><a href="#s3">3. Граница типов: Prisma → @miracle/types</a></li>
+    <li class="part">Часть II. Основные операции</li>
+    <li><a href="#s4">4. Чтение: findUnique, findFirst, findMany</a></li>
+    <li><a href="#s5">5. Создание записи</a></li>
+    <li><a href="#s6">6. Обновление записи</a></li>
+    <li><a href="#s7">7. Удаление: мягкое и жёсткое</a></li>
+    <li class="part">Часть III. Фильтрация и сортировка</li>
+    <li><a href="#s8">8. Фильтрация: where</a></li>
+    <li><a href="#s9">9. Сортировка: orderBy</a></li>
+    <li><a href="#s10">10. Пагинация: skip и take</a></li>
+    <li class="part">Часть IV. Json-поля</li>
+    <li><a href="#s11">11. Чтение Json-полей</a></li>
+    <li><a href="#s12">12. Запись и обновление Json-полей</a></li>
+    <li><a href="#s13">13. Фильтрация по содержимому Json</a></li>
+    <li class="part">Часть V. Паттерны проекта</li>
+    <li><a href="#s14">14. Паттерн getOrThrow</a></li>
+    <li><a href="#s15">15. Паттерн мягкого удаления</a></li>
+    <li><a href="#s16">16. Паттерн toPublic</a></li>
+    <li><a href="#s17">17. Типичные ошибки и как их избежать</a></li>
+  </ol>
+</nav>
+
+<p class="lead">После миграции с lowdb на Prisma меняется не только технология — меняется способ мышления о данных. Коллекции в памяти заменяются таблицами в PostgreSQL, синхронный API заменяется асинхронным, а вместо `db.collections.X.method()` теперь `prisma.x.prismaMethod()`. Это руководство показывает, как работать с новым слоем данных в контексте именно этого проекта.</p>
+
+<!-- ═══════════════════════════════════════════════════════════ ЧАСТЬ I -->
+<h2 id="s1"><span class="num">1</span>Как устроен PrismaService</h2>
+
+<p><code class="inl">PrismaService</code> — единственная точка входа в базу данных. Он живёт в <code class="inl">src/database/prisma.service.ts</code>, зарегистрирован как <code class="inl">@Global()</code> провайдер и доступен в любом модуле без дополнительных импортов.</p>
+
+<pre><span class="label">prisma.service.ts</span><span class="k">import</span> { Injectable, <span class="k">type</span> <span class="t">OnModuleInit</span>, <span class="k">type</span> <span class="t">OnModuleDestroy</span> } <span class="k">from</span> <span class="s">'@nestjs/common'</span>;
+<span class="k">import</span> { PrismaPg } <span class="k">from</span> <span class="s">'@prisma/adapter-pg'</span>;
+<span class="k">import</span> pg <span class="k">from</span> <span class="s">'pg'</span>;
+<span class="k">import</span> { PrismaClient } <span class="k">from</span> <span class="s">'../generated/prisma/client.js'</span>;
+<span class="k">import</span> { AppConfigService } <span class="k">from</span> <span class="s">'../config/app-config.service.js'</span>;
+
+@Injectable()
+<span class="k">export class</span> <span class="t">PrismaService</span> <span class="k">extends</span> PrismaClient
+  <span class="k">implements</span> <span class="t">OnModuleInit</span>, <span class="t">OnModuleDestroy</span> {
+
+  constructor(config: <span class="t">AppConfigService</span>) {
+    <span class="c">// Prisma 7 требует driver adapter — подключаемся через пул соединений pg</span>
+    <span class="k">const</span> pool = <span class="k">new</span> pg.<span class="f">Pool</span>({ connectionString: config.databaseUrl });
+    <span class="k">const</span> adapter = <span class="k">new</span> <span class="f">PrismaPg</span>(pool);
+    <span class="k">super</span>({ adapter });
+  }
+
+  <span class="k">async</span> <span class="f">onModuleInit</span>(): <span class="t">Promise&lt;void&gt;</span> { <span class="k">await</span> <span class="k">this</span>.$connect(); }
+  <span class="k">async</span> <span class="f">onModuleDestroy</span>(): <span class="t">Promise&lt;void&gt;</span> { <span class="k">await</span> <span class="k">this</span>.$disconnect(); }
+}</pre>
+
+<p>В сервисах домена инжектируется через конструктор:</p>
+
+<pre><span class="k">constructor</span>(<span class="k">private readonly</span> prisma: <span class="t">PrismaService</span>) {}</pre>
+
+<p>После инъекции у вас есть доступ ко всем таблицам через свойства клиента: <code class="inl">this.prisma.user</code>, <code class="inl">this.prisma.order</code>, <code class="inl">this.prisma.fileContent</code> и т.д. Имена свойств — camelCase от имени модели в схеме.</p>
+
+<div class="note"><span class="t">Почему extends PrismaClient, а не просто обёртка</span>Наследование от <code class="inl">PrismaClient</code> даёт всю типизацию клиента напрямую на <code class="inl">PrismaService</code>: IDE видит все модели и методы, TypeScript проверяет типы запросов и результатов. Если бы это была просто обёртка с полем <code class="inl">client: PrismaClient</code>, пришлось бы обращаться через <code class="inl">this.prisma.client.user</code>.</div>
+
+<h2 id="s2"><span class="num">2</span>Модели: схема и имена таблиц</h2>
+
+<p>Схема определена в <code class="inl">back-nest/prisma/schema.prisma</code>. Имя модели — Pascal Case (как в TypeScript). Имя таблицы в Postgres задаётся директивой <code class="inl">@@map</code> — snake_case, чтобы соответствовать SQL-соглашениям.</p>
+
+<div class="schema-box"><span class="sc">// Модель → таблица: PrismaClient-свойство = camelCase имени модели</span>
+<span class="sk">model</span> <span class="sn">User</span>          <span class="sc">→</span> <span class="sv">prisma.user</span>          <span class="sc">→</span> таблица "users"</span>
+<span class="sk">model</span> <span class="sn">Session</span>       <span class="sc">→</span> <span class="sv">prisma.session</span>       <span class="sc">→</span> таблица "sessions"</span>
+<span class="sk">model</span> <span class="sn">ProductType</span>   <span class="sc">→</span> <span class="sv">prisma.productType</span>   <span class="sc">→</span> таблица "product_types"</span>
+<span class="sk">model</span> <span class="sn">File</span>          <span class="sc">→</span> <span class="sv">prisma.file</span>          <span class="sc">→</span> таблица "files"</span>
+<span class="sk">model</span> <span class="sn">FileContent</span>   <span class="sc">→</span> <span class="sv">prisma.fileContent</span>   <span class="sc">→</span> таблица "file_contents"</span>
+<span class="sk">model</span> <span class="sn">Order</span>         <span class="sc">→</span> <span class="sv">prisma.order</span>         <span class="sc">→</span> таблица "orders"</span>
+<span class="sk">model</span> <span class="sn">TechnicalCondition</span> <span class="sc">→</span> <span class="sv">prisma.technicalCondition</span> <span class="sc">→</span> "technical_conditions"</span>
+<span class="sk">model</span> <span class="sn">JobRun</span>        <span class="sc">→</span> <span class="sv">prisma.jobRun</span>        <span class="sc">→</span> таблица "job_runs"</span></div>
+
+<p>Каждая модель имеет стандартный набор полей. Поля <code class="inl">createdAt</code>/<code class="inl">updatedAt</code> проставляются Prisma автоматически — вручную их передавать не нужно.</p>
+
+<div class="schema-box"><span class="sc">// Стандартные поля у большинства моделей</span>
+id        String    <span class="sd">@id</span> <span class="sd">@default</span>(uuid())  <span class="sc">// Prisma генерирует uuid при create</span>
+createdAt DateTime  <span class="sd">@default</span>(now())      <span class="sc">// ставится один раз при создании</span>
+updatedAt DateTime  <span class="sd">@updatedAt</span>           <span class="sc">// Prisma обновляет при каждом update</span>
+deletedAt DateTime?                         <span class="sc">// null = активна, дата = мягко удалена</span></div>
+
+<h2 id="s3"><span class="num">3</span>Граница типов: Prisma → @miracle/types</h2>
+
+<p>Это самый важный раздел для понимания архитектуры. Prisma генерирует собственные TypeScript-типы для каждой модели. Но возвращать эти типы из контроллера напрямую <strong>нельзя</strong> — из-за трёх причин:</p>
+
+<ul>
+  <li>генератор клиента на фронте не знает импортов из <code class="inl">../generated/prisma</code> (он реэкспортирует только пакеты workspace);</li>
+  <li>Prisma-тип содержит <code class="inl">password</code> и другие backend-internal поля;</li>
+  <li>поля <code class="inl">Json</code> приходят как <code class="inl">JsonValue</code> (по сути <code class="inl">unknown</code>), а не как конкретный доменный тип.</li>
+</ul>
+
+<p>Поэтому сервис работает с Prisma-типами внутри и возвращает типы из <code class="inl">@miracle/types</code> наружу.</p>
+
+<pre><span class="c">// Внутри сервиса: Prisma-тип</span>
+<span class="k">const</span> row = <span class="k">await</span> <span class="k">this</span>.prisma.user.<span class="f">findUnique</span>({ where: { id } });
+<span class="c">// row: { id: string, login: string, role: UserRole, password: string|null,
+//        createdAt: Date, updatedAt: Date, deletedAt: Date|null }</span>
+
+<span class="c">// На границе: маппер убирает секретные поля → Stored&lt;User&gt;</span>
+<span class="k">private</span> <span class="f">toPublic</span>(row: { id: string; login: string; role: string;
+    password: string | <span class="k">null</span>; createdAt: <span class="t">Date</span>; updatedAt: <span class="t">Date</span>;
+    deletedAt: <span class="t">Date</span> | <span class="k">null</span> }): <span class="t">Stored</span>&lt;<span class="t">User</span>&gt; {
+  <span class="k">const</span> { password: _password, ...rest } = row; <span class="c">// убираем поле</span>
+  <span class="k">return</span> rest <span class="k">as</span> <span class="t">Stored</span>&lt;<span class="t">User</span>&gt;;
+}
+
+<span class="c">// Контроллер возвращает Stored&lt;User&gt; с явной аннотацией (важно для кодогена)</span>
+<span class="f">getMe</span>(@<span class="t">CurrentUser</span>() user: <span class="t">AuthenticatedUser</span>): <span class="t">Promise</span>&lt;<span class="t">Stored</span>&lt;<span class="t">User</span>&gt;&gt; {
+  <span class="k">return</span> <span class="k">this</span>.users.<span class="f">getPublicById</span>(user.id);
+}</pre>
+
+<div class="why"><span class="t">Почему Date | string в DbEntity</span>На стороне Prisma поле <code class="inl">createdAt</code> — объект <code class="inl">Date</code>. На стороне фронта после HTTP-сериализации — ISO-строка. Тип <code class="inl">Date | string</code> в <code class="inl">DbEntity</code> покрывает оба случая честно. Фронт нормализует значение через <code class="inl">new Date(value)</code>, который принимает и то, и другое.</div>
+
+<!-- ═══════════════════════════════════════════════════════════ ЧАСТЬ II -->
+<h2 id="s4"><span class="num">4</span>Чтение: findUnique, findFirst, findMany</h2>
+
+<p>Prisma предоставляет три метода чтения. Разница между ними принципиальная.</p>
+
+<table class="cmp">
+  <tr>
+    <th>Метод</th><th>Когда использовать</th><th>Возвращает</th>
+  </tr>
+  <tr>
+    <td><code class="inl">findUnique</code></td>
+    <td>Поиск по <code class="inl">@id</code> или <code class="inl">@unique</code> полю. Гарантирует уникальность на уровне базы.</td>
+    <td><code class="inl">T | null</code></td>
+  </tr>
+  <tr>
+    <td><code class="inl">findFirst</code></td>
+    <td>Поиск по произвольному условию. Возвращает первую подходящую запись.</td>
+    <td><code class="inl">T | null</code></td>
+  </tr>
+  <tr>
+    <td><code class="inl">findMany</code></td>
+    <td>Список записей. Всегда возвращает массив, даже если результатов нет.</td>
+    <td><code class="inl">T[]</code></td>
+  </tr>
+</table>
+
+<pre><span class="label">users.service.ts</span><span class="c">// findUnique — по первичному ключу (id). Если не найдено → null.</span>
+<span class="k">const</span> user = <span class="k">await</span> <span class="k">this</span>.prisma.user.<span class="f">findUnique</span>({ where: { id } });
+
+<span class="c">// findFirst — по произвольному полю (login не @unique в нашей схеме)</span>
+<span class="k">const</span> existing = <span class="k">await</span> <span class="k">this</span>.prisma.user.<span class="f">findFirst</span>({ where: { login: dto.login } });
+
+<span class="c">// findMany — список всех пользователей (без where → все записи)</span>
+<span class="k">const</span> users = <span class="k">await</span> <span class="k">this</span>.prisma.user.<span class="f">findMany</span>();</pre>
+
+<div class="warnbox"><span class="t">findUnique работает только с уникальными полями</span>Если передать в <code class="inl">where</code> поле, которое не помечено как <code class="inl">@id</code> или <code class="inl">@unique</code> в схеме — TypeScript выдаст ошибку компиляции. Для поиска по обычному полю используйте <code class="inl">findFirst</code>.</div>
+
+<h2 id="s5"><span class="num">5</span>Создание записи</h2>
+
+<p>Метод <code class="inl">create</code> принимает объект <code class="inl">data</code>. Поля <code class="inl">id</code>, <code class="inl">createdAt</code>, <code class="inl">updatedAt</code> не нужны — они задаются Prisma через директивы схемы. Исключение: <code class="inl">id</code> файла передаётся явно, потому что используется как имя файла на диске.</p>
+
+<pre><span class="label">auth.service.ts</span><span class="c">// Обычное создание — id, createdAt, updatedAt Prisma проставляет сама</span>
+<span class="k">await</span> <span class="k">this</span>.prisma.user.<span class="f">create</span>({
+  data: {
+    login: dto.login,
+    password: hashedPassword,
+    role: <span class="s">'EMPLOYEE'</span>,           <span class="c">// значение enum как строка</span>
+  },
+});
+
+<span class="c">// Создание с явным id (files.service.ts) — нужно для имени файла на диске</span>
+<span class="k">const</span> id = <span class="f">randomUUID</span>();
+<span class="k">const</span> row = <span class="k">await</span> <span class="k">this</span>.prisma.file.<span class="f">create</span>({
+  data: { id, name, extension, bytes, authorId },   <span class="c">// id передаём явно</span>
+});
+
+<span class="c">// Создание с nullable Json-полем</span>
+<span class="k">const</span> row = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">create</span>({
+  data: { authorId, fileId: fileId ?? <span class="k">null</span>, details: <span class="k">undefined</span> },
+  <span class="c">// undefined → поле не передаётся → Prisma пишет NULL (поле nullable)</span>
+});</pre>
+
+<div class="note"><span class="t">undefined vs null в data</span>Prisma трактует эти значения по-разному для nullable полей: <code class="inl">null</code> — явно записать NULL в базу; <code class="inl">undefined</code> — пропустить поле (для <code class="inl">create</code> используется default, для <code class="inl">update</code> поле не трогается). Это особенно важно для Json-полей.</div>
+
+<h2 id="s6"><span class="num">6</span>Обновление записи</h2>
+
+<p>Метод <code class="inl">update</code> требует уникальный идентификатор в <code class="inl">where</code> и обновляемые поля в <code class="inl">data</code>. Обновляются только переданные поля — остальные не трогаются (неглубокое слияние, в отличие от прежнего <code class="inl">ts-deepmerge</code> в lowdb).</p>
+
+<pre><span class="label">product-types.service.ts</span><span class="c">// Обновление конкретных полей</span>
+<span class="k">const</span> updated = <span class="k">await</span> <span class="k">this</span>.prisma.productType.<span class="f">update</span>({
+  where: { id },
+  data: { name: dto.name },   <span class="c">// только name, synonyms не трогается</span>
+});
+
+<span class="c">// Условное включение полей — антипаттерн через spread</span>
+<span class="k">const</span> data: <span class="t">Record</span>&lt;<span class="t">string</span>, <span class="t">unknown</span>&gt; = {};
+<span class="k">if</span> (dto.name !== <span class="k">undefined</span>) data[<span class="s">'name'</span>] = dto.name;
+<span class="k">if</span> (dto.synonyms !== <span class="k">undefined</span>) data[<span class="s">'synonyms'</span>] = dto.synonyms;
+
+<span class="k">await</span> <span class="k">this</span>.prisma.productType.<span class="f">update</span>({ where: { id }, data });</pre>
+
+<div class="warnbox"><span class="t">Spread-условия ломают типизацию Prisma</span>Паттерн <code class="inl">data: { ...(condition && { field: value }) }</code> вызывает ошибку компиляции в строго-типизированном Prisma input. Правило: <strong>либо явно перечислять поля с проверкой на undefined</strong>, либо собирать объект <code class="inl">Record&lt;string, unknown&gt;</code> и приводить к типу (как в <code class="inl">orders.service.ts</code>). Первый способ предпочтительнее когда полей мало.</div>
+
+<h2 id="s7"><span class="num">7</span>Удаление: мягкое и жёсткое</h2>
+
+<p>В проекте используются оба вида удаления — в зависимости от модели.</p>
+
+<h3>Мягкое удаление (soft delete)</h3>
+<p>Запись остаётся в базе, но помечается датой. Используется для <code class="inl">ProductType</code>, <code class="inl">FileContent</code>, <code class="inl">File</code> — там, где нужна история или восстановление. Реализуется как обычный <code class="inl">update</code>:</p>
+
+<pre><span class="label">product-types.service.ts</span><span class="c">// Пометить удалённым</span>
+<span class="k">await</span> <span class="k">this</span>.prisma.productType.<span class="f">update</span>({
+  where: { id },
+  data: { deletedAt: <span class="k">new</span> <span class="f">Date</span>() },
+});
+
+<span class="c">// Снять пометку (восстановить)</span>
+<span class="k">await</span> <span class="k">this</span>.prisma.fileContent.<span class="f">update</span>({
+  where: { id: contentId },
+  data: { deletedAt: <span class="k">null</span> },
+});
+
+<span class="c">// При запросе — всегда фильтруем активные записи</span>
+<span class="k">const</span> rows = <span class="k">await</span> <span class="k">this</span>.prisma.productType.<span class="f">findMany</span>({
+  where: { deletedAt: <span class="k">null</span> },   <span class="c">// null = не удалено</span>
+});</pre>
+
+<h3>Жёсткое удаление (hard delete)</h3>
+<p>Запись физически удаляется из базы. Используется для <code class="inl">Session</code>, <code class="inl">JobRun</code>:</p>
+
+<pre><span class="label">files-content.service.ts</span><span class="c">// Жёсткое удаление по id</span>
+<span class="k">async</span> <span class="f">delete</span>(id: <span class="t">string</span>): <span class="t">Promise</span>&lt;<span class="t">boolean</span>&gt; {
+  <span class="k">try</span> {
+    <span class="k">await</span> <span class="k">this</span>.prisma.fileContent.<span class="f">delete</span>({ where: { id } });
+    <span class="k">return true</span>;
+  } <span class="k">catch</span> {
+    <span class="k">return false</span>;   <span class="c">// запись не найдена — Prisma бросает ошибку</span>
+  }
+}
+
+<span class="c">// Удаление нескольких записей по условию (sessions.service.ts)</span>
+<span class="k">await</span> <span class="k">this</span>.prisma.session.<span class="f">deleteMany</span>({
+  where: { userId },   <span class="c">// удалить все сессии пользователя</span>
+});</pre>
+
+<!-- ═══════════════════════════════════════════════════════════ ЧАСТЬ III -->
+<h2 id="s8"><span class="num">8</span>Фильтрация: where</h2>
+
+<p>Поле <code class="inl">where</code> принимает объект условий. Все перечисленные условия объединяются логическим AND.</p>
+
+<pre><span class="label">orders.service.ts</span><span class="c">// Фильтр по нескольким полям (AND неявный)</span>
+<span class="k">const</span> rows = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">findMany</span>({
+  where: {
+    authorId: query.authorId,   <span class="c">// только заказы этого пользователя</span>
+    fileId: query.fileId,       <span class="c">// и с конкретным файлом</span>
+  },
+});
+
+<span class="c">// Фильтр по enum-значению</span>
+<span class="k">const</span> active = <span class="k">await</span> <span class="k">this</span>.prisma.jobRun.<span class="f">findFirst</span>({
+  where: {
+    job: <span class="s">'order-analyse'</span>,
+    status: <span class="s">'running'</span>,         <span class="c">// строка, совпадающая с enum-значением</span>
+  },
+});
+
+<span class="c">// Фильтр "в списке" (аналог SQL IN)</span>
+<span class="k">const</span> rows = <span class="k">await</span> <span class="k">this</span>.prisma.jobRun.<span class="f">findMany</span>({
+  where: { status: { <span class="k">in</span>: [<span class="s">'running'</span>, <span class="s">'queued'</span>] } },
+});
+
+<span class="c">// Активные записи: deletedAt IS NULL</span>
+<span class="k">const</span> active = <span class="k">await</span> <span class="k">this</span>.prisma.productType.<span class="f">findMany</span>({
+  where: { deletedAt: <span class="k">null</span> },
+});
+
+<span class="c">// Динамический фильтр: добавляем условия по мере необходимости</span>
+<span class="k">const</span> where: <span class="t">Record</span>&lt;<span class="t">string</span>, <span class="t">unknown</span>&gt; = {};
+<span class="k">if</span> (query.id !== <span class="k">undefined</span>) where[<span class="s">'id'</span>] = query.id;
+<span class="k">if</span> (query.authorId !== <span class="k">undefined</span>) where[<span class="s">'authorId'</span>] = query.authorId;
+<span class="k">const</span> rows = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">findMany</span>({ where });</pre>
+
+<h3>Операторы сравнения</h3>
+<pre><span class="c">// Числовые сравнения</span>
+where: { bytes: { gte: <span class="n">1024</span> } }          <span class="c">// >= 1024 байт</span>
+where: { bytes: { gt: <span class="n">0</span>, lt: <span class="n">1048576</span> } }  <span class="c">// 0 < bytes < 1 MB</span>
+
+<span class="c">// Строковые операторы</span>
+where: { name: { contains: <span class="s">'НЭМС'</span> } }             <span class="c">// LIKE '%НЭМС%'</span>
+where: { name: { startsWith: <span class="s">'ГОС'</span> } }            <span class="c">// LIKE 'ГОС%'</span>
+where: { name: { contains: <span class="s">'нэмс'</span>, mode: <span class="s">'insensitive'</span> } }  <span class="c">// без учёта регистра</span>
+
+<span class="c">// Инвертирование (NOT)</span>
+where: { deletedAt: { not: <span class="k">null</span> } }    <span class="c">// только удалённые</span>
+where: { status: { not: <span class="s">'cancelled'</span> } }  <span class="c">// всё кроме cancelled</span>
+
+<span class="c">// Явный AND / OR / NOT</span>
+where: {
+  OR: [{ authorId: userId }, { fileId: someFileId }],
+}</pre>
+
+<h2 id="s9"><span class="num">9</span>Сортировка: orderBy</h2>
+
+<pre><span class="label">files-content.service.ts</span><span class="c">// По одному полю — от новых к старым</span>
+<span class="k">const</span> rows = <span class="k">await</span> <span class="k">this</span>.prisma.fileContent.<span class="f">findMany</span>({
+  where: { fileId, deletedAt: <span class="k">null</span> },
+  orderBy: { updatedAt: <span class="s">'desc'</span> },
+});
+
+<span class="c">// Динамическая сортировка (workers.service.ts)</span>
+<span class="k">const</span> rows = <span class="k">await</span> <span class="k">this</span>.prisma.jobRun.<span class="f">findMany</span>({
+  where: query.status ? { status: query.status } : <span class="k">undefined</span>,
+  orderBy: query.sort === <span class="s">'asc'</span> || query.sort === <span class="s">'desc'</span>
+    ? { createdAt: query.sort }
+    : <span class="k">undefined</span>,
+});
+
+<span class="c">// По нескольким полям (сначала по статусу, потом по дате)</span>
+orderBy: [
+  { status: <span class="s">'asc'</span> },
+  { createdAt: <span class="s">'desc'</span> },
+]</pre>
+
+<div class="note"><span class="t">Сортировка вместо .sort()</span>Старый код lowdb сортировал массивы в памяти: <code class="inl">.sort((a, b) =&gt; b.createdAt - a.createdAt)</code>. С Prisma сортировку выполняет PostgreSQL через <code class="inl">orderBy</code> — это эффективнее и корректнее для больших таблиц.</div>
+
+<h2 id="s10"><span class="num">10</span>Пагинация: skip и take</h2>
+
+<pre><span class="c">// Первые 20 записей (первая страница)</span>
+<span class="k">const</span> page1 = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">findMany</span>({
+  orderBy: { createdAt: <span class="s">'desc'</span> },
+  take: <span class="n">20</span>,
+});
+
+<span class="c">// Вторая страница (пропустить первые 20)</span>
+<span class="k">const</span> page2 = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">findMany</span>({
+  orderBy: { createdAt: <span class="s">'desc'</span> },
+  skip: <span class="n">20</span>,
+  take: <span class="n">20</span>,
+});
+
+<span class="c">// Только одна запись — findFirst + orderBy эквивалентно findMany + take: 1</span>
+<span class="k">const</span> latest = <span class="k">await</span> <span class="k">this</span>.prisma.session.<span class="f">findFirst</span>({
+  where: { refreshToken },
+  orderBy: { createdAt: <span class="s">'desc'</span> },
+});</pre>
+
+<!-- ═══════════════════════════════════════════════════════════ ЧАСТЬ IV -->
+<h2 id="s11"><span class="num">11</span>Чтение Json-полей</h2>
+
+<p>В проекте семь <code class="inl">Json</code>-колонок: <code class="inl">Order.details</code>, <code class="inl">FileContent.content</code>/<code class="inl">meta</code>, <code class="inl">File.settings</code>, <code class="inl">TechnicalCondition.rules</code>/<code class="inl">designationSlots</code>/<code class="inl">displayTemplates</code>, <code class="inl">JobRun.input</code>/<code class="inl">output</code>/<code class="inl">memo</code>/<code class="inl">steps</code>, <code class="inl">ProductType.synonyms</code>.</p>
+
+<p>Prisma возвращает <code class="inl">Json</code>-поле как <code class="inl">JsonValue</code> (на практике это <code class="inl">unknown</code>). Чтобы получить конкретный тип, нужно приведение:</p>
+
+<pre><span class="label">orders.service.ts</span><span class="c">// Читаем order.details из базы — тип JsonValue (unknown)</span>
+<span class="k">const</span> order = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">findUnique</span>({ where: { id } });
+
+<span class="c">// Приводим к доменному типу на границе чтения — не пересборка, только cast</span>
+<span class="k">const</span> details = order?.details <span class="k">as</span> <span class="t">OrderDetails</span> | <span class="k">null</span>;
+
+<span class="c">// Дальше details типизирован и можно обращаться к полям</span>
+<span class="k">const</span> hasRequirements = (details?.requirements ?? []).<span class="f">length</span> &gt; <span class="n">0</span>;</pre>
+
+<pre><span class="label">product-types.service.ts</span><span class="c">// synonyms хранится как jsonb массив строк</span>
+<span class="k">const</span> found = rows.<span class="f">find</span>((item) =&gt; {
+  <span class="k">const</span> synonyms = item.synonyms <span class="k">as</span> <span class="t">string</span>[];    <span class="c">// cast массива</span>
+  <span class="k">return</span> synonyms.<span class="f">some</span>((s) =&gt; <span class="k">this</span>.<span class="f">normalizeName</span>(s) === normalized);
+});</pre>
+
+<pre><span class="label">job-runtime.service.ts</span><span class="c">// Вложенные прогоны (рекурсивная структура)</span>
+<span class="k">const</span> run = row <span class="k">as</span> <span class="t">unknown</span> <span class="k">as</span> <span class="t">JobRun</span>;
+<span class="c">// Двойной cast через unknown — когда типы слишком далеки для прямого приведения</span>
+
+<span class="c">// input хранится как Json — приводим к ожидаемой форме</span>
+<span class="k">const</span> input = active?.input <span class="k">as</span> { orderId?: <span class="t">string</span> } | <span class="k">null</span>;
+<span class="k">if</span> (input?.orderId === id) { ... }</pre>
+
+<h2 id="s12"><span class="num">12</span>Запись и обновление Json-полей</h2>
+
+<p>При записи Prisma принимает любое JSON-сериализуемое значение. TypeScript требует явного приведения, поскольку тип <code class="inl">JsonValue</code> шире, чем конкретный объект:</p>
+
+<pre><span class="label">files-content.service.ts</span><span class="c">// При обновлении — явный cast к object (Prisma принимает object для Json)</span>
+<span class="k">await</span> <span class="k">this</span>.prisma.fileContent.<span class="f">update</span>({
+  where: { id: data.id },
+  data: {
+    content: data.content <span class="k">as</span> <span class="t">object</span>[] | <span class="k">undefined</span>,   <span class="c">// Content[]</span>
+    meta: data.meta <span class="k">as</span> <span class="t">object</span> | <span class="k">undefined</span>,             <span class="c">// FileMeta</span>
+  },
+});</pre>
+
+<pre><span class="label">job-runtime.service.ts</span><span class="c">// Сохранение рекурсивного дерева прогона</span>
+<span class="k">await</span> <span class="k">this</span>.prisma.jobRun.<span class="f">update</span>({
+  where: { id: root.id },
+  data: {
+    status: root.status <span class="k">as</span> <span class="t">JobStatus</span>,
+    input: root.input !== <span class="k">undefined</span> ? (root.input <span class="k">as</span> <span class="t">object</span>) : <span class="k">undefined</span>,
+    memo: root.memo !== <span class="k">undefined</span> ? (root.memo <span class="k">as</span> <span class="t">object</span>) : <span class="k">undefined</span>,
+    steps: root.steps !== <span class="k">undefined</span> ? (root.steps <span class="k">as</span> <span class="t">object</span>) : <span class="k">undefined</span>,
+  },
+});</pre>
+
+<div class="warnbox"><span class="t">undefined vs null для Json (ещё раз — это важно)</span>Для nullable Json-поля: <code class="inl">undefined</code> в поле <code class="inl">data</code> означает «не трогать поле» (для <code class="inl">update</code>) или «использовать default» (для <code class="inl">create</code>). <code class="inl">null</code> означает «явно записать NULL в базу». Паттерн <code class="inl">value !== undefined ? (value as object) : undefined</code> — стандартный способ условно обновить Json-поле.</div>
+
+<h2 id="s13"><span class="num">13</span>Фильтрация по содержимому Json</h2>
+
+<p>PostgreSQL поддерживает запросы внутрь <code class="inl">jsonb</code>-полей. Prisma открывает это через оператор <code class="inl">path</code>:</p>
+
+<pre><span class="label">files.service.ts</span><span class="c">// Найти файлы с settings.isTechnicalCondition === true</span>
+<span class="k">const</span> rows = <span class="k">await</span> <span class="k">this</span>.prisma.file.<span class="f">findMany</span>({
+  where: {
+    settings: {
+      path: [<span class="s">'isTechnicalCondition'</span>],
+      equals: <span class="k">true</span>,
+    },
+  },
+});</pre>
+
+<div class="note"><span class="t">Когда Json-запросы не нужны</span>Большинство фильтраций по Json-полям в проекте делается в памяти (<code class="inl">.find()</code> после <code class="inl">findMany()</code>) — это проще и достаточно для нынешних объёмов. Json-запросы Prisma стоит использовать только когда нужно фильтровать миллионы записей или строить индекс по Json-полю. Для поиска синонимов в нескольких сотнях типов продукции in-memory поиск оптимален.</div>
+
+<!-- ═══════════════════════════════════════════════════════════ ЧАСТЬ V -->
+<h2 id="s14"><span class="num">14</span>Паттерн getOrThrow</h2>
+
+<p>Повторяющийся паттерн во всех сервисах: сначала пытаемся найти запись, потом бросаем исключение Nest, если не нашли.</p>
+
+<pre><span class="label">Применяется везде: orders, product-types, tc, workers…</span><span class="c">// Базовый метод — возвращает null если не найдено</span>
+<span class="k">async</span> <span class="f">get</span>(id: <span class="t">string</span>): <span class="t">Promise</span>&lt;<span class="t">Stored</span>&lt;<span class="t">Order</span>&gt; | <span class="k">null</span>&gt; {
+  <span class="k">const</span> row = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">findUnique</span>({ where: { id } });
+  <span class="k">return</span> row <span class="k">as</span> <span class="t">Stored</span>&lt;<span class="t">Order</span>&gt; | <span class="k">null</span>;
+}
+
+<span class="c">// Вариант с исключением — используется когда отсутствие = ошибка</span>
+<span class="k">async</span> <span class="f">getOrThrow</span>(id: <span class="t">string</span>): <span class="t">Promise</span>&lt;<span class="t">Stored</span>&lt;<span class="t">Order</span>&gt;&gt; {
+  <span class="k">const</span> order = <span class="k">await</span> <span class="k">this</span>.<span class="f">get</span>(id);
+  <span class="k">if</span> (!order) {
+    <span class="k">throw new</span> <span class="f">NotFoundException</span>(<span class="s">'Заказ не найден'</span>);
+  }
+  <span class="k">return</span> order;
+}
+
+<span class="c">// В методах, требующих существования — сначала проверяем, потом действуем</span>
+<span class="k">async</span> <span class="f">update</span>(id: <span class="t">string</span>, patch: ...): <span class="t">Promise</span>&lt;<span class="t">Stored</span>&lt;<span class="t">Order</span>&gt;&gt; {
+  <span class="k">await</span> <span class="k">this</span>.<span class="f">getOrThrow</span>(id);   <span class="c">// бросит 404 если не найдено</span>
+  <span class="k">const</span> updated = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">update</span>({ where: { id }, data: ... });
+  <span class="k">return</span> updated <span class="k">as</span> <span class="t">Stored</span>&lt;<span class="t">Order</span>&gt;;
+}</pre>
+
+<h2 id="s15"><span class="num">15</span>Паттерн мягкого удаления</h2>
+
+<p>Полный цикл работы с мягким удалением: создание → чтение только активных → пометка → восстановление.</p>
+
+<pre><span class="label">files-content.service.ts — полный паттерн</span><span class="c">// 1. Создать запись — deletedAt не передаём, по умолчанию null</span>
+<span class="k">const</span> row = <span class="k">await</span> <span class="k">this</span>.prisma.fileContent.<span class="f">create</span>({ data });
+
+<span class="c">// 2. Читать только активные — всегда фильтруем</span>
+<span class="k">const</span> active = <span class="k">await</span> <span class="k">this</span>.prisma.fileContent.<span class="f">findMany</span>({
+  where: { fileId, deletedAt: <span class="k">null</span> },   <span class="c">// ключевое условие</span>
+  orderBy: { updatedAt: <span class="s">'desc'</span> },
+});
+
+<span class="c">// 3. Иногда нужны все включая удалённые — передаём флаг</span>
+<span class="k">const</span> all = <span class="k">await</span> <span class="k">this</span>.prisma.fileContent.<span class="f">findMany</span>({
+  where: {
+    fileId,
+    ...(includeDeleted ? {} : { deletedAt: <span class="k">null</span> }),
+  },
+});
+
+<span class="c">// 4. Мягко удалить / восстановить</span>
+<span class="k">await</span> <span class="k">this</span>.prisma.fileContent.<span class="f">update</span>({
+  where: { id: contentId },
+  data: { deletedAt: mark ? <span class="k">new</span> <span class="f">Date</span>() : <span class="k">null</span> },
+});</pre>
+
+<div class="okbox"><span class="t">Правило: фильтр deletedAt: null везде</span>Любой метод, возвращающий «активные» данные, обязан содержать <code class="inl">where: { deletedAt: null }</code>. Это не умолчание Prisma — база хранит все записи, и без этого фильтра мягко удалённые записи будут выглядеть как живые.</div>
+
+<h2 id="s16"><span class="num">16</span>Паттерн toPublic</h2>
+
+<p>Маппер, превращающий Prisma-результат в контрактный тип <code class="inl">Stored&lt;T&gt;</code>. Его задача: убрать backend-internal поля (прежде всего <code class="inl">password</code>) и при необходимости привести типы.</p>
+
+<pre><span class="label">users.service.ts — канонический образец</span><span class="c">// Принимает сырой Prisma-объект, возвращает контрактный Stored&lt;User&gt;</span>
+<span class="k">private</span> <span class="f">toPublic</span>(user: {
+  id: <span class="t">string</span>; login: <span class="t">string</span>; role: <span class="t">string</span>;
+  password: <span class="t">string</span> | <span class="k">null</span>; createdAt: <span class="t">Date</span>;
+  updatedAt: <span class="t">Date</span>; deletedAt: <span class="t">Date</span> | <span class="k">null</span>;
+}): <span class="t">Stored</span>&lt;<span class="t">User</span>&gt; {
+  <span class="k">const</span> { password: _password, ...rest } = user;   <span class="c">// убираем поле</span>
+  <span class="k">return</span> rest <span class="k">as</span> <span class="t">Stored</span>&lt;<span class="t">User</span>&gt;;
+  <span class="c">// Note: даты не трогаем — Date присваивается Date|string автоматически</span>
+}</pre>
+
+<pre><span class="label">Более простые модели — без маппера, прямой cast</span><span class="c">// Когда нет секретных полей — достаточно приведения типа</span>
+<span class="k">const</span> row = <span class="k">await</span> <span class="k">this</span>.prisma.order.<span class="f">create</span>({ data });
+<span class="k">return</span> row <span class="k">as</span> <span class="t">Stored</span>&lt;<span class="t">Order</span>&gt;;
+
+<span class="c">// Для массивов</span>
+<span class="k">const</span> rows = <span class="k">await</span> <span class="k">this</span>.prisma.productType.<span class="f">findMany</span>({ where: { deletedAt: <span class="k">null</span> } });
+<span class="k">return</span> rows <span class="k">as</span> <span class="t">Stored</span>&lt;<span class="t">ProductType</span>&gt;[];</pre>
+
+<div class="note"><span class="t">Когда нужен маппер, а когда достаточно cast</span>Маппер (<code class="inl">toPublic</code>) нужен только когда надо <em>удалить</em> поле из объекта в рантайме. Если поля не нужно удалять — простого <code class="inl">as Stored&lt;T&gt;</code> достаточно: TypeScript проверяет структуру, а лишние поля (которых нет в контрактном типе) тихо игнорируются сериализатором.</div>
+
+<h2 id="s17"><span class="num">17</span>Типичные ошибки и как их избежать</h2>
+
+<h3>1. Забыть await</h3>
+<div class="grid2">
+  <div class="col before"><h4>Ошибка</h4>
+<pre><span class="c">// TypeScript молчит — getOrThrow возвращает Promise</span>
+<span class="k">const</span> order = <span class="k">this</span>.orders.<span class="f">getOrThrow</span>(id);
+<span class="c">// order.details — ошибка в рантайме!</span>
+order.details?.productTypeId;</pre></div>
+  <div class="col after"><h4>Правильно</h4>
+<pre><span class="k">const</span> order = <span class="k">await</span> <span class="k">this</span>.orders.<span class="f">getOrThrow</span>(id);
+<span class="c">// теперь order — реальный объект</span>
+order.details?.productTypeId;</pre></div>
+</div>
+
+<h3>2. Вернуть Promise из контроллера без явной аннотации</h3>
+<div class="grid2">
+  <div class="col before"><h4>Проблема</h4>
+<pre><span class="c">// Без аннотации генератор клиента выведет тип сам
+// и может получить import("../generated/prisma")</span>
+<span class="f">list</span>() {
+  <span class="k">return</span> <span class="k">this</span>.orders.<span class="f">getOrders</span>(query);
+}</pre></div>
+  <div class="col after"><h4>Правильно</h4>
+<pre><span class="c">// Явная аннотация → генератор видит Stored&lt;Order&gt;</span>
+<span class="f">list</span>(): <span class="t">Promise</span>&lt;<span class="t">Stored</span>&lt;<span class="t">Order</span>&gt;[]&gt; {
+  <span class="k">return</span> <span class="k">this</span>.orders.<span class="f">getOrders</span>(query);
+}</pre></div>
+</div>
+
+<h3>3. Вернуть Prisma-тип из контроллера напрямую</h3>
+<div class="grid2">
+  <div class="col before"><h4>Ошибка</h4>
+<pre><span class="c">// Prisma-тип утекает наружу — генератор сломается</span>
+<span class="k">async</span> <span class="f">getOne</span>(id: <span class="t">string</span>) {
+  <span class="k">return</span> <span class="k">this</span>.prisma.user.<span class="f">findUnique</span>({ where: { id } });
+  <span class="c">// тип: { id, login, password, ... } из generated/prisma</span>
+}</pre></div>
+  <div class="col after"><h4>Правильно</h4>
+<pre><span class="c">// Сервис делает маппинг, контроллер возвращает контрактный тип</span>
+<span class="k">async</span> <span class="f">getOne</span>(id: <span class="t">string</span>): <span class="t">Promise</span>&lt;<span class="t">Stored</span>&lt;<span class="t">User</span>&gt;&gt; {
+  <span class="k">return</span> <span class="k">this</span>.users.<span class="f">getPublicById</span>(id);
+}</pre></div>
+</div>
+
+<h3>4. Потерять null при мягком удалении</h3>
+<div class="grid2">
+  <div class="col before"><h4>Ошибка</h4>
+<pre><span class="c">// Нет фильтра → вернёт и удалённые</span>
+<span class="k">const</span> types = <span class="k">await</span> <span class="k">this</span>.prisma.productType.<span class="f">findMany</span>();</pre></div>
+  <div class="col after"><h4>Правильно</h4>
+<pre><span class="c">// Всегда фильтруем активные</span>
+<span class="k">const</span> types = <span class="k">await</span> <span class="k">this</span>.prisma.productType.<span class="f">findMany</span>({
+  where: { deletedAt: <span class="k">null</span> },
+});</pre></div>
+</div>
+
+<h3>5. Передать spread с условными полями в data</h3>
+<div class="grid2">
+  <div class="col before"><h4>Ошибка компиляции</h4>
+<pre><span class="c">// TypeScript: объект не совместим с типом Prisma input</span>
+<span class="k">await</span> prisma.order.<span class="f">update</span>({
+  where: { id },
+  data: {
+    ...(patch.fileId && { fileId: patch.fileId }),
+  },
+});</pre></div>
+  <div class="col after"><h4>Правильно</h4>
+<pre><span class="k">const</span> data: <span class="t">Record</span>&lt;<span class="t">string</span>, <span class="t">unknown</span>&gt; = {};
+<span class="k">if</span> (patch.fileId !== <span class="k">undefined</span>) data[<span class="s">'fileId'</span>] = patch.fileId;
+
+<span class="k">await</span> prisma.order.<span class="f">update</span>({
+  where: { id },
+  data: data <span class="k">as</span> Parameters&lt;<span class="k">typeof</span> prisma.order.update&gt;[<span class="n">0</span>][<span class="s">'data'</span>],
+});</pre></div>
+</div>
+
+<h3>6. Читать Json-поле без приведения типа</h3>
+<div class="grid2">
+  <div class="col before"><h4>TypeScript-ошибка</h4>
+<pre><span class="c">// details: JsonValue (unknown) — нельзя обратиться к полям</span>
+<span class="k">const</span> order = <span class="k">await</span> prisma.order.<span class="f">findUnique</span>({ where: { id } });
+order.details.requirements; <span class="c">// ошибка!</span></pre></div>
+  <div class="col after"><h4>Правильно</h4>
+<pre><span class="c">// Явный cast на границе чтения</span>
+<span class="k">const</span> details = order?.details <span class="k">as</span> <span class="t">OrderDetails</span> | <span class="k">null</span>;
+details?.requirements;  <span class="c">// работает ✓</span></pre></div>
+</div>
+
+<footer>
+  Связанные документы:
+  <a href="README.md">README.md</a> — общий план миграции ·
+  <a href="migrations-guide.md">migrations-guide.md</a> — работа с миграциями ·
+  <a href="../../../lectures/prisma-migrations/index.html">Лекция: миграции Prisma</a>
+</footer>
+</div>
+</body>
+</html>

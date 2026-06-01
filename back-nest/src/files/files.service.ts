@@ -4,14 +4,16 @@ import fs from 'fs';
 import path from 'path';
 import type { FileModel, FileWithMeta, FilesQuery, Stored } from '@miracle/types';
 import { AppConfigService } from '../config/app-config.service.js';
-import { DatabaseService } from '../database/database.service.js';
-import type { CreateEntityInput } from '../database/json-collection.js';
+import { PrismaService } from '../database/prisma.service.js';
 import { fixFileNameEncoding } from './file-name-encoding.js';
+
+// id опционален: если передан — используется как имя файла на диске; иначе Prisma генерирует uuid.
+export type CreateFileInput = Omit<FileModel, 'id'> & { id?: string };
 
 @Injectable()
 export class FilesService implements OnApplicationBootstrap {
     constructor(
-        private readonly db: DatabaseService,
+        private readonly prisma: PrismaService,
         private readonly config: AppConfigService,
     ) {}
 
@@ -21,94 +23,88 @@ export class FilesService implements OnApplicationBootstrap {
     }
 
     getUploadsDir(): string {
-        return path.join(this.config.dataDir, 'uploads');
+        return this.config.uploadsDir;
     }
 
     getStoredFileName(file: FileModel): string {
-        return file.extension ? `${file.id}.${file.extension}` : file.id;
+        return file.extension ? `${file.id}.${file.extension}` : file.id!;
     }
 
     getFilePath(file: FileModel): string {
         return path.join(this.getUploadsDir(), this.getStoredFileName(file));
     }
 
-    create(data: CreateEntityInput<FileModel>): Promise<Stored<FileModel>> {
-        return this.db.collections.files.create(data);
+    async create(data: CreateFileInput): Promise<Stored<FileModel>> {
+        const row = await this.prisma.file.create({ data });
+        return row as Stored<FileModel>;
     }
 
-    get(id: string): Stored<FileModel> | undefined {
-        return this.db.collections.files.getById(id);
+    async get(id: string): Promise<Stored<FileModel> | null> {
+        const row = await this.prisma.file.findUnique({ where: { id } });
+        return row as Stored<FileModel> | null;
     }
 
-    getByAuthor(authorId: string): Stored<FileModel>[] {
-        return this.db.collections.files.ref().filter((file) => file.authorId === authorId);
+    async getByAuthor(authorId: string): Promise<Stored<FileModel>[]> {
+        const rows = await this.prisma.file.findMany({ where: { authorId } });
+        return rows as Stored<FileModel>[];
     }
 
-    getAll(): Stored<FileModel>[] {
-        return this.db.collections.files.list();
+    async getAll(): Promise<Stored<FileModel>[]> {
+        const rows = await this.prisma.file.findMany();
+        return rows as Stored<FileModel>[];
     }
 
-    getFiles(query: FilesQuery): FileWithMeta[] {
-        const isAvailable = (file: FileModel) => fs.existsSync(this.getFilePath(file));
+    async getFiles(query: FilesQuery): Promise<FileWithMeta[]> {
+        const where: Record<string, unknown> = {};
+        if (query.id !== undefined) where['id'] = query.id;
+        if (query.authorId !== undefined) where['authorId'] = query.authorId;
+        if (query.isTechnicalCondition !== undefined) {
+            where['settings'] = { path: ['isTechnicalCondition'], equals: query.isTechnicalCondition };
+        }
 
-        return this.db.collections.files
-            .ref()
+        const rows = await this.prisma.file.findMany({ where });
+
+        const isAvailable = (file: Stored<FileModel>) => fs.existsSync(this.getFilePath(file));
+
+        return (rows as Stored<FileModel>[])
             .filter((file) => {
-                if (query.id !== undefined && file.id !== query.id) {
-                    return false;
-                }
-                if (query.authorId !== undefined && file.authorId !== query.authorId) {
-                    return false;
-                }
                 if (query.available !== undefined && isAvailable(file) !== query.available) {
                     return false;
-                }
-                if (query.isTechnicalCondition !== undefined) {
-                    const val = file.settings?.isTechnicalCondition ?? false;
-                    if (val !== query.isTechnicalCondition) {
-                        return false;
-                    }
                 }
                 return true;
             })
             .map((file) => {
-                if (!query.includeMeta) {
-                    return file;
-                }
+                if (!query.includeMeta) return file;
                 return { ...file, meta: { available: isAvailable(file) } };
             });
     }
 
-    async patch(id: string, settings: FileModel['settings']): Promise<Stored<FileModel> | undefined> {
-        const existing = this.db.collections.files.getById(id);
-        if (!existing) {
-            return undefined;
-        }
-        return this.db.collections.files.update(id, { settings });
+    async patch(id: string, settings: FileModel['settings']): Promise<Stored<FileModel> | null> {
+        const existing = await this.get(id);
+        if (!existing) return null;
+        const updated = await this.prisma.file.update({
+            where: { id },
+            data: { settings: settings ?? undefined },
+        });
+        return updated as Stored<FileModel>;
     }
 
-    /** Проверяет, действительно ли файл существует в файловой системе. */
-    checkFileAvailability(id: string): boolean {
-        const file = this.db.collections.files.getById(id);
-        if (!file) {
-            return false;
-        }
+    async checkFileAvailability(id: string): Promise<boolean> {
+        const file = await this.get(id);
+        if (!file) return false;
         return fs.existsSync(this.getFilePath(file));
     }
 
-    /** Чинит mojibake в именах файлов при старте (миграция со старого бэкенда). */
     private async runEncodingFix(): Promise<number> {
-        const files = this.db.collections.files.list();
+        const files = await this.prisma.file.findMany();
         let updatedCount = 0;
-
         for (const file of files) {
             const fixedName = fixFileNameEncoding(file.name);
             if (fixedName !== file.name) {
-                await this.db.collections.files.update(file.id, { name: fixedName });
+                await this.prisma.file.update({ where: { id: file.id }, data: { name: fixedName } });
                 updatedCount += 1;
             }
         }
-
         return updatedCount;
     }
 }

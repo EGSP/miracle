@@ -12,14 +12,14 @@ export class UsersController {
 
     @Get('me')
     @UseGuards(AuthGuard)
-    getMe(@CurrentUser() user: AuthenticatedUser): Stored<User> {
+    getMe(@CurrentUser() user: AuthenticatedUser): Promise<Stored<User>> {
         return this.users.getPublicById(user.id);
     }
 
     // Только админ — переезд старого GET /admin/users.
     @Get()
     @UseGuards(AuthGuard, AdminGuard)
-    list(): Stored<User>[] {
+    list(): Promise<Stored<User>[]> {
         return this.users.listPublic();
     }
 
@@ -32,7 +32,7 @@ export class UsersController {
 
     // Публичный (без AuthGuard) — переезд старого GET /user/:id.
     @Get(':id')
-    getById(@Param('id') id: string): Stored<User> {
+    getById(@Param('id') id: string): Promise<Stored<User>> {
         return this.users.getPublicById(id);
     }
 }

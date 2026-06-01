@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Order, OrderQuery, Stored } from '@miracle/types';
-import { DatabaseService } from '../database/database.service.js';
+import type { Order, OrderDetails, OrderQuery, Stored } from '@miracle/types';
+import { PrismaService } from '../database/prisma.service.js';
 import { FilesService } from '../files/files.service.js';
 
 export type OrderAnalysisAvailability = {
@@ -12,85 +12,97 @@ export type OrderAnalysisAvailability = {
 @Injectable()
 export class OrdersService {
     constructor(
-        private readonly db: DatabaseService,
+        private readonly prisma: PrismaService,
         private readonly files: FilesService,
     ) {}
 
     async create(authorId: string, fileId?: string): Promise<Stored<Order>> {
-        if (fileId && !this.files.get(fileId)) {
+        if (fileId && !(await this.files.get(fileId))) {
             throw new NotFoundException('Файл не найден');
         }
-        return this.db.collections.orders.create({ authorId, fileId, details: null });
+        const row = await this.prisma.order.create({
+            data: { authorId, fileId: fileId ?? null, details: undefined },
+        });
+        return row as Stored<Order>;
     }
 
-    get(id: string): Stored<Order> | undefined {
-        return this.db.collections.orders.getById(id);
+    async get(id: string): Promise<Stored<Order> | null> {
+        const row = await this.prisma.order.findUnique({ where: { id } });
+        return row as Stored<Order> | null;
     }
 
-    getOrThrow(id: string): Stored<Order> {
-        const order = this.get(id);
+    async getOrThrow(id: string): Promise<Stored<Order>> {
+        const order = await this.get(id);
         if (!order) {
             throw new NotFoundException('Заказ не найден');
         }
         return order;
     }
 
-    getOrders(query: OrderQuery): Stored<Order>[] {
-        return this.db.collections.orders.ref().filter((order) => {
-            if (query.id !== undefined && order.id !== query.id) return false;
-            if (query.authorId !== undefined && order.authorId !== query.authorId) return false;
-            if (query.fileId !== undefined && order.fileId !== query.fileId) return false;
-            return true;
-        });
+    async getOrders(query: OrderQuery): Promise<Stored<Order>[]> {
+        const where: Record<string, unknown> = {};
+        if (query.id !== undefined) where['id'] = query.id;
+        if (query.authorId !== undefined) where['authorId'] = query.authorId;
+        if (query.fileId !== undefined) where['fileId'] = query.fileId;
+
+        const rows = await this.prisma.order.findMany({ where });
+        return rows as Stored<Order>[];
     }
 
     async update(id: string, patch: Partial<Omit<Order, 'authorId'>>): Promise<Stored<Order>> {
-        this.getOrThrow(id);
-        const updated = await this.db.collections.orders.update(id, patch);
-        if (!updated) {
-            throw new NotFoundException('Заказ не найден');
-        }
-        return updated;
+        await this.getOrThrow(id);
+        // Явно перечисляем поля: Prisma не принимает spread с условными полями в строго-типизированном data
+        const data: Record<string, unknown> = {};
+        if (patch.fileId !== undefined) data['fileId'] = patch.fileId;
+        if (patch.details !== undefined) data['details'] = patch.details ?? null;
+
+        const updated = await this.prisma.order.update({
+            where: { id },
+            data: data as Parameters<typeof this.prisma.order.update>[0]['data'],
+        });
+        return updated as Stored<Order>;
     }
 
     async clearAnalysedDetails(id: string): Promise<Stored<Order>> {
-        this.getOrThrow(id);
-        const updated = await this.db.collections.orders.update(id, { details: null });
-        if (!updated) {
-            throw new NotFoundException('Заказ не найден');
-        }
-        return updated;
+        await this.getOrThrow(id);
+        const updated = await this.prisma.order.update({
+            where: { id },
+            data: { details: undefined },
+        });
+        return updated as Stored<Order>;
     }
 
     /** Можно ли запустить анализ деталей: файл доступен и нет активного прогона `order-analyse`. */
-    canAnalyseOrderDetails(id: string): OrderAnalysisAvailability {
-        const order = this.get(id);
+    async canAnalyseOrderDetails(id: string): Promise<OrderAnalysisAvailability> {
+        const order = await this.get(id);
         if (!order) {
             return { canAnalyse: false, errorMessage: 'Заказ не найден' };
         }
         if (!order.fileId) {
             return { canAnalyse: false, errorMessage: 'У заказа не прикреплён файл' };
         }
-        if (!this.files.get(order.fileId)) {
+        if (!(await this.files.get(order.fileId))) {
             return { canAnalyse: false, errorMessage: 'Файл заказа не найден' };
         }
-        if (!this.files.checkFileAvailability(order.fileId)) {
+        if (!(await this.files.checkFileAvailability(order.fileId))) {
             return { canAnalyse: false, errorMessage: 'Файл заказа недоступен' };
         }
 
-        const active = this.db.collections.jobRuns
-            .ref()
-            .some(
-                (run) =>
-                    run.job === 'order-analyse'
-                    && run.status === 'running'
-                    && (run.input as { orderId?: string } | undefined)?.orderId === id,
-            );
+        const active = await this.prisma.jobRun.findFirst({
+            where: {
+                job: 'order-analyse',
+                status: 'running',
+            },
+        });
         if (active) {
-            return { canAnalyse: false, canForceReanalyse: false, errorMessage: 'Для заказа уже выполняется анализ' };
+            const input = active.input as { orderId?: string } | null;
+            if (input?.orderId === id) {
+                return { canAnalyse: false, canForceReanalyse: false, errorMessage: 'Для заказа уже выполняется анализ' };
+            }
         }
 
-        if (order.details != null) {
+        const details = order.details as OrderDetails | null;
+        if (details != null) {
             return { canAnalyse: false, canForceReanalyse: true };
         }
         return { canAnalyse: true, canForceReanalyse: false };

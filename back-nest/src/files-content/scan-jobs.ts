@@ -100,10 +100,11 @@ export function createScanJobs(deps: ScanJobsDeps): {
     llmVisionTc: AnyJob;
 } {
     const requireFile = (fileId: string): Effect.Effect<Stored<FileModel>, Error> =>
-        Effect.suspend(() => {
-            const file = deps.files.get(fileId);
-            return file ? Effect.succeed(file) : Effect.fail(new Error(`Файл "${fileId}" не найден`));
-        });
+        Effect.promise(() => deps.files.get(fileId)).pipe(
+            Effect.flatMap((file) =>
+                file ? Effect.succeed(file) : Effect.fail(new Error(`Файл "${fileId}" не найден`)),
+            ),
+        );
 
     const renderPages = (file: Stored<FileModel>) =>
         Effect.gen(function* () {

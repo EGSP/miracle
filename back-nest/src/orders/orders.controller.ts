@@ -11,7 +11,7 @@ import {
     Query,
     UseGuards,
 } from '@nestjs/common';
-import type { DesignationWorkerInput, Order, OrderQuery, Stored } from '@miracle/types';
+import type { DesignationWorkerInput, Order, OrderDetails, OrderQuery, Stored } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
 import { JobRuntimeService } from '../jobs/job-runtime.service.js';
@@ -42,16 +42,17 @@ export class OrdersController {
         if (!body?.orderId || !body?.tcId) {
             throw new BadRequestException('Тело запроса должно содержать orderId и tcId');
         }
-        const order = this.orders.getOrThrow(body.orderId);
-        const tc = this.tc.getByIdOrThrow(body.tcId);
+        const order = await this.orders.getOrThrow(body.orderId);
+        const tc = await this.tc.getByIdOrThrow(body.tcId);
 
-        const hasRequirement = (order.details?.requirements ?? []).some(
+        const details = order.details as OrderDetails | null;
+        const hasRequirement = (details?.requirements ?? []).some(
             (dual) => dual.human !== undefined || (dual.ai !== undefined && dual.ai.used !== false),
         );
         if (!hasRequirement) {
             throw new BadRequestException('У заказа нет активных требований — сначала запустите анализ заявки');
         }
-        if (!tc.designationSlots?.length) {
+        if (!(tc.designationSlots as unknown[] | undefined)?.length) {
             throw new BadRequestException('У ТУ не заданы параметры условного обозначения');
         }
 
@@ -63,12 +64,12 @@ export class OrdersController {
     }
 
     @Get()
-    list(@Query() query: OrderQuery): Stored<Order>[] {
+    list(@Query() query: OrderQuery): Promise<Stored<Order>[]> {
         return this.orders.getOrders(query);
     }
 
     @Get(':id')
-    getOne(@Param('id') id: string): Stored<Order> {
+    getOne(@Param('id') id: string): Promise<Stored<Order>> {
         return this.orders.getOrThrow(id);
     }
 
@@ -77,14 +78,14 @@ export class OrdersController {
         @Param('id') id: string,
         @Body() body: Partial<Pick<Order, 'fileId' | 'details'>>,
     ): Promise<Stored<Order>> {
-        if (body.fileId != null && !this.files.get(body.fileId)) {
+        if (body.fileId != null && !(await this.files.get(body.fileId))) {
             throw new NotFoundException('Файл не найден');
         }
         return this.orders.update(id, { fileId: body.fileId, details: body.details });
     }
 
     @Get(':id/can-analyse-details')
-    canAnalyse(@Param('id') id: string): OrderAnalysisAvailability {
+    canAnalyse(@Param('id') id: string): Promise<OrderAnalysisAvailability> {
         return this.orders.canAnalyseOrderDetails(id);
     }
 
@@ -97,7 +98,7 @@ export class OrdersController {
         if (forceReanalyse === 'true') {
             await this.orders.clearAnalysedDetails(id);
         }
-        const availability = this.orders.canAnalyseOrderDetails(id);
+        const availability = await this.orders.canAnalyseOrderDetails(id);
         if (!availability.canAnalyse) {
             throw new BadRequestException(availability.errorMessage ?? 'Анализ заказа недоступен');
         }

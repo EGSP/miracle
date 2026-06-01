@@ -5,7 +5,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import type { JobRun, Stored, WorkerFinalPrompt } from '@miracle/types';
-import { DatabaseService } from '../database/database.service.js';
+import { PrismaService } from '../database/prisma.service.js';
 import { JobRuntimeService } from '../jobs/job-runtime.service.js';
 
 /** Рекурсивно ищет сохранённый промпт (`memo.finalPrompt`) в дереве прогона. */
@@ -30,29 +30,27 @@ function findFinalPrompt(node: JobRun): WorkerFinalPrompt | undefined {
 @Injectable()
 export class WorkersService {
     constructor(
-        private readonly db: DatabaseService,
+        private readonly prisma: PrismaService,
         private readonly runtime: JobRuntimeService,
     ) {}
 
-    list(query: { status?: string; sort?: 'asc' | 'desc' | string }): Stored<JobRun>[] {
-        let result = this.db.collections.jobRuns
-            .list()
-            .filter((run) => (query.status ? run.status === query.status : true));
-
-        if (query.sort === 'desc') {
-            result = [...result].sort((a, b) => b.createdAt - a.createdAt);
-        } else if (query.sort === 'asc') {
-            result = [...result].sort((a, b) => a.createdAt - b.createdAt);
-        }
-        return result;
+    async list(query: { status?: string; sort?: 'asc' | 'desc' | string }): Promise<Stored<JobRun>[]> {
+        const rows = await this.prisma.jobRun.findMany({
+            where: query.status ? { status: query.status as 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled' } : undefined,
+            orderBy: query.sort === 'asc' || query.sort === 'desc'
+                ? { createdAt: query.sort }
+                : undefined,
+        });
+        return rows as unknown as Stored<JobRun>[];
     }
 
-    getPromptPreview(id: string): WorkerFinalPrompt {
-        const run = this.db.collections.jobRuns.getById(id);
+    async getPromptPreview(id: string): Promise<WorkerFinalPrompt> {
+        const run = await this.prisma.jobRun.findUnique({ where: { id } });
         if (!run) {
             throw new NotFoundException('Прогон не найден');
         }
-        const prompt = findFinalPrompt(run);
+        const runDomain = run as unknown as JobRun;
+        const prompt = findFinalPrompt(runDomain);
         if (!prompt) {
             throw new NotFoundException('У прогона ещё нет сохранённого промпта');
         }
@@ -64,15 +62,16 @@ export class WorkersService {
     }
 
     async delete(id: string): Promise<void> {
-        const run = this.db.collections.jobRuns.getById(id);
+        const run = await this.prisma.jobRun.findUnique({ where: { id } });
         if (!run) {
             throw new NotFoundException('Прогон не найден');
         }
         if (run.status === 'running') {
             throw new ConflictException('Нельзя удалить активный прогон');
         }
-        const isDeleted = await this.db.collections.jobRuns.delete(id);
-        if (!isDeleted) {
+        try {
+            await this.prisma.jobRun.delete({ where: { id } });
+        } catch {
             throw new InternalServerErrorException('Не удалось удалить прогон');
         }
     }

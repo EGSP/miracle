@@ -74,12 +74,12 @@ type TcExtractMid = { tcId: string; sections: TCDetailsResult['sections'] };
 export function createTcJobs(deps: TcJobsDeps): { tcExtract: AnyJob } {
     const getTcText = (tcId: string): Effect.Effect<string, Error> =>
         Effect.gen(function* () {
-            const tc = deps.tc.getById(tcId);
+            const tc = yield* Effect.promise(() => deps.tc.getById(tcId));
             if (!tc) return yield* Effect.fail(new Error(`TC "${tcId}" не найдено`));
             if (!tc.fileId) return yield* Effect.fail(new Error(`У TC "${tcId}" не прикреплён PDF-файл`));
 
-            const completed = deps.filesContent
-                .getContent(tc.fileId)
+            const allContent = yield* Effect.promise(() => deps.filesContent.getContent(tc.fileId!));
+            const completed = allContent
                 .find((c) => c.meta?.extractionStatus === ExtractionStatus.COMPLETED);
             if (!completed) {
                 return yield* Effect.fail(
@@ -126,7 +126,7 @@ export function createTcJobs(deps: TcJobsDeps): { tcExtract: AnyJob } {
                 content: r.content,
             }));
 
-            const tc = deps.tc.getById(input.tcId);
+            const tc = yield* Effect.promise(() => deps.tc.getById(input.tcId));
             if (!tc) return yield* Effect.fail(new Error(`TC "${input.tcId}" не найдено`));
 
             yield* Effect.promise(() =>

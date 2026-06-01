@@ -1,67 +1,84 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { hasDeletion, type FileContent, type Stored } from '@miracle/types';
-import { DatabaseService } from '../database/database.service.js';
-import type { CreateEntityInput } from '../database/json-collection.js';
+import type { FileContent, Stored } from '@miracle/types';
+import { PrismaService } from '../database/prisma.service.js';
 import { countTokens } from '../common/count-tokens.js';
 
+export type CreateFileContentInput = Omit<FileContent, 'id'>;
+
 /**
- * Слой данных над коллекцией `file-content`: создание/чтение/мягкое удаление записей извлечения.
+ * Слой данных над таблицей `file_contents`: создание/чтение/мягкое удаление записей извлечения.
  * Оркестрацию самого извлечения см. в {@link ExtractionService}.
  */
 @Injectable()
 export class FilesContentService {
-    constructor(private readonly db: DatabaseService) {}
+    constructor(private readonly prisma: PrismaService) {}
 
-    create(data: CreateEntityInput<FileContent>): Promise<Stored<FileContent>> {
-        return this.db.collections.filesContent.create(data);
+    async create(data: CreateFileContentInput): Promise<Stored<FileContent>> {
+        const row = await this.prisma.fileContent.create({ data });
+        return row as Stored<FileContent>;
     }
 
-    get(id: string): Stored<FileContent> | undefined {
-        return this.db.collections.filesContent.getById(id);
+    async get(id: string): Promise<Stored<FileContent> | null> {
+        const row = await this.prisma.fileContent.findUnique({ where: { id } });
+        return row as Stored<FileContent> | null;
     }
 
     /**
      * Записи контента по `fileId`. По умолчанию только активные; при `includeDeleted` — все.
      * Сортировка: от новых к старым по `updatedAt`.
      */
-    getContent(fileId: string, options?: { includeDeleted?: boolean }): Stored<FileContent>[] {
+    async getContent(fileId: string, options?: { includeDeleted?: boolean }): Promise<Stored<FileContent>[]> {
         const includeDeleted = options?.includeDeleted === true;
-        const rows = this.db.collections.filesContent.ref().filter((content) => {
-            if (content.fileId !== fileId) {
-                return false;
-            }
-            if (!includeDeleted && hasDeletion(content)) {
-                return false;
-            }
-            return true;
+        const rows = await this.prisma.fileContent.findMany({
+            where: {
+                fileId,
+                ...(includeDeleted ? {} : { deletedAt: null }),
+            },
+            orderBy: { updatedAt: 'desc' },
         });
-        return [...rows].sort((a, b) => b.updatedAt - a.updatedAt);
+        return rows as Stored<FileContent>[];
     }
 
     /** `mark=true` — пометить удалённой, `mark=false` — снять пометку. */
     async softDelete(contentId: string, mark: boolean): Promise<void> {
-        const existing = this.get(contentId);
+        const existing = await this.get(contentId);
         if (!existing) {
             throw new NotFoundException('Запись контента не найдена');
         }
-        await this.db.collections.filesContent.softDelete(contentId, mark);
+        await this.prisma.fileContent.update({
+            where: { id: contentId },
+            data: { deletedAt: mark ? new Date() : null },
+        });
     }
 
-    async update(data: FileContent): Promise<Stored<FileContent> | undefined> {
-        const existing = this.get(data.id);
+    async update(data: FileContent): Promise<Stored<FileContent> | null> {
+        const existing = await this.get(data.id);
         if (!existing) {
             throw new NotFoundException('Содержимое не найдено');
         }
-        return this.db.collections.filesContent.update(data.id, data);
+        const updated = await this.prisma.fileContent.update({
+            where: { id: data.id },
+            data: {
+                fileId: data.fileId,
+                content: data.content as object[] | undefined,
+                meta: data.meta as object | undefined,
+            },
+        });
+        return updated as Stored<FileContent>;
     }
 
-    delete(id: string): Promise<boolean> {
-        return this.db.collections.filesContent.delete(id);
+    async delete(id: string): Promise<boolean> {
+        try {
+            await this.prisma.fileContent.delete({ where: { id } });
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     /** Оценка числа токенов по сохранённому контенту записи. */
-    getTokenCount(contentId: string): number {
-        const record = this.get(contentId);
+    async getTokenCount(contentId: string): Promise<number> {
+        const record = await this.get(contentId);
         if (!record) {
             throw new NotFoundException('Запись контента не найдена');
         }

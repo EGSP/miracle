@@ -40,7 +40,7 @@ export class FilesController {
     constructor(private readonly files: FilesService) {}
 
     @Get()
-    getFiles(@Query() query: FilesQueryDto): FileWithMeta[] {
+    getFiles(@Query() query: FilesQueryDto): Promise<FileWithMeta[]> {
         return this.files.getFiles(query);
     }
 
@@ -80,6 +80,7 @@ export class FilesController {
 
         const { size } = await stat(targetPath);
 
+        // id передаётся явно, потому что используется как имя файла на диске.
         return this.files.create({
             id,
             name: originalName,
@@ -110,7 +111,7 @@ export class FilesController {
             throw new BadRequestException('No file provided');
         }
 
-        const existing = this.files.get(id);
+        const existing = await this.files.get(id);
         if (!existing) {
             data.file.resume();
             throw new NotFoundException(`File with id "${id}" not found`);
@@ -120,7 +121,7 @@ export class FilesController {
             .extname(fixFileNameEncoding(data.filename))
             .slice(1)
             .toLowerCase();
-        if (uploadedExt !== existing.extension.toLowerCase()) {
+        if (uploadedExt !== existing.extension!.toLowerCase()) {
             data.file.resume();
             throw new BadRequestException(
                 `Extension mismatch: expected .${existing.extension}, got .${uploadedExt}`,
@@ -142,12 +143,12 @@ export class FilesController {
 
     @Get(':id/content')
     @BinaryResponse()
-    streamContent(
+    async streamContent(
         @Param('id') id: string,
         @Req() req: FastifyRequest,
         @Res() reply: FastifyReply,
-    ): void {
-        const file = this.files.get(id);
+    ): Promise<void> {
+        const file = await this.files.get(id);
         if (!file) {
             throw new NotFoundException(`File with id "${id}" not found`);
         }
@@ -157,8 +158,8 @@ export class FilesController {
             throw new NotFoundException('File content is not available');
         }
 
-        const contentType = getContentType(file.extension);
-        const filename = encodeURIComponent(file.name);
+        const contentType = getContentType(file.extension!);
+        const filename = encodeURIComponent(file.name!);
         const stats = statSync(filePath);
         const range = req.headers.range;
 

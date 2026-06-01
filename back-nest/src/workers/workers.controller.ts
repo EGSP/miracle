@@ -22,12 +22,12 @@ export class WorkersController {
     constructor(private readonly workers: WorkersService) {}
 
     @Get()
-    list(@Query('status') status?: string, @Query('sort') sort?: string): Stored<JobRun>[] {
+    list(@Query('status') status?: string, @Query('sort') sort?: string): Promise<Stored<JobRun>[]> {
         return this.workers.list({ status, sort });
     }
 
     @Get(':id/preview-prompt')
-    previewPrompt(@Param('id') id: string): WorkerFinalPrompt {
+    previewPrompt(@Param('id') id: string): Promise<WorkerFinalPrompt> {
         return this.workers.getPromptPreview(id);
     }
 

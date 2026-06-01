@@ -219,12 +219,11 @@ export function createOrderJobs(deps: OrderJobsDeps): {
 } {
     const getOrderFileText = (orderId: string): Effect.Effect<string, Error> =>
         Effect.gen(function* () {
-            const order = deps.orders.get(orderId);
+            const order = yield* Effect.promise(() => deps.orders.get(orderId));
             if (!order) return yield* Effect.fail(new Error(`Заказ "${orderId}" не найден`));
             if (!order.fileId) return yield* Effect.fail(new Error(`У заказа "${orderId}" не прикреплён файл`));
-            const completed = deps.filesContent
-                .getContent(order.fileId)
-                .find((c) => c.meta?.extractionStatus === ExtractionStatus.COMPLETED);
+            const allContent = yield* Effect.promise(() => deps.filesContent.getContent(order.fileId!));
+            const completed = allContent.find((c) => c.meta?.extractionStatus === ExtractionStatus.COMPLETED);
             if (!completed) {
                 return yield* Effect.fail(new Error(`Файл "${order.fileId}" не имеет завершённого извлечения`));
             }
@@ -255,10 +254,16 @@ export function createOrderJobs(deps: OrderJobsDeps): {
                 const flat = yield* pollUntilDone<FlatOrderDetails>(() =>
                     deps.yandex.pollCompletionJson(opId, FlatOrderDetailsZodSchema),
                 );
-                const catalog = deps.productTypes.getAll();
-                const details = flatToDualOrderDetails(flat, catalog, (name) =>
-                    deps.productTypes.findByNameOrSynonym(name),
-                );
+                const catalog = yield* Effect.promise(() => deps.productTypes.getAll());
+                const normName = (v: string) => v.trim().replace(/\s+/g, ' ').toLowerCase();
+                const details = flatToDualOrderDetails(flat, catalog, (name) => {
+                    const norm = normName(name);
+                    return catalog.find(
+                        (item) =>
+                            normName(item.name) === norm ||
+                            (item.synonyms as string[]).some((s) => normName(s) === norm),
+                    );
+                });
                 if (!details) {
                     return yield* Effect.fail(new Error(`Не удалось извлечь данные из заказа: ${JSON.stringify(flat)}`));
                 }
@@ -274,9 +279,9 @@ export function createOrderJobs(deps: OrderJobsDeps): {
         'designation-llm',
         (input: DesignationWorkerInput): Effect.Effect<DesignationMid, unknown, Memo> =>
             Effect.gen(function* () {
-                const order = deps.orders.get(input.orderId);
+                const order = yield* Effect.promise(() => deps.orders.get(input.orderId));
                 if (!order) return yield* Effect.fail(new Error(`Заказ "${input.orderId}" не найден`));
-                const tc = deps.tc.getById(input.tcId);
+                const tc = yield* Effect.promise(() => deps.tc.getById(input.tcId));
                 if (!tc) return yield* Effect.fail(new Error(`TC "${input.tcId}" не найдено`));
 
                 const userMessage = [formatRequirements(order), prepareDesignationSlotsPayload(tc)].join('\n\n');
@@ -302,7 +307,7 @@ export function createOrderJobs(deps: OrderJobsDeps): {
 
     const designationApply = leaf('designation-apply', (input: DesignationMid) =>
         Effect.gen(function* () {
-            const order = deps.orders.get(input.orderId);
+            const order = yield* Effect.promise(() => deps.orders.get(input.orderId));
             if (!order) return yield* Effect.fail(new Error(`Заказ "${input.orderId}" не найден`));
 
             const designation: Designation = { tcId: input.tcId, values: input.values };

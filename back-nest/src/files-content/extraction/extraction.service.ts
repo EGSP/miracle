@@ -4,7 +4,6 @@ import {
     ExtractionType,
     FileDomain,
     getFileDomain,
-    hasDeletion,
     type FileContent,
     type FileModel,
     type Stored,
@@ -49,7 +48,7 @@ export class ExtractionService {
      * @throws BadRequestException если контент уже извлечён (и повтор не запрошен/не применим).
      */
     async extract(fileId: string, options?: { retryIfLastFailed?: boolean }): Promise<void> {
-        const others = this.filesContent.getContent(fileId);
+        const others = await this.filesContent.getContent(fileId);
         if (others.length > 0) {
             const last = others[0];
             if (options?.retryIfLastFailed === true && last?.meta?.extractionStatus === ExtractionStatus.FAILED) {
@@ -64,29 +63,26 @@ export class ExtractionService {
     }
 
     private async runExtraction(fileId: string): Promise<void> {
-        const file = this.files.get(fileId);
+        const file = await this.files.get(fileId);
         if (!file) {
             throw new NotFoundException('Файл не найден');
         }
 
-        const domain = getFileDomain(file.extension);
+        const domain = getFileDomain(file.extension!);
         if (!domain) {
             throw new BadRequestException(`Тип файла с расширением «${file.extension}» не поддерживается`);
         }
 
         // Защита от дублирующего запуска: если уже идёт извлечение — выходим без действий.
-        // Статус FAILED не блокирует — повторная попытка разрешена.
-        const alreadyInProgress = this.filesContent.getContent(fileId).some(
-            (c) => !hasDeletion(c) && c.meta?.extractionStatus === ExtractionStatus.STARTED,
+        const existingContent = await this.filesContent.getContent(fileId);
+        const alreadyInProgress = existingContent.some(
+            (c) => c.deletedAt == null && c.meta?.extractionStatus === ExtractionStatus.STARTED,
         );
         if (alreadyInProgress) {
             return;
         }
 
         if (domain === FileDomain.VISUAL) {
-            // VISUAL — асинхронный durable-прогон: isTechnicalCondition → LLM Vision ТУ;
-            // complexLayout → LLM Vision; иначе → Yandex OCR. Запись STARTED создаём заранее,
-            // job обновит её до COMPLETED/FAILED.
             const useLlm = Boolean(file.settings?.isTechnicalCondition || file.settings?.complexLayout);
             const extractionType = useLlm ? ExtractionType.LLM : ExtractionType.OCR;
             const record = await this.filesContent.create({
@@ -110,13 +106,11 @@ export class ExtractionService {
         const pathToFile = this.files.getFilePath(file);
 
         let created: Stored<FileContent> | undefined;
-        // Первый yield сразу пишем как новую запись (фиксируем состояние STARTED в БД),
-        // последующие — обновляем ту же запись.
         for await (const content of extractor(file, pathToFile)) {
             if (!created) {
                 created = await this.filesContent.create(content);
             } else {
-                created = await this.filesContent.update({ id: created.id, ...content });
+                created = (await this.filesContent.update({ id: created.id, ...content })) ?? undefined;
             }
         }
     }

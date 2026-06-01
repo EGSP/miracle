@@ -21,7 +21,7 @@ export class ProductTypesController {
     constructor(private readonly productTypes: ProductTypesService) {}
 
     @Get()
-    list(): Stored<ProductType>[] {
+    list(): Promise<Stored<ProductType>[]> {
         return this.productTypes.getAll();
     }
 
@@ -31,7 +31,7 @@ export class ProductTypesController {
     }
 
     @Get(':id')
-    getOne(@Param('id') id: string): Stored<ProductType> {
+    getOne(@Param('id') id: string): Promise<Stored<ProductType>> {
         return this.productTypes.getByIdOrThrow(id);
     }
 

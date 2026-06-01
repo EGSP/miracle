@@ -7,14 +7,14 @@ import {
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { TokensService } from '../tokens/tokens.service.js';
-import { DatabaseService } from '../database/database.service.js';
+import { PrismaService } from '../database/prisma.service.js';
 import type { AuthenticatedUser } from './current-user.decorator.js';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(
         private readonly tokens: TokensService,
-        private readonly db: DatabaseService,
+        private readonly prisma: PrismaService,
     ) {}
 
     async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -29,7 +29,7 @@ export class AuthGuard implements CanActivate {
             throw new UnauthorizedException('Access token invalid');
         }
 
-        const user = this.db.collections.users.getById(payload.sub);
+        const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
         if (!user) {
             throw new NotFoundException('User not found');
         }

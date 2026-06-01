@@ -1,7 +1,7 @@
 import { Inject, Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import { Cause, Effect, Fiber } from 'effect';
-import type { JobRun, JobStatus } from '@miracle/types';
-import { DatabaseService } from '../database/database.service.js';
+import type { JobId, JobRun, JobStatus } from '@miracle/types';
+import { PrismaService } from '../database/prisma.service.js';
 import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
 import type { AnyJob, Job } from './job.js';
 import { getJob } from './registry.js';
@@ -18,30 +18,43 @@ export class JobRuntimeService implements OnApplicationBootstrap {
     private readonly fibers = new Map<string, Fiber.RuntimeFiber<unknown, unknown>>();
 
     constructor(
-        private readonly db: DatabaseService,
+        private readonly prisma: PrismaService,
         @Inject(AppLoggerService) private readonly loggerFactory: AppLoggerService,
     ) {
         this.logger = this.loggerFactory.forContext(JobRuntimeService.name);
     }
 
     private persist = async (root: JobRun): Promise<void> => {
-        await this.db.collections.jobRuns.update(root.id, root);
+        await this.prisma.jobRun.update({
+            where: { id: root.id },
+            data: {
+                status: root.status as JobStatus,
+                input: root.input !== undefined ? (root.input as object) : undefined,
+                output: root.output !== undefined ? (root.output as object) : undefined,
+                error: root.error ?? null,
+                progress: root.progress !== undefined ? (root.progress as object) : undefined,
+                memo: root.memo !== undefined ? (root.memo as object) : undefined,
+                cursor: root.cursor ?? null,
+                steps: root.steps !== undefined ? (root.steps as object) : undefined,
+            },
+        });
     };
 
     /** Запускает прогон Job: создаёт корневую запись и форкает исполнение. */
     async start<Input>(job: Job<Input, unknown, any>, input: Input): Promise<JobRun> {
-        const root = await this.db.collections.jobRuns.create({
-            job: job.id,
-            status: 'queued' satisfies JobStatus,
-            input,
+        const row = await this.prisma.jobRun.create({
+            data: {
+                job: job.id,
+                status: 'queued' satisfies JobStatus,
+                input: input !== undefined ? (input as object) : undefined,
+            },
         });
-        this.launch(job, root);
+        const root = row as unknown as JobRun;
+        this.launch(job, root as JobRun);
         return root;
     }
 
     private launch(job: AnyJob, root: JobRun): void {
-        // Сервисы/вендоры приходят в листья замыканием (через фабрики доменов); раннер сам
-        // провайдит Memo/Progress, поэтому к моменту запуска требований (R) у эффекта нет.
         const runnable = runNode(job, root, root, this.persist).pipe(
             Effect.catchAllCause((cause) =>
                 Effect.sync(() =>
@@ -63,10 +76,12 @@ export class JobRuntimeService implements OnApplicationBootstrap {
         if (fiber) {
             await Effect.runPromise(Fiber.interrupt(fiber));
         }
-        const run = this.db.collections.jobRuns.getById(runId);
-        if (run && (run.status === 'running' || run.status === 'queued')) {
-            run.status = 'cancelled';
-            await this.persist(run);
+        const row = await this.prisma.jobRun.findUnique({ where: { id: runId } });
+        if (row && (row.status === 'running' || row.status === 'queued')) {
+            await this.prisma.jobRun.update({
+                where: { id: runId },
+                data: { status: 'cancelled' },
+            });
         }
     }
 
@@ -75,17 +90,20 @@ export class JobRuntimeService implements OnApplicationBootstrap {
      * Раннер пропустит ранее завершённые шаги (их выход переиспользуется) и выполнит только apply.
      */
     async applyById(runId: string): Promise<void> {
-        const run = this.db.collections.jobRuns.getById(runId);
-        if (!run) {
+        const row = await this.prisma.jobRun.findUnique({ where: { id: runId } });
+        if (!row) {
             throw new Error('Прогон не найден');
         }
-        if (run.status !== 'succeeded') {
+        if (row.status !== 'succeeded') {
             throw new Error('Применение возможно только для завершённого (succeeded) прогона');
         }
-        const job = getJob(run.job);
+        // row.job — string из Prisma; реестр хранит JobId (брендированный string) → приводим явно
+        const job = getJob(row.job as JobId);
         if (!job) {
-            throw new Error(`Нет определения job "${run.job}" — применение невозможно`);
+            throw new Error(`Нет определения job "${row.job}" — применение невозможно`);
         }
+
+        const run = row as unknown as JobRun;
 
         if (run.steps && run.steps.length > 0) {
             const last = run.steps[run.steps.length - 1];
@@ -100,18 +118,18 @@ export class JobRuntimeService implements OnApplicationBootstrap {
 
     /** Восстанавливает незавершённые прогоны (running/queued) после перезапуска процесса. */
     async onApplicationBootstrap(): Promise<void> {
-        const runs = this.db.collections.jobRuns
-            .list()
-            .filter((run) => run.status === 'running' || run.status === 'queued');
+        const rows = await this.prisma.jobRun.findMany({
+            where: { status: { in: ['running', 'queued'] } },
+        });
 
-        for (const run of runs) {
-            const job = getJob(run.job);
+        for (const row of rows) {
+            const job = getJob(row.job as JobId);
             if (!job) {
-                this.logger.warn(`Прогон "${run.id}": нет определения job "${run.job}" — пропущен`);
+                this.logger.warn(`Прогон "${row.id}": нет определения job "${row.job}" — пропущен`);
                 continue;
             }
-            this.logger.info(`Восстановление прогона "${run.id}" (${run.job})`);
-            this.launch(job, run);
+            this.logger.info(`Восстановление прогона "${row.id}" (${row.job})`);
+            this.launch(job, row as unknown as JobRun);  // row.job: string → cast через unknown до JobRun
         }
     }
 }
