@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Миграции в Prisma: как они работают и как с ними живут в реальной разработке</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f7f8fa; --ink: #19191c; --muted: #6c707e;
+    --accent: #7048e8; --accent2: #3573f0; --warn: #b25f00; --line: #ebecf0;
+    --code-bg: #f7f8fa; --code-ink: #19191c; --cmt: #8c8c8c; --kw: #0033b3;
+    --str: #067d17; --fn: #00627a;
+    --maxw: 980px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.7 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 120px; }
+  header.top {
+    border-bottom: 1px solid var(--line); margin-bottom: 28px;
+    padding: 40px 22px 26px; background: linear-gradient(180deg, #ffffff, #f7f8fa);
+  }
+  header.top .inner { max-width: var(--maxw); margin: 0 auto; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -.2px; color: var(--ink); }
+  .sub { color: var(--muted); font-size: 16px; margin: 0; }
+  .badge {
+    display: inline-block; margin-top: 14px; padding: 5px 11px; border-radius: 999px;
+    background: #f1f2f4; border: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  h2 {
+    font-size: 23px; margin: 52px 0 14px; padding-top: 14px; letter-spacing: -.2px;
+    border-top: 1px solid var(--line);
+  }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 10px; }
+  h3 { font-size: 18px; margin: 28px 0 10px; color: #383a42; }
+  p { margin: 12px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ul, ol.steps { margin: 12px 0; padding-left: 24px; }
+  li { margin: 6px 0; }
+  code.inl {
+    background: #f1f2f4; border: 1px solid #e3e5e8; border-radius: 5px;
+    padding: 1px 6px; font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: .88em;
+    color: #0a3069;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.62;
+    color: var(--code-ink);
+  }
+  pre .c { color: var(--cmt); font-style: italic; }
+  pre .k { color: var(--kw); }
+  pre .s { color: var(--str); }
+  pre .f { color: var(--fn); }
+  .lead { font-size: 18px; color: #383a42; }
+  .why, .note, .warnbox {
+    border-radius: 10px; padding: 14px 16px 14px 18px; margin: 18px 0;
+    border: 1px solid var(--line);
+  }
+  .why { border-left: 3px solid var(--accent); background: #f4f1fd; }
+  .note { border-left: 3px solid var(--accent2); background: #eef3fe; }
+  .warnbox { border-left: 3px solid var(--warn); background: #fff7ea; }
+  .why .t, .note .t, .warnbox .t {
+    display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+  .why .t { color: var(--accent); }
+  .note .t { color: var(--accent2); }
+  .warnbox .t { color: var(--warn); }
+  nav.toc {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; margin: 8px 0 10px;
+  }
+  nav.toc h2 { border: 0; margin: 0 0 10px; padding: 0; font-size: 16px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc li { margin: 3px 0; }
+  nav.toc .part { list-style: none; margin: 12px 0 4px -22px; font-weight: 600; color: #383a42; }
+  table.cmp { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px; }
+  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+  table.cmp th { background: #f2f3f5; color: var(--ink); }
+  table.cmp td code { white-space: nowrap; }
+  hr.soft { border: 0; border-top: 1px dashed var(--line); margin: 26px 0; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:6px; background:#f1f2f4; border:1px solid var(--line); font-size:12.5px; color:var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .col h4 { margin: 0 0 6px; font-size: 14px; letter-spacing:.3px; text-transform: uppercase; color: var(--muted); }
+  .before h4 { color: #c9362c; } .after h4 { color: var(--str); }
+  footer { color: var(--muted); font-size: 14px; margin-top: 60px; border-top: 1px solid var(--line); padding-top: 18px; }
+  .flow { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin: 18px 0; font-size: 14.5px; }
+  .flow b { color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <h1>Миграции в Prisma: как они работают и как с ними живут в реальной разработке</h1>
+    <p class="sub">С нуля — для того, кто не работал с SQL-базами. Что такое схема, что такое миграция, какие команды и когда выполняют, и что происходит «по-настоящему» в каждый момент.</p>
+    <span class="badge">Сопровождает план перехода miracle на Prisma + PostgreSQL. Ориентир — Prisma 7.</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <h2>Содержание</h2>
+  <ol>
+    <li class="part">Часть I. Фундамент</li>
+    <li><a href="#s1">1. Что такое таблица, строка и схема</a></li>
+    <li><a href="#s2">2. Почему форму базы нельзя поменять «просто так»</a></li>
+    <li><a href="#s3">3. Миграция — это записанный шаг изменения</a></li>
+    <li><a href="#s4">4. schema.prisma — единственный источник правды</a></li>
+    <li class="part">Часть II. Два режима работы</li>
+    <li><a href="#s5">5. Режим без истории: db push</a></li>
+    <li><a href="#s6">6. Режим с историей: migrate</a></li>
+    <li><a href="#s7">7. Жизненный цикл: dev, миграции, production</a></li>
+    <li class="part">Часть III. Что происходит на самом деле</li>
+    <li><a href="#s8">8. Анатомия файла миграции</a></li>
+    <li><a href="#s9">9. Когда Prisma не угадывает намерение</a></li>
+    <li><a href="#s10">10. Сохранить данные: expand → migrate → contract</a></li>
+    <li><a href="#s11">11. Почему миграции не редактируют и не «откатывают»</a></li>
+    <li class="part">Часть IV. В реальной команде</li>
+    <li><a href="#s12">12. Миграции в git и на сервере</a></li>
+    <li><a href="#s13">13. Типичные ошибки</a></li>
+    <li><a href="#s14">14. Решающее дерево и памятка команд</a></li>
+  </ol>
+</nav>
+
+<p class="lead">До этого момента данные miracle лежали в JSON-файлах: каждая коллекция — это массив объектов, и форму объекта можно было менять как угодно, прямо в коде. PostgreSQL устроен иначе: форма данных фиксируется заранее и охраняется самой базой. Из-за этого появляется новая задача — <em>как менять эту форму, не теряя то, что уже накоплено</em>. Инструмент для этого и называется миграциями. Эта лекция объясняет их с самого основания — не предполагая, что вы раньше писали SQL.</p>
+
+<!-- ================= ЧАСТЬ I ================= -->
+<h2 id="s1"><span class="num">1</span>Что такое таблица, строка и схема</h2>
+<p>Начнём с того, что вы уже знаете. В текущем проекте коллекция <code class="inl">users</code> — это файл с массивом объектов:</p>
+<pre><span class="c">// users.json — то, что было в lowdb</span>
+{ items: [
+  { id: <span class="s">"u1"</span>, login: <span class="s">"anna"</span>, role: <span class="s">"admin"</span> },
+  { id: <span class="s">"u2"</span>, login: <span class="s">"egor"</span>, role: <span class="s">"user"</span> },
+]}</pre>
+<p>В реляционной базе (PostgreSQL — одна из них) это превращается в <strong>таблицу</strong>. Соответствие почти дословное:</p>
+<table class="cmp">
+  <tr><th>Мир JSON / lowdb</th><th>Мир SQL-базы</th></tr>
+  <tr><td>файл-коллекция <code class="inl">users.json</code></td><td><strong>таблица</strong> <code class="inl">users</code></td></tr>
+  <tr><td>один объект в массиве</td><td><strong>строка</strong> (row)</td></tr>
+  <tr><td>поле объекта <code class="inl">login</code></td><td><strong>колонка</strong> (column)</td></tr>
+  <tr><td>тип поля в TypeScript</td><td><strong>тип колонки</strong> в базе (<code class="inl">TEXT</code>, <code class="inl">INTEGER</code>…)</td></tr>
+</table>
+<p>Ключевое отличие — в одном слове: <strong>фиксированность</strong>. В JSON один объект мог иметь поле <code class="inl">phone</code>, а соседний — нет, и никто не возражал. В SQL-таблице набор колонок и их типы заданы заранее и одинаковы для всех строк. Этот заранее заданный «чертёж» таблиц — какие есть таблицы, какие у них колонки, каких типов, какие связи между ними — и называется <strong>схемой</strong> (schema).</p>
+<div class="why"><span class="t">Зачем база себя так ограничивает</span>Фиксированная форма — не каприз, а источник надёжности и скорости. База гарантирует, что в колонке <code class="inl">email</code> всегда строка, что у заказа всегда есть существующий автор, что двух пользователей с одним email не появится. Эти проверки делает сама база, а не ваш код — поэтому им можно доверять.</div>
+
+<h2 id="s2"><span class="num">2</span>Почему форму базы нельзя поменять «просто так»</h2>
+<p>Раз форма зафиксирована и охраняется, изменить её — это отдельное действие. В JSON, чтобы добавить телефон пользователю, вы просто дописывали поле в тип и в объект. В SQL так нельзя: таблица <code class="inl">users</code> уже существует в базе с конкретным набором колонок, и в ней, возможно, уже лежат строки. Чтобы появилась колонка <code class="inl">phone</code>, базе нужно отдать явную команду.</p>
+<p>Команды, меняющие <em>структуру</em> (а не данные), пишутся на языке SQL и выглядят так:</p>
+<pre><span class="k">ALTER TABLE</span> users <span class="k">ADD COLUMN</span> phone <span class="k">TEXT</span>;   <span class="c">-- добавить колонку</span>
+<span class="k">ALTER TABLE</span> users <span class="k">DROP COLUMN</span> phone;       <span class="c">-- удалить колонку</span>
+<span class="k">CREATE TABLE</span> orders ( ... );                <span class="c">-- создать новую таблицу</span></pre>
+<p>Запоминать этот SQL вам не придётся — его за вас напишет Prisma (об этом вся остальная лекция). Но важно понять <em>идею</em>: переход базы из одной формы в другую — это последовательность таких команд. И тут возникает настоящая проблема, которой не было в мире JSON.</p>
+<div class="warnbox"><span class="t">Главная сложность</span>Менять форму нужно так, чтобы <strong>не потерять уже накопленные данные</strong>. Удалить колонку — значит стереть её значения во всех строках. Сменить тип — значит как-то преобразовать существующие значения. Если в базе сто тысяч реальных записей, ошибка в таком изменении необратима. Именно ради безопасного изменения формы и существует весь механизм миграций.</div>
+
+<h2 id="s3"><span class="num">3</span>Миграция — это записанный шаг изменения</h2>
+<p>Можно было бы менять форму, набирая SQL-команды руками прямо в базе. Так и делали раньше — и так до сих пор делают новички, наживая проблемы. Беда в том, что такое изменение нигде не записано: на вашей машине база уже новая, а у коллеги и на сервере — старая, и привести их к одному виду нечем, кроме памяти.</p>
+<p><strong>Миграция</strong> решает это просто: каждый шаг изменения структуры <em>записывается в файл</em>. Файл — это и есть те самые SQL-команды, но сохранённые на диск, в репозиторий, с номером по порядку.</p>
+<pre><span class="c">// так выглядит каталог миграций на диске</span>
+prisma/migrations/
+  20260601_init/            <span class="c">-- шаг 1: создать все таблицы</span>
+    migration.sql
+  20260615_add_user_phone/  <span class="c">-- шаг 2: добавить колонку phone</span>
+    migration.sql
+  20260620_orders_status/   <span class="c">-- шаг 3: ...</span>
+    migration.sql</pre>
+<p>Теперь «привести любую базу к нужной форме» = «выполнить по порядку все файлы миграций, которых в ней ещё нет». Это работает одинаково на вашей машине, у коллеги и на боевом сервере. История изменений структуры лежит в git рядом с кодом.</p>
+<div class="note"><span class="t">Запомните формулировку</span>Миграция — это <em>один зафиксированный шаг</em> превращения схемы из состояния «до» в состояние «после», сохранённый как файл с SQL. Набор миграций по порядку — это полная история того, как база дошла до текущей формы.</div>
+
+<h2 id="s4"><span class="num">4</span>schema.prisma — единственный источник правды</h2>
+<p>Писать SQL руками всё же не хочется. Здесь и вступает Prisma. Вы описываете <strong>желаемую</strong> форму базы в одном файле — <code class="inl">schema.prisma</code> — на удобном декларативном языке:</p>
+<pre><span class="k">model</span> <span class="f">User</span> {
+  id        <span class="f">String</span>   @id @default(uuid())
+  login     <span class="f">String</span>
+  role      <span class="f">UserRole</span>
+  phone     <span class="f">String?</span>            <span class="c">// ? — колонка необязательная (может быть пустой)</span>
+  createdAt <span class="f">DateTime</span> @default(now())
+}</pre>
+<p>Дальше Prisma берёт на себя всю чёрную работу. Её инструмент сравнивает два состояния — <em>что написано в схеме</em> и <em>что сейчас в базе</em> — вычисляет разницу и <strong>сам генерирует нужный SQL</strong>. Вы декларируете «как должно быть», Prisma вычисляет «что для этого выполнить».</p>
+<div class="flow">
+  <b>schema.prisma</b> (как хочу) &nbsp;→&nbsp; Prisma сравнивает с базой &nbsp;→&nbsp; вычисляет разницу &nbsp;→&nbsp; <b>SQL-команды</b> (что выполнить)
+</div>
+<p>Из этой картины растут оба режима работы, между которыми и предстоит выбирать. Разница между ними — <em>что Prisma делает с этим вычисленным SQL</em>: выполнить молча и забыть, или сохранить в файл-миграцию.</p>
+
+<!-- ================= ЧАСТЬ II ================= -->
+<h2 id="s5"><span class="num">5</span>Режим без истории: <code style="font-size:.8em">db push</code></h2>
+<p>Первый режим — самый простой. Команда <code class="inl">prisma db push</code> вычисляет разницу и <strong>сразу применяет</strong> её к базе. Файл миграции при этом не создаётся — изменение нигде не записывается, просто база приводится к виду схемы.</p>
+<pre><span class="c"># поменял schema.prisma → выполнил одну команду</span>
+npm run prisma:push</pre>
+<p>Это идеальный режим, <strong>пока в базе нет ценных данных</strong> — то есть ровно текущая ситуация miracle. Меняешь схему как угодно часто, давишь <code class="inl">push</code>, работаешь дальше. Никакой возни с файлами. Если база запуталась — сбрасываешь её целиком:</p>
+<pre>npm run prisma:reset   <span class="c"># стереть всё, создать заново по схеме + наполнить тестовыми данными</span></pre>
+<div class="why"><span class="t">Почему без истории — это нормально на старте</span>Пока данные тестовые, история изменений не нужна: их не жалко потерять, а воспроизводить «как именно мы пришли к этой схеме» незачем — схема ещё скачет каждый день. Запись каждого шага в файл на этой стадии только мешала бы. Поэтому: пустая база → <code class="inl">db push</code>, и никаких миграций.</div>
+
+<h2 id="s6"><span class="num">6</span>Режим с историей: <code style="font-size:.8em">migrate</code></h2>
+<p>Второй режим включают, когда в базе появляются данные, которые <strong>нельзя потерять</strong> (первый боевой сервер, демо-стенд с введёнными вручную записями). Команда <code class="inl">prisma migrate dev</code> делает то же сравнение, но вычисленный SQL <strong>сохраняет в новый файл-миграцию</strong> и только потом применяет.</p>
+<pre><span class="c"># поменял схему → создать и применить миграцию с понятным именем</span>
+npm run prisma:migrate -- --name add_user_phone</pre>
+<p>Что появляется в проекте при этом режиме:</p>
+<ul>
+  <li><strong>Каталог <code class="inl">prisma/migrations/</code></strong> — те самые пронумерованные файлы с SQL. Они едут в git вместе с кодом.</li>
+  <li><strong>Служебная таблица <code class="inl">_prisma_migrations</code></strong> — Prisma создаёт её прямо в базе и записывает туда, какие миграции уже применены. Так база «помнит», на каком шаге истории она находится, и не применяет один файл дважды.</li>
+</ul>
+<div class="note"><span class="t">Как база понимает, что ей делать</span>При запуске Prisma смотрит в таблицу <code class="inl">_prisma_migrations</code>, видит список уже применённых файлов, сравнивает с каталогом <code class="inl">migrations/</code> и применяет только <em>недостающие</em>. Поэтому одну и ту же команду можно запускать сколько угодно раз — лишнего она не сделает.</div>
+
+<h2 id="s7"><span class="num">7</span>Жизненный цикл: dev, миграции, production</h2>
+<p>Сложим оба режима в одну временную линию — как проект проходит её в реальности.</p>
+<ol class="steps">
+  <li><strong>Ранняя разработка (мы здесь).</strong> Данных нет. Живём на <code class="inl">db push</code> и <code class="inl">reset</code>. Каталога <code class="inl">migrations/</code> в проекте ещё нет.</li>
+  <li><strong>Схема устоялась / готовимся к первому деплою.</strong> Один раз выполняем <code class="inl">migrate dev --name init</code> — Prisma создаёт первый файл-миграцию, описывающий всю текущую схему целиком («создать такие-то таблицы»). С этого момента проект — «на миграциях».</li>
+  <li><strong>Дальнейшая разработка.</strong> Каждое изменение схемы оформляем как новую миграцию: <code class="inl">migrate dev --name ...</code>. Файлы копятся в git.</li>
+  <li><strong>Выкатка на боевой сервер.</strong> Там <em>не генерируют</em> миграции. Там выполняют только готовые: <code class="inl">prisma migrate deploy</code> — эта команда берёт файлы из репозитория и применяет недостающие к боевой базе, не задавая вопросов.</li>
+</ol>
+<div class="flow">
+  локально: <b>migrate dev</b> (придумали и записали шаг) &nbsp;&nbsp;→&nbsp; git &nbsp;→&nbsp;&nbsp; на сервере: <b>migrate deploy</b> (применили готовый шаг)
+</div>
+<div class="warnbox"><span class="t">Два правила, которые экономят нервы</span><code class="inl">migrate dev</code> — <strong>только</strong> на машине разработчика (он умеет генерировать и может задавать вопросы). На production — <strong>только</strong> <code class="inl">migrate deploy</code>. И: на одной базе нельзя смешивать <code class="inl">db push</code> с <code class="inl">migrate</code> — выбрав миграции, про <code class="inl">db push</code> для этой базы забывают.</div>
+
+<!-- ================= ЧАСТЬ III ================= -->
+<h2 id="s8"><span class="num">8</span>Анатомия файла миграции</h2>
+<p>Раз миграция — это файл с SQL, посмотрим, что внутри. Бояться не нужно: язык читается почти по-английски. Вот начало реальной миграции «создать таблицу users»:</p>
+<pre><span class="k">CREATE TABLE</span> <span class="s">"users"</span> (
+    <span class="s">"id"</span>        <span class="k">TEXT</span> <span class="k">NOT NULL</span>,            <span class="c">-- колонка id, строка, обязательная</span>
+    <span class="s">"login"</span>     <span class="k">TEXT</span> <span class="k">NOT NULL</span>,
+    <span class="s">"phone"</span>     <span class="k">TEXT</span>,                     <span class="c">-- без NOT NULL — значит, может быть пустой</span>
+    <span class="s">"createdAt"</span> <span class="k">TIMESTAMP</span> <span class="k">NOT NULL</span> <span class="k">DEFAULT</span> <span class="f">CURRENT_TIMESTAMP</span>,
+    <span class="k">CONSTRAINT</span> <span class="s">"users_pkey"</span> <span class="k">PRIMARY KEY</span> (<span class="s">"id"</span>)   <span class="c">-- id — главный ключ, уникален</span>
+);</pre>
+<p>Читается прямо: «создать таблицу users с колонками id (текст, обязательна), login, phone (необязательна), createdAt (время, по умолчанию — текущий момент); главный ключ — id». Этот файл <strong>сгенерировала Prisma сама</strong> из вашей модели <code class="inl">User</code>. В 95% случаев вы его даже не открываете — Prisma всё сделала правильно.</p>
+<p>Остальные 5% — когда заглянуть в файл и поправить его руками всё-таки нужно. Им посвящены следующие два раздела: это и есть то место, где у новичков рождается страх перед миграциями, и где этот страх снимается.</p>
+
+<h2 id="s9"><span class="num">9</span>Когда Prisma не угадывает намерение</h2>
+<p>Prisma сравнивает схему с базой по фактическому различию, но она <strong>не читает ваши мысли</strong>. Классический пример — переименование колонки. Вы переименовали в схеме <code class="inl">login</code> в <code class="inl">username</code>. Для Prisma это выглядит как «колонка login исчезла, колонка username появилась», и она честно сгенерирует:</p>
+<div class="grid2">
+  <div class="col before"><h4>Что сгенерирует Prisma</h4>
+  <pre><span class="k">ALTER TABLE</span> users
+  <span class="k">DROP COLUMN</span> <span class="s">"login"</span>;     <span class="c">-- ❌ удалит все логины</span>
+<span class="k">ALTER TABLE</span> users
+  <span class="k">ADD COLUMN</span> <span class="s">"username"</span> <span class="k">TEXT</span>; <span class="c">-- создаст пустую колонку</span></pre></div>
+  <div class="col after"><h4>Что вы имели в виду</h4>
+  <pre><span class="k">ALTER TABLE</span> users
+  <span class="k">RENAME COLUMN</span> <span class="s">"login"</span>
+  <span class="k">TO</span> <span class="s">"username"</span>;          <span class="c">-- ✓ данные сохранены</span></pre></div>
+</div>
+<p>Намерение было «переименовать, сохранив значения», а сгенерированный SQL их сотрёт. Решение — перехватить файл до применения. Для этого есть ключ <code class="inl">--create-only</code>: он говорит Prisma «сгенерируй файл миграции, но <strong>не применяй</strong> его»:</p>
+<pre><span class="c"># 1. Prisma создаёт файл, но НЕ трогает базу</span>
+npm run prisma:migrate -- --create-only --name rename_login
+
+<span class="c"># 2. открываешь migration.sql и заменяешь DROP/ADD на RENAME (вручную)</span>
+
+<span class="c"># 3. теперь применяешь отредактированный файл</span>
+npm run prisma:migrate</pre>
+<div class="why"><span class="t">Вот и весь секрет «ручных миграций»</span>«Ручная миграция» — это не отдельная сложная технология и не обход Prisma. Это тот же самый файл миграции, который вы <em>открыли и поправили</em> перед применением, потому что лучше Prisma знаете намерение. Деления на «призмовские» и «ручные» миграции нет — есть один файл, иногда отредактированный человеком.</div>
+
+<h2 id="s10"><span class="num">10</span>Сохранить данные: expand → migrate → contract</h2>
+<p>Вторая ситуация, где нужна ручная правка, — когда новое требование к структуре противоречит уже лежащим данным. Пример: вы добавляете обязательную (NOT NULL) колонку <code class="inl">status</code> в таблицу с тысячей существующих заказов. Нельзя просто объявить колонку обязательной — у тысячи старых строк значения нет, и база отвергнет такое изменение.</p>
+<p>Безопасный приём разбивает изменение на три шага. У него есть устоявшееся название — <strong>expand → migrate → contract</strong> (расширить → перенести → сузить):</p>
+<pre><span class="c">-- ШАГ 1 (expand): добавить колонку как НЕобязательную — это всегда безопасно</span>
+<span class="k">ALTER TABLE</span> orders <span class="k">ADD COLUMN</span> <span class="s">"status"</span> <span class="k">TEXT</span>;
+
+<span class="c">-- ШАГ 2 (migrate): заполнить значение у всех старых строк</span>
+<span class="k">UPDATE</span> orders <span class="k">SET</span> <span class="s">"status"</span> = <span class="s">'draft'</span> <span class="k">WHERE</span> <span class="s">"status"</span> <span class="k">IS NULL</span>;
+
+<span class="c">-- ШАГ 3 (contract): теперь, когда пустых нет, сделать колонку обязательной</span>
+<span class="k">ALTER TABLE</span> orders <span class="k">ALTER COLUMN</span> <span class="s">"status"</span> <span class="k">SET NOT NULL</span>;</pre>
+<p>Команда <code class="inl">UPDATE ... SET</code> в шаге 2 — это и есть «перенос/заполнение данных» (backfill). Она не меняет структуру, она проставляет значения. Такие шаги Prisma за вас не придумает — их дописывают руками в файл миграции через тот же <code class="inl">--create-only</code>.</p>
+<div class="warnbox"><span class="t">Золотое правило data-preserving миграций</span>Никогда не соединяйте «перенести данные» и «удалить старое» в одной миграции. Сначала миграция, которая <em>добавляет новое и переносит</em>. Проверяете, что данные на месте. И только потом <em>отдельной</em> миграцией удаляете старое. Так у вас всегда есть точка, в которой ничего ещё не потеряно.</div>
+
+<h2 id="s11"><span class="num">11</span>Почему миграции не редактируют и не «откатывают»</h2>
+<p>Два вопроса, которые возникают у каждого новичка.</p>
+<h3>«Я ошибся в применённой миграции — поправлю файл»</h3>
+<p>Нельзя. Как только миграция применена (к вашей базе, к базе коллеги, на сервере), она считается <strong>неизменяемой</strong>. Prisma запоминает её «отпечаток» в таблице <code class="inl">_prisma_migrations</code>; если потом изменить файл, отпечаток разойдётся и Prisma поднимет тревогу о рассинхроне. Правильно — сделать <strong>новую</strong> миграцию, которая исправляет предыдущую. История идёт только вперёд и ничего не переписывает задним числом — как коммиты в git.</p>
+<h3>«Как откатить миграцию назад?»</h3>
+<p>В мире баз данных откат — это почти всегда <em>ещё одна миграция вперёд</em>, которая отменяет изменение (добавили колонку — новая миграция её удаляет). Автоматической «кнопки undo» для боевой базы нет намеренно: откат структуры часто означает потерю данных, и это должно быть осознанным шагом, а не нажатием клавиши. На стадии разработки, где данные не жалко, «откат» заменяется простым <code class="inl">reset</code> — снести всё и пересоздать.</p>
+<div class="note"><span class="t">Аналогия с git</span>Миграции ведут себя как коммиты: применённое не переписывают, ошибки чинят новым шагом поверх, а история — это правдивая летопись изменений, по которой любую базу можно привести в текущее состояние.</div>
+
+<!-- ================= ЧАСТЬ IV ================= -->
+<h2 id="s12"><span class="num">12</span>Миграции в git и на сервере</h2>
+<p>Несколько практических следствий для командной работы — они станут актуальны после перехода на режим миграций (шаг 2 из раздела 7).</p>
+<ul>
+  <li><strong>Файлы миграций коммитят в git.</strong> Они — часть кода. Создал миграцию локально — закоммитил вместе с изменением <code class="inl">schema.prisma</code>. Коллега, подтянув твой коммит, выполнит <code class="inl">migrate dev</code> и получит ту же форму базы.</li>
+  <li><strong>На сервере — автоматически перед стартом.</strong> В скрипт деплоя добавляют <code class="inl">prisma migrate deploy</code>: перед запуском новой версии приложения он докатывает на боевую базу миграции, которых там ещё нет. Это безопасно и идемпотентно.</li>
+  <li><strong>Конфликт миграций.</strong> Если двое одновременно создали миграции, после слияния веток база у одного из них окажется «впереди» истории. Обычно достаточно локального <code class="inl">migrate dev</code> — Prisma подскажет, что рассинхрон, а в dev можно пересоздать через <code class="inl">reset</code>. На боевой базе до такого не доводят — там история линейна.</li>
+</ul>
+
+<h2 id="s13"><span class="num">13</span>Типичные ошибки</h2>
+<table class="cmp">
+  <tr><th>Ошибка</th><th>Что происходит и как правильно</th></tr>
+  <tr><td>Запустил <code class="inl">db push</code> на базе с миграциями</td><td>Рассинхрон между файлами миграций и реальной формой базы. После перехода на миграции <code class="inl">db push</code> для этой базы не используют вовсе.</td></tr>
+  <tr><td>Запустил <code class="inl">migrate dev</code> на production</td><td>Он предназначен для разработки и может задавать вопросы/генерировать. На боевом — строго <code class="inl">migrate deploy</code>.</td></tr>
+  <tr><td>Отредактировал уже применённую миграцию</td><td>Расходится «отпечаток» в <code class="inl">_prisma_migrations</code>. Исправление — всегда новой миграцией, а не правкой старой.</td></tr>
+  <tr><td>Удалил каталог <code class="inl">migrations/</code> на проекте, который уже на миграциях</td><td>Потеря истории и рассинхрон с сервером. Удалять миграции можно только в dev до первого реального деплоя.</td></tr>
+  <tr><td>Соединил перенос данных и удаление старого в одной миграции</td><td>Если перенос не сработает — данные уже не вернуть. Делить на две миграции (раздел 10).</td></tr>
+  <tr><td>Забыл загрузить <code class="inl">DATABASE_URL</code></td><td>CLI Prisma не находит базу. В miracle все скрипты обёрнуты в <code class="inl">dotenv-cli</code> — запускать через <code class="inl">npm run prisma:*</code>, а не голой командой <code class="inl">prisma</code>.</td></tr>
+</table>
+
+<h2 id="s14"><span class="num">14</span>Решающее дерево и памятка команд</h2>
+<h3>Каким режимом пользоваться</h3>
+<div class="flow">
+  В базе есть данные, которые жалко потерять?<br>
+  &nbsp;&nbsp;<b>НЕТ</b> (наш случай сейчас) &nbsp;→&nbsp; <code class="inl">db push</code> + <code class="inl">reset</code>, файлы миграций не нужны.<br>
+  &nbsp;&nbsp;<b>ДА</b> &nbsp;→&nbsp; режим миграций: <code class="inl">migrate dev</code> локально, <code class="inl">migrate deploy</code> на сервере.<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;Изменение грозит стереть данные? &nbsp;→&nbsp; <code class="inl">--create-only</code> + правка SQL вручную (разделы 9–10).
+</div>
+<h3>Что делать прямо сейчас (пустая база)</h3>
+<pre>npm run prisma:push     <span class="c"># изменил схему — синхронизировал базу</span>
+npm run prisma:reset    <span class="c"># база запуталась — пересоздать с нуля + тестовые данные</span>
+npm run prisma:studio   <span class="c"># посмотреть глазами, что лежит в таблицах</span></pre>
+<h3>Команды на будущее (когда появятся данные)</h3>
+<table class="cmp">
+  <tr><th>Команда</th><th>Когда</th></tr>
+  <tr><td><code class="inl">prisma migrate dev --name init</code></td><td>Один раз — фиксируем текущую схему как первую миграцию</td></tr>
+  <tr><td><code class="inl">prisma migrate dev --name &lt;имя&gt;</code></td><td>Каждое изменение схемы в разработке</td></tr>
+  <tr><td><code class="inl">prisma migrate dev --create-only --name &lt;имя&gt;</code></td><td>Когда нужно поправить SQL руками перед применением</td></tr>
+  <tr><td><code class="inl">prisma migrate deploy</code></td><td>На боевом сервере — применить готовые миграции</td></tr>
+  <tr><td><code class="inl">prisma migrate status</code></td><td>Посмотреть, какие миграции применены, какие ждут</td></tr>
+</table>
+
+<div class="note"><span class="t">Связанные документы</span>Пошаговый план перехода miracle на Prisma — <a href="../../plans/prisma/README.md">plans/prisma/README.md</a>. Краткая текстовая памятка по командам — <a href="../../plans/prisma/migrations-guide.md">plans/prisma/migrations-guide.md</a>. Эта лекция объясняет, <em>почему</em> всё устроено именно так; памятка — <em>что набирать</em>.</div>
+
+<footer>
+  Учебная страница. Главная мысль: миграция — это записанный шаг изменения формы базы. Пока данных нет — шаги не записывают (<code class="inl">db push</code>); когда появляются ценные данные — каждый шаг сохраняют в файл и при необходимости правят руками, чтобы не потерять накопленное. Никакой магии: внутри — обычный SQL, который в 95% случаев Prisma пишет за вас.
+</footer>
+
+</div>
+</body>
+</html>
