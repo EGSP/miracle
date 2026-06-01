@@ -20,8 +20,8 @@ import { useGetUser } from "@/lib/queries/user.query"
 const COL_LIST = 6 as const
 const COL_CARD = 10 as const
 
-function formatCreatedAt(unixMs: number): string {
-  return new Date(unixMs).toLocaleString()
+function formatCreatedAt(value: Date | string): string {
+  return new Date(value).toLocaleString()
 }
 
 function getFileIndicator(file: FileWithMeta | null): {

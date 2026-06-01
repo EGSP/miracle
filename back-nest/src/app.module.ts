@@ -10,7 +10,6 @@ import { HealthModule } from './health/health.module.js';
 import { SessionsModule } from './sessions/sessions.module.js';
 import { UsersModule } from './users/users.module.js';
 import { ProductTypesModule } from './product-types/product-types.module.js';
-import { WorkersModule } from './workers/workers.module.js';
 import { FilesModule } from './files/files.module.js';
 import { FilesContentModule } from './files-content/files-content.module.js';
 import { TechnicalConditionsModule } from './technical-conditions/technical-conditions.module.js';
@@ -29,7 +28,6 @@ import { OrdersModule } from './orders/orders.module.js';
         SessionsModule,
         UsersModule,
         ProductTypesModule,
-        WorkersModule,
         FilesModule,
         FilesContentModule,
         TechnicalConditionsModule,

@@ -54,4 +54,5 @@ export * from './workers.schemas.js';
 export * from './users.schemas.js';
 export * from './files.schemas.js';
 export * from './files-content.schemas.js';
+export * from './job-runs.schemas.js';
 // ...

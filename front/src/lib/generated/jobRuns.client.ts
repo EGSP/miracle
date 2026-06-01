@@ -5,22 +5,26 @@ import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { JobRun, Stored, WorkerFinalPrompt } from '@miracle/types';
 
-export const workers = {
+export const jobRuns = {
     list: (query: { status?: string; sort?: string }) => customInstance<Stored<JobRun>[]>({
         method: 'GET',
-        url: '/workers',
+        url: '/jobs',
         params: query,
     }),
     previewPrompt: (id: string) => customInstance<WorkerFinalPrompt>({
         method: 'GET',
-        url: formatPath('/workers/:id/preview-prompt', { id }),
+        url: formatPath('/jobs/:id/preview-prompt', { id }),
     }),
-    applyWorkerData: (id: string) => customInstance<void>({
+    applyResult: (id: string) => customInstance<void>({
         method: 'POST',
-        url: formatPath('/workers/:id/apply-worker-data', { id }),
+        url: formatPath('/jobs/:id/apply', { id }),
+    }),
+    cancel: (id: string) => customInstance<void>({
+        method: 'POST',
+        url: formatPath('/jobs/:id/cancel', { id }),
     }),
     remove: (id: string) => customInstance<void>({
         method: 'DELETE',
-        url: formatPath('/workers/:id', { id }),
+        url: formatPath('/jobs/:id', { id }),
     }),
 };

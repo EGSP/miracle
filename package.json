@@ -24,7 +24,6 @@
 
     "generate:all": "npm run generate:client-nest --workspace=tools",
     "generate-client": "npm run generate:client-nest --workspace=tools",
-    "generate-backend-validation": "npm run generate:backend-validation --workspace=tools",
 
     "deploy": "tsx tools/src/deploy/index.ts"
   },
