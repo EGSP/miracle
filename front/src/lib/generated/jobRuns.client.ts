@@ -4,12 +4,13 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { JobRun, Stored, WorkerFinalPrompt } from '@miracle/types';
+import type { JobRunsQueryDto } from './models';
 
 export const jobRuns = {
-    list: (query: { status?: string; sort?: string }) => customInstance<Stored<JobRun>[]>({
+    list: (jobRunsQueryDto: JobRunsQueryDto) => customInstance<Stored<JobRun>[]>({
         method: 'GET',
         url: '/jobs',
-        params: query,
+        params: jobRunsQueryDto,
     }),
     previewPrompt: (id: string) => customInstance<WorkerFinalPrompt>({
         method: 'GET',

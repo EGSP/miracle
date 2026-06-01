@@ -1,6 +1,7 @@
 /* eslint-disable */
 // Файл сгенерирован @miracle/tools client-generator-nest. Не редактировать вручную.
 export * from './common.models';
+export * from './jobRuns.models';
 export * from './auth.models';
 export * from './health.models';
 export * from './sessions.models';
