@@ -31,7 +31,7 @@ export interface FileState {
   uploadedId?: string
 }
 
-export interface AppliedFile {
+interface AppliedFile {
   file: File
   /** Заполняется компонентом при нарушении ограничений size / extension. */
   validationError?: FileInputError & { type: "size" | "extension" }

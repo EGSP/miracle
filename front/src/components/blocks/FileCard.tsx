@@ -1,4 +1,4 @@
-﻿import { IconIndicator, Layer, Stack, Text } from "@miracle/aramid"
+﻿import { IconIndicator, Stack, Text } from "@miracle/aramid"
 import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@miracle/types"
 import { FileDomain, getFileDomain, validatePageRanges } from "@miracle/types"
 import { AlertCircle, Eye, ScanText, Trash2, Upload } from "lucide-react"
@@ -10,6 +10,7 @@ import { FileDropZone } from "@/components/ui/file-dropzone"
 import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification"
 import { Input } from "@/components/ui/input"
 import { Dialog } from "@/components/ui/modal-dialog"
+import { Tile } from "@/components/ui/tile"
 import {
   DirtyGuardProvider,
   useGuardActions,
@@ -243,8 +244,8 @@ function FileCardBody() {
   }
 
   return (
-    <Layer>
-      <Stack gap={3} className="p-4">
+    <Tile>
+      <Stack gap={3}>
         <Stack orientation="horizontal" gap={2} className="items-center justify-between">
           <Text.Heading as="h3" variant="compact-01" className="truncate">
             {file.name}
@@ -368,7 +369,7 @@ function FileCardBody() {
           mutation={{ isError: isGetContentError, isSuccess: false, error: getContentError }}
         />
       </Stack>
-    </Layer>
+    </Tile>
   )
 }
 
