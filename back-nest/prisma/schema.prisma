@@ -98,11 +98,8 @@ model FileContent {
 }
 
 model Order {
-  id       String  @id @default(uuid())
+  id       String @id @default(uuid())
   authorId String
-  fileId   String?
-  // OrderDetails — { clientCompanyName?, requirements?, productTypeId?, ... }
-  details  Json?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -128,6 +125,24 @@ model OrderApplication {
   @@map("order_applications")
 }
 
+// Позиция в приложении заказа. Одно приложение → несколько позиций.
+// Результат обработки источника. Связь плоская (applicationId + @@index), как везде в схеме.
+model OrderPosition {
+  id              String  @id @default(uuid())
+  applicationId   String
+  productTypeId   String?
+  productTypeName String?
+  requirements    Json? // PositionRequirement[]
+  designation     Json? // Designation
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([applicationId])
+  @@map("order_positions")
+}
+
 model TechnicalCondition {
   id                  String  @id @default(uuid())
   name                String?
@@ -148,23 +163,25 @@ model TechnicalCondition {
   @@map("technical_conditions")
 }
 
-// Прогоны durable-движка задач (JobRun). Заменяет прежнюю коллекцию workers.
+// Прогоны durable-движка задач (JobRun). Плоские: дерево выражается ссылкой parentId,
+// дочерние прогоны дедуплицируются парой (parentId, key).
 model JobRun {
   id       String    @id @default(uuid())
   job      String
+  parentId String?
+  key      String?
   status   JobStatus
   input    Json?
   output   Json?
   error    String?
   progress Json?
   memo     Json?
-  cursor   Int?
-  // Вложенные прогоны (рекурсивная структура хранится целиком в jsonb)
-  steps    Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([parentId, key])
+  @@index([parentId])
   @@index([status])
   @@map("job_runs")
 }

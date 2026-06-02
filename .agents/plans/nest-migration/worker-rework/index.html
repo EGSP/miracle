@@ -249,21 +249,25 @@ Schedule.<span class="f">recurs</span>(5);              <span class="c">// не 
 
 <!-- ================= ЧАСТЬ II ================= -->
 <h2 id="s10"><span class="num">10</span>Job как Effect</h2>
-<p>Теперь соберём из оснований нашу единицу работы. <strong>Job</strong> — это функция, превращающая вход в эффект, дающий выход:</p>
-<pre><span class="k">type</span> Job&lt;I, O, R = never&gt; = (input: I) =&gt; Effect.Effect&lt;O, JobError, R&gt;;</pre>
-<p>Поскольку тело Job — это <code class="inl">Effect.gen</code>, внутри него можно вызывать другие Job через <code class="inl">yield*</code>. Значит, цепочка задач — это снова Job. Композиция рекурсивна и единообразна: «атом» и «конвейер» имеют один тип, и пайплайн всегда можно вложить в больший пайплайн.</p>
-<pre><span class="k">const</span> loadTcText:  Job&lt;{ tcId: string }, { text: string }, Files&gt; = (<span class="c">/* ... */</span>) =&gt; <span class="c">/* ... */</span>;
-<span class="k">const</span> applyTcRules: Job&lt;TcRules, void, Tc&gt;                     = (<span class="c">/* ... */</span>) =&gt; <span class="c">/* ... */</span>;
+<p>Теперь соберём из оснований нашу единицу работы. <strong>Job</strong> — это id плюс тело, превращающее вход в эффект, дающий выход:</p>
+<pre><span class="k">type</span> Job&lt;I, O&gt; = {
+  id: JobId;
+  run: (input: I) =&gt; Effect.Effect&lt;O, <span class="k">unknown</span>, Memo | Progress | Jobs&gt;;
+};</pre>
+<p>Описание плоское — никаких «листьев» и «последовательностей» на уровне типа. Оркестрация живёт <strong>внутри тела</strong>: раз тело — это <code class="inl">Effect.gen</code>, оно запускает под-джобы через сервис <code class="inl">Jobs</code> (см. раздел 13). Под-джоб — это снова Job, поэтому вложенность любой глубины получается сама собой, без отдельного типа «конвейер».</p>
+<pre><span class="k">const</span> extractText  = <span class="f">defineJob</span>(<span class="s">'extract-text'</span>, ({ tcId }: { tcId: string }) =&gt; <span class="c">/* ... → { text } */</span>);
+<span class="k">const</span> applyTcRules = <span class="f">defineJob</span>(<span class="s">'apply-tc-rules'</span>, (rules: TcRules) =&gt; <span class="c">/* ... → void */</span>);
 
-<span class="c">// пайплайн — это тоже Job: вход первого, выход последнего</span>
-<span class="k">const</span> tcDetailsJob: Job&lt;{ tcId: string }, void, Files | Tc | Llm | Checkpoint&gt; =
-  ({ tcId }) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
-    <span class="k">const</span> { text } = <span class="k">yield*</span> <span class="f">loadTcText</span>({ tcId });
-    <span class="k">const</span> rules    = <span class="k">yield*</span> <span class="f">tcDetailsLlm</span>({ text });   <span class="c">// см. раздел 11</span>
-    <span class="k">yield*</span> <span class="f">applyTcRules</span>(rules);
-  });
+<span class="c">// родитель оркеструет детей через Jobs.run(job, key, input)</span>
+<span class="k">const</span> tcExtract = <span class="f">defineJob</span>(<span class="s">'tc-extract'</span>, ({ tcId }: { tcId: string }) =&gt;
+  Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+    <span class="k">const</span> jobs     = <span class="k">yield*</span> Jobs;
+    <span class="k">const</span> { text } = <span class="k">yield*</span> jobs.<span class="f">run</span>(extractText,  <span class="s">'extract'</span>, { tcId });
+    <span class="k">const</span> rules    = <span class="k">yield*</span> jobs.<span class="f">run</span>(tcDetailsLlm, <span class="s">'llm'</span>,     { text });
+    <span class="k">yield*</span> jobs.<span class="f">run</span>(applyTcRules, <span class="s">'apply'</span>, rules);
+  }));
 </pre>
-<div class="why"><span class="t">Что мы выиграли</span>Стыки проверяет компилятор: выход <code class="inl">loadTcText</code> обязан совпасть со входом следующего шага. Все требуемые зависимости (<code class="inl">Files | Tc | Llm | Checkpoint</code>) собираются в канале <code class="inl">R</code> автоматически — забыть подключить сервис не выйдет, программа просто не запустится без нужного слоя.</div>
+<div class="why"><span class="t">Что мы выиграли</span>Стыки проверяет компилятор: выход <code class="inl">extractText</code> обязан подойти на вход следующего вызова. Сервисы <code class="inl">Memo | Progress | Jobs</code> собираются в канале <code class="inl">R</code> автоматически — забыть их нельзя, программа не запустится без слоя, который провайдит рантайм. А <code class="inl">key</code> (<code class="inl">'extract'</code>/<code class="inl">'llm'</code>/<code class="inl">'apply'</code>) делает каждый запуск адресуемым и идемпотентным (раздел 13).</div>
 
 <h2 id="s11"><span class="num">11</span>Комбинатор poll</h2>
 <p>Опрос длительной облачной операции встречается в нескольких воркерах. Вынесем его в один переиспользуемый кирпич, собранный из <code class="inl">Schedule</code> и <code class="inl">repeat</code>. Любая задача затем строит свой опрос из него, не переписывая цикл.</p>
@@ -281,108 +285,100 @@ Schedule.<span class="f">recurs</span>(5);              <span class="c">// не 
 <p>Это и есть «отдельная область, переиспользуемая каждым воркером», о которой шла речь: <code class="inl">pollUntilDone</code> ничего не знает о конкретной задаче — только о том, как опрашивать операцию по её идентификатору.</p>
 
 <h2 id="s12"><span class="num">12</span>Прогресс</h2>
-<p>Чтобы наблюдать ход работы, заведём ещё один сервис в контексте — <code class="inl">Progress</code>. Задача сообщает о фазах, а раннер агрегирует прогресс по всему пайплайну (завершённые этапы плюс прогресс текущего). Снаружи (HTTP, интерфейс) прогресс читается из записи прогона.</p>
-<pre><span class="k">class</span> <span class="f">Progress</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'Progress'</span>)&lt;Progress, {
-  report(p: { phase: string; pct?: number }): Effect.Effect&lt;void&gt;;
+<p>Чтобы наблюдать ход работы, заведём сервис <code class="inl">Progress</code>. Джоб сообщает свой процент, а общий прогресс собирается отдельно — рекурсивным обходом потомков по <code class="inl">parentId</code>. Заранее известного числа детей нет (они рождаются динамически), поэтому итог приблизительный. Снаружи прогресс читается из записей прогонов.</p>
+<pre><span class="k">class</span> <span class="f">Progress</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'jobs/Progress'</span>)&lt;Progress, {
+  set(pct: number, label?: string): Effect.Effect&lt;void&gt;;
 }&gt;() {}
 
-<span class="c">// внутри опроса можно докладывать фазу</span>
 <span class="k">const</span> step = Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
   <span class="k">const</span> progress = <span class="k">yield*</span> Progress;
-  <span class="k">yield*</span> progress.<span class="f">report</span>({ phase: <span class="s">'polling'</span> });
-  <span class="c">// ...</span>
+  <span class="k">yield*</span> progress.<span class="f">set</span>(50, <span class="s">'опрос LLM'</span>);
 });
 </pre>
-<div class="note"><span class="t">Замечание</span>Прогресс — это <em>наблюдаемость</em>, а не состояние для возобновления. Для восстановления служат контрольные точки (следующий раздел); прогресс лишь показывает, на каком шаге мы сейчас.</div>
+<div class="note"><span class="t">Замечание</span>Прогресс — это <em>наблюдаемость</em>, а не состояние для возобновления. Для восстановления служат контрольные точки (<code class="inl">Memo</code>, следующий раздел) и сами завершённые дочерние прогоны.</div>
 
 <h2 id="s13"><span class="num">13</span>Долговечность и контрольные точки</h2>
-<p class="lead">Это центральный раздел. Effect прекрасно описывает вычисление, но его «волокно» живёт в оперативной памяти: если процесс упал посреди опроса, волокно исчезает. А у нас жёсткое требование — пережить перезапуск и продолжить работу (нынешний механизм <code class="inl">restore()</code>). Значит, слой долговечности (англ. <em>durability</em>) мы строим сами, поверх Effect.</p>
+<p class="lead">Это центральный раздел. Effect прекрасно описывает вычисление, но его «волокно» живёт в оперативной памяти: если процесс упал посреди опроса, волокно исчезает. А нам нужно пережить перезапуск и продолжить. Слой долговечности (англ. <em>durability</em>) мы строим сами — на <em>плоских записях</em> и <em>повторном проигрывании</em> (replay).</p>
 
 <h3>Что именно мы храним</h3>
-<p>На каждый запуск пайплайна заводится запись прогона в нашей <code class="inl">JsonCollection</code>. Она хранит курсор (индекс текущего этапа) и состояние каждого этапа — статус, выход (для завершённых) и контрольную точку (для незавершённого).</p>
-<pre><span class="k">type</span> StageState =
-  | { status: <span class="s">'pending'</span> }
-  | { status: <span class="s">'running'</span>; checkpoint: Record&lt;string, unknown&gt; }
-  | { status: <span class="s">'done'</span>; output: unknown }
-  | { status: <span class="s">'failed'</span>; error: string };
-
-<span class="k">type</span> PipelineRun = {
-  id: string; pipeline: string; input: unknown;
-  cursor: number;            <span class="c">// индекс текущего этапа</span>
-  stages: StageState[];      <span class="c">// по одному на этап</span>
-  status: <span class="s">'running'</span> | <span class="s">'done'</span> | <span class="s">'failed'</span> | <span class="s">'cancelled'</span>;
+<p>На каждый запуск джоба заводится <strong>плоская</strong> запись прогона. Дерево не хранится внутри записи — оно выражается ссылкой <code class="inl">parentId</code> на непосредственного родителя. Дочерние запуски различаются ключом <code class="inl">key</code>, уникальным в пределах родителя.</p>
+<pre><span class="k">type</span> JobRun = {
+  id: string; job: JobId;
+  parentId: string | null;   <span class="c">// id родителя; null у корня</span>
+  key: string | null;        <span class="c">// ключ в пределах родителя; null у корня</span>
+  status: <span class="s">'queued'</span> | <span class="s">'running'</span> | <span class="s">'succeeded'</span> | <span class="s">'failed'</span> | <span class="s">'cancelled'</span>;
+  input?; output?; error?;
+  memo?: Record&lt;string, unknown&gt;;   <span class="c">// контрольная точка внутри джоба</span>
 };
+<span class="c">// в БД: @@unique([parentId, key]) — дедупликация запусков и защита от гонки</span>
 </pre>
 
-<h3>Контрольная точка как сервис</h3>
-<p>Доступ к контрольной точке текущего этапа даёт сервис <code class="inl">Checkpoint</code>. Его реализация привязана к конкретной паре «прогон + индекс этапа», а запись <code class="inl">set</code> сразу сохраняется на диск (durable).</p>
-<pre><span class="k">class</span> <span class="f">Checkpoint</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'Checkpoint'</span>)&lt;Checkpoint, {
+<h3>Запуск ребёнка: найти-или-создать</h3>
+<p>Вместо раннера, обходящего дерево, у нас сервис <code class="inl">Jobs</code>. Его <code class="inl">run(job, key, input)</code> ищет ребёнка по паре <code class="inl">(parentId, key)</code>, где <code class="inl">parentId</code> — id <em>текущего</em> джоба (рантайм подставляет сам). По статусу найденного решается судьба:</p>
+<pre><span class="k">class</span> <span class="f">Jobs</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'jobs/Jobs'</span>)&lt;Jobs, {
+  run&lt;I, O&gt;(job: Job&lt;I, O&gt;, key: string, input: I): Effect.Effect&lt;O, unknown&gt;;
+}&gt;() {}
+
+<span class="c">// succeeded        → вернуть сохранённый output (не исполнять заново)</span>
+<span class="c">// failed/cancelled → пробросить ошибку (перезапуск — только новым прогоном)</span>
+<span class="c">// running/queued   → артефакт краха: переисполнить в той же строке</span>
+<span class="c">// строки нет       → создать и исполнить</span>
+</pre>
+<p>Рекурсия здесь в том, что ребёнок исполняется с сервисом <code class="inl">Jobs</code>, замкнутым уже на <em>его</em> строку, — поэтому внук цепляется к ребёнку, а не к корню.</p>
+
+<h3>Контрольная точка как сервис (Memo)</h3>
+<p>Внутри одного джоба контрольную точку даёт сервис <code class="inl">Memo</code>: <code class="inl">set</code> пишет ключ в <code class="inl">memo</code> записи и сразу сохраняет (durable). Это нужно, чтобы пережить рестарт <em>внутри</em> джоба — например, запомнить id облачной операции до начала опроса.</p>
+<pre><span class="k">class</span> <span class="f">Memo</span> <span class="k">extends</span> Context.<span class="f">Tag</span>(<span class="s">'jobs/Memo'</span>)&lt;Memo, {
   get&lt;T&gt;(key: string): Effect.Effect&lt;Option.Option&lt;T&gt;&gt;;
   set&lt;T&gt;(key: string, value: T): Effect.Effect&lt;void&gt;;   <span class="c">// пишет в запись прогона</span>
 }&gt;() {}
 </pre>
 
 <h3>Идемпотентная отправка</h3>
-<p>Главный приём восстановления — сделать отправку операции <em>идемпотентной</em>: при возобновлении задача сперва смотрит, нет ли уже сохранённого идентификатора операции, и если есть — не отправляет запрос повторно, а сразу переходит к опросу.</p>
+<p>Главный приём восстановления — сделать отправку операции <em>идемпотентной</em>: при возобновлении джоб сперва смотрит сохранённый <code class="inl">opId</code> и, если он есть, не отправляет повторно, а сразу опрашивает.</p>
 <pre><span class="k">const</span> submitOnce = (req: SubmitReq) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
-  <span class="k">const</span> cp    = <span class="k">yield*</span> Checkpoint;
-  <span class="k">const</span> saved = <span class="k">yield*</span> cp.<span class="f">get</span>&lt;string&gt;(<span class="s">'opId'</span>);
+  <span class="k">const</span> memo  = <span class="k">yield*</span> Memo;
+  <span class="k">const</span> saved = <span class="k">yield*</span> memo.<span class="f">get</span>&lt;string&gt;(<span class="s">'opId'</span>);
   <span class="k">if</span> (Option.<span class="f">isSome</span>(saved)) <span class="k">return</span> saved.value;   <span class="c">// возобновление: НЕ отправляем заново</span>
 
-  <span class="k">const</span> llm  = <span class="k">yield*</span> Llm;
-  <span class="k">const</span> opId = <span class="k">yield*</span> Effect.<span class="f">promise</span>(() =&gt; llm.<span class="f">submit</span>(req));
-  <span class="k">yield*</span> cp.<span class="f">set</span>(<span class="s">'opId'</span>, opId);                    <span class="c">// durable ДО начала опроса</span>
+  <span class="k">const</span> opId = <span class="k">yield*</span> Effect.<span class="f">tryPromise</span>(() =&gt; llm.<span class="f">submit</span>(req));
+  <span class="k">yield*</span> memo.<span class="f">set</span>(<span class="s">'opId'</span>, opId);                  <span class="c">// durable ДО начала опроса</span>
   <span class="k">return</span> opId;
 });
 
-<span class="c">// собранный этап опроса переиспользует submitOnce + pollUntilDone</span>
-<span class="k">const</span> tcDetailsLlm: Job&lt;{ text: string }, TcRules, Llm | Checkpoint&gt; =
-  ({ text }) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+<span class="c">// этап опроса переиспользует submitOnce + pollUntilDone</span>
+<span class="k">const</span> tcDetailsLlm = <span class="f">defineJob</span>(<span class="s">'tc-details-llm'</span>, ({ text }: { text: string }) =&gt;
+  Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
     <span class="k">const</span> opId = <span class="k">yield*</span> <span class="f">submitOnce</span>({ system, user: text, jsonSchema });
     <span class="k">return</span> <span class="k">yield*</span> <span class="f">pollUntilDone</span>&lt;TcRules&gt;(opId);
-  });
+  }));
 </pre>
 
-<h3>Раннер: пропустить завершённое, возобновить текущее</h3>
-<p>Сам пайплайн исполняет раннер, который смотрит на запись прогона. Завершённые этапы он не перезапускает — их сохранённый выход подаётся дальше. Незавершённый этап он запускает, подставив слой <code class="inl">Checkpoint</code>, привязанный к этому этапу, — и задача внутри сама решает, начать заново или продолжить по контрольной точке.</p>
-<pre><span class="k">const</span> runPipeline = (run: PipelineRun, jobs: AnyJob[]) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
-  <span class="k">let</span> input = run.input;
-  <span class="k">for</span> (<span class="k">let</span> i = run.cursor; i &lt; jobs.length; i++) {
-    <span class="k">const</span> st = run.stages[i];
-    <span class="k">if</span> (st.status === <span class="s">'done'</span>) { input = st.output; <span class="k">continue</span>; }   <span class="c">// не перезапускаем</span>
-
-    <span class="k">const</span> cpLayer = <span class="f">makeCheckpointLayer</span>(run.id, i);            <span class="c">// get/set → JsonCollection.update</span>
-    <span class="k">const</span> output  = <span class="k">yield*</span> <span class="f">jobs</span>[i](input).<span class="f">pipe</span>(Effect.<span class="f">provide</span>(cpLayer));
-
-    <span class="k">yield*</span> <span class="f">persistStageDone</span>(run.id, i, output);             <span class="c">// статус+выход+курсор (durable)</span>
-    input = output;
-  }
-});
-</pre>
-
-<h3>Порядок записи — где это важно</h3>
-<p>Долговечность держится на двух правилах порядка. Первое: контрольную точку (<code class="inl">opId</code>) сохраняем <strong>до</strong> начала опроса — иначе при падении мы потеряем ссылку на уже запущенную облачную операцию. Второе: курсор продвигаем <strong>после</strong> того, как получили и сохранили выход этапа, — иначе пропустим невыполненную работу.</p>
-<div class="warnbox"><span class="t">Честная оговорка</span>Между строкой «операция отправлена» и строкой «opId сохранён» есть крошечное окно. Если процесс умрёт ровно в нём, при перезапуске мы отправим операцию повторно (потеряв первую). Сузить окно можно либо ключом идемпотентности на стороне облака (повторная отправка с тем же ключом не создаёт новую операцию), либо предварительной меткой «собираюсь отправить» с последующей выверкой. Это сознательный компромисс: без распределённого журнала транзакций окно нельзя свести строго к нулю, но можно сделать его практически безопасным.</div>
+<h3>Что сохраняется и в каком порядке</h3>
+<p>Каждый узел — отдельная строка, и рантайм обновляет <strong>только её</strong> (а не всё дерево, как в прежней модели — это убирает «усиление записи»). Вход в джоб → <code class="inl">running</code>; <code class="inl">memo.set</code>/<code class="inl">progress.set</code> → патч поля; успех → <code class="inl">succeeded</code> + <code class="inl">output</code>; ошибка → <code class="inl">failed</code> + сообщение. Долговечность держится на одном правиле порядка: <code class="inl">opId</code> сохраняем <strong>до</strong> опроса. А «не перезапускать завершённое» теперь даёт не курсор, а сам статус <code class="inl">succeeded</code> дочерней строки.</p>
+<div class="warnbox"><span class="t">Честная оговорка</span>Между строкой «операция отправлена» и «opId сохранён» есть крошечное окно. Если процесс умрёт ровно в нём, при перезапуске мы отправим операцию повторно. Сузить окно можно ключом идемпотентности на стороне облака или предварительной меткой с последующей выверкой. Без распределённого журнала транзакций окно нельзя свести строго к нулю — это сознательный компромисс. Отдельно учтите: тело родителя при возобновлении <em>проигрывается заново</em>, поэтому всё, что не завёрнуто в <code class="inl">Jobs.run</code> или <code class="inl">memo</code>, выполнится повторно — побочные эффекты держим только в дочерних джобах.</div>
 
 <h2 id="s14"><span class="num">14</span>Сквозной пример и сценарий перезапуска</h2>
-<p>Соберём пайплайн обработки технического условия: распознать файл, разбить текст на разделы, применить результат к сущности ТУ.</p>
-<pre><span class="k">const</span> tcPipeline = [
-  ocrJob,         <span class="c">// Job&lt;{ fileId }, { text }&gt;   — внутри submitOnce + pollUntilDone (OCR)</span>
-  tcDetailsLlm,   <span class="c">// Job&lt;{ text }, TcRules&gt;      — внутри submitOnce + pollUntilDone (LLM)</span>
-  applyTcRules,   <span class="c">// Job&lt;TcRules, void&gt;          — запись в доменную сущность</span>
-];
+<p>Пайплайн обработки технического условия — это один родительский джоб, запускающий трёх детей по ключам: распознать файл, извлечь правила LLM, применить результат к сущности ТУ.</p>
+<pre><span class="k">const</span> tcExtract = <span class="f">defineJob</span>(<span class="s">'tc-extract'</span>, ({ fileId, tcId }) =&gt;
+  Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+    <span class="k">const</span> jobs     = <span class="k">yield*</span> Jobs;
+    <span class="k">const</span> { text } = <span class="k">yield*</span> jobs.<span class="f">run</span>(ocrJob,       <span class="s">'ocr'</span>,   { fileId });   <span class="c">// OCR: submitOnce + pollUntilDone</span>
+    <span class="k">const</span> rules    = <span class="k">yield*</span> jobs.<span class="f">run</span>(tcDetailsLlm, <span class="s">'llm'</span>,   { text });     <span class="c">// LLM: submitOnce + pollUntilDone</span>
+    <span class="k">yield*</span> jobs.<span class="f">run</span>(applyTcRules, <span class="s">'apply'</span>, { tcId, rules });             <span class="c">// запись в доменную сущность</span>
+  }));
 </pre>
-<p>Теперь проследим сбой во время второго этапа (опрос LLM):</p>
-<pre class="step">1. ocrJob завершился → stages[0] = done(output: { text }), cursor = 1, всё сохранено.
-2. tcDetailsLlm: submitOnce отправил запрос, получил opId, записал checkpoint.opId, начал опрос.
+<p>Теперь проследим сбой во время опроса LLM:</p>
+<pre class="step">1. ocrJob завершился → строка (parentId=run, key='ocr') = succeeded, output { text }.
+2. tcDetailsLlm: submitOnce отправил запрос, получил opId, записал memo.opId, начал опрос.
 3. ⛔ процесс упал во время опроса.
-4. Перезапуск: restore() находит прогон в статусе running, зовёт runPipeline(run).
-5. i=0: stages[0].status === 'done' → этап пропущен, его { text } подан дальше.
-6. i=1: запускается tcDetailsLlm; submitOnce видит сохранённый opId → НЕ отправляет заново,
-        сразу переходит к pollUntilDone(opId) → опрос продолжается.
-7. Операция завершилась → stages[1] = done(rules), cursor = 2.
-8. i=2: applyTcRules пишет результат в ТУ. Пайплайн завершён.</pre>
-<div class="why"><span class="t">Здесь сошлось всё</span>Опрос (<code class="inl">pollUntilDone</code>), отмена (вычисление прервалось при падении), прогресс (его читали по записи) и контрольные точки (по ним мы и продолжили). Это прямой ответ на исходный вопрос: «продолжить опрос либо сразу перейти к нему, если предыдущий этап завершён».</div>
+4. Перезапуск: bootstrap находит корень tc-extract (running) и проигрывает его тело заново.
+5. jobs.run(ocrJob, 'ocr', …): строка succeeded → сразу возвращается { text } (не исполняем).
+6. jobs.run(tcDetailsLlm, 'llm', …): строка running → переисполняем; submitOnce видит memo.opId
+        → НЕ отправляет заново, сразу pollUntilDone(opId) → опрос продолжается.
+7. Операция завершилась → строка 'llm' = succeeded(rules).
+8. jobs.run(applyTcRules, 'apply', …): пишет результат в ТУ. Прогон завершён.</pre>
+<div class="why"><span class="t">Здесь сошлось всё</span>Опрос (<code class="inl">pollUntilDone</code>), отмена (вычисление прервалось при падении), прогресс (читали по записи) и контрольные точки (<code class="inl">memo.opId</code> плюс завершённые дети). Возобновление — это просто повторное проигрывание тела, где готовые дети отдают кэш, а недоделанный продолжает с контрольной точки.</div>
 
 <h2 id="s15"><span class="num">15</span>Код до и после</h2>
 <p>Нынешний <code class="inl">TCDetailsWorker</code> — около 270 строк, из которых уникальны лишь промпт, схема ответа и применение результата; остальное — мутабельное состояние с приведениями типов, ручные статусы, скопированные <code class="inl">markSuccess</code>/<code class="inl">markStopped</code>, цикл опроса и блок <code class="inl">try/catch</code>.</p>
@@ -405,33 +401,33 @@ Schedule.<span class="f">recurs</span>(5);              <span class="c">// не 
         <li>состояние — в записи прогона, не в объекте; приведений нет</li>
         <li>опрос — из общего <code class="inl">pollUntilDone</code></li>
         <li>отправка — из общего <code class="inl">submitOnce</code> (идемпотентна)</li>
-        <li>статусы/курсор/ошибки — на стороне раннера, единообразно</li>
+        <li>статусы/ошибки — на стороне рантайма, единообразно; дедуп по <code class="inl">(parentId, key)</code></li>
         <li>уникальны лишь промпт, схема и <code class="inl">applyTcRules</code></li>
       </ul>
     </td>
   </tr>
 </table>
 <pre><span class="c">// «после» целиком — это сборка из готовых кирпичей:</span>
-<span class="k">const</span> tcDetailsJob = (tcId: string) =&gt; Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
-  <span class="k">const</span> { text } = <span class="k">yield*</span> <span class="f">loadTcText</span>(tcId);
-  <span class="k">const</span> opId     = <span class="k">yield*</span> <span class="f">submitOnce</span>({ system, user: text, jsonSchema });
-  <span class="k">const</span> rules    = <span class="k">yield*</span> <span class="f">pollUntilDone</span>&lt;TcRules&gt;(opId);
-  <span class="k">yield*</span> <span class="f">applyTcRules</span>(rules);
-});
+<span class="k">const</span> tcDetailsLlm = <span class="f">defineJob</span>(<span class="s">'tc-details-llm'</span>, ({ text }: { text: string }) =&gt;
+  Effect.<span class="f">gen</span>(<span class="k">function*</span> () {
+    <span class="k">const</span> opId = <span class="k">yield*</span> <span class="f">submitOnce</span>({ system, user: text, jsonSchema });
+    <span class="k">return</span> <span class="k">yield*</span> <span class="f">pollUntilDone</span>&lt;TcRules&gt;(opId);
+  }));
 </pre>
 
 <h2 id="s16"><span class="num">16</span>Открытые вопросы и риски</h2>
 <ul>
   <li><strong>Порог входа.</strong> Effect — мощная, но непривычная модель; команде нужно освоить хотя бы основания из Части&nbsp;I. Это инвестиция, оправданная только если механизмы (композиция, отмена, повторы, типизированные ошибки) реально используются — а у нас используются.</li>
-  <li><strong>Мост Nest ↔ Effect.</strong> Нужно аккуратно описать, как Nest-провайдеры превращаются в <code class="inl">Layer</code> и где находится единая точка запуска/восстановления (вероятно, сервис-раннер с <code class="inl">OnApplicationBootstrap</code>).</li>
-  <li><strong>Гранулярность контрольных точек.</strong> Что считать атомарным шагом: чем мельче точки, тем надёжнее возобновление, но тем чаще запись на диск.</li>
-  <li><strong>Политика повторов.</strong> Где уместен <code class="inl">retry</code> с нарастающей паузой (сетевые сбои), а где — нет (бизнес-ошибка, которую повтор не исправит).</li>
-  <li><strong>Реестр Job и восстановление.</strong> Как сопоставлять сохранённый прогон с кодом пайплайна (по имени), и что делать, если набор этапов изменился между версиями.</li>
+  <li><strong>Replay-семантика тела.</strong> Возобновление = повторное проигрывание тела родителя. Значит, тело обязано быть детерминированной оркестрацией, а все настоящие действия — в дочерних джобах или под <code class="inl">memo</code>; иначе побочный эффект выполнится дважды.</li>
+  <li><strong>Прогресс без знаменателя.</strong> Дети рождаются динамически, общее их число заранее неизвестно — общий процент приблизительный. Если нужна точность, родитель должен заранее объявлять ожидаемый набор/веса.</li>
+  <li><strong>Политика повторов.</strong> Где уместен <code class="inl">retry</code> с нарастающей паузой (сетевые сбои), а где — нет (бизнес-ошибка). По умолчанию <code class="inl">failed</code> у ребёнка пробрасывается наверх; перезапуск — только новым прогоном.</li>
+  <li><strong>Реестр Job и восстановление.</strong> Прогон сопоставляется с кодом по <code class="inl">job</code> id из реестра. При смене ключей у детей старые строки просто перестанут находиться и дети переисполнятся — это безопасно, но возможен «осиротевший» прогон.</li>
   <li><strong>Окно идемпотентности отправки</strong> (см. раздел&nbsp;13) — выбрать конкретную стратегию для облачных операций Yandex.</li>
+  <li><strong>Координация между инстансами.</strong> Карта волокон локальная; при нескольких процессах оба восстановят один корень. Для мультиинстансной работы нужна аренда/лок на прогон — пока вне рамок.</li>
 </ul>
 
 <footer>
-  Документ для проектного решения. Код миграции из него пока не следует — сначала договариваемся об архитектуре, затем переносим воркеры на эту модель.
+  Модель реализована: чистый фреймворк в <code class="inl">back-nest/src/jobs/framework/</code>, Nest-обёртка (единый <code class="inl">JobsService</code>) — в <code class="inl">jobs/</code>. Доменные джобы переносятся на неё постепенно.
 </footer>
 
 </div>

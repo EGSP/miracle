@@ -10,7 +10,7 @@ import {
 } from '@miracle/types';
 import { FilesService } from '../../files/files.service.js';
 import { AppLoggerService, type AppLogger } from '../../logger/app-logger.service.js';
-import { JobRuntimeService } from '../../jobs/job-runtime.service.js';
+import { JobsService } from '../../jobs/jobs.service.js';
 import { FilesContentService } from '../files-content.service.js';
 import { ScanJobs } from '../scan-jobs.service.js';
 import { extractDocumentContent } from './extract-document.js';
@@ -36,7 +36,7 @@ export class ExtractionService {
     constructor(
         private readonly files: FilesService,
         private readonly filesContent: FilesContentService,
-        private readonly runtime: JobRuntimeService,
+        private readonly runtime: JobsService,
         private readonly scanJobs: ScanJobs,
         @Inject(AppLoggerService) private readonly loggerFactory: AppLoggerService,
     ) {

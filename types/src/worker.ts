@@ -1,6 +1,5 @@
 import type { Stored } from './db.js';
 import type { Content } from './file-content.js';
-import type { OrderDetails } from './order.js';
 
 export type WorkerType =
     | 'yandex-ocr-worker'
@@ -46,7 +45,8 @@ export type OrderDetailsWorkerData = BaseWorkerData & {
      * Сохраняется до submitCompletion в run(). Показывается на /worker-prompt.
      */
     finalPrompt?: WorkerFinalPrompt;
-    orderDetails?: OrderDetails | null;
+    // TODO(воркеры): переезд на OrderPosition. Тип-заглушка до рефактора order-details-worker.
+    orderDetails?: unknown;
     errorMessage?: string;
 };
 

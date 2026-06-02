@@ -1,135 +1,153 @@
 # Паттерн: durable-задачи (Job-фреймворк на Effect)
 
-> Движок задач back-nest: `back-nest/src/jobs/`. Заменяет старый `worker-pool` + `BaseWorker`.
-> Концептуальная база — лекции в `.agents/lectures/` и `.agents/plans/nest-migration/worker-rework/`.
+> Движок задач back-nest. Чистый мини-фреймворк: `back-nest/src/jobs/framework/`.
+> Nest-обёртки (сервис/контроллер/модуль): `back-nest/src/jobs/`.
+> Концептуальная база — лекция `.agents/plans/nest-migration/worker-rework/`.
 
 ## Идея в двух абзацах
 
-**Job** — это *инспектируемое описание* задачи, которое раннер компилирует в `Effect`. Лист (`leaf`)
-несёт Effect-тело с реальной работой; составной Job (`andThen`/`named`) хранит детей как значения,
-поэтому раннер может обойти структуру, пропустить уже завершённые шаги и возобновить незавершённый.
+**Job** — это *инспектируемое описание* задачи, которое рантайм исполняет как `Effect`. Описание
+плоское: id плюс тело `run(input) => Effect`. Никаких деревьев и последовательностей на уровне
+описания нет — оркестрация живёт **внутри тела**: джоб сам запускает под-джобы через сервис `Jobs`.
 
-Долговечность Effect сам не даёт (его «волокно» живёт в памяти), поэтому состояние исполнения
-персистится как единый рекурсивный **`JobRun`** (коллекция `jobRuns`): лист хранит контрольную точку
-в `memo`, составной — детей в `steps` и `cursor`. После перезапуска процесса прогон возобновляется по
-сохранённому дереву.
+Долговечность Effect сам не даёт (волокно живёт в памяти), поэтому каждый запуск персистится как
+**плоская** запись `JobRun` (таблица `job_runs`). Дерево выражается ссылкой `parentId` на
+непосредственного родителя, а дочерние запуски дедуплицируются парой `(parentId, key)`. После
+рестарта незавершённый корень **проигрывается заново**: завершённые (`succeeded`) дети возвращают
+сохранённый `output`, а недоделанные переисполняются. Это replay-семантика: тело родителя должно
+быть чистой оркестрацией, а все настоящие действия — в дочерних джобах или под `memo`.
 
-## Объявление листового Job
+## Объявление джоба
 
 ```ts
 import { Effect } from 'effect';
-import { leaf } from '../jobs/job.js';
-import { Memo, Progress } from '../jobs/context.js';
+import { defineJob, Memo, Progress } from '../jobs/framework/index.js';
 
-// leaf(id, fn): id брендируется в JobId; тело — функция input → Effect.
-// Зависимости (доменные сервисы/вендоры) и теги Memo/Progress приходят из слоя раннера.
-export const tcDetailsLlm = leaf(
-    'tc-details-llm',
-    (input: { text: string }) =>
+// defineJob(id, fn): id брендируется в JobId; тело — функция input → Effect.
+// Memo/Progress/Jobs приходят из окружения Effect (их провайдит рантайм для текущего узла).
+export const extractText = defineJob(
+    'extract-text',
+    (input: { applicationId: string }) =>
         Effect.gen(function* () {
-            const memo = yield* Memo;
             const progress = yield* Progress;
-
-            // Идемпотентная отправка: при возобновлении opId уже в memo — НЕ шлём заново.
-            const saved = yield* memo.get<string>('opId');
-            let opId: string;
-            if (saved._tag === 'Some') {
-                opId = saved.value;
-            } else {
-                // finalPrompt полезно сохранить ДО отправки — для preview-prompt и отладки.
-                yield* memo.set('finalPrompt', buildPrompt(input.text));
-                opId = yield* Effect.tryPromise(() => llm.submit(buildPrompt(input.text)));
-                yield* memo.set('opId', opId); // memo durable ДО опроса
-            }
-
-            // Опрос до готовности (цикл прерываем — отмена волокна сработает на Effect.sleep).
-            yield* progress.report({ phase: 'polling' });
-            while (true) {
-                const r = yield* Effect.tryPromise(() => llm.poll<TcRules>(opId));
-                if (r.done) return r.result!;
-                yield* Effect.sleep('3 seconds');
-            }
+            yield* progress.set(0, 'чтение источника');
+            const text = yield* readSourceText(input.applicationId);
+            return text;
         }),
 );
 ```
 
-> Помощники вида `submitOnce`/`pollUntilDone` — **не часть фреймворка** (они специфичны для Yandex/LLM).
-> Их место рядом с конкретными Job (в `yandex/` или в каталоге домена-потребителя), а не в `jobs/`.
-
-## Композиция (pipe + andThen + named)
+## Запуск под-джобов (вместо pipe/andThen)
 
 ```ts
-import { andThen, named } from '../jobs/combinators.js';
+import { defineJob, Jobs } from '../jobs/framework/index.js';
 
-// Типобезопасная цепочка: выход звена обязан совпадать со входом следующего.
-// Получаем составной Job — он тоже Job (рекурсивно вкладывается дальше).
-export const tcExtract = ocr.pipe(            // Job<{fileId}, {text}>
-    andThen(tcDetailsLlm),                    // {text} → TcRules
-    andThen(applyTcRules),                    // TcRules → void
-    named('tc-extract'),                      // имя корневого пайплайна
+export const orderAnalyse = defineJob(
+    'order-analyse',
+    (input: { applicationId: string }) =>
+        Effect.gen(function* () {
+            const jobs = yield* Jobs;
+            // parentId подставляет рантайм (это id текущего джоба); key уникален в пределах родителя.
+            const text = yield* jobs.run(extractText, 'extract', { applicationId: input.applicationId });
+            const positions = yield* jobs.run(llmPositions, 'llm', { text });
+            return positions;
+        }),
 );
 ```
 
-`apply` — это просто последний лист пайплайна (запись результата в доменную сущность). Повторное
-применение (`apply-worker-data`) = повторный прогон терминального узла.
+`Jobs.run(job, key, input)` находит-или-создаёт ребёнка по `(parentId, key)`:
+- `succeeded` → сразу возвращает сохранённый `output` (повторно не исполняет);
+- `failed`/`cancelled` → пробрасывает ошибку (перезапуск — только явной командой с новым прогоном);
+- `running`/`queued` (артефакт краха) → переисполняет в той же строке;
+- нет строки → создаёт и исполняет.
+
+Параллельные дети — просто разные ключи:
+```ts
+const [a, b] = yield* Effect.all(
+    [jobs.run(stepA, 'a', input), jobs.run(stepB, 'b', input)],
+    { concurrency: 'unbounded' },
+);
+```
+
+## Memo и Progress
+
+```ts
+const memo = yield* Memo;
+const saved = yield* memo.get<string>('opId');     // Option<string>
+yield* memo.set('opId', opId);                      // durable: пишет в memo и персистит
+
+const progress = yield* Progress;
+yield* progress.set(50, 'опрос LLM');               // pct 0..100 + подпись
+```
+
+`memo` — для возобновления внутри одного джоба (например, помнить id облачной операции до опроса),
+`progress` — только для наблюдаемости. Помощники `submitOnce`/`pollUntilDone` (в `common/cloud-job.ts`)
+построены поверх `memo` и **не** входят во фреймворк.
 
 ## Реестр и запуск
 
 ```ts
-import { registerJob } from '../jobs/registry.js';
+import { registerJob } from '../jobs/framework/index.js';
+import { JobsService } from '../jobs/jobs.service.js';
 
-// Регистрируем КОРНЕВЫЕ Job по id — нужно для запуска по ключу и для восстановления.
-registerJob(tcExtract);
+// Корневые джобы регистрируем по id — нужно для восстановления после рестарта.
+registerJob(orderAnalyse);
 
-// Запуск из доменного сервиса: инжектим JobRuntimeService (он @Global).
-constructor(private readonly runtime: JobRuntimeService) {}
+// Запуск из доменного сервиса (JobsService @Global):
+constructor(private readonly jobs: JobsService) {}
 
-async extractDetails(tcId: string) {
-    // start создаёт корневой JobRun (status: 'queued') и форкает durable-прогон.
-    const run = await this.runtime.start(tcExtract, { tcId });
-    return run; // содержит id прогона — отдать клиенту для слежения
+async analyse(applicationId: string) {
+    const run = await this.jobs.start(orderAnalyse, { applicationId }); // корень: parentId/key = null
+    return run; // run.id — отдать клиенту для слежения
 }
 ```
 
 ## Что и когда сохраняется
 
-`JobRun` (дерево) персистится раннером после каждого значимого перехода:
-- лист: `memo.set(...)` пишет ключ и сразу сохраняет весь корень (поэтому `opId` сохраняем ДО опроса);
-- составной: `cursor`/`output` ребёнка — ПОСЛЕ его завершения; статусы `running`/`succeeded`/`failed`.
+Каждый узел — отдельная плоская строка. Рантайм обновляет только её (не всё дерево):
+- вход в джоб → `status: 'running'`;
+- `memo.set(...)` / `progress.set(...)` → патч соответствующего поля (поэтому `opId` сохраняем ДО опроса);
+- успех → `status: 'succeeded'` + `output`; ошибка → `status: 'failed'` + сообщение.
 
 Форма (`types/src/job-run.ts`):
 ```ts
 type JobRun = {
-  id; job: JobId; status: 'queued'|'running'|'succeeded'|'failed'|'cancelled';
-  input?; output?; error?; progress?;
-  memo?: Record<string, unknown>;   // ЛИСТ: { opId, finalPrompt, ... }
-  cursor?: number;                   // СОСТАВНОЙ: индекс текущего ребёнка
-  steps?: JobRun[];                  // СОСТАВНОЙ: вложенные прогоны
+  id; job: JobId;
+  parentId?: string | null;          // id родителя; null у корня
+  key?: string | null;               // ключ идемпотентности в пределах родителя; null у корня
+  status: 'queued'|'running'|'succeeded'|'failed'|'cancelled';
+  input?; output?; error?;
+  progress?: { pct: number; label?: string };
+  memo?: Record<string, unknown>;    // { opId, finalPrompt, ... }
 };
 ```
 
 ### Возобновление
-При рестарте `JobRuntimeService` (на `OnApplicationBootstrap`) находит прогоны `running`/`queued`, по
-`run.job` берёт определение из реестра и заново запускает раннер по сохранённому дереву:
-- дети со статусом `succeeded` **не перезапускаются** — их `output` подаётся дальше;
-- лист с `memo.opId` **продолжает опрос**, не отправляя операцию повторно.
+При рестарте `JobsService` (на `OnApplicationBootstrap`) находит корни `running`/`queued`, по `run.job`
+берёт определение из реестра и **проигрывает тело заново**. Внутри тела `Jobs.run` находит завершённых
+детей и возвращает их `output` (не переисполняя), а недоделанных — переисполняет. Так прогон
+доходит до места обрыва.
 
-## Прогресс
+## Отмена и удаление
 
-```ts
-import { progressStages, overallProgress } from '../jobs/progress.js';
+`JobsService.cancel(id)` прерывает волокно корня и **рекурсивно** метит поддерево (`running`/`queued`
+→ `cancelled`), обходя потомков по `parentId`. `delete(id)` удаляет завершённый прогон (активный —
+нельзя). Прежнего `apply`/`applyById` больше нет.
 
-overallProgress(run);          // общий прогресс, 0..100
-progressStages(run, 1);        // [{ name, weight, progress }] — прямые дети корня
-progressStages(run, 2);        // на уровень глубже; глубина клампится фактической структурой
-// weight в сумме = 100 (доля этапа); progress в сумме = общий прогресс.
-```
+## Прогресс (сбор)
+
+Каждый джоб пишет свой `pct` через `Progress.set`. Общий прогресс по дереву собирается **рекурсивным
+обходом** потомков по `parentId` (отдельной функцией на стороне сервиса/фронта) — заранее известного
+числа детей нет, поэтому общий процент приблизительный.
 
 ## Правила и грабли
-- **Тело листа** может звать другие Job только через композицию (комбинаторы), не вызовом «вживую» —
-  иначе раннер не сможет возобновить вложенный шаг. Внутри листа — любой `Effect.gen`.
+- **Тело родителя проигрывается заново** при возобновлении: всё, что не завёрнуто в `Jobs.run` или
+  `memo`, выполнится повторно. Побочные эффекты — только в дочерних джобах.
+- **`key` уникален в пределах непосредственного родителя** (в БД — `@@unique([parentId, key])`).
+  Это и дедупликация запусков, и защита от гонки.
+- **`parentId` — это id ТЕКУЩЕГО джоба**, а не корня: рантайм подставляет его сам, замыкая `Jobs`
+  на узел; внук цепляется к ребёнку, а не к корню.
 - **`memo` — для возобновления**, `progress` — для наблюдаемости; не путать.
-- **`opId` сохраняем ДО** запуска опроса; иначе при падении потеряем ссылку на облачную операцию.
-- **Вендоры/сервисы** не импортируем в Job напрямую — они приходят Effect-тегами из слоя раннера
-  (`JobRuntimeService` строит `Layer` из Nest-провайдеров).
-- **Корневые Job регистрируем** в реестре (иначе не восстановятся после перезапуска).
+- **`opId` сохраняем ДО** опроса облачной операции.
+- **Корневые джобы регистрируем** в реестре (иначе не восстановятся).
+- **Фреймворк чистый**: в `jobs/framework/` нет Nest/Prisma; БД приходит через порт `JobStore`.

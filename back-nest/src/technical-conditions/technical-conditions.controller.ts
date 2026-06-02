@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Stored, TechnicalCondition } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
-import { JobRuntimeService } from '../jobs/job-runtime.service.js';
+import { JobsService } from '../jobs/jobs.service.js';
 import { TechnicalConditionsService } from './technical-conditions.service.js';
 import { TcJobs } from './tc-jobs.service.js';
 
@@ -21,7 +21,7 @@ import { TcJobs } from './tc-jobs.service.js';
 export class TechnicalConditionsController {
     constructor(
         private readonly tc: TechnicalConditionsService,
-        private readonly runtime: JobRuntimeService,
+        private readonly runtime: JobsService,
         private readonly tcJobs: TcJobs,
     ) {}
 

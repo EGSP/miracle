@@ -1,5 +1,5 @@
 import { Effect, Duration, Option } from 'effect';
-import { Memo } from '../jobs/context.js';
+import { Memo } from '../jobs/framework/context.js';
 
 /**
  * Помощники для листьев Job, работающих с облачными операциями (отправка → опрос).
