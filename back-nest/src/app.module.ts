@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from './logger/logger.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
+import { JobImplementationsModule } from './jobs/job-implementations.module.js';
 import { YandexModule } from './yandex/yandex.module.js';
 import { ConvertModule } from './convert/convert.module.js';
 import { AppConfigModule } from './config/app-config.module.js';
@@ -19,6 +20,7 @@ import { OrdersModule } from './orders/orders.module.js';
     imports: [
         LoggerModule,
         JobsModule,
+        JobImplementationsModule,
         YandexModule,
         ConvertModule,
         AppConfigModule,

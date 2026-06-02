@@ -9,6 +9,7 @@
  * Nest-обёртки (сервис/контроллер/модуль) живут уровнем выше, в `jobs/`.
  */
 export * from './job.js';
+export * from './job-impl.decorator.js';
 export * from './context.js';
 export * from './store.js';
 export * from './registry.js';

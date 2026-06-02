@@ -1,7 +1,7 @@
 # Реворк: приложения/позиции заказа + движок джобов — саммари
 
 > Итог рабочей сессии. Лекция-основание — `index.html` в этой папке. Концепт-паттерн — `../job.md`.
-> **Следующий шаг:** перенос доменных джобов со старого API на новый фреймворк (см. «Что осталось»).
+> **Следующий шаг:** подключить новые джобы к контроллерам (эндпоинты анализа всё ещё 501) — см. «Что осталось».
 
 ## 1. OrderApplication — приложения к заказу
 
@@ -61,16 +61,47 @@
 - Прогресс пишут сами джобы (`Progress.set`); сбор — рекурсивным обходом по `parentId` (итог
   приблизительный, число детей заранее неизвестно).
 
-## Что осталось (следующий шаг — реворк доменных джобов)
+## 5. Реворк доменных джобов — выполнено
 
-Шесть файлов используют **старый** API/пути и красные by design:
+Каждый корневой джоб — **отдельный инъецируемый класс в своём файле** под
+`back-nest/src/jobs/implementations/`, сгруппированы по категориям подпапками:
 
-| Домен | Файлы | Нужно |
-|---|---|---|
-| orders | `order-jobs.ts`, `order-jobs.service.ts` | новый API **+** переезд на `OrderPosition`/`applicationId` (старая завязка на `order.details`/`fileId`/`OrdersService.update`) |
-| technical-conditions | `tc-jobs.ts`, `tc-jobs.service.ts` | новый API (`defineJob` + `Jobs.run`, импорт из `jobs/framework`) |
-| files-content | `scan-jobs.ts`, `scan-jobs.service.ts` | новый API |
+```
+implementations/
+  scan/   scan.shared.ts · ocr.job.ts · llm-vision.job.ts · llm-vision-tc.job.ts
+  order/  order-analyse.job.ts · designation-analyse.job.ts
+  tc-extract.job.ts        (одиночный — без подпапки)
+```
 
-`common/cloud-job.ts` (`submitOnce`/`pollUntilDone`) уже на новом `Memo` и зелёный — подойдёт как есть.
-Эндпоинты анализа в `orders.controller.ts` временно отвечают `501` до переноса джобов.
-Сервер пока не стартует (эти 6 файлов) — ожидаемо для поэтапной миграции.
+- **Класс-джоб** = `@Injectable() @JobImpl()` + `implements Job<I,O>` (поля `id`, `run`). Доменные
+  сервисы инъецируются в конструктор обычным DI; дети (`llm`/`recognize`, `apply`) строятся в
+  конструкторе через `defineJob`, замыкая инъецированные сервисы. `run` — чистая оркестрация
+  детей через `Jobs.run`. Общая «начинка» scan-джобов — в `scan/scan.shared.ts` (3 класса её не дублируют).
+- **Авторегистрация вместо регистраторов.** `@JobImpl()` (`framework/job-impl.decorator.ts`) ставит
+  метку; `JobsService` на `onApplicationBootstrap` находит все провайдеры с меткой через
+  `DiscoveryService` и регистрирует в реестре, затем — recovery. Прежние доменные регистраторы
+  `OrderJobs`/`TcJobs`/`ScanJobs` **удалены**.
+- **Единый модуль** `jobs/job-implementations.module.ts`: провайдит все джоб-классы, импортирует
+  доменные модули (Files/FilesContent/ProductTypes/TechnicalConditions/Orders). Подключён в `AppModule`.
+  `JobsModule` импортирует `DiscoveryModule`.
+- **Запуск по id.** `JobsService.start(id | job, input)` (перегрузка по строке резолвит через реестр).
+  Потребители из других модулей зовут по id, не инъецируя класс джоба (нет цикла):
+  `ExtractionService` → `start('ocr'|'llm-vision'|'llm-vision-tc', …)`,
+  `TechnicalConditionsController` → `start('tc-extract', {tcId})`.
+- **Паттерн дюрабилити (без изменений):** `llm`/`recognize` мемоизирует только `opId`; его **output**
+  (результат) живёт в `JobRun` ребёнка и повторно не хранится. `apply` — побочный эффект (для
+  `order-analyse` это `create`, защищён кэшем ребёнка от дубля при replay).
+- **order** переехал на приложения/позиции: `order-analyse(applicationId)` → `OrderPosition`;
+  `designation-analyse(positionId, tcId)` → `OrderPosition.designation`. Убраны `OrderDetails`/Dual/
+  `clientCompanyName`/`OrdersService.update`. Создан `OrderPositionsService` (экспорт `OrdersModule`).
+
+Состояние: `npm install` + `prisma generate` выполнены, `tsc` по `back-nest` — **0 ошибок**.
+Приложение не загружалось вживую (нет `DATABASE_URL` в `.env` и поднятой БД) — проверка статическая.
+
+## Что осталось (следующий шаг)
+
+Подключить новые джобы к контроллерам: эндпоинты анализа в `orders.controller.ts`
+(`analyse-details`, `analyse-designation`) пока отвечают `501`. Нужно запускать
+`order-analyse`/`designation-analyse` через `JobsService.start('order-analyse', {applicationId})` /
+`start('designation-analyse', {positionId, tcId})` (вероятно — новый контроллер уровня
+приложения/позиции, т.к. вход теперь `applicationId`/`positionId`, а не `orderId`).

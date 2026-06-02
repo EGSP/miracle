@@ -12,7 +12,6 @@ import { FilesService } from '../../files/files.service.js';
 import { AppLoggerService, type AppLogger } from '../../logger/app-logger.service.js';
 import { JobsService } from '../../jobs/jobs.service.js';
 import { FilesContentService } from '../files-content.service.js';
-import { ScanJobs } from '../scan-jobs.service.js';
 import { extractDocumentContent } from './extract-document.js';
 import { extractSpreadsheetContent } from './extract-spreadsheet.js';
 import { extractTextContent } from './extract-text.js';
@@ -37,7 +36,6 @@ export class ExtractionService {
         private readonly files: FilesService,
         private readonly filesContent: FilesContentService,
         private readonly runtime: JobsService,
-        private readonly scanJobs: ScanJobs,
         @Inject(AppLoggerService) private readonly loggerFactory: AppLoggerService,
     ) {
         this.logger = this.loggerFactory.forContext(ExtractionService.name);
@@ -89,12 +87,12 @@ export class ExtractionService {
                 fileId,
                 meta: { extractionType, extractionStatus: ExtractionStatus.STARTED },
             });
-            const job = file.settings?.isTechnicalCondition
-                ? this.scanJobs.llmVisionTc
+            const jobId = file.settings?.isTechnicalCondition
+                ? 'llm-vision-tc'
                 : file.settings?.complexLayout
-                  ? this.scanJobs.llmVision
-                  : this.scanJobs.ocr;
-            await this.runtime.start(job, { fileId, fileContentId: record.id });
+                  ? 'llm-vision'
+                  : 'ocr';
+            await this.runtime.start(jobId, { fileId, fileContentId: record.id });
             return;
         }
 

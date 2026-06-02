@@ -6,11 +6,21 @@ import {
     NotFoundException,
     type OnApplicationBootstrap,
 } from '@nestjs/common';
+import { DiscoveryService, Reflector } from '@nestjs/core';
 import { Cause, Effect, Fiber } from 'effect';
 import type { JobRun, JobRunsQuery, Stored, WorkerFinalPrompt } from '@miracle/types';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
-import { execute, getJob, type AnyJob, type Job, type JobStore } from './framework/index.js';
+import {
+    brandJobId,
+    execute,
+    getJob,
+    JOB_IMPL_METADATA,
+    registerJob,
+    type AnyJob,
+    type Job,
+    type JobStore,
+} from './framework/index.js';
 import { createPrismaJobStore } from './prisma-job-store.js';
 
 /**
@@ -26,17 +36,34 @@ export class JobsService implements OnApplicationBootstrap {
 
     constructor(
         private readonly prisma: PrismaService,
+        private readonly discovery: DiscoveryService,
+        private readonly reflector: Reflector,
         @Inject(AppLoggerService) loggerFactory: AppLoggerService,
     ) {
         this.logger = loggerFactory.forContext(JobsService.name);
         this.store = createPrismaJobStore(prisma);
     }
 
-    /** Запускает корневой прогон: создаёт запись (`parentId`/`key` = null) и форкает исполнение. */
-    async start<Input>(job: Job<Input, unknown>, input: Input): Promise<JobRun> {
+    /**
+     * Запускает корневой прогон: создаёт запись (`parentId`/`key` = null) и форкает исполнение.
+     * Принимает либо сам джоб, либо его строковый id (джоб берётся из реестра) — последнее
+     * удобно потребителям из других модулей, которым нельзя инъецировать сам класс джоба.
+     */
+    async start<Input>(job: Job<Input, unknown>, input: Input): Promise<JobRun>;
+    async start(jobId: string, input: unknown): Promise<JobRun>;
+    async start(jobOrId: AnyJob | string, input: unknown): Promise<JobRun> {
+        const job = typeof jobOrId === 'string' ? this.requireJob(jobOrId) : jobOrId;
         const root = await this.store.create({ job: job.id, parentId: null, key: null, input });
         this.launch(job, root);
         return root;
+    }
+
+    private requireJob(id: string): AnyJob {
+        const job = getJob(brandJobId(id));
+        if (!job) {
+            throw new NotFoundException(`Неизвестный джоб "${id}"`);
+        }
+        return job;
     }
 
     private launch(job: AnyJob, root: JobRun): void {
@@ -73,8 +100,13 @@ export class JobsService implements OnApplicationBootstrap {
         }
     }
 
-    /** Восстанавливает незавершённые корни после рестарта: replay переиспользует завершённых детей. */
+    /**
+     * Авторегистрация всех джоб-провайдеров (помеченных {@link JobImpl}) в реестре через
+     * `DiscoveryService` — заменяет прежние доменные регистраторы. Затем восстанавливает
+     * незавершённые корни: replay переиспользует завершённых детей.
+     */
     async onApplicationBootstrap(): Promise<void> {
+        this.registerDiscoveredJobs();
         const roots = await this.store.roots(['running', 'queued']);
         for (const root of roots) {
             const job = getJob(root.job);
@@ -85,6 +117,20 @@ export class JobsService implements OnApplicationBootstrap {
             this.logger.info(`Восстановление прогона "${root.id}" (${root.job})`);
             this.launch(job, root);
         }
+    }
+
+    /** Находит провайдеры с маркером {@link JobImpl} и регистрирует их экземпляры в реестре. */
+    private registerDiscoveredJobs(): void {
+        const ids: string[] = [];
+        for (const wrapper of this.discovery.getProviders()) {
+            const { metatype, instance } = wrapper;
+            if (!instance || typeof metatype !== 'function') continue;
+            if (this.reflector.get<boolean>(JOB_IMPL_METADATA, metatype) !== true) continue;
+            const job = instance as AnyJob;
+            registerJob(job);
+            ids.push(job.id);
+        }
+        this.logger.info(`Зарегистрировано джобов: ${ids.length}`, { jobs: ids });
     }
 
     // ── Чтение и управление ───────────────────────────────────────────────────

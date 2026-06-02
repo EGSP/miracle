@@ -14,7 +14,6 @@ import type { Stored, TechnicalCondition } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { TechnicalConditionsService } from './technical-conditions.service.js';
-import { TcJobs } from './tc-jobs.service.js';
 
 @Controller('technical-conditions')
 @UseGuards(AuthGuard)
@@ -22,7 +21,6 @@ export class TechnicalConditionsController {
     constructor(
         private readonly tc: TechnicalConditionsService,
         private readonly runtime: JobsService,
-        private readonly tcJobs: TcJobs,
     ) {}
 
     @Get()
@@ -53,7 +51,7 @@ export class TechnicalConditionsController {
         if (!tc.fileId) {
             throw new BadRequestException('TC не имеет прикреплённого PDF-файла');
         }
-        const run = await this.runtime.start(this.tcJobs.tcExtract, { tcId: id });
+        const run = await this.runtime.start('tc-extract', { tcId: id });
         return { runId: run.id };
     }
 }

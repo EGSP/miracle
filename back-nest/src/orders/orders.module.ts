@@ -7,12 +7,12 @@ import { TechnicalConditionsModule } from '../technical-conditions/technical-con
 import { OrdersController } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
-import { OrderJobs } from './order-jobs.service.js';
+import { OrderPositionsService } from './order-positions.service.js';
 
 @Module({
     imports: [AuthModule, FilesModule, FilesContentModule, ProductTypesModule, TechnicalConditionsModule],
     controllers: [OrdersController],
-    providers: [OrdersService, OrderApplicationsService, OrderJobs],
-    exports: [OrdersService],
+    providers: [OrdersService, OrderApplicationsService, OrderPositionsService],
+    exports: [OrdersService, OrderApplicationsService, OrderPositionsService],
 })
 export class OrdersModule {}
