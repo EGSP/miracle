@@ -51,8 +51,7 @@ export function useFileInputUpload({ id }: UseFileInputUploadOptions) {
     fileStatesRef.current = fileStates
   }, [fileStates])
 
-  const isDirty =
-    fileStates.length > 0 && fileStates.some((s) => s.status !== "success")
+  const isDirty = fileStates.length > 0 && fileStates.some((s) => s.status !== "success")
 
   // ── Регистрация в DirtyGuard ────────────────────────────────────────────
   useEffect(() => {

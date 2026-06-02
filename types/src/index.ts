@@ -7,6 +7,7 @@ export * from './file-types.js';
 export * from './job-run.js';
 export * from './worker.js';
 export * from './order.js';
+export * from './order-application.js';
 export * from './db.js';
 export * from './file-content.js';
 export * from './ai.js';

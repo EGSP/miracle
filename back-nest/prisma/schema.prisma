@@ -111,6 +111,23 @@ model Order {
   @@map("orders")
 }
 
+// Приложение к заказу. К одному заказу может быть несколько приложений (несколько источников),
+// все равноправны. Полезная нагрузка — дискриминированный юнион ApplicationData (file | text).
+model OrderApplication {
+  id       String @id @default(uuid())
+  orderId  String
+  authorId String
+  // ApplicationData — { type:'file', fileId } | { type:'text', text }
+  data     Json
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([orderId])
+  @@map("order_applications")
+}
+
 model TechnicalCondition {
   id                  String  @id @default(uuid())
   name                String?

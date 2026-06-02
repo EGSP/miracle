@@ -24,13 +24,7 @@ export const useUploadFileWithProgress = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      file,
-      onProgress,
-    }: {
-      file: File
-      onProgress?: (percent: number) => void
-    }) => {
+    mutationFn: ({ file, onProgress }: { file: File; onProgress?: (percent: number) => void }) => {
       const formData = new FormData()
       formData.append("file", file)
       return customInstance<FileModel>({

@@ -15,11 +15,10 @@ import {
 } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { createReadStream, existsSync, statSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
+import { unlink } from 'fs/promises';
 import path from 'path';
 import { pipeline } from 'stream/promises';
 import { createWriteStream } from 'fs';
-import { randomUUID } from 'crypto';
 import type { FileModel, FileWithMeta } from '@miracle/types';
 import { getContentType } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
@@ -31,8 +30,6 @@ import { FILE_UPLOAD_CONFIG } from './file-upload.config.js';
 import { fixFileNameEncoding } from './file-name-encoding.js';
 import { PatchFileDto } from './dto/patch-file.dto.js';
 import { FilesQueryDto } from './dto/files-query.dto.js';
-
-const ALLOWED_MIME_TYPES = FILE_UPLOAD_CONFIG.allowedMimeTypes as readonly string[];
 
 @Controller('files')
 @UseGuards(AuthGuard)
@@ -54,41 +51,7 @@ export class FilesController {
         if (!data) {
             throw new BadRequestException('No file provided');
         }
-
-        if (!ALLOWED_MIME_TYPES.includes(data.mimetype)) {
-            data.file.resume();
-            throw new BadRequestException(`File type "${data.mimetype}" is not allowed`);
-        }
-
-        const originalName = fixFileNameEncoding(data.filename);
-        const ext = path.extname(originalName);
-        const extension = ext ? ext.slice(1) : '';
-        const id = randomUUID();
-        const targetPath = path.join(
-            this.files.getUploadsDir(),
-            extension ? `${id}.${extension}` : id,
-        );
-
-        await pipeline(data.file, createWriteStream(targetPath));
-
-        if (data.file.truncated) {
-            await unlink(targetPath);
-            throw new PayloadTooLargeException(
-                `File exceeds the ${FILE_UPLOAD_CONFIG.maxSizeBytes} byte limit`,
-            );
-        }
-
-        const { size } = await stat(targetPath);
-
-        // id передаётся явно, потому что используется как имя файла на диске.
-        return this.files.create({
-            id,
-            name: originalName,
-            extension,
-            bytes: size,
-            pages: undefined,
-            authorId: user.id,
-        });
+        return this.files.saveUpload(data, user.id);
     }
 
     @Patch(':id')
