@@ -1,9 +1,9 @@
-﻿import { Stack } from "@miracle/aramid"
-import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
-import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
-import { Textarea } from "@/components/ui/ds/textarea"
-import { useAddTextApplication } from "@/lib/queries/order-application.query"
+import { Stack } from "@miracle/aramid"
 import { useState } from "react"
+import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
+import { Textarea } from "@/components/ui/ds/textarea"
+import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
+import { useAddTextApplication } from "@/lib/queries/order-application.query"
 
 type Props = {
   orderId: string

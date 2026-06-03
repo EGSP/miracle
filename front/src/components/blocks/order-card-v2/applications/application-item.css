@@ -1,0 +1,76 @@
+/* ─── ApplicationItem (Carbon-aligned clickable chip) ────────────────────────
+   Интерактивная плитка приложения к заказу: иконка типа + обрезаемый текст.
+──────────────────────────────────────────────────────────────────────────── */
+
+.application-item {
+  --application-item-h: var(--aramid-spacing-8); /* 40px */
+  --application-item-min-w: var(--aramid-spacing-13); /* 160px */
+  --application-item-max-w: var(--input-fixed-width); /* 320px */
+
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aramid-spacing-3);
+  min-width: var(--application-item-min-w);
+  max-width: var(--application-item-max-w);
+  width: var(--application-item-max-w);
+  height: var(--application-item-h);
+  padding-inline: var(--aramid-spacing-4);
+  border: 1px solid var(--aramid-color-gray-20);
+  background-color: var(--aramid-color-gray-10);
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-xs);
+  font-weight: var(--aramid-font-weight-regular);
+  line-height: var(--aramid-font-line-height-normal);
+  color: var(--aramid-color-gray-100);
+  text-align: start;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 70ms,
+    border-color 70ms;
+}
+
+.application-item--fluid {
+  width: auto;
+}
+
+.application-item--compact {
+  --application-item-h: var(--aramid-spacing-7); /* 32px */
+}
+
+.application-item:hover:not(:disabled) {
+  background-color: var(--aramid-color-sand-20);
+  border-color: var(--aramid-color-gray-30);
+}
+
+.application-item:active:not(:disabled) {
+  background-color: var(--aramid-color-sand-30);
+  border-color: var(--aramid-color-gray-40);
+}
+
+.application-item:focus-visible {
+  outline: 2px solid var(--aramid-color-sand-60);
+  outline-offset: 2px;
+}
+
+.application-item:disabled {
+  cursor: not-allowed;
+  color: var(--aramid-color-gray-40);
+  background-color: var(--aramid-color-gray-10);
+  border-color: var(--aramid-color-gray-20);
+}
+
+.application-item__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--aramid-color-gray-60);
+}
+
+.application-item__label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

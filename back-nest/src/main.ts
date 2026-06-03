@@ -26,9 +26,11 @@ async function bootstrap() {
 
     const config = app.get(AppConfigService);
 
+    // @fastify/cors defaults to GET,HEAD,POST only (unlike express cors) — DELETE/PATCH need explicit methods
     app.enableCors({
         origin: config.corsOpen ? true : config.corsOrigins,
         credentials: true,
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     });
 
     app.useGlobalPipes(new ZodValidationPipe());

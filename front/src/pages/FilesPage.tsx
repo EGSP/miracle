@@ -13,7 +13,7 @@ import {
   StructuredList,
   type StructuredListKey,
 } from "@/components/ui/ds/structured-list"
-import { frontConfig } from "@/lib/config"
+import { resolveFilePreviewUrl } from "@/lib/resolve-file-preview-url"
 import { useFilteredFiles } from "@/lib/hooks/useFilteredFiles"
 import { useFileInputUpload } from "@/lib/hooks/useFileInputUpload"
 import { useGetFiles } from "@/lib/queries/file.query"
@@ -102,9 +102,6 @@ function FileListSection() {
 
   const selectedFile = useMemo(() => files?.find((f) => f.id === fileId) ?? null, [files, fileId])
 
-  const resolvePreviewUrl = (file: FileWithMeta) =>
-    `${frontConfig.API_URL}/files/${encodeURIComponent(file.id)}/content`
-
   const handleSelected = (keys: StructuredListKey[]) => {
     void navigate({ search: (prev) => ({ ...prev, fileId: keys[0] as string | undefined }) })
   }
@@ -150,7 +147,7 @@ function FileListSection() {
           <Text.Heading as="h3" variant="compact-01">
             Предпросмотр
           </Text.Heading>
-          <FileContentPreview file={selectedFile} resolveUrl={resolvePreviewUrl} />
+          <FileContentPreview file={selectedFile} resolveUrl={resolveFilePreviewUrl} />
         </Stack>
       )}
     </Stack>

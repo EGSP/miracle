@@ -1,5 +1,6 @@
 import { Layer, Text } from "@miracle/aramid"
 import { XIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import type * as React from "react"
 import { useEffect, useRef } from "react"
 import { Button } from "./button"
@@ -14,6 +15,8 @@ export interface DialogButtonConfig {
   onClick: () => void
   variant?: ButtonVariant
   disabled?: boolean
+  /** Trailing-иконка (как у Button). */
+  icon?: ReactNode
 }
 
 export interface DialogProps {
@@ -75,6 +78,7 @@ function PrivateActions({ actions }: { actions?: DialogButtonConfig[] }) {
           <Button
             key={i}
             label={action.label}
+            icon={action.icon}
             variant={action.variant ?? "primary"}
             onClick={action.onClick}
             disabled={action.disabled}

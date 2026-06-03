@@ -1,0 +1,4 @@
+/* Горизонтальный ряд ApplicationItem с переносом. */
+.order-applications__chips {
+  flex-wrap: wrap;
+}

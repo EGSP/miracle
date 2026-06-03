@@ -1,14 +1,14 @@
-﻿import { Stack, Text } from "@miracle/aramid"
+import { Stack, Text } from "@miracle/aramid"
 import { Plus } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/ds/button"
 import { ButtonGroup } from "@/components/ui/ds/button-group"
 import { Tile } from "@/components/ui/ds/tile"
 import { useGetOrderApplications } from "@/lib/queries/order-application.query"
-import { AddFileApplicationDialog } from "./AddFileApplicationDialog"
-import { AddTextApplicationDialog } from "./AddTextApplicationDialog"
+import { AddFileApplicationDialog } from "./AddFileApplicationDialog.tsx"
+import { AddTextApplicationDialog } from "./AddTextApplicationDialog.tsx"
 import { ApplicationItem } from "./ApplicationItem"
-import "./order-card-v2.css"
+import "./applications-tile.css"
 
 export function ApplicationsTile({ orderId }: { orderId: string }) {
   const { data: applications, isLoading } = useGetOrderApplications(orderId)
@@ -21,7 +21,7 @@ export function ApplicationsTile({ orderId }: { orderId: string }) {
     <>
       <Tile>
         <Stack gap={4}>
-          <div className="order-applications__header">
+          <Stack gap={3}>
             <Text.Heading as="h3" variant="compact-01">
               Приложения
             </Text.Heading>
@@ -41,18 +41,16 @@ export function ApplicationsTile({ orderId }: { orderId: string }) {
                 onClick={() => setFileDialogOpen(true)}
               />
             </ButtonGroup>
-          </div>
+          </Stack>
 
           {isLoading && <Text.Helper as="p">Загрузка…</Text.Helper>}
           {!isLoading && !hasApplications && <Text.Helper as="p">Нет приложений</Text.Helper>}
           {hasApplications && (
-            <ul className="order-applications__list">
+            <Stack orientation="horizontal" gap={3} className="order-applications__chips">
               {applications?.map((application) => (
-                <li key={application.id}>
-                  <ApplicationItem application={application} />
-                </li>
+                <ApplicationItem key={application.id} application={application} fluid compact />
               ))}
-            </ul>
+            </Stack>
           )}
         </Stack>
       </Tile>

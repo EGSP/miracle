@@ -1,6 +1,6 @@
 import { Stack, Text } from "@miracle/aramid"
 import { useGetOrder } from "@/lib/queries/order.query"
-import { ApplicationsTile } from "./ApplicationsTile"
+import { ApplicationsTile } from "./applications/ApplicationsTile"
 import { OrderCardV2Header } from "./OrderCardV2Header"
 import type { OrderCardV2Props } from "./OrderCardV2.types"
 
