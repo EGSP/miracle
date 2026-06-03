@@ -2,9 +2,9 @@ import { Input as InputPrimitive } from "@base-ui/react/input"
 import { Text } from "@miracle/aramid"
 import type * as React from "react"
 
-import { InputDropdown } from "@/components/ui/input-dropdown"
-import { InputSuggest } from "@/components/ui/input-suggest"
-import { type BaseInputProps, inputVariants } from "@/components/ui/input-variants"
+import { InputDropdown } from "./input-dropdown"
+import { InputSuggest } from "./input-suggest"
+import { type BaseInputProps, inputVariants } from "./input-variants"
 import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 

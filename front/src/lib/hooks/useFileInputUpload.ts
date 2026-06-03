@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useFileInputUpload
  *
  * Управляет состоянием файлов и их последовательной загрузкой на сервер.
@@ -23,7 +23,7 @@
 
 import { useEffect, useRef, useState } from "react"
 
-import type { AppliedFile, FileState } from "@/components/ui/file-input"
+import type { AppliedFile, FileState } from "@/components/ui/ds/file-input"
 import { useDirtyGuardContext } from "@/contexts/dirty-state/DirtyGuardContext"
 import { getApiErrorMessage } from "@/lib/api"
 import { useUploadFileWithProgress } from "@/lib/queries/file.query"

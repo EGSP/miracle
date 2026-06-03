@@ -3,14 +3,14 @@ import type { ExtractionStatus, FileContent, FileWithMeta, Stored } from "@mirac
 import { FileDomain, getFileDomain, validatePageRanges } from "@miracle/types"
 import { AlertCircle, Eye, ScanText, Trash2, Upload } from "lucide-react"
 import { createContext, type PropsWithChildren, useContext, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
-import { Checkbox } from "@/components/ui/checkbox"
-import { FileInput, type AppliedFile, type FileState } from "@/components/ui/file-input"
-import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification"
-import { Input } from "@/components/ui/input"
-import { Dialog } from "@/components/ui/modal-dialog"
-import { Tile } from "@/components/ui/tile"
+import { Button } from "@/components/ui/ds/button"
+import { ButtonGroup } from "@/components/ui/ds/button-group"
+import { Checkbox } from "@/components/ui/ds/checkbox"
+import { FileInput, type AppliedFile, type FileState } from "@/components/ui/ds/file-input"
+import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
+import { Input } from "@/components/ui/ds/input"
+import { Dialog } from "@/components/ui/ds/modal-dialog"
+import { Tile } from "@/components/ui/ds/tile"
 import {
   DirtyGuardProvider,
   useGuardActions,

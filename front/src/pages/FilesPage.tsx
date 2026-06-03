@@ -1,18 +1,18 @@
-import { Column, Grid, IconIndicator, Stack, Text } from "@miracle/aramid"
+﻿import { Column, Grid, IconIndicator, Stack, Text } from "@miracle/aramid"
 import { type FileWithMeta, getAllowedExtensions } from "@miracle/types"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { FileIcon, Upload } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { FileCard } from "@/components/blocks/FileCard"
-import { Button } from "@/components/ui/button"
-import { Checkbox, type TriStateValue } from "@/components/ui/checkbox"
-import { FileContentPreview } from "@/components/ui/file-content-preview"
-import { FileInput } from "@/components/ui/file-input"
+import { Button } from "@/components/ui/ds/button"
+import { Checkbox, type TriStateValue } from "@/components/ui/ds/checkbox"
+import { FileContentPreview } from "@/components/ui/external/file-content-preview"
+import { FileInput } from "@/components/ui/ds/file-input"
 import {
   type ListDefinition,
   StructuredList,
   type StructuredListKey,
-} from "@/components/ui/structured-list"
+} from "@/components/ui/ds/structured-list"
 import { frontConfig } from "@/lib/config"
 import { useFilteredFiles } from "@/lib/hooks/useFilteredFiles"
 import { useFileInputUpload } from "@/lib/hooks/useFileInputUpload"

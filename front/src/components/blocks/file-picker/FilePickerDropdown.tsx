@@ -1,7 +1,7 @@
-import { IconIndicator, Stack, Text } from "@miracle/aramid"
+﻿import { IconIndicator, Stack, Text } from "@miracle/aramid"
 import type { FileWithMeta } from "@miracle/types"
 import { useMemo } from "react"
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/ds/input"
 
 export function getFileIndicator(file: FileWithMeta | null): {
   kind: "succeeded" | "failed" | "unknown"
@@ -42,7 +42,7 @@ export type FilePickerDropdownProps = {
 }
 
 /**
- * @deprecated Используй `FileInput` из `@/components/ui/file-input` для новых компонентов.
+ * @deprecated Используй `FileInput` из `@/components/ui/ds/file-input` для новых компонентов.
  * Выбор файла из списка с возможностью сброса (пустой пункт в dropdown).
  */
 export function FilePickerDropdown({

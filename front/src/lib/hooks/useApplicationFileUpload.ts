@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useApplicationFileUpload
  *
  * Аналог useFileInputUpload, но загружает файлы как приложения заказа
@@ -7,7 +7,7 @@
  */
 
 import { useRef, useState } from "react"
-import type { AppliedFile, FileState } from "@/components/ui/file-input"
+import type { AppliedFile, FileState } from "@/components/ui/ds/file-input"
 import { getApiErrorMessage } from "@/lib/api"
 import { orderApplicationsKey } from "@/lib/queries/order-application.query"
 import { useMutation, useQueryClient } from "@tanstack/react-query"

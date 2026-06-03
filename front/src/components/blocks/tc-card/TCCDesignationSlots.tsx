@@ -1,12 +1,12 @@
-import { Column, Grid, Stack, Text } from "@miracle/aramid"
+﻿import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import type {
   DesignationSlot,
   Stored,
   TechnicalCondition,
   TechnicalConditionRule,
 } from "@miracle/types"
-import { ArrayEditor } from "@/components/ui/array-editor"
-import { Input } from "@/components/ui/input"
+import { ArrayEditor } from "@/components/ui/derivations/array-editor"
+import { Input } from "@/components/ui/ds/input"
 import { useField } from "@/contexts/dirty-state/useField"
 import { useContribute } from "@/contexts/draft-api/DraftContext"
 import { useTechnicalConditionCardContext } from "./TechnicalConditionCardContext"

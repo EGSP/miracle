@@ -1,8 +1,8 @@
 ﻿import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import { Link, Outlet } from "@tanstack/react-router"
 import { type ReactNode, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/ds/button"
+import { Input } from "@/components/ui/ds/input"
 import { useAuthContext } from "@/contexts/AuthContext"
 import { useLogin, useLogout, useRegister } from "@/lib/queries/auth.query"
 

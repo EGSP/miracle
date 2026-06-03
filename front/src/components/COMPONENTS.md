@@ -4,7 +4,11 @@
 
 - **`packages/aramid`** — внутренний дизайн-пакет. Источник истины для токенов и базовых компонентов (Grid, Stack, Text и т.д.)
 - **`front/src`** — фронтенд-приложение, потребляет Aramid
-- Tailwind и shadcn установлены, но **только для сторонних/стандартных контролов** (base-ui и т.п.). В собственных компонентах не используются
+- **`front/src/components/ui/`** — UI-компоненты приложения, разбиты по слоям:
+  - **`ds/`** — базовые контролы в духе Carbon v11 + Aramid (`Button`, `Input`, `Dialog` из `modal-dialog`, `Tile`, …). Импорт: `@/components/ui/ds/...` или barrel `@/components/ui/ds`
+  - **`derivations/`** — виджеты, собранные из `ds` (`CopyButton`, `ArrayEditor`)
+  - **`external/`** — чужеродные/legacy-виджеты вне DS (`InlineMutationNotification`, `FileContentPreview`)
+- Tailwind — только в `external/` и отдельных блоках; в `ds/` не используется
 
 ---
 
@@ -161,7 +165,7 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 
 - **`Layer`** из `@miracle/aramid` — фон панели (`--layer-background`) и уровень в React Context (0…3). Вложенный `Layer` без `level` увеличивает уровень на 1.
 - **Поля ввода** (`Input`, `Textarea`, dropdown, suggest) сами вызывают `useLayerTokens()` и задают фон/границу через inline `style` (хелпер `useFieldLayerStyle` в `front/src/lib/use-field-layer-style.ts`). Каскад `--field-background` с предка **не используется**.
-- **Диалог** рендерится в корне документа (`body`) вне дерева страницы — внутри `DialogContent` уже есть `<Layer level={1}>`.
+- **Диалог** (`ds/modal-dialog`) рендерится через `DialogProvider` / `useDialog` вне дерева страницы; тело — `<Layer level={1}>`.
 - Карточки с формами оборачиваются в `<Layer>` (белая поверхность, поля `gray-10`).
 
 Подробнее: [`aramid/docs/LAYER.md`](../../aramid/docs/LAYER.md).

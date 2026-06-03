@@ -1,7 +1,7 @@
 import { ClipboardCopy, StickyNote, StickyNotes } from "lucide-react"
 import type * as React from "react"
-import { Button, type ButtonProps } from "@/components/ui/button"
-import type { ButtonSize } from "@/components/ui/button-variants"
+import { Button, type ButtonProps } from "@/components/ui/ds/button"
+import type { ButtonSize } from "@/components/ui/ds/button-variants"
 import { copyTextWithExecCommand } from "@/lib/copy-text"
 
 export type CopyButtonProps = Omit<ButtonProps, "variant" | "icon" | "label" | "children"> & {

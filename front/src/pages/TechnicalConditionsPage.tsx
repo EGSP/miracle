@@ -1,4 +1,4 @@
-import { Column, Grid, Stack, Text } from "@miracle/aramid"
+﻿import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import type { Stored, TechnicalCondition } from "@miracle/types"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useCallback, useEffect, useState } from "react"
@@ -8,7 +8,7 @@ import {
   type ListDefinition,
   StructuredList,
   type StructuredListKey,
-} from "@/components/ui/structured-list"
+} from "@/components/ui/ds/structured-list"
 import { DirtyGuardProvider, useGuardState } from "@/contexts/dirty-state/DirtyGuardContext"
 import { useTechnicalConditions } from "@/lib/queries/technical-condition.query"
 

@@ -1,7 +1,7 @@
-import { Column, Grid, Stack, Text } from "@miracle/aramid"
+﻿import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import { Link } from "@tanstack/react-router"
 import { useMemo } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/ds/button"
 import { useAuthContext } from "@/contexts/AuthContext"
 import { useCheckHealth, useRefetchHealth } from "@/lib/queries/health.query"
 

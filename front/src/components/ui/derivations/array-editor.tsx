@@ -1,7 +1,7 @@
 ﻿import { Stack } from "@miracle/aramid"
 import { Plus, Trash2 } from "lucide-react"
 import type { ReactNode } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/ds/button"
 import { cn } from "@/lib/utils"
 
 type ArrayEditorProps<T> = {

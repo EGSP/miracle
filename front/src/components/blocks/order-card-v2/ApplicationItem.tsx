@@ -1,7 +1,7 @@
-import { Text } from "@miracle/aramid"
+﻿import { Text } from "@miracle/aramid"
 import type { ApplicationData, OrderApplication, Stored } from "@miracle/types"
 import { File, MessageSquareText, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/ds/button"
 import { useRemoveApplication } from "@/lib/queries/order-application.query"
 
 export function ApplicationItem({ application }: { application: Stored<OrderApplication> }) {

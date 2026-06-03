@@ -1,7 +1,7 @@
-import { Stack } from "@miracle/aramid"
-import { Dialog, type DialogButtonConfig } from "@/components/ui/modal-dialog"
-import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification"
-import { Textarea } from "@/components/ui/textarea"
+﻿import { Stack } from "@miracle/aramid"
+import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
+import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
+import { Textarea } from "@/components/ui/ds/textarea"
 import { useAddTextApplication } from "@/lib/queries/order-application.query"
 import { useState } from "react"
 

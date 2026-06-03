@@ -1,7 +1,7 @@
 import { Text, useLayerTokens, useNextLayerTokens } from "@miracle/aramid"
 import * as React from "react"
 
-import { type BaseInputProps, inputVariants } from "@/components/ui/input-variants"
+import { type BaseInputProps, inputVariants } from "./input-variants"
 import { useFieldLayerStyle } from "@/lib/use-field-layer-style"
 import { cn } from "@/lib/utils"
 

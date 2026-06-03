@@ -1,8 +1,8 @@
-import { Stack, Text } from "@miracle/aramid"
+﻿import { Stack, Text } from "@miracle/aramid"
 import { USER_ROLE_LABELS, USER_ROLES, type UserRole } from "@miracle/types"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/ds/button"
+import { Input } from "@/components/ui/ds/input"
 import { getApiErrorMessage } from "@/lib/api"
 import { useCreateAdminUser } from "@/lib/queries/admin.query"
 

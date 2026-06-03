@@ -2,10 +2,10 @@
 import type { ProductType, Stored } from "@miracle/types"
 import { Trash2 } from "lucide-react"
 import { useMemo } from "react"
-import { Button } from "@/components/ui/button"
-import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/ds/button"
+import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
+import { Input } from "@/components/ui/ds/input"
+import { Textarea } from "@/components/ui/ds/textarea"
 import {
   DirtyGuardProvider,
   useGuardActions,

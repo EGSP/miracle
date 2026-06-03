@@ -1,13 +1,13 @@
-import { Stack, Text } from "@miracle/aramid"
+﻿import { Stack, Text } from "@miracle/aramid"
 import type {
   DesignationSlot,
   Stored,
   TechnicalCondition,
   TechnicalConditionRule,
 } from "@miracle/types"
-import { ArrayEditor } from "@/components/ui/array-editor"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { ArrayEditor } from "@/components/ui/derivations/array-editor"
+import { Input } from "@/components/ui/ds/input"
+import { Textarea } from "@/components/ui/ds/textarea"
 import { useField } from "@/contexts/dirty-state/useField"
 import { useContribute } from "@/contexts/draft-api/DraftContext"
 import { createUuid } from "@/lib/uuid"

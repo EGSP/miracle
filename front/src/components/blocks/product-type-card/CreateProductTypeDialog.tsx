@@ -1,29 +1,23 @@
 ﻿import { Stack, Text } from "@miracle/aramid"
 import { Plus } from "lucide-react"
-import { useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { useMemo } from "react"
+import { Button } from "@/components/ui/ds/button"
+import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
+import { Input } from "@/components/ui/ds/input"
+import { Textarea } from "@/components/ui/ds/textarea"
+import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
 import {
   DirtyGuardProvider,
   useGuardActions,
   useGuardState,
 } from "@/contexts/dirty-state/DirtyGuardContext"
 import { useField } from "@/contexts/dirty-state/useField"
+import { useDialog } from "@/lib/hooks/use-dialog"
 import { parseSynonymsFromText } from "@/lib/product-type-synonyms"
 import { useCreateProductType } from "@/lib/queries/product-type.query"
 import { SynonymsPreview } from "./SynonymsPreview"
 
-function CreateProductTypeForm({ onCreated }: { onCreated: () => void }) {
+function CreateProductTypeDialogContent({ onClose }: { onClose: () => void }) {
   const createMutation = useCreateProductType()
   const { isDirtyAnywhere } = useGuardState()
   const { commitAll, resetAll } = useGuardActions()
@@ -47,7 +41,7 @@ function CreateProductTypeForm({ onCreated }: { onCreated: () => void }) {
       {
         onSuccess: () => {
           commitAll()
-          onCreated()
+          onClose()
         },
       },
     )
@@ -55,11 +49,25 @@ function CreateProductTypeForm({ onCreated }: { onCreated: () => void }) {
 
   const handleCancel = () => {
     resetAll()
-    onCreated()
+    onClose()
   }
 
+  const actions: DialogButtonConfig[] = [
+    {
+      label: "Отмена",
+      onClick: handleCancel,
+      variant: "secondary",
+      disabled: createMutation.isPending,
+    },
+    {
+      label: createMutation.isPending ? "Создание..." : "Создать",
+      onClick: handleCreate,
+      disabled: !isDirtyAnywhere || !name.value.trim() || createMutation.isPending,
+    },
+  ]
+
   return (
-    <>
+    <Dialog title="Новый тип продукции" size="md" onClose={onClose} actions={actions}>
       <Stack gap={3}>
         <Stack gap={1}>
           <Text.Label as="span">Название</Text.Label>
@@ -94,43 +102,25 @@ function CreateProductTypeForm({ onCreated }: { onCreated: () => void }) {
         </Stack>
         <InlineMutationNotification mutation={createMutation} />
       </Stack>
-      <DialogFooter>
-        <Button
-          variant="tertiary"
-          label="Отмена"
-          onClick={handleCancel}
-          disabled={createMutation.isPending}
-        />
-        <Button
-          label={createMutation.isPending ? "Создание..." : "Создать"}
-          onClick={handleCreate}
-          disabled={!isDirtyAnywhere || !name.value.trim() || createMutation.isPending}
-        />
-      </DialogFooter>
-    </>
+    </Dialog>
   )
 }
 
 export function CreateProductTypeDialog() {
-  const [open, setOpen] = useState(false)
-
-  const handleClose = () => {
-    setOpen(false)
-  }
+  const { open } = useDialog()
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" icon={<Plus />} label="Создать тип" />} />
-      <DialogContent size="medium">
-        <DialogHeader>
-          <DialogTitle>Новый тип продукции</DialogTitle>
-        </DialogHeader>
-        {open && (
+    <Button
+      size="sm"
+      icon={<Plus />}
+      label="Создать тип"
+      onClick={() =>
+        open(({ close }) => (
           <DirtyGuardProvider id="create-product-type">
-            <CreateProductTypeForm onCreated={handleClose} />
+            <CreateProductTypeDialogContent onClose={close} />
           </DirtyGuardProvider>
-        )}
-      </DialogContent>
-    </Dialog>
+        ))
+      }
+    />
   )
 }

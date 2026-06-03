@@ -1,7 +1,8 @@
+import { Text } from "@miracle/aramid"
 import { AlertCircle, CheckCircle2, X } from "lucide-react"
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/ds/button"
+import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
 import { getApiErrorMessage } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -33,6 +34,10 @@ export function InlineMutationNotification({
 
   if (mutation.isError) {
     const message = getApiErrorMessage(mutation.error as Error)
+    const detailsActions: DialogButtonConfig[] = [
+      { label: "Закрыть", onClick: () => setDetailsOpen(false), variant: "secondary" },
+    ]
+
     return (
       <>
         <div
@@ -61,13 +66,18 @@ export function InlineMutationNotification({
             />
           </div>
         </div>
-        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent size="small">
-            <DialogTitle>Ошибка</DialogTitle>
-            <p className="break-words text-sm text-muted-foreground">{message}</p>
-            <DialogFooter showCloseButton />
-          </DialogContent>
-        </Dialog>
+        {detailsOpen && (
+          <Dialog
+            title="Ошибка"
+            size="sm"
+            onClose={() => setDetailsOpen(false)}
+            actions={detailsActions}
+          >
+            <Text.Helper as="p" className="break-words">
+              {message}
+            </Text.Helper>
+          </Dialog>
+        )}
       </>
     )
   }

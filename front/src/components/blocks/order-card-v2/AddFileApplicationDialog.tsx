@@ -1,8 +1,8 @@
-import { Stack } from "@miracle/aramid"
+﻿import { Stack } from "@miracle/aramid"
 import { getAllowedExtensions } from "@miracle/types"
 import { useMemo } from "react"
-import { FileInput } from "@/components/ui/file-input"
-import { Dialog, type DialogButtonConfig } from "@/components/ui/modal-dialog"
+import { FileInput } from "@/components/ui/ds/file-input"
+import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
 import { useApplicationFileUpload } from "@/lib/hooks/useApplicationFileUpload"
 
 type Props = {

@@ -1,26 +1,20 @@
 ﻿import { Stack, Text } from "@miracle/aramid"
 import type { ProductType, Stored } from "@miracle/types"
 import { Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { FilePickerDropdown } from "@/components/blocks/file-picker/FilePickerDropdown"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/ds/button"
+import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
+import { Input } from "@/components/ui/ds/input"
+import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
 import { DirtyGuardProvider, useGuardActions } from "@/contexts/dirty-state/DirtyGuardContext"
 import { useField } from "@/contexts/dirty-state/useField"
+import { useDialog } from "@/lib/hooks/use-dialog"
 import { useGetFiles } from "@/lib/queries/file.query"
 import { useProductTypes } from "@/lib/queries/product-type.query"
 import { useCreateTechnicalCondition } from "@/lib/queries/technical-condition.query"
 
-function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) {
+function CreateTechnicalConditionDialogContent({ onClose }: { onClose: () => void }) {
   const createMutation = useCreateTechnicalCondition()
   const { commitAll, resetAll } = useGuardActions()
   const { data: productTypes = [], isLoading: isProductTypesLoading } = useProductTypes()
@@ -46,7 +40,7 @@ function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) 
       {
         onSuccess: () => {
           commitAll()
-          onCreated()
+          onClose()
         },
       },
     )
@@ -54,11 +48,25 @@ function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) 
 
   const handleCancel = () => {
     resetAll()
-    onCreated()
+    onClose()
   }
 
+  const actions: DialogButtonConfig[] = [
+    {
+      label: "Отмена",
+      onClick: handleCancel,
+      variant: "secondary",
+      disabled: createMutation.isPending,
+    },
+    {
+      label: createMutation.isPending ? "Создание..." : "Создать ТУ",
+      onClick: handleCreate,
+      disabled: createMutation.isPending,
+    },
+  ]
+
   return (
-    <>
+    <Dialog title="Новое техническое условие" size="md" onClose={onClose} actions={actions}>
       <Stack gap={3}>
         <Text.Helper as="p">
           Все поля необязательны. Файл и тип продукции можно задать сейчас или позже в карточке ТУ.
@@ -101,41 +109,26 @@ function CreateTechnicalConditionForm({ onCreated }: { onCreated: () => void }) 
         </Stack>
         <InlineMutationNotification mutation={createMutation} />
       </Stack>
-      <DialogFooter>
-        <Button
-          variant="tertiary"
-          label="Отмена"
-          onClick={handleCancel}
-          disabled={createMutation.isPending}
-        />
-        <Button
-          label={createMutation.isPending ? "Создание..." : "Создать ТУ"}
-          onClick={handleCreate}
-          disabled={createMutation.isPending}
-        />
-      </DialogFooter>
-    </>
+    </Dialog>
   )
 }
 
 export function CreateTechnicalConditionDialog() {
-  const [open, setOpen] = useState(false)
+  const { open } = useDialog()
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={<Button type="button" size="sm" icon={<Plus />} label="Создать ТУ" />}
-      />
-      <DialogContent size="medium">
-        <DialogHeader>
-          <DialogTitle>Новое техническое условие</DialogTitle>
-        </DialogHeader>
-        {open && (
+    <Button
+      type="button"
+      size="sm"
+      icon={<Plus />}
+      label="Создать ТУ"
+      onClick={() =>
+        open(({ close }) => (
           <DirtyGuardProvider id="create-technical-condition">
-            <CreateTechnicalConditionForm onCreated={() => setOpen(false)} />
+            <CreateTechnicalConditionDialogContent onClose={close} />
           </DirtyGuardProvider>
-        )}
-      </DialogContent>
-    </Dialog>
+        ))
+      }
+    />
   )
 }

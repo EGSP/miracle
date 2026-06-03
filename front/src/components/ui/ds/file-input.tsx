@@ -3,8 +3,8 @@ import { CircleCheck, X } from "lucide-react"
 import { createContext, useContext, useRef, useState } from "react"
 import type { ReactNode } from "react"
 
-import { Button } from "@/components/ui/button"
-import type { ButtonSize, ButtonVariant } from "@/components/ui/button-variants"
+import { Button } from "./button"
+import type { ButtonSize, ButtonVariant } from "./button-variants"
 import { cn } from "@/lib/utils"
 
 import "@/design/file-input.css"

@@ -1,15 +1,15 @@
-import { Column, Grid, Stack, Text } from "@miracle/aramid"
+﻿import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import type { Order, Stored } from "@miracle/types"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { ListOrdered, Plus } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { OrderCardV2 } from "@/components/blocks/order-card-v2/OrderCardV2"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/ds/button"
 import {
   type ListDefinition,
   StructuredList,
   type StructuredListKey,
-} from "@/components/ui/structured-list"
+} from "@/components/ui/ds/structured-list"
 import { useCreateOrder, useGetOrders } from "@/lib/queries/order.query"
 import { useGetUser } from "@/lib/queries/user.query"
 

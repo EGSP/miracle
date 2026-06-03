@@ -1,9 +1,9 @@
-import { Stack, Text } from "@miracle/aramid"
+﻿import { Stack, Text } from "@miracle/aramid"
 import type { Order, Stored, TechnicalCondition } from "@miracle/types"
 import { useMemo, useState } from "react"
-import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification"
-import { Input } from "@/components/ui/input"
-import { Dialog } from "@/components/ui/modal-dialog"
+import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
+import { Input } from "@/components/ui/ds/input"
+import { Dialog } from "@/components/ui/ds/modal-dialog"
 import { useAnalyseDesignation, useGetOrders } from "@/lib/queries/order.query"
 import { useTechnicalConditions } from "@/lib/queries/technical-condition.query"
 

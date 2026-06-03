@@ -2,9 +2,9 @@ import { Layer, Text } from "@miracle/aramid"
 import { XIcon } from "lucide-react"
 import type * as React from "react"
 import { useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
-import type { ButtonVariant } from "@/components/ui/button-variants"
+import { Button } from "./button"
+import { ButtonGroup } from "./button-group"
+import type { ButtonVariant } from "./button-variants"
 import "@/design/modal-dialog.css"
 
 // ─── Public types ────────────────────────────────────────────────────────────

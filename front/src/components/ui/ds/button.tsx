@@ -1,6 +1,6 @@
 import type * as React from "react"
 
-import { type BaseButtonProps, buttonVariants } from "@/components/ui/button-variants"
+import { type BaseButtonProps, buttonVariants } from "./button-variants"
 import { cn } from "@/lib/utils"
 
 import "@/design/button.css"
