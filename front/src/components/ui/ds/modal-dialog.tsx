@@ -24,6 +24,8 @@ export interface DialogProps {
   title: string
   size?: "sm" | "md" | "lg" | "xl"
   onClose: () => void
+  /** Закрытие по Escape. Отдельно от `cancel` на `<dialog>` — отмена системного file picker не закрывает модалку. */
+  closeOnEscape?: boolean
   actions?: DialogButtonConfig[]
   children?: React.ReactNode
 }
@@ -97,10 +99,13 @@ function Dialog({
   title,
   size = "md",
   onClose,
+  closeOnEscape = true,
   actions,
   children,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     const el = dialogRef.current
@@ -109,7 +114,17 @@ function Dialog({
     el.showModal()
     el.querySelector<HTMLElement>("[data-modal-close]")?.focus({ preventScroll: true })
 
-    const handleCancel = () => onClose()
+    // Браузер шлёт `cancel` и при Escape, и при отмене вложенного file picker — не закрываем по нему.
+    const handleCancel = (e: Event) => {
+      e.preventDefault()
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!closeOnEscape || e.key !== "Escape") return
+      e.preventDefault()
+      onCloseRef.current()
+    }
+
     const handleBackdropClick = (e: MouseEvent) => {
       if (e.target === el) {
         el.querySelector<HTMLElement>("[data-modal-close]")?.focus({ preventScroll: true })
@@ -117,14 +132,16 @@ function Dialog({
     }
 
     el.addEventListener("cancel", handleCancel)
+    el.addEventListener("keydown", handleKeyDown)
     el.addEventListener("click", handleBackdropClick)
 
     return () => {
       el.removeEventListener("cancel", handleCancel)
+      el.removeEventListener("keydown", handleKeyDown)
       el.removeEventListener("click", handleBackdropClick)
       if (el.open) el.close()
     }
-  }, [])
+  }, [closeOnEscape])
 
   return (
     <dialog
