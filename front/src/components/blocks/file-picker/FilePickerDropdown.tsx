@@ -42,6 +42,7 @@ export type FilePickerDropdownProps = {
 }
 
 /**
+ * @deprecated Используй `FileInput` из `@/components/ui/file-input` для новых компонентов.
  * Выбор файла из списка с возможностью сброса (пустой пункт в dropdown).
  */
 export function FilePickerDropdown({

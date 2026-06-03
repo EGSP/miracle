@@ -1,7 +1,7 @@
 import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import type { ProductType, Stored, TechnicalCondition } from "@miracle/types"
 import { useMemo } from "react"
-import { FileWizard } from "@/components/blocks/FileWizard"
+import { FilePickerDropdown } from "@/components/blocks/file-picker/FilePickerDropdown"
 import { Input } from "@/components/ui/input"
 import { useField } from "@/contexts/dirty-state/useField"
 import { useContribute } from "@/contexts/draft-api/DraftContext"
@@ -83,10 +83,11 @@ export function TCCInfo() {
         </Stack>
 
         <Text.Label as="span">Файл ТУ</Text.Label>
-        <FileWizard
-          fileId={fileId.value}
+        {/* TODO: загрузка нового файла ТУ — через страницу файлов (FileUploadDialog удалён) */}
+        <FilePickerDropdown
           files={tcFiles}
-          onFileSelected={(id) => fileId.onChange(id ?? undefined)}
+          value={fileId.value}
+          onChange={(id) => fileId.onChange(id)}
         />
       </Column>
       <Column span="100%"></Column>

@@ -6,7 +6,7 @@ import { createContext, type PropsWithChildren, useContext, useState } from "rea
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FileDropZone } from "@/components/ui/file-dropzone"
+import { FileInput, type AppliedFile, type FileState } from "@/components/ui/file-input"
 import { InlineMutationNotification } from "@/components/ui/inline-mutation-notification"
 import { Input } from "@/components/ui/input"
 import { Dialog } from "@/components/ui/modal-dialog"
@@ -189,7 +189,8 @@ function FileCardBody() {
   const extractMutation = useExtractFileContent(file.id)
   const softDeleteMutation = useSoftDeleteFileContent(file.id)
   const restoreMutation = useRestoreFile(file.id)
-  const [restoreFile, setRestoreFile] = useState<File | null>(null)
+  const [restoreFileStates, setRestoreFileStates] = useState<FileState[]>([])
+  const restoreFile = restoreFileStates.find((s) => s.status === "applied")?.file ?? null
   const { open } = useDialog()
 
   const isVisual = getFileDomain(file.extension) === FileDomain.VISUAL
@@ -213,9 +214,20 @@ function FileCardBody() {
     !softDeleteMutation.isPending &&
     !extractMutation.isPending
 
+  const handleRestoreFilesApplied = (applied: AppliedFile[]) => {
+    const first = applied[0]
+    if (!first) return
+    setRestoreFileStates([{
+      id: crypto.randomUUID(),
+      file: first.file,
+      status: first.validationError ? "error" : "applied",
+      error: first.validationError,
+    }])
+  }
+
   const handleRestore = () => {
     if (!restoreFile) return
-    restoreMutation.mutate(restoreFile, { onSuccess: () => setRestoreFile(null) })
+    restoreMutation.mutate(restoreFile, { onSuccess: () => setRestoreFileStates([]) })
   }
 
   const handleScanClick = () => {
@@ -284,12 +296,19 @@ function FileCardBody() {
         {!isFileAvailable && (
           <Stack gap={2} className="border border-border bg-muted/20 p-2">
             <Text.Label as="span">Физический файл отсутствует — загрузите его</Text.Label>
-            <FileDropZone
-              value={restoreFile}
-              onChange={setRestoreFile}
-              accept={`.${file.extension}`}
+            <FileInput
+              variant="drop-zone"
+              multiple={false}
+              extensions={[file.extension]}
+              fileStates={restoreFileStates}
+              onFilesApplied={handleRestoreFilesApplied}
+              onRemove={() => setRestoreFileStates([])}
               disabled={restoreMutation.isPending}
-            />
+              fluid
+            >
+              <FileInput.Zone />
+              <FileInput.List />
+            </FileInput>
             <Button
               variant="tertiary"
               size="sm"
