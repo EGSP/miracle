@@ -9,7 +9,7 @@
 .textarea {
   display: block;
   min-width: 0;
-  width: var(--input-fixed-width);
+  width: 100%; /* тянется на ширину контейнера .textarea-field */
   min-height: calc(var(--aramid-spacing-9) * 2); /* sm = 96px */
   padding-block: var(--aramid-spacing-3); /* 8px */
   padding-inline: var(--aramid-spacing-5); /* 16px */
@@ -70,22 +70,23 @@
   resize: none;
 }
 
-/* ─── Width variants ─────────────────────────────────────────────────────── */
-
-.textarea--full {
-  width: 100%;
-}
-
 /* ─── Resize variants ────────────────────────────────────────────────────── */
 
 .textarea--no-resize {
   resize: none;
 }
 
-/* ─── Field (label + textarea stack) ────────────────────────────────────── */
+/* ─── Field (единый корень: ширина + стек label/textarea/helper) ─────────── */
 
 .textarea-field {
   display: flex;
   flex-direction: column;
   gap: var(--aramid-spacing-2);
+  min-width: 0;
+  width: var(--input-fixed-width); /* фиксированная ширина как у input */
+}
+
+/* fluid: контейнер на всю ширину родителя */
+.textarea-field--full {
+  width: 100%;
 }

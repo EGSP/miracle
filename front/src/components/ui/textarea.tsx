@@ -38,40 +38,31 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     },
     ref,
   ) => {
-    const fieldStyle = useFieldLayerStyle({ disabled, style })
+    // Токены слоя (фон, нижняя граница) — на самом элементе textarea.
+    const fieldStyle = useFieldLayerStyle({ disabled })
 
-    const textarea = (
-      <textarea
-        ref={ref}
-        data-slot="textarea"
-        disabled={disabled}
-        className={cn(
-          "textarea",
-          sizeClass[size],
-          full && "textarea--full",
-          !resizable && "textarea--no-resize",
-          className,
+    // Единый корень — контейнер поля; ширина живёт на нём, textarea тянется на 100%.
+    return (
+      <div
+        className={cn("textarea-field", full && "textarea-field--full", className)}
+        style={style}
+      >
+        {label && <Text.Helper as="span">{label}</Text.Helper>}
+        <textarea
+          ref={ref}
+          data-slot="textarea"
+          disabled={disabled}
+          className={cn("textarea", sizeClass[size], !resizable && "textarea--no-resize")}
+          style={fieldStyle}
+          {...props}
+        />
+        {helperText && (
+          <Text.Helper as="span" className="field-helper-text">
+            {helperText}
+          </Text.Helper>
         )}
-        style={fieldStyle}
-        {...props}
-      />
+      </div>
     )
-
-    if (label || helperText) {
-      return (
-        <div className="textarea-field">
-          {label && <Text.Helper as="span">{label}</Text.Helper>}
-          {textarea}
-          {helperText && (
-            <Text.Helper as="span" className="field-helper-text">
-              {helperText}
-            </Text.Helper>
-          )}
-        </div>
-      )
-    }
-
-    return textarea
   },
 )
 

@@ -12,6 +12,13 @@ export const useGetOrders = (query: OrderQuery = {}) => {
   })
 }
 
+export const useGetOrder = (id: string) => {
+  return useQuery({
+    queryKey: [...ORDERS_QUERY_KEY, "one", id] as const,
+    queryFn: () => orders.getOne(id),
+  })
+}
+
 export const useCreateOrder = () => {
   const queryClient = useQueryClient()
 
