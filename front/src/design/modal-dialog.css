@@ -69,10 +69,10 @@ body:has(dialog.modal-dialog[open]) {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--aramid-spacing-2); /* 4px между label и title */
+  gap: var(--aramid-spacing-2); /* 4px между title и description */
 }
 
-.modal-dialog-label {
+.modal-dialog-description {
   margin: 0;
   color: var(--aramid-color-gray-60);
 }

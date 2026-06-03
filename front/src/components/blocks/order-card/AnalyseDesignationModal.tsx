@@ -55,7 +55,7 @@ export function AnalyseDesignationModal({
 
   return (
     <Dialog
-      label="Условное обозначение"
+      description="Условное обозначение"
       title="Анализ заказа"
       size="md"
       onClose={onClose}
@@ -99,7 +99,7 @@ export function AnalyseDesignationModal({
                 {item ? `Заказ ${item.id.slice(0, 8)}…` : ""}
               </Text>
             )}
-            full
+            fluid
           >
             <Input.Dropdown.Selected />
             <Input.Dropdown.List emptyText="Нет заказов" />
@@ -124,7 +124,7 @@ export function AnalyseDesignationModal({
                 {getTcLabel(item)}
               </Text>
             )}
-            full
+            fluid
           >
             <Input.Dropdown.Selected />
             <Input.Dropdown.List emptyText="Нет доступных ТУ" />

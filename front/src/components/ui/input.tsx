@@ -18,39 +18,34 @@ function InputRoot({
   label,
   helperText,
   size,
-  full,
+  fluid = false,
   disabled,
   style,
   ...props
 }: InputRootProps) {
-  const fieldStyle = useFieldLayerStyle({ disabled, style })
+  const fieldStyle = useFieldLayerStyle({ disabled })
 
-  const input = (
-    <InputPrimitive
-      type={type}
-      disabled={disabled}
-      data-slot="input"
-      className={cn(inputVariants({ size, full }), className)}
-      style={fieldStyle}
-      {...props}
-    />
+  return (
+    <div
+      className={cn("input-field", fluid && "input-field--fluid", className)}
+      style={style}
+    >
+      {label && <Text.Helper as="span">{label}</Text.Helper>}
+      <InputPrimitive
+        type={type}
+        disabled={disabled}
+        data-slot="input"
+        className={inputVariants({ size })}
+        style={fieldStyle}
+        {...props}
+      />
+      {helperText && (
+        <Text.Helper as="span" className="field-helper-text">
+          {helperText}
+        </Text.Helper>
+      )}
+    </div>
   )
-
-  if (label || helperText) {
-    return (
-      <div className="input-field">
-        {label && <Text.Helper as="span">{label}</Text.Helper>}
-        {input}
-        {helperText && (
-          <Text.Helper as="span" className="field-helper-text">
-            {helperText}
-          </Text.Helper>
-        )}
-      </div>
-    )
-  }
-
-  return input
 }
 
 const Input = Object.assign(InputRoot, {

@@ -48,7 +48,7 @@ export function OrderCardActions() {
     if (hasExistingAnalysis) {
       open(({ close }) => (
         <Dialog
-          label="Анализ заявки"
+          description="Анализ заявки"
           title="Запустить вывод требований заново?"
           size="sm"
           onClose={close}

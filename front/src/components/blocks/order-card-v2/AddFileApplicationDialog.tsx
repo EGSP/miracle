@@ -28,8 +28,7 @@ export function AddFileApplicationDialog({ orderId, onClose }: Props) {
   return (
     <Dialog
       title="Файловое приложение"
-      // label временно играет роль описания диалога (потом — отдельный проп description в modal-dialog).
-      label="Файлы загрузятся и прикрепятся к заказу как приложения."
+      description="Файлы загрузятся и прикрепятся к заказу как приложения."
       size="md"
       onClose={onClose}
       actions={actions}

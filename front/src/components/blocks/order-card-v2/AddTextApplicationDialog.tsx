@@ -31,8 +31,7 @@ export function AddTextApplicationDialog({ orderId, onClose }: Props) {
   return (
     <Dialog
       title="Текстовое приложение"
-      // label временно играет роль описания диалога (потом — отдельный проп description в modal-dialog).
-      label="Текст будет прикреплён к заказу как отдельное приложение."
+      description="Текст будет прикреплён к заказу как отдельное приложение."
       size="md"
       onClose={onClose}
       actions={actions}
@@ -45,7 +44,7 @@ export function AddTextApplicationDialog({ orderId, onClose }: Props) {
           onChange={(e) => setText(e.target.value)}
           disabled={addMutation.isPending}
           size="lg"
-          full
+          fluid
         />
         <InlineMutationNotification
           mutation={addMutation}

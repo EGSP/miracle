@@ -66,7 +66,7 @@ export function TCCRules() {
               value={rule.title ?? ""}
               onChange={(e) => update(i, { title: e.target.value })}
               disabled={isSaving}
-              full
+              fluid
             />
             <div className="flex flex-col gap-0.5">
               <Textarea
@@ -77,7 +77,7 @@ export function TCCRules() {
                 onChange={(e) => update(i, { content: e.target.value })}
                 disabled={isSaving}
                 resizable={true}
-                full
+                fluid
               />
             </div>
           </Stack>

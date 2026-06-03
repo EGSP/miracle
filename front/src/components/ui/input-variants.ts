@@ -4,7 +4,7 @@ export type InputSize = "sm" | "md" | "lg"
 
 export interface BaseInputProps {
   size?: InputSize
-  full?: boolean
+  fluid?: boolean
   disabled?: boolean
   label?: string
   helperText?: string
@@ -17,14 +17,9 @@ export const inputVariants = cva("input", {
       md: "",
       lg: "input--lg",
     },
-    full: {
-      true: "input--full",
-      false: "",
-    },
   },
   defaultVariants: {
     size: "md",
-    full: false,
   },
 })
 

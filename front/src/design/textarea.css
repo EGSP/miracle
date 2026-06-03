@@ -87,6 +87,6 @@
 }
 
 /* fluid: контейнер на всю ширину родителя */
-.textarea-field--full {
+.textarea-field--fluid {
   width: 100%;
 }

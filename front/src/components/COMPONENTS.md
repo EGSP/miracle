@@ -20,7 +20,7 @@
 ## Именование CSS-классов
 
 - Полные слова, BEM-стиль: `.block`, `.block--modifier`, `.block-element`, `.block-element--modifier`
-- Примеры: `.input`, `.input--sm`, `.input--full`, `.input-field`, `.input-dropdown-list`, `.input-dropdown-item:hover`
+- Примеры: `.input`, `.input--sm`, `.input-field`, `.input-field--fluid`, `.input-dropdown-list`, `.input-dropdown-item:hover`
 - Никаких сокращений (не `.inp`, не `.txa`, не `.btn`)
 
 ---
@@ -43,7 +43,7 @@
 // Пример структуры базового интерфейса
 export interface BaseInputProps {
   size?: InputSize      // общие размеры семейства
-  full?: boolean        // ширина: false = фиксированная (default), true = 100%
+  fluid?: boolean       // ширина: false = фиксированная (default), true = 100%
   disabled?: boolean
   label?: string
 }
@@ -149,9 +149,9 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 
 ## Ширина компонентов
 
-- `full` — boolean prop, **default `false`** (фиксированная ширина)
-- Фиксированная ширина задаётся через CSS-переменную `--input-fixed-width` (определена в `design/base.css`), не хардкодится в компоненте
-- Составные компоненты (dropdown, suggest) управляют шириной через обёртку `.input-wrap` / `.input-wrap--full`, а не через сам элемент
+- `fluid` — boolean prop, **default `false`** (фиксированная ширина)
+- Фиксированная ширина задаётся на контейнере `.input-field` / `.textarea-field` через `--input-fixed-width` (в `design/base.css`); элемент `.input` / `.textarea` тянется на `width: 100%`
+- Составные компоненты (dropdown, suggest): `.input-wrap` — `width: 100%` внутри `.input-field`; модификатор `--fluid` только на `.input-field`
 
 ---
 
@@ -171,5 +171,5 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 ## Label
 
 - Все input-компоненты поддерживают `label?: string` через `BaseInputProps`
-- При наличии label компонент оборачивается в `.input-field` / `.textarea-field` (flex-column + gap)
+- Input/Textarea всегда рендерят единый корень `.input-field` / `.textarea-field` (flex-column + gap: label, control, helper)
 - Текст лейбла — `<Text.Helper as="span">` из Aramid

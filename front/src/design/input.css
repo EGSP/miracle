@@ -1,12 +1,12 @@
 /* ─── Input element ──────────────────────────────────────────────────────────
    Base class for all input-like elements: <input>, <button> (dropdown trigger).
-   Size and width are md / fixed by default.
+   Size on element; width on .input-field (element stretches to 100%).
 ──────────────────────────────────────────────────────────────────────────── */
 
 .input {
   display: block;
   min-width: 0;
-  width: var(--input-fixed-width);
+  width: 100%;
   height: var(--aramid-spacing-8); /* md = 40px */
   padding-inline: var(--aramid-spacing-5); /* 16px */
   border: none;
@@ -79,27 +79,23 @@
   height: calc(var(--aramid-spacing-9) - var(--aramid-spacing-3));
 }
 
-/* ─── Width variants ─────────────────────────────────────────────────────── */
-
-.input--full {
-  width: 100%;
-}
-
-/* ─── Wrapper (for compound inputs: dropdown, suggest) ───────────────────── */
+/* ─── Wrapper (compound inputs: dropdown, suggest) ─────────────────────── */
 
 .input-wrap {
   position: relative;
-  width: var(--input-fixed-width);
-}
-
-.input-wrap--full {
   width: 100%;
 }
 
-/* ─── Field (label + control stack) ─────────────────────────────────────── */
+/* ─── Field (единый корень: ширина + стек label/control/helper) ──────────── */
 
 .input-field {
   display: flex;
   flex-direction: column;
   gap: var(--aramid-spacing-2);
+  min-width: 0;
+  width: var(--input-fixed-width);
+}
+
+.input-field--fluid {
+  width: 100%;
 }

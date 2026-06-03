@@ -17,7 +17,7 @@ export interface DialogButtonConfig {
 }
 
 export interface DialogProps {
-  label?: string
+  description?: string
   title: string
   size?: "sm" | "md" | "lg" | "xl"
   onClose: () => void
@@ -28,23 +28,23 @@ export interface DialogProps {
 // ─── Private subcomponents ───────────────────────────────────────────────────
 
 interface PrivateHeaderProps {
-  label?: string
+  description?: string
   title: string
   onClose: () => void
 }
 
-function PrivateHeader({ label, title, onClose }: PrivateHeaderProps) {
+function PrivateHeader({ description, title, onClose }: PrivateHeaderProps) {
   return (
     <div className="modal-dialog-header">
       <div className="modal-dialog-header-text">
-        {label != null && (
-          <Text.Label as="p" className="modal-dialog-label">
-            {label}
-          </Text.Label>
-        )}
         <Text.Heading id="modal-dialog-title" variant="03" as="h2" className="modal-dialog-title">
           {title}
         </Text.Heading>
+        {description != null && (
+          <Text.Label as="p" className="modal-dialog-description">
+            {description}
+          </Text.Label>
+        )}
       </div>
       <Button
         data-modal-close
@@ -88,7 +88,14 @@ function PrivateActions({ actions }: { actions?: DialogButtonConfig[] }) {
 
 // ─── Dialog ──────────────────────────────────────────────────────────────────
 
-function Dialog({ label, title, size = "md", onClose, actions, children }: DialogProps) {
+function Dialog({
+  description,
+  title,
+  size = "md",
+  onClose,
+  actions,
+  children,
+}: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -122,7 +129,7 @@ function Dialog({ label, title, size = "md", onClose, actions, children }: Dialo
       className="modal-dialog"
       aria-labelledby="modal-dialog-title"
     >
-      <PrivateHeader label={label} title={title} onClose={onClose} />
+      <PrivateHeader description={description} title={title} onClose={onClose} />
       <PrivateBody>{children}</PrivateBody>
       <PrivateActions actions={actions} />
     </dialog>

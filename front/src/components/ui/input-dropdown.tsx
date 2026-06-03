@@ -75,7 +75,7 @@ function InputDropdownRoot<T>({
   const renderListItem = props.renderListItem
   const disabled = props.disabled ?? false
   const size = props.size
-  const full = props.full ?? false
+  const fluid = props.fluid ?? false
   const label = props.label
   const helperText = props.helperText
   const className = props.className
@@ -188,31 +188,19 @@ function InputDropdownRoot<T>({
     ],
   )
 
-  const wrap = (
-    <div ref={rootRef} className={cn("input-wrap", full && "input-wrap--full", className)}>
-      {children}
-    </div>
-  )
-
-  if (label || helperText) {
-    return (
-      <DropdownContext.Provider value={contextValue as DropdownContextValue<unknown>}>
-        <div className="input-field">
-          {label && <Text.Helper as="span">{label}</Text.Helper>}
-          {wrap}
-          {helperText && (
-            <Text.Helper as="span" className="field-helper-text">
-              {helperText}
-            </Text.Helper>
-          )}
-        </div>
-      </DropdownContext.Provider>
-    )
-  }
-
   return (
     <DropdownContext.Provider value={contextValue as DropdownContextValue<unknown>}>
-      {wrap}
+      <div className={cn("input-field", fluid && "input-field--fluid", className)}>
+        {label && <Text.Helper as="span">{label}</Text.Helper>}
+        <div ref={rootRef} className="input-wrap">
+          {children}
+        </div>
+        {helperText && (
+          <Text.Helper as="span" className="field-helper-text">
+            {helperText}
+          </Text.Helper>
+        )}
+      </div>
     </DropdownContext.Provider>
   )
 }
@@ -293,7 +281,7 @@ function InputDropdownSelected<T>({
         onKeyDown?.(event)
       }}
       className={cn(
-        inputVariants({ size, full: true }),
+        inputVariants({ size }),
         "input-dropdown-trigger",
         !hasValue && "input-dropdown-trigger--empty",
         className,

@@ -43,13 +43,13 @@ function InputSuggest<T>({
   onKeyDown,
   disabled,
   size,
-  full = false,
+  fluid = false,
   label,
   helperText,
   style,
   ...props
 }: InputSuggestProps<T>) {
-  const fieldStyle = useFieldLayerStyle({ disabled, style })
+  const fieldStyle = useFieldLayerStyle({ disabled })
   const { layerBackground } = useNextLayerTokens()
   const { fieldBackground } = useLayerTokens()
 
@@ -119,93 +119,88 @@ function InputSuggest<T>({
     [getItemValue, onChange, onSelect],
   )
 
-  const wrap = (
-    <div ref={rootRef} className={cn("input-wrap", full && "input-wrap--full")}>
-      <input
-        {...props}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        onFocus={(event) => {
-          clearBlurTimeout()
-          setIsFocused(true)
-          onFocus?.(event)
-        }}
-        onBlur={(event) => {
-          clearBlurTimeout()
-          blurTimeoutRef.current = window.setTimeout(() => setIsFocused(false), 150)
-          onBlur?.(event)
-        }}
-        onKeyDown={(event) => {
-          if (isOpen && event.key === "ArrowDown") {
-            event.preventDefault()
-            setActiveIndex((prev) => Math.min(prev + 1, items.length - 1))
-          } else if (isOpen && event.key === "ArrowUp") {
-            event.preventDefault()
-            setActiveIndex((prev) => Math.max(prev - 1, 0))
-          } else if (isOpen && event.key === "Enter") {
-            if (activeIndex >= 0 && activeIndex < items.length) {
+  return (
+    <div
+      className={cn("input-field", fluid && "input-field--fluid", className)}
+      style={style}
+    >
+      {label && <Text.Helper as="span">{label}</Text.Helper>}
+      <div ref={rootRef} className="input-wrap">
+        <input
+          {...props}
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          onFocus={(event) => {
+            clearBlurTimeout()
+            setIsFocused(true)
+            onFocus?.(event)
+          }}
+          onBlur={(event) => {
+            clearBlurTimeout()
+            blurTimeoutRef.current = window.setTimeout(() => setIsFocused(false), 150)
+            onBlur?.(event)
+          }}
+          onKeyDown={(event) => {
+            if (isOpen && event.key === "ArrowDown") {
               event.preventDefault()
-              const selected = items[activeIndex]
-              if (selected) selectItem(selected)
+              setActiveIndex((prev) => Math.min(prev + 1, items.length - 1))
+            } else if (isOpen && event.key === "ArrowUp") {
+              event.preventDefault()
+              setActiveIndex((prev) => Math.max(prev - 1, 0))
+            } else if (isOpen && event.key === "Enter") {
+              if (activeIndex >= 0 && activeIndex < items.length) {
+                event.preventDefault()
+                const selected = items[activeIndex]
+                if (selected) selectItem(selected)
+              }
+            } else if (event.key === "Escape") {
+              setIsFocused(false)
+              setActiveIndex(-1)
             }
-          } else if (event.key === "Escape") {
-            setIsFocused(false)
-            setActiveIndex(-1)
-          }
-          onKeyDown?.(event)
-        }}
-        className={cn(inputVariants({ size, full: true }), className)}
-        style={fieldStyle}
-      />
+            onKeyDown?.(event)
+          }}
+          className={inputVariants({ size })}
+          style={fieldStyle}
+        />
 
-      {isOpen && (
-        <div
-          role="listbox"
-          className="input-suggest-list"
-          style={{ backgroundColor: layerBackground }}
-        >
-          {items.map((item, index) => {
-            const isActive = index === activeIndex
-            return (
-              <div
-                key={`${getItemValue(item)}-${index}`}
-                role="option"
-                aria-selected={isActive}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => selectItem(item)}
-                className={cn("input-suggest-item", isActive && "input-suggest-item--active")}
-                style={isActive ? { backgroundColor: fieldBackground } : undefined}
-              >
-                {renderItem ? renderItem(item, { isActive, index }) : getItemValue(item)}
-              </div>
-            )
-          })}
-        </div>
-      )}
+        {isOpen && (
+          <div
+            role="listbox"
+            className="input-suggest-list"
+            style={{ backgroundColor: layerBackground }}
+          >
+            {items.map((item, index) => {
+              const isActive = index === activeIndex
+              return (
+                <div
+                  key={`${getItemValue(item)}-${index}`}
+                  role="option"
+                  aria-selected={isActive}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => selectItem(item)}
+                  className={cn("input-suggest-item", isActive && "input-suggest-item--active")}
+                  style={isActive ? { backgroundColor: fieldBackground } : undefined}
+                >
+                  {renderItem ? renderItem(item, { isActive, index }) : getItemValue(item)}
+                </div>
+              )
+            })}
+          </div>
+        )}
 
-      {isFocused && isLoading && (
-        <div className="input-suggest-loading">Loading suggestions...</div>
+        {isFocused && isLoading && (
+          <div className="input-suggest-loading">Loading suggestions...</div>
+        )}
+      </div>
+      {helperText && (
+        <Text.Helper as="span" className="field-helper-text">
+          {helperText}
+        </Text.Helper>
       )}
     </div>
   )
-
-  if (label || helperText) {
-    return (
-      <div className="input-field">
-        {label && <Text.Helper as="span">{label}</Text.Helper>}
-        {wrap}
-        {helperText && (
-          <Text.Helper as="span" className="field-helper-text">
-            {helperText}
-          </Text.Helper>
-        )}
-      </div>
-    )
-  }
-
-  return wrap
 }
 
 export type { InputSuggestProps }

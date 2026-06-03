@@ -234,7 +234,7 @@ function FileCardBody() {
     if (willOverwrite) {
       open(({ close }) => (
         <Dialog
-          label="Сканирование"
+          description="Сканирование"
           title="Запустить сканирование заново?"
           size="sm"
           onClose={close}
@@ -361,7 +361,7 @@ function FileCardBody() {
             disabled={!hasContent}
             onClick={() =>
               open(({ close }) => (
-                <Dialog label="Содержимое файла" title={file.name} size="xl" onClose={close}>
+                <Dialog description="Содержимое файла" title={file.name} size="xl" onClose={close}>
                   <Stack gap={3}>
                     {latestContent?.content?.map((chunk, index) => (
                       <Stack key={`${index}-${chunk.page ?? "no-page"}`} gap={1}>

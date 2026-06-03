@@ -28,7 +28,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     {
       className,
       size = "sm",
-      full = false,
+      fluid = false,
       resizable = true,
       disabled,
       label,
@@ -38,13 +38,11 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     },
     ref,
   ) => {
-    // Токены слоя (фон, нижняя граница) — на самом элементе textarea.
     const fieldStyle = useFieldLayerStyle({ disabled })
 
-    // Единый корень — контейнер поля; ширина живёт на нём, textarea тянется на 100%.
     return (
       <div
-        className={cn("textarea-field", full && "textarea-field--full", className)}
+        className={cn("textarea-field", fluid && "textarea-field--fluid", className)}
         style={style}
       >
         {label && <Text.Helper as="span">{label}</Text.Helper>}
