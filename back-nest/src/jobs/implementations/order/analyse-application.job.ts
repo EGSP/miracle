@@ -5,6 +5,8 @@ import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs } from '../../framework/context.js';
 import { tryLabeledPromise } from '../../../common/effect-errors.js';
+import { runFanout, decideFanout } from '../../framework/fanout.js';
+import { JobPartialError } from '../../framework/runtime.js';
 import { OrderApplicationsService } from '../../../orders/order-applications.service.js';
 import { ApplicationChunkReader } from '../../../orders/application-chunk-reader.js';
 import { FilesService } from '../../../files/files.service.js';
@@ -21,8 +23,9 @@ type AnalyseApplicationInput = { applicationId: string };
  * Документы/текст/таблицы читаются ридером инлайн без отдельного шага. Затем читает приложение
  * через {@link ApplicationChunkReader} и веером запускает `extract-positions-from-chunk` по чанкам.
  *
- * Веер — обычный `Effect.all` (fail-fast): падение любого чанка валит ВСЁ приложение. Это намеренно —
- * родитель (`analyse-order`) ловит падение приложения и продолжает остальные.
+ * Веер чанков — best-effort со сводом ({@link decideFanout}): упавший чанк не валит остальные;
+ * все чанки упали → приложение `failed`, часть → `partial`, все ок → `succeeded`. Предусловия же
+ * (загрузка заявки/файла, `extract-visual`, чтение чанков) остаются fail-fast — без них веера нет.
  */
 @Injectable()
 @JobImpl()
@@ -59,7 +62,7 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
                 const chunks = yield* tryLabeledPromise(`чтение чанков заявки "${input.applicationId}"`, () =>
                     reader.read(application),
                 );
-                yield* Effect.all(
+                const chunkResults = yield* runFanout(
                     chunks.map((c) =>
                         jobs.run(extract, [jobs.runId, 'chunk', c.chunkKey], {
                             applicationId: input.applicationId,
@@ -67,11 +70,14 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
                             chunkKey: c.chunkKey,
                         }),
                     ),
-                    { concurrency: 'unbounded' },
                 );
+                yield* decideFanout(`анализ приложения "${input.applicationId}"`, chunkResults);
             }).pipe(
-                Effect.mapError(
-                    (error) => new Error(`Не удалось проанализировать приложение "${input.applicationId}"`, { cause: error }),
+                Effect.mapError((error) =>
+                    // Сигнал `partial` нельзя терять под обёрткой — иначе узел покрасится в `failed`.
+                    error instanceof JobPartialError
+                        ? error
+                        : new Error(`Не удалось проанализировать приложение "${input.applicationId}"`, { cause: error }),
                 ),
             );
     }

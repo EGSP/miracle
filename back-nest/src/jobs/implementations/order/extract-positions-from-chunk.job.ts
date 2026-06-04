@@ -53,7 +53,13 @@ const SYSTEM_PROMPT_BASE = `Ты — ассистент для анализа з
 - requirements/шифр захватывай ДОСЛОВНО, как в источнике. Не интерпретируй, не разворачивай условные обозначения, не разбивай на пары параметр→значение.
 - unit и quantity — verbatim; если значения нет — null.
 - confidence — уверенность в ВЫДЕЛЕНИИ позиции (что это действительно отдельная единица), НЕ в типе продукции. Если не уверен — confidence_note поясняет, чем.
-- productType бери ТОЛЬКО из справочника ниже (id и name точно как в нём). Если позиция не из нашей номенклатуры или тип неоднозначен — productType: null.
+
+Правила определения типа продукции (productType):
+- Определи НАИБОЛЕЕ ПОДХОДЯЩИЙ тип из справочника ниже ПО СМЫСЛУ изделия, а не по буквальному совпадению строк.
+- Имена и синонимы в справочнике — это ОРИЕНТИРЫ и примеры формулировок, а НЕ закрытый список допустимых названий. Реальное обозначение заказчика может звучать иначе, но относиться к тому же типу — сопоставляй по назначению и сути изделия.
+- Если сомневаешься между близкими типами — выбирай наиболее вероятный. НЕ уходи в null только из-за того, что формулировка не совпала со справочником дословно.
+- productType: null ставь ТОЛЬКО если по смыслу не подходит ни один тип (изделие вне нашей номенклатуры).
+- В ОТВЕТЕ productType.id и productType.name копируй ДОСЛОВНО из выбранной строки справочника, без изменений.
 
 Отвечай ТОЛЬКО валидным JSON по схеме, без markdown-обёртки.`;
 
@@ -65,7 +71,9 @@ function buildSystemPrompt(catalog: Stored<ProductType>[]): string {
     });
     const catalogBlock =
         lines.length > 0 ? lines.join('\n') : '(справочник типов пуст — для всех позиций productType: null)';
-    return `${SYSTEM_PROMPT_BASE}\n\n=== СПРАВОЧНИК ТИПОВ ПРОДУКЦИИ ===\n${catalogBlock}`;
+    const catalogHint =
+        'Синонимы в скобках — примеры формулировок для распознавания по смыслу, а не исчерпывающий список названий.';
+    return `${SYSTEM_PROMPT_BASE}\n\n=== СПРАВОЧНИК ТИПОВ ПРОДУКЦИИ ===\n${catalogHint}\n${catalogBlock}`;
 }
 
 const normName = (value: string): string => value.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -160,6 +168,10 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
                         () => yandex.pollCompletionJson(opId, PositionsZodSchema),
                         { label: `extract positions poll; opId=${opId}` },
                     );
+                    // Диагностика: сохраняем сырой ответ модели (до резолва типа по каталогу) рядом
+                    // с finalPrompt в memo — чтобы видеть, что именно вернул LLM в productType.
+                    const memo = yield* Memo;
+                    yield* memo.set('rawResponse', out);
                     return out.positions.map((p) => toOrderPosition(p, input.applicationId, catalog));
                 }).pipe(
                     Effect.mapError(

@@ -59,6 +59,13 @@ export class OrdersController {
         return this.orderAnalysis.analyse(id, body) as Promise<Stored<JobRun>>;
     }
 
+    /** Текущий корневой прогон анализа заказа (или `null`, если не запускался) — для тайла прогресса. */
+    @Get(':id/job')
+    async getJob(@Param('id') id: string): Promise<Stored<JobRun> | null> {
+        await this.orders.getOrThrow(id);
+        return this.orderAnalysis.getRun(id);
+    }
+
     @Get(':id/applications')
     async listApplications(@Param('id') id: string): Promise<Stored<OrderApplication>[]> {
         await this.orders.getOrThrow(id);

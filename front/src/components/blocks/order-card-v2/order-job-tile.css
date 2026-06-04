@@ -1,0 +1,12 @@
+.order-job__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aramid-spacing-1);
+  flex-shrink: 0;
+  color: var(--aramid-color-gray-60);
+}
+
+.order-job__tree {
+  max-height: 320px;
+  overflow: auto;
+}

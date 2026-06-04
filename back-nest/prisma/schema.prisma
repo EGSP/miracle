@@ -22,6 +22,8 @@ enum JobStatus {
   queued
   running
   succeeded
+  // Частичный успех веера: часть детей упала, часть прошла (только для оркестраторов).
+  partial
   failed
   cancelled
 }

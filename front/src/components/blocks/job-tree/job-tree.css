@@ -29,6 +29,11 @@
   background-color: var(--aramid-color-green-60);
 }
 
+/* Частичный успех: оранжевый — отличаем от красного `failed`. */
+.job-node__dot--partial {
+  background-color: var(--aramid-color-orange-60);
+}
+
 .job-node__dot--failed {
   background-color: var(--aramid-color-semantic-danger);
 }

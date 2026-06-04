@@ -25,6 +25,10 @@ export const orders = {
         url: formatPath('/order/:id/analyse', { id }),
         data: analyseOrderDto,
     }),
+    getJob: (id: string) => customInstance<Stored<JobRun> | null>({
+        method: 'GET',
+        url: formatPath('/order/:id/job', { id }),
+    }),
     listApplications: (id: string) => customInstance<Stored<OrderApplication>[]>({
         method: 'GET',
         url: formatPath('/order/:id/applications', { id }),

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AnalyseOrderOptions, JobRun } from '@miracle/types';
+import type { AnalyseOrderOptions, JobRun, Stored } from '@miracle/types';
 import { JobsService } from '../jobs/jobs.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
 import { OrderPositionsService } from './order-positions.service.js';
@@ -47,6 +47,15 @@ export class OrderAnalysisService {
         await this.wipeOrderData(orderId, options.deleteFileContent);
 
         return this.jobs.start('analyse-order', { orderId }, [...key]);
+    }
+
+    /**
+     * Текущий корневой прогон анализа заказа (по стабильному ключу) или `null`, если анализ ещё не
+     * запускался. Чтение без побочных эффектов — для тайла прогресса в карточке заказа.
+     */
+    async getRun(orderId: string): Promise<Stored<JobRun> | null> {
+        const run = await this.jobs.findByKey([...analyseOrderKey(orderId)]);
+        return run as Stored<JobRun> | null;
     }
 
     /** Чистый лист: всегда сносит позиции и обозначения заказа; FileContent — по флагу. */

@@ -14,4 +14,5 @@ export * from './context.js';
 export * from './store.js';
 export * from './registry.js';
 export * from './runtime.js';
+export * from './fanout.js';
 export * from './hash-key.js';

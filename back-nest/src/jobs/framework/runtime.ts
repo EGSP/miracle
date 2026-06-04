@@ -1,5 +1,5 @@
 import { Cause, Effect, Option } from 'effect';
-import type { JobKey, JobRun } from '@miracle/types';
+import type { JobKey, JobRun, JobStatus } from '@miracle/types';
 import { formatUnknown } from '../../common/effect-errors.js';
 import type { Job } from './job.js';
 import { Jobs, Memo, Progress } from './context.js';
@@ -12,6 +12,22 @@ export class JobChildFailedError extends Error {
         const childError = child.error ? `: ${child.error}` : '';
         super(`Дочерний прогон "${child.id}" (${child.job}) завершился со статусом ${child.status}${childError}`);
         this.name = 'JobChildFailedError';
+    }
+}
+
+/**
+ * Сигнал «частичный успех веера»: тело-оркестратор бросает его, когда часть дочерних прогонов
+ * упала, а часть прошла. {@link execute} распознаёт его и пишет узлу статус `partial` (а не
+ * `failed`); при этом ошибка всё равно всплывает наверх — для родителя `partial` равнозначен
+ * провалу (его исход считается неуспешным при сведении). См. {@link JobStatus} и `fanout.ts`.
+ */
+export class JobPartialError extends Error {
+    constructor(
+        public readonly failures: ReadonlyArray<unknown>,
+        message: string,
+    ) {
+        super(message);
+        this.name = 'JobPartialError';
     }
 }
 
@@ -70,7 +86,8 @@ function makeJobs(store: JobStore, parent: JobRun) {
                 if (node.status === 'succeeded') {
                     return node.output as Output;
                 }
-                if (node.status === 'failed' || node.status === 'cancelled') {
+                // `partial` для родителя равнозначен провалу: переисполняется только явной командой.
+                if (node.status === 'failed' || node.status === 'cancelled' || node.status === 'partial') {
                     return yield* Effect.fail(new JobChildFailedError(node));
                 }
                 return yield* execute(store, job, node);
@@ -107,12 +124,13 @@ export function execute<Input, Output>(
     });
 
     return body.pipe(
-        Effect.tapErrorCause((cause) =>
-            Cause.isInterruptedOnly(cause)
-                ? Effect.void
-                : Effect.promise(() =>
-                    store.patch(node.id, { status: 'failed', error: errToMessage(Cause.squash(cause)) }),
-                ),
-        ),
+        Effect.tapErrorCause((cause) => {
+            // Прерывание (отмена волокна) — не ошибка: статус `cancelled` ставит сервис рантайма.
+            if (Cause.isInterruptedOnly(cause)) return Effect.void;
+            const error = Cause.squash(cause);
+            // Частичный успех веера красим в `partial`; всё остальное — `failed`.
+            const status: JobStatus = error instanceof JobPartialError ? 'partial' : 'failed';
+            return Effect.promise(() => store.patch(node.id, { status, error: errToMessage(error) }));
+        }),
     );
 }

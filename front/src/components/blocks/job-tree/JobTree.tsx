@@ -6,18 +6,22 @@ import { useJobTreeStore, useJobTreeStoreApi } from "./JobTreeContext"
 import { JobTreeNode } from "./JobTreeNode"
 import { diffTree } from "./job-tree.utils"
 
-const POLL_INTERVAL_MS = 2500
+export const JOB_TREE_POLL_INTERVAL_MS = 2500
 
 export type JobTreeProps = {
   rootId: string
   onSelect?: (run: Stored<JobRun>) => void
+  /** Вызывается после каждого опроса дерева (initial и интервальный) — для индикатора обновления. */
+  onSync?: () => void
 }
 
-export function JobTree({ rootId, onSelect }: JobTreeProps) {
+export function JobTree({ rootId, onSelect, onSync }: JobTreeProps) {
   const store = useJobTreeStoreApi()
   const initializedRef = useRef(false)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+  const onSyncRef = useRef(onSync)
+  onSyncRef.current = onSync
 
   const selectedId = useJobTreeStore((s) => s.selectedId)
 
@@ -42,6 +46,8 @@ export function JobTree({ rootId, onSelect }: JobTreeProps) {
         }
       } catch {
         // тихий retry при следующем интервале
+      } finally {
+        onSyncRef.current?.()
       }
     },
     [rootId, store],
@@ -50,7 +56,7 @@ export function JobTree({ rootId, onSelect }: JobTreeProps) {
   useEffect(() => {
     initializedRef.current = false
     void syncTree(true)
-    const id = window.setInterval(() => void syncTree(false), POLL_INTERVAL_MS)
+    const id = window.setInterval(() => void syncTree(false), JOB_TREE_POLL_INTERVAL_MS)
     return () => window.clearInterval(id)
   }, [syncTree])
 

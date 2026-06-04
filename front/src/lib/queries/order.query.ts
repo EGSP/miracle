@@ -4,6 +4,7 @@ import { orders } from "../generated"
 
 export const ORDERS_QUERY_KEY = ["orders"] as const
 export const ORDER_ANALYSE_AVAILABILITY_QUERY_KEY = ["order-analyse-availability"] as const
+export const ORDER_JOB_QUERY_KEY = ["order-job"] as const
 
 export const useGetOrders = (query: OrderQuery = {}) => {
   return useQuery({
@@ -16,6 +17,14 @@ export const useGetOrder = (id: string) => {
   return useQuery({
     queryKey: [...ORDERS_QUERY_KEY, "one", id] as const,
     queryFn: () => orders.getOne(id),
+  })
+}
+
+/** Корневой прогон анализа заказа (или null, если не запускался). Поллинг дерева — в самом тайле. */
+export const useGetOrderJob = (orderId: string) => {
+  return useQuery({
+    queryKey: [...ORDER_JOB_QUERY_KEY, orderId] as const,
+    queryFn: () => orders.getJob(orderId),
   })
 }
 
@@ -41,6 +50,7 @@ export const useAnalyseOrder = (orderId: string | undefined) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: ["jobs"] })
+      queryClient.invalidateQueries({ queryKey: [...ORDER_JOB_QUERY_KEY, orderId] })
     },
   })
 }
