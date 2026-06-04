@@ -54,7 +54,7 @@ export type AnyJob = Job<any, any>;
  * @example
  * ```ts
  * const orderAnalyse = defineJob(
- *   'order-analyse',
+ *   'analyse-order',
  *   (input: { applicationId: string }) =>
  *     Effect.gen(function* () {
  *       const jobs = yield* Jobs;

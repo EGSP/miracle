@@ -33,6 +33,12 @@ export class DesignationsService {
         return row ? toDesignation(row as DesignationRow) : null;
     }
 
+    /** Жёсткое удаление обозначений перечисленных позиций (чистый лист при переанализе). */
+    async deleteByPositions(orderPositionIds: string[]): Promise<void> {
+        if (orderPositionIds.length === 0) return;
+        await this.prisma.designation.deleteMany({ where: { orderPositionId: { in: orderPositionIds } } });
+    }
+
     /** Создаёт или перезаписывает обозначение позиции (1:1 по orderPositionId). */
     async upsert(orderPositionId: string, tcId: string, values: DesignationValue[]): Promise<Stored<Designation>> {
         const row = await this.prisma.designation.upsert({

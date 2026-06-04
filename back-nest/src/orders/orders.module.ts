@@ -9,11 +9,27 @@ import { OrdersService } from './orders.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
 import { OrderPositionsService } from './order-positions.service.js';
 import { DesignationsService } from './designations.service.js';
+import { ApplicationChunkReader } from './application-chunk-reader.js';
+import { OrderAnalysisService } from './order-analysis.service.js';
 
 @Module({
     imports: [AuthModule, FilesModule, FilesContentModule, ProductTypesModule, TechnicalConditionsModule],
     controllers: [OrdersController],
-    providers: [OrdersService, OrderApplicationsService, OrderPositionsService, DesignationsService],
-    exports: [OrdersService, OrderApplicationsService, OrderPositionsService, DesignationsService],
+    providers: [
+        OrdersService,
+        OrderApplicationsService,
+        OrderPositionsService,
+        DesignationsService,
+        ApplicationChunkReader,
+        OrderAnalysisService,
+    ],
+    exports: [
+        OrdersService,
+        OrderApplicationsService,
+        OrderPositionsService,
+        DesignationsService,
+        ApplicationChunkReader,
+        OrderAnalysisService,
+    ],
 })
 export class OrdersModule {}

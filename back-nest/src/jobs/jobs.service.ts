@@ -75,6 +75,16 @@ export class JobsService implements OnApplicationBootstrap {
         return root;
     }
 
+    /** Найти прогон по структурному ключу (через его `keyHash`). */
+    async findByKey(key: JobKey): Promise<JobRun | null> {
+        return this.store.findByKeyHash(hashKey(key));
+    }
+
+    /** Физически удалить прогон и всё его поддерево (для супрессии при переанализе). */
+    async deleteRunTree(rootId: string): Promise<void> {
+        await this.store.deleteSubtree(rootId);
+    }
+
     private requireJob(id: string): AnyJob {
         const job = getJob(brandJobId(id));
         if (!job) {

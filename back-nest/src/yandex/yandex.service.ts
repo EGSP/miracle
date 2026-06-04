@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { Duration, Effect, Exit, RateLimiter, Scope } from 'effect';
 import { Session } from '@yandex-cloud/nodejs-sdk';
 import { textGenerationService } from '@yandex-cloud/nodejs-sdk/ai-foundation_models-v1';
 import { operationService } from '@yandex-cloud/nodejs-sdk/operation';
@@ -29,12 +30,39 @@ type YandexConfig = { apiKey: string; folderId: string };
  * Сессия/клиенты создаются лениво и переиспользуются. Конфиг — из `AppConfigService`;
  * при его отсутствии методы кидают понятную ошибку (приложение поднимается без Yandex-кредов).
  */
+type Limit = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
+
 @Injectable()
-export class YandexService {
+export class YandexService implements OnModuleInit, OnModuleDestroy {
     private session?: Session;
     private openaiClient?: OpenAI;
 
+    // Глобальные лимитеры частоты к Yandex (квоты async-режима генерации текста). Живут весь
+    // жизненный цикл приложения в этом scope; одни на все вызовы, поэтому потолок держится
+    // независимо от того, сколько джоб-веток одновременно обращаются к API.
+    private readonly limiterScope = Effect.runSync(Scope.make());
+    private submitLimit: Limit = (effect) => effect; // 10/сек + 5000/час (submit)
+    private pollLimit: Limit = (effect) => effect; // 50/сек (poll)
+
     constructor(private readonly appConfig: AppConfigService) {}
+
+    async onModuleInit(): Promise<void> {
+        const make = (limit: number, interval: Duration.DurationInput): Promise<RateLimiter.RateLimiter> =>
+            Effect.runPromise(
+                Scope.extend(RateLimiter.make({ limit, interval, algorithm: 'token-bucket' }), this.limiterScope),
+            );
+
+        const perSecond = await make(10, Duration.seconds(1));
+        const perHour = await make(5000, Duration.hours(1));
+        const pollPerSecond = await make(50, Duration.seconds(1));
+
+        this.submitLimit = (effect) => perHour(perSecond(effect));
+        this.pollLimit = pollPerSecond;
+    }
+
+    async onModuleDestroy(): Promise<void> {
+        await Effect.runPromise(Scope.close(this.limiterScope, Exit.void));
+    }
 
     private config(): YandexConfig {
         const apiKey = this.appConfig.yandexApiKey;
@@ -70,6 +98,7 @@ export class YandexService {
     // ── Текстовая LLM (YandexGPT) ──────────────────────────────────────────
 
     async submitCompletion(request: LlmRequest): Promise<string> {
+        await Effect.runPromise(this.submitLimit(Effect.void)); // занять слот квоты submit (10/сек + 5000/час)
         const { folderId } = this.config();
         const client = this.getSession().client(
             textGenerationService.TextGenerationAsyncServiceClient,
@@ -95,6 +124,7 @@ export class YandexService {
     }
 
     async pollCompletion(operationId: string): Promise<LlmPollResult<string>> {
+        await Effect.runPromise(this.pollLimit(Effect.void)); // занять слот квоты poll (50/сек)
         const opClient = this.getSession().client(
             operationService.OperationServiceClient,
         ) as unknown as AsyncOperationClient;

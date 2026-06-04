@@ -143,7 +143,7 @@ model OrderPosition {
   @@map("order_positions")
 }
 
-// Условное обозначение позиции (результат designation-analyse). 1:1 с позицией.
+// Условное обозначение позиции (результат analyse-designation). 1:1 с позицией.
 // Связь плоская через orderPositionId (уникален), как везде в схеме.
 model Designation {
   id              String @id @default(uuid())

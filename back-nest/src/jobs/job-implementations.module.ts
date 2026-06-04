@@ -8,9 +8,10 @@ import { OcrJob } from './implementations/scan/ocr.job.js';
 import { LlmVisionJob } from './implementations/scan/llm-vision.job.js';
 import { LlmVisionTcJob } from './implementations/scan/llm-vision-tc.job.js';
 import { TcExtractJob } from './implementations/tc-extract.job.js';
-import { OrderAnalyseJob } from './implementations/order/order-analyse.job.js';
-import { DesignationAnalyseJob } from './implementations/order/designation-analyse.job.js';
 import { ExtractPositionsFromChunkJob } from './implementations/order/extract-positions-from-chunk.job.js';
+import { AnalyseDesignationJob } from './implementations/order/analyse-designation.job.js';
+import { AnalyseApplicationJob } from './implementations/order/analyse-application.job.js';
+import { AnalyseOrderJob } from './implementations/order/analyse-order.job.js';
 
 /**
  * Единый модуль реализаций джобов: держит все джоб-классы как провайдеры и импортирует доменные
@@ -25,9 +26,10 @@ import { ExtractPositionsFromChunkJob } from './implementations/order/extract-po
         LlmVisionJob,
         LlmVisionTcJob,
         TcExtractJob,
-        OrderAnalyseJob,
-        DesignationAnalyseJob,
         ExtractPositionsFromChunkJob,
+        AnalyseDesignationJob,
+        AnalyseApplicationJob,
+        AnalyseOrderJob,
     ],
 })
 export class JobImplementationsModule {}

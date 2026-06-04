@@ -90,4 +90,10 @@ export class OrderPositionsService {
         if (ids.length === 0) return;
         await this.prisma.orderPosition.deleteMany({ where: { id: { in: ids } } });
     }
+
+    /** Жёсткое удаление всех позиций перечисленных приложений (чистый лист при переанализе). */
+    async deleteByApplications(applicationIds: string[]): Promise<void> {
+        if (applicationIds.length === 0) return;
+        await this.prisma.orderPosition.deleteMany({ where: { applicationId: { in: applicationIds } } });
+    }
 }

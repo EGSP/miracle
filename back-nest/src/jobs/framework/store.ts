@@ -34,4 +34,6 @@ export interface JobStore {
     /** Корневые прогоны (`parentId = null`) с указанными статусами — для восстановления. */
     roots(statuses: JobStatus[]): Promise<JobRun[]>;
     patch(id: string, patch: JobRunPatch): Promise<void>;
+    /** Физически удалить прогон вместе со всем поддеревом (обход потомков по `parentId`). */
+    deleteSubtree(rootId: string): Promise<void>;
 }

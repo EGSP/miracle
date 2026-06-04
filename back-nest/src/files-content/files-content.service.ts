@@ -76,6 +76,11 @@ export class FilesContentService {
         }
     }
 
+    /** Жёсткое удаление всех записей контента файла (для сброса вычиток при переанализе). */
+    async deleteByFile(fileId: string): Promise<void> {
+        await this.prisma.fileContent.deleteMany({ where: { fileId } });
+    }
+
     /** Оценка числа токенов по сохранённому контенту записи. */
     async getTokenCount(contentId: string): Promise<number> {
         const record = await this.get(contentId);

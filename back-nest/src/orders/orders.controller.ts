@@ -5,7 +5,6 @@ import {
     Delete,
     Get,
     NotFoundException,
-    NotImplementedException,
     Param,
     Post,
     Query,
@@ -13,14 +12,16 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import type { Order, OrderApplication, OrderQuery, Stored } from '@miracle/types';
+import type { JobRun, Order, OrderApplication, OrderQuery, Stored } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
 import { UploadedFile } from '../common/uploaded-file.decorator.js';
 import { FilesService } from '../files/files.service.js';
 import { OrdersService } from './orders.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
+import { OrderAnalysisService } from './order-analysis.service.js';
 import { CreateTextApplicationDto } from './dto/create-text-application.dto.js';
+import { AnalyseOrderDto } from './dto/analyse-order.dto.js';
 
 @Controller('order')
 @UseGuards(AuthGuard)
@@ -28,6 +29,7 @@ export class OrdersController {
     constructor(
         private readonly orders: OrdersService,
         private readonly orderApplications: OrderApplicationsService,
+        private readonly orderAnalysis: OrderAnalysisService,
         private readonly files: FilesService,
     ) {}
 
@@ -46,16 +48,15 @@ export class OrdersController {
         return this.orders.getOrThrow(id);
     }
 
-    // Анализ переезжает на уровень приложений/позиций. Воркеры будут отрефакторены отдельно —
-    // до тех пор эндпоинты, запускавшие джобы, отвечают 501.
-    @Post('analyse-designation')
-    analyseDesignation(): never {
-        throw new NotImplementedException('Анализ обозначения переносится на позиции приложения');
-    }
-
-    @Post(':id/analyse-details')
-    analyseDetails(): never {
-        throw new NotImplementedException('Анализ заявки переносится на позиции приложения');
+    /**
+     * (Пере)анализ заказа: запускает джоб `analyse-order` (чтение приложений → позиции → обозначения).
+     * Тело — {@link AnalyseOrderDto}: `deleteJobs` (умолч. true) супрессирует прежний прогон,
+     * `deleteFileContent` (умолч. false) дополнительно сбрасывает вычитки FileContent.
+     */
+    @Post(':id/analyse')
+    async analyse(@Param('id') id: string, @Body() body: AnalyseOrderDto): Promise<Stored<JobRun>> {
+        await this.orders.getOrThrow(id);
+        return this.orderAnalysis.analyse(id, body) as Promise<Stored<JobRun>>;
     }
 
     @Get(':id/applications')

@@ -114,7 +114,7 @@ type ExtractInput = { applicationId: string; chunk: unknown; chunkKey?: string }
  * Дети: `llm` (opId под `memo`; output — `OrderPosition[]`) → `apply` (перезапись позиций прогона).
  *
  * Шаг A пайплайна: только сегментация, классификация типа по справочнику и дословный захват.
- * Интерпретация требований/условного обозначения — на последующих шагах (designation-analyse / ТУ).
+ * Интерпретация требований/условного обозначения — на последующих шагах (analyse-designation / ТУ).
  */
 @Injectable()
 @JobImpl()

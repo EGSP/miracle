@@ -60,5 +60,20 @@ export function createPrismaJobStore(prisma: PrismaService): JobStore {
                 },
             });
         },
+
+        async deleteSubtree(rootId: string): Promise<void> {
+            // BFS по parentId: собираем весь идентификаторы поддерева, затем удаляем одним deleteMany.
+            const ids: string[] = [];
+            let frontier: string[] = [rootId];
+            while (frontier.length > 0) {
+                ids.push(...frontier);
+                const children = await prisma.jobRun.findMany({
+                    where: { parentId: { in: frontier } },
+                    select: { id: true },
+                });
+                frontier = children.map((c) => c.id);
+            }
+            await prisma.jobRun.deleteMany({ where: { id: { in: ids } } });
+        },
     };
 }

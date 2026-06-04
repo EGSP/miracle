@@ -51,7 +51,7 @@ function formatRequirements(position: Stored<OrderPosition>): string {
 
     const requirements = position.data.requirements?.trim();
     if (!requirements) {
-        throw new Error('У позиции нет требований — сначала запустите анализ заявки');
+        throw new Error('У позиции нет требований — обозначение не определить');
     }
 
     return ['=== ТРЕБОВАНИЯ ЗАКАЗЧИКА ===', '', productTypeLine, '', 'Требования:', requirements].join('\n');
@@ -83,18 +83,23 @@ function prepareDesignationSlotsPayload(tc: Stored<TechnicalCondition>): string 
     return ['=== ПАРАМЕТРЫ ОБОЗНАЧЕНИЯ ===', '', ...blocks].join('\n\n');
 }
 
-type DesignationAnalyseInput = { positionId: string; tcId: string };
+/** `tcId` необязателен: если не задан — резолвится по типу продукции позиции (см. гейты ниже). */
+type AnalyseDesignationInput = { positionId: string; tcId?: string };
 type DesignationMid = { positionId: string; tcId: string; values: DesignationResult['values'] };
 
 /**
- * Корневой джоб `designation-analyse`: позиция + ТУ → условное обозначение.
- * Дети: `llm` (opId под `memo`; output — значения слотов) → `apply` (пишет `position.designation`).
+ * Корневой джоб `analyse-designation`: позиция (+ ТУ) → условное обозначение.
+ * Дети: `llm` (opId под `memo`; output — значения слотов) → `apply` (пишет обозначение позиции).
+ *
+ * ТУ резолвится ВНУТРИ джоба и здесь же — гейты: джоб бросает осмысленную ошибку при отсутствии
+ * типа продукции / пустых требованиях / отсутствии ТУ / неоднозначном выборе (>1 ТУ на тип).
+ * Вызывающий (`analyse-order`) ловит эти ошибки пер-позиция и продолжает остальные.
  */
 @Injectable()
 @JobImpl()
-export class DesignationAnalyseJob implements Job<DesignationAnalyseInput, void> {
-    readonly id = brandJobId('designation-analyse');
-    run!: Job<DesignationAnalyseInput, void>['run'];
+export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void> {
+    readonly id = brandJobId('analyse-designation');
+    run!: Job<AnalyseDesignationInput, void>['run'];
 
     constructor(
         positions: OrderPositionsService,
@@ -103,13 +108,32 @@ export class DesignationAnalyseJob implements Job<DesignationAnalyseInput, void>
         yandex: YandexService,
     ) {
         const llm = defineJob(
-            'designation-analyse:llm',
-            (input: DesignationAnalyseInput): Effect.Effect<DesignationMid, unknown, JobEnv> =>
+            'analyse-designation:llm',
+            (input: AnalyseDesignationInput): Effect.Effect<DesignationMid, unknown, JobEnv> =>
                 Effect.gen(function* () {
                     const position = yield* Effect.promise(() => positions.get(input.positionId));
                     if (!position) return yield* Effect.fail(new Error(`Позиция "${input.positionId}" не найдена`));
-                    const condition = yield* Effect.promise(() => tc.getById(input.tcId));
-                    if (!condition) return yield* Effect.fail(new Error(`TC "${input.tcId}" не найдено`));
+                    if (!position.productTypeId) {
+                        return yield* Effect.fail(new Error('У позиции не определён тип продукции — обозначение невозможно'));
+                    }
+
+                    // Резолв ТУ: явный tcId важнее; иначе по типу продукции с гейтами 0 / >1.
+                    let tcId = input.tcId;
+                    if (!tcId) {
+                        const list = yield* Effect.promise(() => tc.getByProductTypeId(position.productTypeId!));
+                        if (list.length === 0) {
+                            return yield* Effect.fail(new Error(`Для типа "${position.productTypeId}" нет ТУ`));
+                        }
+                        if (list.length > 1) {
+                            return yield* Effect.fail(
+                                new Error(`Для типа "${position.productTypeId}" несколько ТУ — выбор неоднозначен`),
+                            );
+                        }
+                        tcId = list[0].id;
+                    }
+
+                    const condition = yield* Effect.promise(() => tc.getById(tcId!));
+                    if (!condition) return yield* Effect.fail(new Error(`ТУ "${tcId}" не найдено`));
 
                     const userMessage = [formatRequirements(position), prepareDesignationSlotsPayload(condition)].join('\n\n');
                     const opId = yield* submitOnce(
@@ -128,15 +152,15 @@ export class DesignationAnalyseJob implements Job<DesignationAnalyseInput, void>
                     const result = yield* pollUntilDone<DesignationResult>(() =>
                         yandex.pollCompletionJson(opId, DesignationResultZodSchema),
                     );
-                    return { positionId: input.positionId, tcId: input.tcId, values: result.values };
+                    return { positionId: input.positionId, tcId: tcId!, values: result.values };
                 }),
         );
 
-        const apply = defineJob('designation-analyse:apply', (input: DesignationMid) =>
+        const apply = defineJob('analyse-designation:apply', (input: DesignationMid) =>
             Effect.promise(() => designations.upsert(input.positionId, input.tcId, input.values)).pipe(Effect.asVoid),
         );
 
-        this.run = (input: DesignationAnalyseInput) =>
+        this.run = (input: AnalyseDesignationInput) =>
             Effect.gen(function* () {
                 const jobs = yield* Jobs;
                 const mid = yield* jobs.run(llm, [jobs.runId, 'llm'], input);
