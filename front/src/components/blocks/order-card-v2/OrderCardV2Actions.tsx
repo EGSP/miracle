@@ -15,7 +15,7 @@ export function OrderCardV2Actions({ orderId }: { orderId: string }) {
           size="sm"
           label={analyseMutation.isPending ? "Запуск…" : "Анализ"}
           disabled={analyseMutation.isPending}
-          onClick={() => analyseMutation.mutate({})}
+          onClick={() => analyseMutation.mutate({ deleteJobs: true, deleteFileContent: true })}
         />
       </ButtonGroup>
       <InlineMutationNotification mutation={analyseMutation} successMessage="Анализ запущен" />

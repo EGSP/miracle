@@ -52,7 +52,7 @@ export const useAnalyseOrder = (orderId: string | undefined) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (options: AnalyseOrderOptions = {}) => {
+    mutationFn: (options: AnalyseOrderOptions) => {
       if (!orderId) throw new Error("Order ID is required")
       return orders.analyse(orderId, options)
     },

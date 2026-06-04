@@ -43,9 +43,19 @@ export function OrderPositionInfo({ item }: { item: OrderPositionWithDesignation
         <Text.Heading as="h4" variant="compact-01">
           Требования
         </Text.Heading>
-        <Text as="p" compact>
-          {data.requirements ?? "—"}
-        </Text>
+        {data.requirements.length > 0 ? (
+          <Stack as="ul" gap={1}>
+            {data.requirements.map((line) => (
+              <Text key={line} as="li" compact>
+                {line}
+              </Text>
+            ))}
+          </Stack>
+        ) : (
+          <Text as="p" compact>
+            —
+          </Text>
+        )}
       </Stack>
 
       <Stack gap={1}>

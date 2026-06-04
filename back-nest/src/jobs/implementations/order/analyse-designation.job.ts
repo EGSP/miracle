@@ -50,12 +50,19 @@ function formatRequirements(position: Stored<OrderPosition>): string {
             ? `Тип продукции: ${position.productTypeName} (id: ${position.productTypeId})`
             : 'Тип продукции: не указан';
 
-    const requirements = position.data.requirements?.trim();
-    if (!requirements) {
+    const requirements = (position.data.requirements ?? []).map((line) => line.trim()).filter(Boolean);
+    if (requirements.length === 0) {
         throw new Error('У позиции нет требований — обозначение не определить');
     }
 
-    return ['=== ТРЕБОВАНИЯ ЗАКАЗЧИКА ===', '', productTypeLine, '', 'Требования:', requirements].join('\n');
+    return [
+        '=== ТРЕБОВАНИЯ ЗАКАЗЧИКА ===',
+        '',
+        productTypeLine,
+        '',
+        'Требования:',
+        ...requirements.map((line) => `- ${line}`),
+    ].join('\n');
 }
 
 function prepareSlotRulesPayload(tc: Stored<TechnicalCondition>): string {
