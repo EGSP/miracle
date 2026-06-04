@@ -151,8 +151,8 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
         this.run = (input: TcExtractInput) =>
             Effect.gen(function* () {
                 const jobs = yield* Jobs;
-                const mid = yield* jobs.run(llm, 'llm', input);
-                yield* jobs.run(apply, 'apply', mid);
+                const mid = yield* jobs.run(llm, [jobs.runId, 'llm'], input);
+                yield* jobs.run(apply, [jobs.runId, 'apply'], mid);
             });
     }
 }

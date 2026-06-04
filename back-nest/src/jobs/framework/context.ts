@@ -1,5 +1,5 @@
 import { Context, type Effect, type Option } from 'effect';
-import type { JobProgress } from '@miracle/types';
+import type { JobKey, JobProgress } from '@miracle/types';
 import type { Job } from './job.js';
 
 /**
@@ -44,25 +44,34 @@ export class Progress extends Context.Tag('jobs/Progress')<
 >() {}
 
 /**
- * Запуск дочерних джобов. `run(job, key, input)` находит-или-создаёт прогон ребёнка по паре
- * `(parentId, key)`, где `parentId` — id ТЕКУЩЕГО джоба (рантайм подставляет сам, замыкая сервис
- * на узел). Если ребёнок уже `succeeded` — мгновенно возвращается его `output`; иначе тело
- * исполняется. `key` уникален в пределах непосредственного родителя.
+ * Запуск дочерних джобов. `run(job, key, input)` находит-или-создаёт прогон по глобальной
+ * идентичности `keyHash = hashKey(key)`. Если прогон уже `succeeded` — мгновенно возвращается
+ * его `output`; иначе тело исполняется (`parentId` проставляется в текущий узел только для
+ * навигации по дереву).
+ *
+ * Ключ — структурный массив ({@link JobKey}), который собирает РОДИТЕЛЬ из своего скоупа.
+ * Чтобы ребёнок был глобально уникален внутри своего поддерева, в ключ кладут `runId` —
+ * id текущего (родительского) прогона: `[jobs.runId, 'сегмент']`.
  *
  * @example
  * ```ts
  * const jobs = yield* Jobs;
- * const a = yield* jobs.run(stepA, 'a', input);
- * // параллельные дети — разные ключи:
- * const [x, y] = yield* Effect.all([jobs.run(stepX, 'x', a), jobs.run(stepY, 'y', a)], { concurrency: 'unbounded' });
+ * const a = yield* jobs.run(stepA, [jobs.runId, 'a'], input);
+ * // параллельные дети — разные сегменты:
+ * const [x, y] = yield* Effect.all(
+ *   [jobs.run(stepX, [jobs.runId, 'x'], a), jobs.run(stepY, [jobs.runId, 'y'], a)],
+ *   { concurrency: 'unbounded' },
+ * );
  * ```
  */
 export class Jobs extends Context.Tag('jobs/Jobs')<
     Jobs,
     {
+        /** id текущего (исполняющегося) прогона — родитель кладёт его в ключ ребёнка для уникальности. */
+        readonly runId: string;
         readonly run: <Input, Output>(
             job: Job<Input, Output>,
-            key: string,
+            key: JobKey,
             input: Input,
         ) => Effect.Effect<Output, unknown>;
     }

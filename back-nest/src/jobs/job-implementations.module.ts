@@ -10,6 +10,7 @@ import { LlmVisionTcJob } from './implementations/scan/llm-vision-tc.job.js';
 import { TcExtractJob } from './implementations/tc-extract.job.js';
 import { OrderAnalyseJob } from './implementations/order/order-analyse.job.js';
 import { DesignationAnalyseJob } from './implementations/order/designation-analyse.job.js';
+import { ExtractPositionsFromChunkJob } from './implementations/order/extract-positions-from-chunk.job.js';
 
 /**
  * Единый модуль реализаций джобов: держит все джоб-классы как провайдеры и импортирует доменные
@@ -19,6 +20,14 @@ import { DesignationAnalyseJob } from './implementations/order/designation-analy
  */
 @Module({
     imports: [FilesModule, FilesContentModule, ProductTypesModule, TechnicalConditionsModule, OrdersModule],
-    providers: [OcrJob, LlmVisionJob, LlmVisionTcJob, TcExtractJob, OrderAnalyseJob, DesignationAnalyseJob],
+    providers: [
+        OcrJob,
+        LlmVisionJob,
+        LlmVisionTcJob,
+        TcExtractJob,
+        OrderAnalyseJob,
+        DesignationAnalyseJob,
+        ExtractPositionsFromChunkJob,
+    ],
 })
 export class JobImplementationsModule {}

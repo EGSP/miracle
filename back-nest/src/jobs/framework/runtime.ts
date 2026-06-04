@@ -1,7 +1,8 @@
 import { Effect, Option } from 'effect';
-import type { JobRun } from '@miracle/types';
+import type { JobKey, JobRun } from '@miracle/types';
 import type { Job } from './job.js';
 import { Jobs, Memo, Progress } from './context.js';
+import { hashKey } from './hash-key.js';
 import type { JobStore } from './store.js';
 
 /** Ошибка, пробрасываемая наверх, когда дочерний прогон находится в терминальном неуспешном статусе. */
@@ -45,34 +46,32 @@ function makeProgress(store: JobStore, node: JobRun) {
 }
 
 /**
- * Реализация сервиса {@link Jobs}, замкнутая на узел-родитель. `run` находит-или-создаёт ребёнка
- * по `(parent.id, key)` и решает его судьбу по статусу:
+ * Реализация сервиса {@link Jobs}, замкнутая на узел-родитель. `run` находит-или-создаёт прогон
+ * по глобальной идентичности `keyHash = hashKey(key)` (`parentId` проставляется в текущий узел,
+ * но в идентичности не участвует) и решает его судьбу по статусу:
  * - `succeeded` → возвращаем сохранённый `output` (повторно не исполняем);
  * - `failed`/`cancelled` → пробрасываем ошибку наверх (перезапуск — только явной командой);
- * - `running`/`queued` (артефакт краха) → переисполняем в той же строке;
- * - нет строки → создаём и исполняем.
+ * - `running`/`queued` (новый или артефакт краха) → исполняем в той же строке.
  *
- * Рекурсия `makeJobs(store, child)` внутри {@link execute} обеспечивает, что родителем внука
- * становится ребёнок, а не корень.
+ * `runId` (= `parent.id`) родитель кладёт в ключ ребёнка (`[jobs.runId, 'сегмент']`), чтобы тот
+ * был глобально уникален. Рекурсия `makeJobs(store, child)` внутри {@link execute} обеспечивает,
+ * что родителем внука становится ребёнок, а не корень.
  */
 function makeJobs(store: JobStore, parent: JobRun) {
     return {
-        run: <Input, Output>(job: Job<Input, Output>, key: string, input: Input) =>
+        runId: parent.id,
+        run: <Input, Output>(job: Job<Input, Output>, key: JobKey, input: Input) =>
             Effect.gen(function* () {
-                const existing = yield* Effect.promise(() => store.findChild(parent.id, key));
-                if (existing) {
-                    if (existing.status === 'succeeded') {
-                        return existing.output as Output;
-                    }
-                    if (existing.status === 'failed' || existing.status === 'cancelled') {
-                        return yield* Effect.fail(new JobChildFailedError(existing));
-                    }
-                    return yield* execute(store, job, existing);
-                }
-                const child = yield* Effect.promise(() =>
-                    store.create({ job: job.id, parentId: parent.id, key, input }),
+                const node = yield* Effect.promise(() =>
+                    store.findOrCreate({ job: job.id, parentId: parent.id, key, keyHash: hashKey(key), input }),
                 );
-                return yield* execute(store, job, child);
+                if (node.status === 'succeeded') {
+                    return node.output as Output;
+                }
+                if (node.status === 'failed' || node.status === 'cancelled') {
+                    return yield* Effect.fail(new JobChildFailedError(node));
+                }
+                return yield* execute(store, job, node);
             }),
     };
 }

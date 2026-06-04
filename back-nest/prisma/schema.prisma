@@ -130,10 +130,10 @@ model OrderApplication {
 model OrderPosition {
   id              String  @id @default(uuid())
   applicationId   String
+  name            String
   productTypeId   String?
   productTypeName String?
-  requirements    Json? // PositionRequirement[]
-  designation     Json? // Designation
+  data            Json // OrderPositionData
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -141,6 +141,21 @@ model OrderPosition {
 
   @@index([applicationId])
   @@map("order_positions")
+}
+
+// Условное обозначение позиции (результат designation-analyse). 1:1 с позицией.
+// Связь плоская через orderPositionId (уникален), как везде в схеме.
+model Designation {
+  id              String @id @default(uuid())
+  orderPositionId String @unique
+  tcId            String
+  values          Json? // DesignationValue[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("designations")
 }
 
 model TechnicalCondition {
@@ -164,12 +179,13 @@ model TechnicalCondition {
 }
 
 // Прогоны durable-движка задач (JobRun). Плоские: дерево выражается ссылкой parentId,
-// дочерние прогоны дедуплицируются парой (parentId, key).
+// идентичность/дедупликация — глобально по keyHash (хеш ключа-массива key). parentId — навигация.
 model JobRun {
   id       String    @id @default(uuid())
   job      String
   parentId String?
-  key      String?
+  key      Json?
+  keyHash  String
   status   JobStatus
   input    Json?
   output   Json?
@@ -180,7 +196,7 @@ model JobRun {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([parentId, key])
+  @@unique([keyHash])
   @@index([parentId])
   @@index([status])
   @@map("job_runs")

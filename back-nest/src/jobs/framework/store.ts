@@ -1,12 +1,14 @@
-import type { JobId, JobRun, JobStatus } from '@miracle/types';
+import type { JobId, JobKey, JobRun, JobStatus } from '@miracle/types';
 
 /** Данные для создания новой записи прогона. */
 export type CreateRunInput = {
     job: JobId;
     /** id непосредственного родителя; `null` для корневого прогона. */
     parentId: string | null;
-    /** Ключ идемпотентности в пределах родителя; `null` для корня. */
-    key: string | null;
+    /** Структурный ключ-массив (читаемая форма). */
+    key: JobKey;
+    /** Канонический хеш ключа — глобальная идентичность (уникальный индекс). */
+    keyHash: string;
     input: unknown;
 };
 
@@ -16,13 +18,17 @@ export type JobRunPatch = Partial<Pick<JobRun, 'status' | 'output' | 'error' | '
 /**
  * Порт хранилища прогонов. Отделяет чистый Effect-рантайм фреймворка от конкретной БД:
  * Nest-слой реализует этот интерфейс через Prisma. Все строки плоские, дерево восстанавливается
- * запросами по `parentId`.
+ * запросами по `parentId`. Идентичность прогона — `keyHash`.
  */
 export interface JobStore {
-    create(data: CreateRunInput): Promise<JobRun>;
+    /**
+     * Найти прогон по `keyHash` или атомарно создать новый — основа идемпотентного запуска.
+     * Реализация обязана быть race-safe (напр. upsert по уникальному `keyHash`).
+     */
+    findOrCreate(data: CreateRunInput): Promise<JobRun>;
     findById(id: string): Promise<JobRun | null>;
-    /** Поиск ребёнка по паре `(parentId, key)` — основа дедупликации запусков. */
-    findChild(parentId: string, key: string): Promise<JobRun | null>;
+    /** Поиск прогона по глобальной идентичности `keyHash`. */
+    findByKeyHash(keyHash: string): Promise<JobRun | null>;
     /** Прямые потомки узла (для рекурсивной отмены и сбора прогресса). */
     childrenOf(parentId: string): Promise<JobRun[]>;
     /** Корневые прогоны (`parentId = null`) с указанными статусами — для восстановления. */

@@ -1,10 +1,11 @@
 /**
- * Модель durable-движка задач (см. фреймворк в `back-nest/src/jobs/framework` и лекцию
- * `.agents/plans/nest-migration/worker-rework`).
+ * Модель durable-движка задач (см. фреймворк в `back-nest/src/jobs/framework` и план
+ * `.agents/plans/jobs`).
  *
  * Единица работы — Job (описание, компилируемое в Effect). Запись об исполнении — плоский
  * {@link JobRun}: дерево не хранится внутри записи, а выражается ссылкой `parentId` на родителя.
- * Дочерние прогоны дедуплицируются парой `(parentId, key)`.
+ * Идентичность прогона — глобальный {@link JobRun.keyHash} (канонический хеш ключа-массива
+ * {@link JobKey}); `parentId` к идентичности не относится и нужен только для навигации по дереву.
  */
 
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
@@ -14,6 +15,25 @@ export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancell
  * полученное из `defineJob(id, …)` (который брендирует через приведение).
  */
 export type JobId = string & { readonly __job: unique symbol };
+
+/** Элемент ключа прогона: JSON-сериализуемое значение (как в ключах TanStack Query). */
+export type JobKeyPart =
+    | string
+    | number
+    | boolean
+    | null
+    | { readonly [key: string]: JobKeyPart }
+    | readonly JobKeyPart[];
+
+/**
+ * Структурный ключ прогона — массив частей (стиль TanStack Query). Порядок элементов значим
+ * (выражает иерархию/контекст). Идентичность задаёт не сам массив, а его канонический хеш
+ * ({@link JobRun.keyHash}): объекты внутри ключа каноникализируются по отсортированным полям.
+ *
+ * Ключ формирует ВЫЗЫВАЮЩИЙ из своего скоупа: продьюсер — для корня; родитель — для ребёнка
+ * (обычно `[jobs.runId, 'сегмент']`, чтобы быть глобально уникальным внутри своего поддерева).
+ */
+export type JobKey = ReadonlyArray<JobKeyPart>;
 
 /** Прогресс джоба (наблюдаемость, не состояние для возобновления). Пишется через сервис `Progress`. */
 export type JobProgress = {
@@ -26,30 +46,35 @@ export type JobProgress = {
 /**
  * Запись об исполнении одного Job — плоская.
  *
- * Связь с деревом — через `parentId` (id непосредственного родителя; `null` у корня) и `key`
- * (ключ идемпотентности в пределах родителя; `null` у корня). Пара `(parentId, key)` уникальна.
- * Завершённый (`succeeded`) прогон переиспользует свой `output` при повторном запросе родителем.
+ * Идентичность — {@link keyHash} (уникальный индекс): дедупликация/идемпотентность запусков
+ * глобальная, а не «в пределах родителя». `parentId` (id непосредственного родителя; `null`
+ * у корня) выражает дерево и используется только для навигации (обход, отмена, агрегация
+ * прогресса). Завершённый (`succeeded`) прогон переиспользует свой `output` при повторном вызове.
  *
  * @example корневой прогон
  * ```json
- * { "id": "run_1", "job": "order-analyse", "parentId": null, "key": null, "status": "running" }
+ * { "id": "run_1", "job": "order-analyse", "parentId": null,
+ *   "key": ["order-analyse", "app_42"], "keyHash": "[\"order-analyse\",\"app_42\"]", "status": "running" }
  * ```
  * @example дочерний прогон
  * ```json
- * { "id": "run_2", "job": "extract-text", "parentId": "run_1", "key": "extract", "status": "succeeded", "output": "…" }
+ * { "id": "run_2", "job": "extract-text", "parentId": "run_1",
+ *   "key": ["run_1", "extract"], "keyHash": "[\"run_1\",\"extract\"]", "status": "succeeded", "output": "…" }
  * ```
  */
 export type JobRun = {
     id: string;
     /** Идентификатор Job (ключ в реестре). */
     job: JobId;
-    /** id непосредственного родителя; `null` у корневого прогона. */
+    /** id непосредственного родителя; `null` у корня. Только навигация по дереву, не идентичность. */
     parentId?: string | null;
-    /** Ключ идемпотентности в пределах родителя; `null` у корня. */
-    key?: string | null;
+    /** Структурный ключ-массив (читаемая форма). Идентичность задаёт {@link keyHash}. */
+    key?: JobKey | null;
+    /** Канонический хеш ключа — глобальная идентичность прогона (уникальный индекс). */
+    keyHash: string;
     status: JobStatus;
     input?: unknown;
-    /** Для `succeeded` — выход; переиспользуется при повторном запуске родителем. */
+    /** Для `succeeded` — выход; переиспользуется при повторном вызове. */
     output?: unknown;
     /** Для `failed` — сообщение об ошибке. */
     error?: string;

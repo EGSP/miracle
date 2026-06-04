@@ -7,15 +7,20 @@ export function createPrismaJobStore(prisma: PrismaService): JobStore {
     const toRun = (row: unknown): JobRun => row as unknown as JobRun;
 
     return {
-        async create(data: CreateRunInput): Promise<JobRun> {
-            const row = await prisma.jobRun.create({
-                data: {
+        async findOrCreate(data: CreateRunInput): Promise<JobRun> {
+            // Race-safe: уникальный индекс по keyHash делает upsert атомарным. update:{} —
+            // no-op, поэтому при совпадении возвращается существующая строка как есть.
+            const row = await prisma.jobRun.upsert({
+                where: { keyHash: data.keyHash },
+                create: {
                     job: data.job,
                     parentId: data.parentId,
-                    key: data.key,
+                    key: data.key as object,
+                    keyHash: data.keyHash,
                     status: 'queued' satisfies JobStatus,
                     input: data.input !== undefined ? (data.input as object) : undefined,
                 },
+                update: {},
             });
             return toRun(row);
         },
@@ -25,8 +30,8 @@ export function createPrismaJobStore(prisma: PrismaService): JobStore {
             return row ? toRun(row) : null;
         },
 
-        async findChild(parentId: string, key: string): Promise<JobRun | null> {
-            const row = await prisma.jobRun.findFirst({ where: { parentId, key } });
+        async findByKeyHash(keyHash: string): Promise<JobRun | null> {
+            const row = await prisma.jobRun.findUnique({ where: { keyHash } });
             return row ? toRun(row) : null;
         },
 

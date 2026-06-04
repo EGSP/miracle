@@ -5,7 +5,6 @@ import {
     ExtractionStatus,
     type ApplicationData,
     type OrderPosition,
-    type PositionRequirement,
     type ProductType,
     type Stored,
 } from '@miracle/types';
@@ -78,24 +77,29 @@ function flatToPosition(
     findByNameOrSynonym: (name: string) => Stored<ProductType> | undefined,
 ): OrderPosition | null {
     const resolvedType = resolveProductType(flat.productType as LlmProductType, catalog, findByNameOrSynonym);
-    const requirements: PositionRequirement[] = (flat.requirements ?? []).map((req) => ({
-        parameterName: req.parameterName,
-        requiredValue: req.requiredValue,
-    }));
+    const reqList = flat.requirements ?? [];
+    const requirementsText =
+        reqList.length > 0 ? reqList.map((req) => `${req.parameterName}: ${req.requiredValue}`).join('\n') : null;
 
-    if (resolvedType === undefined && requirements.length === 0) {
+    if (resolvedType === undefined && requirementsText === null) {
         return null;
     }
 
-    const out: OrderPosition = { applicationId };
-    if (resolvedType !== undefined) {
-        out.productTypeId = resolvedType.productTypeId;
-        out.productTypeName = resolvedType.productTypeName;
-    }
-    if (requirements.length > 0) {
-        out.requirements = requirements;
-    }
-    return out;
+    return {
+        applicationId,
+        name: resolvedType?.productTypeName ?? 'Позиция',
+        ...(resolvedType
+            ? { productTypeId: resolvedType.productTypeId, productTypeName: resolvedType.productTypeName }
+            : {}),
+        data: {
+            requirements: requirementsText,
+            unit: null,
+            quantity: null,
+            alternatives: [],
+            confidence: 'low',
+            confidenceNote: 'Импортировано пайплайном order-analyse (без сегментации и оценки уверенности)',
+        },
+    };
 }
 
 type ApplicationsDep = Pick<OrderApplicationsService, 'get'>;
@@ -193,8 +197,8 @@ export class OrderAnalyseJob implements Job<PositionAnalyseInput, void> {
         this.run = (input: PositionAnalyseInput) =>
             Effect.gen(function* () {
                 const jobs = yield* Jobs;
-                const position = yield* jobs.run(llm, 'llm', input);
-                yield* jobs.run(apply, 'apply', position);
+                const position = yield* jobs.run(llm, [jobs.runId, 'llm'], input);
+                yield* jobs.run(apply, [jobs.runId, 'apply'], position);
             });
     }
 }

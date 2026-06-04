@@ -218,8 +218,8 @@ export const buildScanRun =
     (input: ScanInput): Effect.Effect<void, unknown, JobEnv> =>
         Effect.gen(function* () {
             const jobs = yield* Jobs;
-            const content = yield* jobs.run(recognizeJob, 'recognize', input);
-            yield* jobs.run(applyJob, 'apply', {
+            const content = yield* jobs.run(recognizeJob, [jobs.runId, 'recognize'], input);
+            yield* jobs.run(applyJob, [jobs.runId, 'apply'], {
                 fileId: input.fileId,
                 fileContentId: input.fileContentId,
                 content,

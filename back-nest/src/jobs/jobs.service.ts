@@ -7,14 +7,16 @@ import {
     type OnApplicationBootstrap,
 } from '@nestjs/common';
 import { DiscoveryService, Reflector } from '@nestjs/core';
+import { randomUUID } from 'node:crypto';
 import { Cause, Effect, Fiber } from 'effect';
-import type { JobRun, JobRunsQuery, Stored, WorkerFinalPrompt } from '@miracle/types';
+import type { JobKey, JobRun, JobRunsQuery, Stored, WorkerFinalPrompt } from '@miracle/types';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
 import {
     brandJobId,
     execute,
     getJob,
+    hashKey,
     JOB_IMPL_METADATA,
     registerJob,
     type AnyJob,
@@ -45,15 +47,30 @@ export class JobsService implements OnApplicationBootstrap {
     }
 
     /**
-     * Запускает корневой прогон: создаёт запись (`parentId`/`key` = null) и форкает исполнение.
+     * Запускает корневой прогон. `key` — ключ идемпотентности (стиль TanStack); если передан и
+     * прогон с таким `keyHash` уже есть: `succeeded`/`running` → возвращаем существующий (не
+     * дублируем), `queued`/`failed`/`cancelled` → (пере)запускаем ту же строку. Без `key` каждый
+     * запуск уникален (`[job.id, uuid]`) — прежнее поведение «всегда новый корень».
+     *
      * Принимает либо сам джоб, либо его строковый id (джоб берётся из реестра) — последнее
      * удобно потребителям из других модулей, которым нельзя инъецировать сам класс джоба.
      */
-    async start<Input>(job: Job<Input, unknown>, input: Input): Promise<JobRun>;
-    async start(jobId: string, input: unknown): Promise<JobRun>;
-    async start(jobOrId: AnyJob | string, input: unknown): Promise<JobRun> {
+    async start<Input>(job: Job<Input, unknown>, input: Input, key?: JobKey): Promise<JobRun>;
+    async start(jobId: string, input: unknown, key?: JobKey): Promise<JobRun>;
+    async start(jobOrId: AnyJob | string, input: unknown, key?: JobKey): Promise<JobRun> {
         const job = typeof jobOrId === 'string' ? this.requireJob(jobOrId) : jobOrId;
-        const root = await this.store.create({ job: job.id, parentId: null, key: null, input });
+        const finalKey: JobKey = key ?? [job.id, randomUUID()];
+        const root = await this.store.findOrCreate({
+            job: job.id,
+            parentId: null,
+            key: finalKey,
+            keyHash: hashKey(finalKey),
+            input,
+        });
+        // Идемпотентный ключ: уже выполнен или в процессе — повторно не запускаем.
+        if (root.status === 'succeeded' || root.status === 'running') {
+            return root;
+        }
         this.launch(job, root);
         return root;
     }

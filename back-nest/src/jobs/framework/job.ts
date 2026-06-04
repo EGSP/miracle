@@ -48,8 +48,8 @@ export interface Job<Input, Output> {
 export type AnyJob = Job<any, any>;
 
 /**
- * Создаёт джоб: брендирует id и оборачивает тело. Заменяет прежние `leaf`/`andThen`/`named` —
- * композиции на уровне описания больше нет, под-джобы запускаются из тела через `Jobs.run`.
+ * Создаёт джоб: брендирует id и оборачивает тело. Композиции на уровне описания нет —
+ * дочерние джобы запускаются из тела через `Jobs.run`.
  *
  * @example
  * ```ts
@@ -58,8 +58,8 @@ export type AnyJob = Job<any, any>;
  *   (input: { applicationId: string }) =>
  *     Effect.gen(function* () {
  *       const jobs = yield* Jobs;
- *       const text = yield* jobs.run(extractText, 'extract', { applicationId: input.applicationId });
- *       const positions = yield* jobs.run(llmPositions, 'llm', { text });
+ *       const text = yield* jobs.run(extractText, [jobs.runId, 'extract'], { applicationId: input.applicationId });
+ *       const positions = yield* jobs.run(llmPositions, [jobs.runId, 'llm'], { text });
  *       return positions;
  *     }),
  * );

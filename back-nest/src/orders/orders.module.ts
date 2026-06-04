@@ -8,11 +8,12 @@ import { OrdersController } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
 import { OrderPositionsService } from './order-positions.service.js';
+import { DesignationsService } from './designations.service.js';
 
 @Module({
     imports: [AuthModule, FilesModule, FilesContentModule, ProductTypesModule, TechnicalConditionsModule],
     controllers: [OrdersController],
-    providers: [OrdersService, OrderApplicationsService, OrderPositionsService],
-    exports: [OrdersService, OrderApplicationsService, OrderPositionsService],
+    providers: [OrdersService, OrderApplicationsService, OrderPositionsService, DesignationsService],
+    exports: [OrdersService, OrderApplicationsService, OrderPositionsService, DesignationsService],
 })
 export class OrdersModule {}

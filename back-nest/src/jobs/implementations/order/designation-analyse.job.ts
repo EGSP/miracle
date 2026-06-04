@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Effect } from 'effect';
 import { z } from 'zod';
-import { type Designation, type OrderPosition, type Stored, type TechnicalCondition } from '@miracle/types';
+import { type OrderPosition, type Stored, type TechnicalCondition } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs } from '../../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
 import { countTokens } from '../../../common/count-tokens.js';
 import { OrderPositionsService } from '../../../orders/order-positions.service.js';
+import { DesignationsService } from '../../../orders/designations.service.js';
 import { TechnicalConditionsService } from '../../../technical-conditions/technical-conditions.service.js';
 import { YandexService } from '../../../yandex/yandex.service.js';
 
@@ -48,19 +49,12 @@ function formatRequirements(position: Stored<OrderPosition>): string {
             ? `Тип продукции: ${position.productTypeName} (id: ${position.productTypeId})`
             : 'Тип продукции: не указан';
 
-    const requirements = position.requirements ?? [];
-    if (requirements.length === 0) {
+    const requirements = position.data.requirements?.trim();
+    if (!requirements) {
         throw new Error('У позиции нет требований — сначала запустите анализ заявки');
     }
 
-    return [
-        '=== ТРЕБОВАНИЯ ЗАКАЗЧИКА ===',
-        '',
-        productTypeLine,
-        '',
-        'Требования:',
-        ...requirements.map((req) => `- ${req.parameterName}: ${req.requiredValue}`),
-    ].join('\n');
+    return ['=== ТРЕБОВАНИЯ ЗАКАЗЧИКА ===', '', productTypeLine, '', 'Требования:', requirements].join('\n');
 }
 
 function prepareDesignationSlotsPayload(tc: Stored<TechnicalCondition>): string {
@@ -104,6 +98,7 @@ export class DesignationAnalyseJob implements Job<DesignationAnalyseInput, void>
 
     constructor(
         positions: OrderPositionsService,
+        designations: DesignationsService,
         tc: TechnicalConditionsService,
         yandex: YandexService,
     ) {
@@ -138,17 +133,14 @@ export class DesignationAnalyseJob implements Job<DesignationAnalyseInput, void>
         );
 
         const apply = defineJob('designation-analyse:apply', (input: DesignationMid) =>
-            Effect.gen(function* () {
-                const designation: Designation = { tcId: input.tcId, values: input.values };
-                yield* Effect.promise(() => positions.update(input.positionId, { designation }));
-            }),
+            Effect.promise(() => designations.upsert(input.positionId, input.tcId, input.values)).pipe(Effect.asVoid),
         );
 
         this.run = (input: DesignationAnalyseInput) =>
             Effect.gen(function* () {
                 const jobs = yield* Jobs;
-                const mid = yield* jobs.run(llm, 'llm', input);
-                yield* jobs.run(apply, 'apply', mid);
+                const mid = yield* jobs.run(llm, [jobs.runId, 'llm'], input);
+                yield* jobs.run(apply, [jobs.runId, 'apply'], mid);
             });
     }
 }
