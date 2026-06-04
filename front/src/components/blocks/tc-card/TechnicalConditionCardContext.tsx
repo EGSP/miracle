@@ -8,6 +8,9 @@ export type TechnicalConditionCardContextType = {
   isSaving: boolean
   saveError: Error | null
   save: () => void
+  isDeleting: boolean
+  deleteError: Error | null
+  deleteTc: () => void
 } & DraftAPI<Stored<TechnicalCondition>>
 
 const TechnicalConditionCardContext = createContext<TechnicalConditionCardContextType | null>(null)

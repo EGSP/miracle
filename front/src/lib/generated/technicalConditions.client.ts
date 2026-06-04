@@ -26,6 +26,10 @@ export const technicalConditions = {
         url: formatPath('/technical-conditions/:id', { id }),
         data: technicalCondition,
     }),
+    remove: (id: string) => customInstance<Stored<TechnicalCondition>>({
+        method: 'DELETE',
+        url: formatPath('/technical-conditions/:id', { id }),
+    }),
     extractDetails: (id: string) => customInstance<TechnicalConditionsExtractDetailsResponse>({
         method: 'POST',
         url: formatPath('/technical-conditions/:id/extract-details', { id }),

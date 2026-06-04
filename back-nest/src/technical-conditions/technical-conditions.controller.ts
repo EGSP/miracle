@@ -2,6 +2,7 @@ import {
     BadRequestException,
     Body,
     Controller,
+    Delete,
     Get,
     HttpCode,
     Param,
@@ -41,6 +42,12 @@ export class TechnicalConditionsController {
     @Put(':id')
     replace(@Param('id') id: string, @Body() body: TechnicalCondition): Promise<Stored<TechnicalCondition>> {
         return this.tc.replace(id, body);
+    }
+
+    /** Мягкое удаление ТУ (проставляет deletedAt). */
+    @Delete(':id')
+    remove(@Param('id') id: string): Promise<Stored<TechnicalCondition>> {
+        return this.tc.softDelete(id);
     }
 
     // Запускает durable-прогон разбора ТУ; возвращает id прогона для слежения.

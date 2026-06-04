@@ -124,6 +124,10 @@ function TechnicalConditionsPageContent() {
             key={selectedTc.id}
             technicalCondition={selectedTc}
             onTechnicalConditionSaved={(saved) => setSelectedTc(saved)}
+            onTechnicalConditionDeleted={() => {
+              setSelectedTc(null)
+              void navigate({ search: (prev) => ({ ...prev, tcId: undefined }) })
+            }}
           />
         ) : (
           <Stack className="border border-border p-4">

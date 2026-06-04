@@ -3,7 +3,10 @@ import type { Stored, TechnicalCondition } from "@miracle/types"
 import type * as React from "react"
 import { DirtyGuardProvider, useGuardActions } from "@/contexts/dirty-state/DirtyGuardContext"
 import { useDraft } from "@/contexts/draft-api/DraftContext"
-import { useReplaceTechnicalCondition } from "@/lib/queries/technical-condition.query"
+import {
+  useDeleteTechnicalCondition,
+  useReplaceTechnicalCondition,
+} from "@/lib/queries/technical-condition.query"
 import { TCCActions } from "./TCCActions"
 import { TCCInfo } from "./TCCInfo"
 import { TCCSlotRules } from "./TCCSlotRules"
@@ -22,11 +25,13 @@ type ProviderProps = React.PropsWithChildren<TechnicalConditionCardProps>
 function TechnicalConditionCardProvider({
   technicalCondition,
   onTechnicalConditionSaved,
+  onTechnicalConditionDeleted,
   children,
 }: ProviderProps) {
   const draft = useDraft<Stored<TechnicalCondition>>()
   const { commitAll } = useGuardActions()
   const mutation = useReplaceTechnicalCondition(technicalCondition.id)
+  const deleteMutation = useDeleteTechnicalCondition(technicalCondition.id)
 
   const save = () => {
     const merged = draft.collect({ ...technicalCondition })
@@ -50,11 +55,20 @@ function TechnicalConditionCardProvider({
     })
   }
 
+  const deleteTc = () => {
+    deleteMutation.mutate(undefined, {
+      onSuccess: (deleted) => onTechnicalConditionDeleted?.(deleted),
+    })
+  }
+
   const value: TechnicalConditionCardContextType = {
     technicalCondition,
     isSaving: mutation.isPending,
     saveError: mutation.error ?? null,
     save,
+    isDeleting: deleteMutation.isPending,
+    deleteError: deleteMutation.error ?? null,
+    deleteTc,
     ...draft,
   }
 

@@ -1,5 +1,5 @@
 ﻿import { Stack } from "@miracle/aramid"
-import { ScanEye, ScanLine, ScanText } from "lucide-react"
+import { ScanText, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/ds/button"
 import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
 import { useGuardState } from "@/contexts/dirty-state/DirtyGuardContext"
@@ -7,10 +7,18 @@ import { useExtractTcDetails } from "@/lib/queries/technical-condition.query"
 import { useTechnicalConditionCardContext } from "./TechnicalConditionCardContext"
 
 export function TCCActions() {
-  const { technicalCondition, isSaving, save, saveError } = useTechnicalConditionCardContext()
+  const { technicalCondition, isSaving, save, saveError, isDeleting, deleteError, deleteTc } =
+    useTechnicalConditionCardContext()
   const { isDirtyAnywhere } = useGuardState()
 
   const extractMutation = useExtractTcDetails(technicalCondition.id)
+
+  const handleDelete = () => {
+    if (!window.confirm("Удалить ТУ? Запись будет скрыта из списка (мягкое удаление).")) {
+      return
+    }
+    deleteTc()
+  }
 
   return (
     <Stack gap={2}>
@@ -19,7 +27,7 @@ export function TCCActions() {
           type="button"
           size="md"
           label={isSaving ? "Сохранение..." : "Сохранить ТУ"}
-          disabled={!isDirtyAnywhere || isSaving}
+          disabled={!isDirtyAnywhere || isSaving || isDeleting}
           onClick={save}
         />
         <Button
@@ -28,13 +36,22 @@ export function TCCActions() {
           variant="secondary"
           icon={<ScanText />}
           label={extractMutation.isPending ? "Запуск..." : "Сканировать"}
-          disabled={!technicalCondition.fileId || extractMutation.isPending}
+          disabled={!technicalCondition.fileId || extractMutation.isPending || isDeleting}
           title={
             !technicalCondition.fileId
               ? "Сначала прикрепите PDF-файл ТУ"
               : "Запустить LLM-анализ: извлечь секции ТУ в правила параметров (перезапишет текущий список)"
           }
           onClick={() => extractMutation.mutate()}
+        />
+        <Button
+          type="button"
+          size="md"
+          variant="danger-tertiary"
+          icon={<Trash2 />}
+          label={isDeleting ? "Удаление..." : "Удалить"}
+          disabled={isDeleting}
+          onClick={handleDelete}
         />
       </Stack>
 
@@ -49,6 +66,10 @@ export function TCCActions() {
 
       <InlineMutationNotification
         mutation={{ isError: !!saveError, isSuccess: false, error: saveError }}
+      />
+
+      <InlineMutationNotification
+        mutation={{ isError: !!deleteError, isSuccess: false, error: deleteError }}
       />
     </Stack>
   )

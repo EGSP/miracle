@@ -11,17 +11,21 @@ export class TechnicalConditionsService {
     ) {}
 
     async getAll(): Promise<Stored<TechnicalCondition>[]> {
-        const rows = await this.prisma.technicalCondition.findMany();
+        const rows = await this.prisma.technicalCondition.findMany({ where: { deletedAt: null } });
         return rows as Stored<TechnicalCondition>[];
     }
 
+    /** Активные ТУ по типу продукции. Мягко удалённые (deletedAt) исключены — их не учитывает резолв designation. */
     async getByProductTypeId(productTypeId: string): Promise<Stored<TechnicalCondition>[]> {
-        const rows = await this.prisma.technicalCondition.findMany({ where: { productTypeId } });
+        const rows = await this.prisma.technicalCondition.findMany({
+            where: { productTypeId, deletedAt: null },
+        });
         return rows as Stored<TechnicalCondition>[];
     }
 
     async getById(id: string): Promise<Stored<TechnicalCondition> | null> {
-        const row = await this.prisma.technicalCondition.findUnique({ where: { id } });
+        // findFirst (не findUnique): к id добавляем фильтр deletedAt — мягко удалённые невидимы везде.
+        const row = await this.prisma.technicalCondition.findFirst({ where: { id, deletedAt: null } });
         return row as Stored<TechnicalCondition> | null;
     }
 
@@ -37,6 +41,16 @@ export class TechnicalConditionsService {
         const payload = await this.preparePayload(body);
         const row = await this.prisma.technicalCondition.create({ data: payload });
         return row as Stored<TechnicalCondition>;
+    }
+
+    /** Мягкое удаление ТУ: проставляет `deletedAt`. Удалённое ТУ исчезает из списков и резолва designation. */
+    async softDelete(id: string): Promise<Stored<TechnicalCondition>> {
+        await this.getByIdOrThrow(id);
+        const updated = await this.prisma.technicalCondition.update({
+            where: { id },
+            data: { deletedAt: new Date() },
+        });
+        return updated as Stored<TechnicalCondition>;
     }
 
     /** Полная замена полезной нагрузки TC (без смены id/createdAt). */

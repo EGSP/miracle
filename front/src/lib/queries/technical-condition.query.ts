@@ -54,6 +54,17 @@ export const useReplaceTechnicalCondition = (id: string) => {
   })
 }
 
+export const useDeleteTechnicalCondition = (id: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => technicalConditions.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TECHNICAL_CONDITIONS_ROOT_KEY })
+    },
+  })
+}
+
 export const useExtractTcDetails = (id: string) => {
   return useMutation({
     mutationFn: () => technicalConditions.extractDetails(id),
