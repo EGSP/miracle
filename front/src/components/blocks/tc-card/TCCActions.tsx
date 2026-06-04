@@ -32,7 +32,7 @@ export function TCCActions() {
           title={
             !technicalCondition.fileId
               ? "Сначала прикрепите PDF-файл ТУ"
-              : "Запустить LLM-анализ: извлечь правила и слоты из текста ТУ"
+              : "Запустить LLM-анализ: извлечь секции ТУ в правила параметров (перезапишет текущий список)"
           }
           onClick={() => extractMutation.mutate()}
         />

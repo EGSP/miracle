@@ -184,7 +184,7 @@ datasource db {
 | `files` | `File` | `name`, `extension`, `bytes`, `pages`, `authorId` | `settings` |
 | `filesContent` | `FileContent` | `fileId` | `content`, `meta` |
 | `orders` | `Order` | `authorId`, `fileId` | `details` |
-| `technicalConditions` | `TechnicalCondition` | `name`, `fileId`, `productTypeId`, `lastProductTypeName` | `rules`, `designationSlots`, `displayTemplates` |
+| `technicalConditions` | `TechnicalCondition` | `name`, `fileId`, `productTypeId`, `lastProductTypeName` | `slotRules`, `displayTemplates` |
 | `workers` | `Worker` | `type` (enum), `status` (enum) | `data` (тело объединения `WorkerData`) |
 | `jobRuns` | `JobRun` | `job`, `status` | `input`, `output`, `error`, `progress`, `memo`, `cursor`, `steps` |
 
@@ -599,6 +599,8 @@ prisma migrate dev                 # теперь применяет отред�
     "prisma:reset": "dotenv -e ../.env -- prisma migrate reset",
     "prisma:studio": "dotenv -e ../.env -- prisma studio",
     "prisma:seed": "dotenv -e ../.env -- tsx prisma/seed.ts",
+    "prisma:import-product-types": "dotenv -e ../.env -- tsx prisma/import-product-types.ts",
+    "prisma:import-technical-conditions": "dotenv -e ../.env -- tsx prisma/import-technical-conditions.ts",
     "prisma:migrate": "dotenv -e ../.env -- prisma migrate dev"
   }
 }
@@ -628,6 +630,19 @@ main().finally(() => prisma.$disconnect());
 
 Для запуска seed как standalone-скрипта (вне Nest) адаптер создаётся прямо в файле, по той
 же схеме, что и в `PrismaService`.
+
+### Импорт из legacy `back/data/`
+
+После `prisma migrate` / `db push` и поднятия Postgres:
+
+```bash
+cd back-nest
+npm run prisma:import-product-types      # product-types.json → product_types
+npm run prisma:import-technical-conditions  # technical-conditions.json → technical_conditions (конвертация rules+designationSlots → slotRules)
+```
+
+Скрипт ТУ читает старый JSON и при upsert собирает `slotRules`: если есть `designationSlots`,
+склеивает `ruleIds` в `text`; иначе переносит только `rules` как секции с `index` 0..n.
 
 ---
 

@@ -18,6 +18,7 @@
     "prisma:studio": "dotenv -e ../.env -- prisma studio",
     "prisma:seed": "dotenv -e ../.env -- tsx prisma/seed.ts",
     "prisma:import-product-types": "dotenv -e ../.env -- tsx prisma/import-product-types.ts",
+    "prisma:import-technical-conditions": "dotenv -e ../.env -- tsx prisma/import-technical-conditions.ts",
     "prisma:migrate": "dotenv -e ../.env -- prisma migrate dev"
   },
   "prisma": {

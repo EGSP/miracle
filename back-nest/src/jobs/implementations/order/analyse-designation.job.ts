@@ -17,13 +17,13 @@ const DesignationResultZodSchema = z.object({
     values: z
         .array(
             z.object({
-                slotIndex: z.number().describe('Индекс слота (DesignationSlot.index) из переданного списка'),
+                slotIndex: z.number().describe('Индекс SlotRule.index из переданного списка'),
                 value: z.string().nullable().describe('Значение строго из вариантов правил ТУ; null если не определимо'),
                 confidence: z.number().min(0).max(1).describe('Уверенность 0..1'),
                 reasoning: z.string().describe('1–2 фразы обоснования; для null — чего не хватило'),
             }),
         )
-        .describe('По одному элементу на каждый переданный DesignationSlot'),
+        .describe('По одному элементу на каждый переданный SlotRule'),
 });
 
 type DesignationResult = z.infer<typeof DesignationResultZodSchema>;
@@ -58,27 +58,17 @@ function formatRequirements(position: Stored<OrderPosition>): string {
     return ['=== ТРЕБОВАНИЯ ЗАКАЗЧИКА ===', '', productTypeLine, '', 'Требования:', requirements].join('\n');
 }
 
-function prepareDesignationSlotsPayload(tc: Stored<TechnicalCondition>): string {
-    const slots = tc.designationSlots ?? [];
-    if (slots.length === 0) {
-        throw new Error('У ТУ не заданы параметры условного обозначения (designationSlots пусто)');
+function prepareSlotRulesPayload(tc: Stored<TechnicalCondition>): string {
+    const slotRules = tc.slotRules ?? [];
+    if (slotRules.length === 0) {
+        throw new Error('У ТУ не заданы правила слотов (slotRules пусто)');
     }
 
-    const rulesById = new Map((tc.rules ?? []).map((rule) => [rule.id, rule]));
-    const orderedSlots = [...slots].sort((a, b) => a.index - b.index);
+    const ordered = [...slotRules].sort((a, b) => a.index - b.index);
 
-    const blocks = orderedSlots.map((slot) => {
-        const ruleContents = slot.ruleIds.map((ruleId) => {
-            const rule = rulesById.get(ruleId);
-            if (!rule) {
-                throw new Error(
-                    `Слот №${slot.index} "${slot.name}" ссылается на отсутствующее правило (ruleId=${ruleId})`,
-                );
-            }
-            return rule.content;
-        });
-        const joinedRules = ruleContents.length > 0 ? ruleContents.join('\n\n') : '(нет привязанных правил)';
-        return [`Слот №${slot.index} — ${slot.name}`, 'Правила из ТУ:', '---', joinedRules, '---'].join('\n');
+    const blocks = ordered.map((slot) => {
+        const rulesText = slot.text.trim() || '(текст правил не задан)';
+        return [`Слот №${slot.index} — ${slot.name}`, 'Правила из ТУ:', '---', rulesText, '---'].join('\n');
     });
 
     return ['=== ПАРАМЕТРЫ ОБОЗНАЧЕНИЯ ===', '', ...blocks].join('\n\n');
@@ -142,7 +132,7 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                     if (!condition) return yield* Effect.fail(new Error(`ТУ "${tcId}" не найдено`));
 
                     const userMessage = yield* Effect.try({
-                        try: () => [formatRequirements(position), prepareDesignationSlotsPayload(condition)].join('\n\n'),
+                        try: () => [formatRequirements(position), prepareSlotRulesPayload(condition)].join('\n\n'),
                         catch: wrapUnknown(`prepare designation prompt for position "${input.positionId}"`),
                     });
                     const opId = yield* submitOnce(

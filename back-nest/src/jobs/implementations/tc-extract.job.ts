@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { Effect } from 'effect';
 import { z } from 'zod';
-import { ExtractionStatus, type TechnicalConditionRule } from '@miracle/types';
+import { ExtractionStatus, type SlotRule } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../framework/job.js';
 import { JobImpl } from '../framework/job-impl.decorator.js';
 import { Jobs } from '../framework/context.js';
@@ -136,11 +135,10 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
         const apply = defineJob('tc-extract:apply', (input: TcExtractMid) =>
             Effect.gen(function* () {
                 const sorted = [...input.sections].sort((a, b) => a.index - b.index);
-                const rules: TechnicalConditionRule[] = sorted.map((r) => ({
-                    id: randomUUID(),
-                    // Yandex JSON Schema не поддерживает optional — пустую строку нормализуем в undefined.
-                    title: r.title || undefined,
-                    content: r.content,
+                const slotRules: SlotRule[] = sorted.map((r) => ({
+                    index: r.index,
+                    name: r.title.trim(),
+                    text: r.content,
                 }));
 
                 const condition = yield* tryLabeledPromise(`загрузка ТУ "${input.tcId}" перед заменой`, () =>
@@ -148,14 +146,13 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
                 );
                 if (!condition) return yield* Effect.fail(new Error(`TC "${input.tcId}" не найдено`));
 
-                yield* tryLabeledPromise(`замена правил ТУ "${input.tcId}"`, () =>
+                yield* tryLabeledPromise(`замена правил слотов ТУ "${input.tcId}"`, () =>
                     tc.replace(input.tcId, {
                         name: condition.name,
                         fileId: condition.fileId,
                         productTypeId: condition.productTypeId,
                         lastProductTypeName: condition.lastProductTypeName,
-                        rules,
-                        designationSlots: condition.designationSlots ?? [],
+                        slotRules,
                         displayTemplates: condition.displayTemplates ?? [],
                     }),
                 );

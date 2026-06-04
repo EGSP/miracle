@@ -77,12 +77,12 @@ export type LlmVisionTcWorkerData = BaseWorkerData & {
 
 /**
  * Читает уже извлечённый текст ТУ из FileContent (через TC.fileId).
- * Вызывает Yandex LLM text (async) — разбивает текст на TechnicalConditionRule[].
- * В apply() обновляет только TC.rules; designationSlots не трогает.
+ * Вызывает Yandex LLM text (async) — разбивает текст на SlotRule[].
+ * В apply() полностью заменяет TC.slotRules.
  */
 export type TCDetailsWorkerData = BaseWorkerData & {
     type: 'tc-details-worker';
-    /** TC, чьи rules нужно заполнить. */
+    /** TC, чьи slotRules нужно заполнить. */
     tcId: string;
     /** ID асинхронной операции Yandex — сохраняется для восстановления после перезапуска. */
     cloudOperationId?: string;
@@ -116,7 +116,7 @@ export type WorkerFinalPrompt = {
 };
 
 /**
- * Читает rules через DesignationSlot.ruleIds + requirements из Order.
+ * Читает SlotRule[] из TC + requirements из позиции заказа.
  * Вызывает Yandex LLM (async) → возвращает DesignationValue[].
  * В apply() записывает результат в Order.details.designation.ai.
  */

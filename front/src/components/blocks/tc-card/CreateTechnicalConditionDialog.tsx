@@ -33,8 +33,7 @@ function CreateTechnicalConditionDialogContent({ onClose }: { onClose: () => voi
       {
         fileId: fileId.value,
         productTypeId: productTypeId.value,
-        rules: [],
-        designationSlots: [],
+        slotRules: [],
         displayTemplates: [],
       },
       {

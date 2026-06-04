@@ -12,7 +12,7 @@ export type Designation = {
 };
 
 export type DesignationValue = {
-    /** Соответствует DesignationSlot.index. */
+    /** Соответствует SlotRule.index в TC. */
     slotIndex: number;
     /**
      * Итоговое значение параметра, напр. "700", "У1", "ВД".

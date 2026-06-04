@@ -115,7 +115,7 @@ export function renderDesignationTemplate(
     valueBySlot.set(entry.slotIndex, entry.value)
   }
 
-  const maxSlotIndex = (tc.designationSlots ?? []).reduce(
+  const maxSlotIndex = (tc.slotRules ?? []).reduce(
     (max, slot) => (slot.index > max ? slot.index : max),
     -1,
   )
@@ -167,7 +167,7 @@ export type DesignationInspectorRow = {
 
 /**
  * Строки инспектора: слоты min…max с проблемами (пропуск, пусто, critical).
- * `slotNames` — DesignationSlot.name по index из TC.
+ * `slotNames` — SlotRule.name по index из TC.
  */
 export function buildDesignationInspectorRows(
   designation: Designation,

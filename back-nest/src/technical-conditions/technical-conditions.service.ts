@@ -70,8 +70,7 @@ export class TechnicalConditionsService {
             fileId,
             productTypeId,
             lastProductTypeName,
-            rules: body.rules ?? [],
-            designationSlots: body.designationSlots ?? [],
+            slotRules: body.slotRules ?? [],
             displayTemplates: body.displayTemplates ?? [],
         };
     }

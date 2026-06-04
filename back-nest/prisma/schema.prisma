@@ -164,10 +164,8 @@ model TechnicalCondition {
   fileId              String?
   productTypeId       String?
   lastProductTypeName String?
-  // TechnicalConditionRule[]
-  rules               Json?
-  // DesignationSlot[]
-  designationSlots    Json?
+  // SlotRule[]
+  slotRules           Json?
   // DisplayTemplate[]
   displayTemplates    Json?
 

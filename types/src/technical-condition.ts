@@ -11,30 +11,20 @@ export type TechnicalCondition = {
      * При сохранении с `productTypeId` заполняется на сервере; без id сохраняется переданное или прежнее значение.
      */
     lastProductTypeName?: string;
-    /** Правила, извлечённые из PDF воркером. Заполняются после TCWorker. */
-    rules?: TechnicalConditionRule[];
-    /** Параметры условного обозначения. Определяет человек, ссылается на rules. */
-    designationSlots?: DesignationSlot[];
+    /** Правила параметров условного обозначения: название + текст из ТУ. Заполняются вручную или джобом `tc-extract`. */
+    slotRules?: SlotRule[];
     /** Шаблоны отображения обозначения (полное, краткое и др.). */
     displayTemplates?: DisplayTemplate[];
 };
 
-export type TechnicalConditionRule = {
-    /** Уникальный идентификатор внутри TC — используется в DesignationSlot.ruleIds. */
-    id: string;
-    /** Заголовок раздела из ТУ, напр. "5.3 Климатическое исполнение". */
-    title?: string;
-    /** Текст правила. Таблицы хранятся как markdown-таблицы. */
-    content: string;
-};
-
-export type DesignationSlot = {
-    /** Позиция параметра в условном обозначении (0-based). */
+/** Параметр условного обозначения в ТУ: название и текст правил выбора значения. */
+export type SlotRule = {
+    /** Позиция параметра в обозначении (0-based). Связь с `DesignationValue.slotIndex`. */
     index: number;
-    /** Название параметра, напр. "Климатическое исполнение". */
+    /** Название параметра, напр. «Климатическое исполнение». */
     name: string;
-    /** Идентификаторы TechnicalConditionRule внутри этого TC. */
-    ruleIds: string[];
+    /** Текст правил из ТУ для этого параметра (таблицы — markdown). */
+    text: string;
 };
 
 export type DisplayTemplate = {

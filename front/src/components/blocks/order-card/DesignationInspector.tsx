@@ -28,11 +28,11 @@ export function DesignationInspector({ designation }: DesignationInspectorProps)
 
   const slotNames = useMemo(() => {
     const map = new Map<number, string>()
-    for (const slot of tcQuery.data?.designationSlots ?? []) {
+    for (const slot of tcQuery.data?.slotRules ?? []) {
       map.set(slot.index, slot.name)
     }
     return map
-  }, [tcQuery.data?.designationSlots])
+  }, [tcQuery.data?.slotRules])
 
   const rows = useMemo(
     () => buildDesignationInspectorRows(designation, slotNames),

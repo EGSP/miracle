@@ -2,13 +2,11 @@ import { Column, Grid, Layer, Stack, Text } from "@miracle/aramid"
 import type { Stored, TechnicalCondition } from "@miracle/types"
 import type * as React from "react"
 import { DirtyGuardProvider, useGuardActions } from "@/contexts/dirty-state/DirtyGuardContext"
-import { useField } from "@/contexts/dirty-state/useField"
 import { useDraft } from "@/contexts/draft-api/DraftContext"
 import { useReplaceTechnicalCondition } from "@/lib/queries/technical-condition.query"
 import { TCCActions } from "./TCCActions"
-import { TCCDesignationSlots } from "./TCCDesignationSlots"
 import { TCCInfo } from "./TCCInfo"
-import { TCCRules } from "./TCCRules"
+import { TCCSlotRules } from "./TCCSlotRules"
 import { TCCTemplates } from "./TCCTemplates"
 import type { TechnicalConditionCardProps } from "./TechnicalConditionCard.types"
 import {
@@ -29,7 +27,6 @@ function TechnicalConditionCardProvider({
   const draft = useDraft<Stored<TechnicalCondition>>()
   const { commitAll } = useGuardActions()
   const mutation = useReplaceTechnicalCondition(technicalCondition.id)
-  const rules = useField(`tc-${technicalCondition.id}-rules`, technicalCondition.rules ?? [])
 
   const save = () => {
     const merged = draft.collect({ ...technicalCondition })
@@ -41,8 +38,7 @@ function TechnicalConditionCardProvider({
       fileId: merged.fileId,
       productTypeId: merged.productTypeId,
       lastProductTypeName: merged.lastProductTypeName,
-      rules: merged.rules ?? [],
-      designationSlots: merged.designationSlots ?? [],
+      slotRules: merged.slotRules ?? [],
       displayTemplates: merged.displayTemplates ?? [],
     }
 
@@ -56,7 +52,6 @@ function TechnicalConditionCardProvider({
 
   const value: TechnicalConditionCardContextType = {
     technicalCondition,
-    rules,
     isSaving: mutation.isPending,
     saveError: mutation.error ?? null,
     save,
@@ -90,11 +85,10 @@ function TechnicalConditionCardBody() {
         <Column span="100%">
           <TCCInfo />
         </Column>
-        <Column span="50%">
-          <TCCRules />
-        </Column>
-        <Column span="50%">
-          <TCCDesignationSlots />
+        <Column span="100%">
+          <Stack gap={2}>
+            <TCCSlotRules />
+          </Stack>
         </Column>
         <Column span="100%">
           <TCCTemplates />
