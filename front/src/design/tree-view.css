@@ -2,6 +2,7 @@
    WAI-ARIA tree (адаптация Carbon TreeView v11). Только Aramid-токены.
    Интерактив (hover/выбор/фокус) — на строке `.tree-node__row`, не на всём узле,
    поэтому подсветка/клик пер-узловые, а не на всё поддерево.
+   Без скруглений; выбор — как в StructuredList (толстая брендовая полоса слева + светлый фон).
 ───────────────────────────────────────────────────────────────────────────── */
 
 .tree-view {
@@ -24,6 +25,7 @@
 
 /* ── Строка узла — единственный интерактивный/визуальный элемент ── */
 .tree-node__row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--aramid-spacing-2);
@@ -38,8 +40,18 @@
   background-color: var(--aramid-color-gray-20);
 }
 
+/* Выбор — как в StructuredList: светлый фон + 3px брендовая полоса слева. */
 .tree-node__row--selected:not(.tree-node__row--disabled) {
-  background-color: var(--aramid-color-gray-30);
+  background-color: var(--aramid-color-sand-20);
+}
+
+.tree-node__row--selected::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background-color: var(--aramid-color-brand);
 }
 
 .tree-node__row--disabled {
@@ -57,30 +69,20 @@
   outline-offset: -2px;
 }
 
-/* ── Твисти (раскрытие) ── */
+/* ── Твисти (раскрытие): без фона/ховера и без скругления, увеличенная область нажатия ── */
 .tree-node__twistie {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: var(--aramid-spacing-5);
-  height: var(--aramid-spacing-5);
+  width: var(--aramid-spacing-6);
+  height: var(--aramid-spacing-7);
   padding: 0;
   border: none;
   background: none;
   color: inherit;
   cursor: pointer;
-  border-radius: 2px;
   outline: none;
-}
-
-.tree-node__twistie:hover:not(:disabled) {
-  background-color: var(--aramid-color-gray-30);
-}
-
-.tree-node__twistie:focus-visible {
-  outline: 2px solid var(--aramid-color-semantic-interactive);
-  outline-offset: 1px;
 }
 
 .tree-node__twistie:disabled {
@@ -105,7 +107,7 @@
 .tree-node__twistie-placeholder {
   display: inline-block;
   flex-shrink: 0;
-  width: var(--aramid-spacing-5);
+  width: var(--aramid-spacing-6);
 }
 
 /* ── Лейбл — усечение, чтобы не расширять контейнер ── */
