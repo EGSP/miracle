@@ -4,6 +4,7 @@ import { FileDomain, getFileDomain } from '@miracle/types';
 import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs } from '../../framework/context.js';
+import { tryLabeledPromise } from '../../../common/effect-errors.js';
 import { OrderApplicationsService } from '../../../orders/order-applications.service.js';
 import { ApplicationChunkReader } from '../../../orders/application-chunk-reader.js';
 import { FilesService } from '../../../files/files.service.js';
@@ -39,7 +40,9 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
         this.run = (input: AnalyseApplicationInput): Effect.Effect<void, unknown, JobEnv> =>
             Effect.gen(function* () {
                 const jobs = yield* Jobs;
-                const application = yield* Effect.promise(() => applications.get(input.applicationId));
+                const application = yield* tryLabeledPromise(`загрузка заявки "${input.applicationId}"`, () =>
+                    applications.get(input.applicationId),
+                );
                 if (!application) {
                     return yield* Effect.fail(new Error(`Приложение "${input.applicationId}" не найдено`));
                 }
@@ -47,13 +50,15 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
                 // VISUAL-файл: извлечь содержимое прямо в пайплайне (дочерний awaited-джоб, идемпотентно).
                 if (application.data.type === 'file') {
                     const fileId = application.data.fileId;
-                    const file = yield* Effect.promise(() => files.get(fileId));
+                    const file = yield* tryLabeledPromise(`загрузка файла заявки "${fileId}"`, () => files.get(fileId));
                     if (file && getFileDomain(file.extension ?? '') === FileDomain.VISUAL) {
                         yield* jobs.run(extractVisual, [jobs.runId, 'extract-visual', fileId], { fileId });
                     }
                 }
 
-                const chunks = yield* Effect.promise(() => reader.read(application));
+                const chunks = yield* tryLabeledPromise(`чтение чанков заявки "${input.applicationId}"`, () =>
+                    reader.read(application),
+                );
                 yield* Effect.all(
                     chunks.map((c) =>
                         jobs.run(extract, [jobs.runId, 'chunk', c.chunkKey], {
@@ -64,6 +69,10 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
                     ),
                     { concurrency: 'unbounded' },
                 );
-            });
+            }).pipe(
+                Effect.mapError(
+                    (error) => new Error(`Не удалось проанализировать приложение "${input.applicationId}"`, { cause: error }),
+                ),
+            );
     }
 }

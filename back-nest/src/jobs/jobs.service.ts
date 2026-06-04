@@ -97,7 +97,7 @@ export class JobsService implements OnApplicationBootstrap {
         const runnable = execute(this.store, job, root).pipe(
             Effect.catchAllCause((cause) =>
                 Effect.sync(() =>
-                    this.logger.error(`прогон "${root.id}" (${root.job}) упал`, Cause.squash(cause)),
+                    this.logger.error(`прогон "${root.id}" (${root.job}) упал`, Cause.pretty(cause)),
                 ),
             ),
         ) as Effect.Effect<void, never, never>;

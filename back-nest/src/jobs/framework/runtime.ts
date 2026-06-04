@@ -1,5 +1,6 @@
-import { Effect, Option } from 'effect';
+import { Cause, Effect, Option } from 'effect';
 import type { JobKey, JobRun } from '@miracle/types';
+import { formatUnknown } from '../../common/effect-errors.js';
 import type { Job } from './job.js';
 import { Jobs, Memo, Progress } from './context.js';
 import { hashKey } from './hash-key.js';
@@ -8,20 +9,13 @@ import type { JobStore } from './store.js';
 /** Ошибка, пробрасываемая наверх, когда дочерний прогон находится в терминальном неуспешном статусе. */
 export class JobChildFailedError extends Error {
     constructor(public readonly child: JobRun) {
-        super(`Дочерний прогон "${child.id}" (${child.job}) завершился со статусом ${child.status}`);
+        const childError = child.error ? `: ${child.error}` : '';
+        super(`Дочерний прогон "${child.id}" (${child.job}) завершился со статусом ${child.status}${childError}`);
         this.name = 'JobChildFailedError';
     }
 }
 
-const errToMessage = (error: unknown): string => {
-    if (error instanceof Error) return error.message;
-    if (typeof error === 'string') return error;
-    try {
-        return JSON.stringify(error);
-    } catch {
-        return String(error);
-    }
-};
+const errToMessage = (error: unknown): string => formatUnknown(error);
 
 /**
  * Реализация {@link Memo}, замкнутая на конкретный узел. `get` читает значение из памяти узла
@@ -113,8 +107,12 @@ export function execute<Input, Output>(
     });
 
     return body.pipe(
-        Effect.tapError((error) =>
-            Effect.promise(() => store.patch(node.id, { status: 'failed', error: errToMessage(error) })),
+        Effect.tapErrorCause((cause) =>
+            Cause.isInterruptedOnly(cause)
+                ? Effect.void
+                : Effect.promise(() =>
+                    store.patch(node.id, { status: 'failed', error: errToMessage(Cause.squash(cause)) }),
+                ),
         ),
     );
 }

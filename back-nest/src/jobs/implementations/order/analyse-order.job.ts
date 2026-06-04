@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs } from '../../framework/context.js';
+import { formatUnknown, tryLabeledPromise } from '../../../common/effect-errors.js';
 import { OrderApplicationsService } from '../../../orders/order-applications.service.js';
 import { OrderPositionsService } from '../../../orders/order-positions.service.js';
 import { AnalyseApplicationJob } from './analyse-application.job.js';
@@ -40,14 +41,16 @@ export class AnalyseOrderJob implements Job<AnalyseOrderInput, void> {
                 const jobs = yield* Jobs;
 
                 // ── Этап 1: чтение приложений → позиции ──────────────────────────────────
-                const apps = yield* Effect.promise(() => applications.listByOrder(input.orderId));
+                const apps = yield* tryLabeledPromise(`получение списка заявок заказа "${input.orderId}"`, () =>
+                    applications.listByOrder(input.orderId),
+                );
                 yield* Effect.all(
                     apps.map((app) =>
                         jobs
                             .run(analyseApplication, [jobs.runId, 'app', app.id], { applicationId: app.id })
                             .pipe(
                                 Effect.catchAll((error) =>
-                                    Effect.logWarning(`analyse-application "${app.id}" пропущено: ${String(error)}`),
+                                    Effect.logWarning(`analyse-application "${app.id}" пропущено: ${formatUnknown(error)}`),
                                 ),
                             ),
                     ),
@@ -55,8 +58,9 @@ export class AnalyseOrderJob implements Job<AnalyseOrderInput, void> {
                 );
 
                 // ── Барьер пройден: все позиции заказа записаны ──────────────────────────
-                const positionLists = yield* Effect.promise(() =>
-                    Promise.all(apps.map((app) => positions.listByApplication(app.id))),
+                const positionLists = yield* tryLabeledPromise(
+                    `получение списка позиций проанализированных заявок заказа "${input.orderId}"`,
+                    () => Promise.all(apps.map((app) => positions.listByApplication(app.id))),
                 );
                 const targets = positionLists.flat().filter((p) => p.productTypeId);
 
@@ -67,12 +71,16 @@ export class AnalyseOrderJob implements Job<AnalyseOrderInput, void> {
                             .run(analyseDesignation, [jobs.runId, 'designation', position.id], { positionId: position.id })
                             .pipe(
                                 Effect.catchAll((error) =>
-                                    Effect.logWarning(`analyse-designation "${position.id}" пропущено: ${String(error)}`),
+                                    Effect.logWarning(`analyse-designation "${position.id}" пропущено: ${formatUnknown(error)}`),
                                 ),
                             ),
                     ),
                     { concurrency: 'unbounded' },
                 );
-            });
+            }).pipe(
+                Effect.mapError(
+                    (error) => new Error(`Не удалось проанализировать заказ "${input.orderId}"`, { cause: error }),
+                ),
+            );
     }
 }

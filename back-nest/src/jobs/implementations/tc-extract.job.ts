@@ -8,6 +8,7 @@ import { JobImpl } from '../framework/job-impl.decorator.js';
 import { Jobs } from '../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../common/cloud-job.js';
 import { countTokens } from '../../common/count-tokens.js';
+import { tryLabeledPromise } from '../../common/effect-errors.js';
 import { TechnicalConditionsService } from '../../technical-conditions/technical-conditions.service.js';
 import { FilesContentService } from '../../files-content/files-content.service.js';
 import { YandexService } from '../../yandex/yandex.service.js';
@@ -71,11 +72,13 @@ type FilesContentDep = Pick<FilesContentService, 'getContent'>;
 /** Текст ТУ из завершённого извлечения прикреплённого PDF. */
 const getTcText = (tc: TcDep, filesContent: FilesContentDep, tcId: string): Effect.Effect<string, Error> =>
     Effect.gen(function* () {
-        const condition = yield* Effect.promise(() => tc.getById(tcId));
+        const condition = yield* tryLabeledPromise(`загрузка ТУ "${tcId}"`, () => tc.getById(tcId));
         if (!condition) return yield* Effect.fail(new Error(`TC "${tcId}" не найдено`));
         if (!condition.fileId) return yield* Effect.fail(new Error(`У TC "${tcId}" не прикреплён PDF-файл`));
 
-        const allContent = yield* Effect.promise(() => filesContent.getContent(condition.fileId!));
+        const allContent = yield* tryLabeledPromise(`загрузка извлечённого содержимого файла ТУ "${condition.fileId}"`, () =>
+            filesContent.getContent(condition.fileId!),
+        );
         const completed = allContent.find((c) => c.meta?.extractionStatus === ExtractionStatus.COMPLETED);
         if (!completed) {
             return yield* Effect.fail(new Error(`Файл "${condition.fileId}" не имеет завершённого извлечения содержимого`));
@@ -112,13 +115,22 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
                                 maxTokens: countTokens(`${SYSTEM_PROMPT}\n\n${text}`) * 10,
                                 jsonSchema: TCDetailsJsonSchema,
                             }),
-                        { finalPrompt: { system: SYSTEM_PROMPT, user: text } },
+                        {
+                            label: `tc extract submit; tc=${input.tcId}`,
+                            extraMemo: { finalPrompt: { system: SYSTEM_PROMPT, user: text } },
+                        },
                     );
-                    const result = yield* pollUntilDone<TCDetailsResult>(() =>
-                        yandex.pollCompletionJson(opId, TCDetailsZodSchema),
+                    const result = yield* pollUntilDone<TCDetailsResult>(
+                        () => yandex.pollCompletionJson(opId, TCDetailsZodSchema),
+                        { label: `tc extract poll; opId=${opId}` },
                     );
                     return { tcId: input.tcId, sections: result.sections };
-                }),
+                }).pipe(
+                    Effect.mapError(
+                        (error) =>
+                            new Error(`Не удалось разобрать ТУ "${input.tcId}" на разделы`, { cause: error }),
+                    ),
+                ),
         );
 
         const apply = defineJob('tc-extract:apply', (input: TcExtractMid) =>
@@ -131,10 +143,12 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
                     content: r.content,
                 }));
 
-                const condition = yield* Effect.promise(() => tc.getById(input.tcId));
+                const condition = yield* tryLabeledPromise(`загрузка ТУ "${input.tcId}" перед заменой`, () =>
+                    tc.getById(input.tcId),
+                );
                 if (!condition) return yield* Effect.fail(new Error(`TC "${input.tcId}" не найдено`));
 
-                yield* Effect.promise(() =>
+                yield* tryLabeledPromise(`замена правил ТУ "${input.tcId}"`, () =>
                     tc.replace(input.tcId, {
                         name: condition.name,
                         fileId: condition.fileId,
@@ -145,7 +159,11 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
                         displayTemplates: condition.displayTemplates ?? [],
                     }),
                 );
-            }),
+            }).pipe(
+                Effect.mapError(
+                    (error) => new Error(`Не удалось записать разделы ТУ "${input.tcId}"`, { cause: error }),
+                ),
+            ),
         );
 
         this.run = (input: TcExtractInput) =>

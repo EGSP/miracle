@@ -4,6 +4,7 @@ import { ExtractionStatus, ExtractionType } from '@miracle/types';
 import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs } from '../../framework/context.js';
+import { tryLabeledPromise } from '../../../common/effect-errors.js';
 import { FilesService } from '../../../files/files.service.js';
 import { FilesContentService } from '../../../files-content/files-content.service.js';
 import { YandexService } from '../../../yandex/yandex.service.js';
@@ -48,12 +49,14 @@ export class ExtractVisualJob implements Job<ExtractVisualInput, void> {
 
         this.run = (input: ExtractVisualInput): Effect.Effect<void, unknown, JobEnv> =>
             Effect.gen(function* () {
-                const existing = yield* Effect.promise(() => filesContent.getContent(input.fileId));
+                const existing = yield* tryLabeledPromise(`загрузка извлечённого содержимого файла "${input.fileId}"`, () =>
+                    filesContent.getContent(input.fileId),
+                );
                 if (existing.some((c) => c.meta?.extractionStatus === ExtractionStatus.COMPLETED)) {
                     return; // уже извлечено — переиспользуем кэш
                 }
 
-                const record = yield* Effect.promise(() =>
+                const record = yield* tryLabeledPromise(`создание записи визуального извлечения для файла "${input.fileId}"`, () =>
                     filesContent.create({
                         fileId: input.fileId,
                         meta: { extractionType: ExtractionType.LLM, extractionStatus: ExtractionStatus.STARTED },
@@ -69,6 +72,10 @@ export class ExtractVisualJob implements Job<ExtractVisualInput, void> {
                     content,
                     extractionType: ExtractionType.LLM,
                 });
-            });
+            }).pipe(
+                Effect.mapError(
+                    (error) => new Error(`Не удалось извлечь визуальное содержимое файла "${input.fileId}"`, { cause: error }),
+                ),
+            );
     }
 }

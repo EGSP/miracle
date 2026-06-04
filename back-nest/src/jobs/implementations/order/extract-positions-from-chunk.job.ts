@@ -6,6 +6,7 @@ import { brandJobId, defineJob, type Job, type JobEnv } from '../../framework/jo
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs, Memo } from '../../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
+import { tryLabeledPromise, wrapUnknown } from '../../../common/effect-errors.js';
 import { LLM_MAX_OUTPUT_TOKENS } from '../../../common/llm-limits.js';
 import { resolveProductType } from '../../../orders/resolve-product-type.js';
 import { OrderPositionsService } from '../../../orders/order-positions.service.js';
@@ -131,9 +132,13 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
             'extract-positions-from-chunk:llm',
             (input: ExtractInput): Effect.Effect<OrderPosition[], unknown, JobEnv> =>
                 Effect.gen(function* () {
-                    const catalog = yield* Effect.promise(() => productTypes.getAll());
+                    const chunkLabel = input.chunkKey ?? 'unknown';
+                    const catalog = yield* tryLabeledPromise('загрузка каталога типов продукции', () => productTypes.getAll());
                     const system = buildSystemPrompt(catalog);
-                    const userText = JSON.stringify(input.chunk);
+                    const userText = yield* Effect.try({
+                        try: () => JSON.stringify(input.chunk),
+                        catch: wrapUnknown(`serialize chunk "${chunkLabel}"`),
+                    });
 
                     const opId = yield* submitOnce(
                         () =>
@@ -146,11 +151,25 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
                                 maxTokens: LLM_MAX_OUTPUT_TOKENS,
                                 jsonSchema: PositionsJsonSchema,
                             }),
-                        { finalPrompt: { system, user: userText } },
+                        {
+                            label: `extract positions submit; chunk=${chunkLabel}`,
+                            extraMemo: { finalPrompt: { system, user: userText } },
+                        },
                     );
-                    const out = yield* pollUntilDone(() => yandex.pollCompletionJson(opId, PositionsZodSchema));
+                    const out = yield* pollUntilDone(
+                        () => yandex.pollCompletionJson(opId, PositionsZodSchema),
+                        { label: `extract positions poll; opId=${opId}` },
+                    );
                     return out.positions.map((p) => toOrderPosition(p, input.applicationId, catalog));
-                }),
+                }).pipe(
+                    Effect.mapError(
+                        (error) =>
+                            new Error(
+                                `Не удалось извлечь позиции из чанка "${input.chunkKey ?? 'unknown'}" приложения "${input.applicationId}"`,
+                                { cause: error },
+                            ),
+                    ),
+                ),
         );
 
         const apply = defineJob('extract-positions-from-chunk:apply', (created: OrderPosition[]) =>
@@ -160,15 +179,23 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
                 // (id в memo), и пишем заново. Не трогаем позиции других чанков того же приложения.
                 const previous = yield* memo.get<string[]>('createdIds');
                 if (Option.isSome(previous)) {
-                    yield* Effect.promise(() => positions.deleteMany(previous.value));
+                    yield* tryLabeledPromise('удаление предыдущих позиций при применении extract-positions', () =>
+                        positions.deleteMany(previous.value),
+                    );
                 }
                 const ids: string[] = [];
                 for (const position of created) {
-                    const row = yield* Effect.promise(() => positions.create(position));
+                    const row = yield* tryLabeledPromise(`создание извлечённой позиции "${position.name}"`, () =>
+                        positions.create(position),
+                    );
                     ids.push(row.id);
                 }
                 yield* memo.set('createdIds', ids);
-            }),
+            }).pipe(
+                Effect.mapError(
+                    (error) => new Error('Не удалось записать извлечённые позиции приложения', { cause: error }),
+                ),
+            ),
         );
 
         this.run = (input: ExtractInput) =>

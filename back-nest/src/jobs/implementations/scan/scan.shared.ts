@@ -12,6 +12,7 @@ import {
 import { defineJob, type Job, type JobEnv } from '../../framework/job.js';
 import { Jobs } from '../../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
+import { formatUnknown, tryLabeledPromise } from '../../../common/effect-errors.js';
 import type { FilesService } from '../../../files/files.service.js';
 import type { FilesContentService } from '../../../files-content/files-content.service.js';
 import type { YandexService } from '../../../yandex/yandex.service.js';
@@ -70,8 +71,7 @@ export const TC_VISION_PROMPT = `Ты — ассистент для извлеч
 
 export const TC_VISION_USER = 'Извлеки содержимое документа Технических Условий.';
 
-const errMessage = (error: unknown): string =>
-    error instanceof Error ? error.message : String(error);
+const errMessage = (error: unknown): string => formatUnknown(error);
 
 /** Вход scan-джоба. */
 export type ScanInput = { fileId: string; fileContentId: string };
@@ -96,7 +96,7 @@ type YandexDep = Pick<
 type ConvertDep = Pick<ConvertService, 'pdfToImages'>;
 
 const requireFile = (files: FilesDep, fileId: string): Effect.Effect<Stored<FileModel>, Error> =>
-    Effect.promise(() => files.get(fileId)).pipe(
+    tryLabeledPromise(`загрузка файла "${fileId}"`, () => files.get(fileId)).pipe(
         Effect.flatMap((file) =>
             file ? Effect.succeed(file) : Effect.fail(new Error(`Файл "${fileId}" не найден`)),
         ),
@@ -107,7 +107,7 @@ const renderPages = (files: FilesDep, convert: ConvertDep, file: Stored<FileMode
         const filePath = files.getFilePath(file);
         const ext = file.extension.toLowerCase();
         if (ext === 'pdf') {
-            const buffer = yield* Effect.promise(() => fs.readFile(filePath));
+            const buffer = yield* tryLabeledPromise(`чтение PDF-файла "${file.id}"`, () => fs.readFile(filePath));
             const spec = file.settings?.usedPages?.trim();
             let pageNumbers: number[] | undefined;
             if (spec) {
@@ -117,9 +117,11 @@ const renderPages = (files: FilesDep, convert: ConvertDep, file: Stored<FileMode
                 }
                 pageNumbers = result.pages;
             }
-            return yield* Effect.promise(() => convert.pdfToImages(buffer, { scale: 2.5, pageNumbers }));
+            return yield* tryLabeledPromise(`рендеринг страниц PDF файла "${file.id}"`, () =>
+                convert.pdfToImages(buffer, { scale: 2.5, pageNumbers }),
+            );
         }
-        const buffer = yield* Effect.promise(() => fs.readFile(filePath));
+        const buffer = yield* tryLabeledPromise(`чтение файла изображения "${file.id}"`, () => fs.readFile(filePath));
         const base64 = buffer.toString('base64');
         const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
         return [{ page: 1, base64, dataUrl: `data:${mimeType};base64,${base64}` }];
@@ -137,10 +139,18 @@ export const ocrRecognize =
                     new Error(`Расширение «${file.extension}» не поддерживается Yandex OCR (jpeg/png/pdf)`),
                 );
             }
-            const bytes = yield* Effect.promise(() => fs.readFile(files.getFilePath(file)));
-            const opId = yield* submitOnce(() => yandex.ocrRecognize(mime, bytes));
-            return yield* pollUntilDone<Content[]>(() => yandex.ocrPoll(opId));
-        });
+            const bytes = yield* tryLabeledPromise(`чтение исходного файла OCR "${input.fileId}"`, () =>
+                fs.readFile(files.getFilePath(file)),
+            );
+            const opId = yield* submitOnce(() => yandex.ocrRecognize(mime, bytes), {
+                label: `ocr submit; file=${input.fileId}`,
+            });
+            return yield* pollUntilDone<Content[]>(() => yandex.ocrPoll(opId), {
+                label: `ocr poll; opId=${opId}`,
+            });
+        }).pipe(
+            Effect.mapError((error) => new Error(`Не удалось распознать файл "${input.fileId}" через OCR`, { cause: error })),
+        );
 
 /** LLM Vision-распознавание: рендер страниц → vision-комплишн (async). */
 export const visionRecognize =
@@ -166,10 +176,15 @@ export const visionRecognize =
                         },
                     ],
                 }),
+                { label: `vision submit; file=${input.fileId}` },
             );
-            const text = yield* pollUntilDone<string>(() => yandex.pollVisionCompletion(opId));
+            const text = yield* pollUntilDone<string>(() => yandex.pollVisionCompletion(opId), {
+                label: `vision poll; opId=${opId}`,
+            });
             return [{ text }];
-        });
+        }).pipe(
+            Effect.mapError((error) => new Error(`Не удалось распознать файл "${input.fileId}" через Vision`, { cause: error })),
+        );
 
 /** Дочерний `recognize`: облачное распознавание; при ошибке метит filesContent FAILED. */
 export const buildRecognizeJob = (
@@ -181,7 +196,7 @@ export const buildRecognizeJob = (
     defineJob(`${id}:recognize`, (input: ScanInput) =>
         recognize(input).pipe(
             Effect.tapError((error) =>
-                Effect.promise(() =>
+                tryLabeledPromise(`отметка неудачного извлечения для содержимого файла "${input.fileContentId}"`, () =>
                     filesContent.update({
                         id: input.fileContentId,
                         fileId: input.fileId,
@@ -199,7 +214,7 @@ export const buildRecognizeJob = (
 /** Дочерний `apply`: идемпотентная запись content в filesContent (COMPLETED). */
 export const buildApplyJob = (id: string, filesContent: FilesContentDep): Job<ScanResult, void> =>
     defineJob(`${id}:apply`, (result: ScanResult) =>
-        Effect.promise(() =>
+        tryLabeledPromise(`отметка завершённого извлечения для содержимого файла "${result.fileContentId}"`, () =>
             filesContent.update({
                 id: result.fileContentId,
                 fileId: result.fileId,
@@ -209,7 +224,13 @@ export const buildApplyJob = (id: string, filesContent: FilesContentDep): Job<Sc
                     extractionStatus: ExtractionStatus.COMPLETED,
                 },
             }),
-        ).pipe(Effect.asVoid),
+        ).pipe(
+            Effect.asVoid,
+            Effect.mapError(
+                (error) =>
+                    new Error(`Не удалось записать результат извлечения файла "${result.fileId}"`, { cause: error }),
+            ),
+        ),
     );
 
 /** Оркестрация корня: `recognize` (результат в JobRun ребёнка) → `apply`. */

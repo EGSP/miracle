@@ -7,6 +7,7 @@ import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs } from '../../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
 import { countTokens } from '../../../common/count-tokens.js';
+import { tryLabeledPromise, wrapUnknown } from '../../../common/effect-errors.js';
 import { OrderPositionsService } from '../../../orders/order-positions.service.js';
 import { DesignationsService } from '../../../orders/designations.service.js';
 import { TechnicalConditionsService } from '../../../technical-conditions/technical-conditions.service.js';
@@ -111,7 +112,9 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
             'analyse-designation:llm',
             (input: AnalyseDesignationInput): Effect.Effect<DesignationMid, unknown, JobEnv> =>
                 Effect.gen(function* () {
-                    const position = yield* Effect.promise(() => positions.get(input.positionId));
+                    const position = yield* tryLabeledPromise(`загрузка позиции "${input.positionId}"`, () =>
+                        positions.get(input.positionId),
+                    );
                     if (!position) return yield* Effect.fail(new Error(`Позиция "${input.positionId}" не найдена`));
                     if (!position.productTypeId) {
                         return yield* Effect.fail(new Error('У позиции не определён тип продукции — обозначение невозможно'));
@@ -120,7 +123,10 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                     // Резолв ТУ: явный tcId важнее; иначе по типу продукции с гейтами 0 / >1.
                     let tcId = input.tcId;
                     if (!tcId) {
-                        const list = yield* Effect.promise(() => tc.getByProductTypeId(position.productTypeId!));
+                        const list = yield* tryLabeledPromise(
+                            `загрузка ТУ для типа продукции "${position.productTypeId}"`,
+                            () => tc.getByProductTypeId(position.productTypeId!),
+                        );
                         if (list.length === 0) {
                             return yield* Effect.fail(new Error(`Для типа "${position.productTypeId}" нет ТУ`));
                         }
@@ -132,10 +138,13 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                         tcId = list[0].id;
                     }
 
-                    const condition = yield* Effect.promise(() => tc.getById(tcId!));
+                    const condition = yield* tryLabeledPromise(`загрузка ТУ "${tcId}"`, () => tc.getById(tcId!));
                     if (!condition) return yield* Effect.fail(new Error(`ТУ "${tcId}" не найдено`));
 
-                    const userMessage = [formatRequirements(position), prepareDesignationSlotsPayload(condition)].join('\n\n');
+                    const userMessage = yield* Effect.try({
+                        try: () => [formatRequirements(position), prepareDesignationSlotsPayload(condition)].join('\n\n'),
+                        catch: wrapUnknown(`prepare designation prompt for position "${input.positionId}"`),
+                    });
                     const opId = yield* submitOnce(
                         () =>
                             yandex.submitCompletion({
@@ -147,17 +156,38 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                                 maxTokens: countTokens(DESIGNATION_PROMPT + userMessage) * 4,
                                 jsonSchema: DesignationResultJsonSchema,
                             }),
-                        { finalPrompt: { system: DESIGNATION_PROMPT, user: userMessage } },
+                        {
+                            label: `analyse designation submit; position=${input.positionId}; tc=${tcId}`,
+                            extraMemo: { finalPrompt: { system: DESIGNATION_PROMPT, user: userMessage } },
+                        },
                     );
-                    const result = yield* pollUntilDone<DesignationResult>(() =>
-                        yandex.pollCompletionJson(opId, DesignationResultZodSchema),
+                    const result = yield* pollUntilDone<DesignationResult>(
+                        () => yandex.pollCompletionJson(opId, DesignationResultZodSchema),
+                        { label: `analyse designation poll; opId=${opId}` },
                     );
                     return { positionId: input.positionId, tcId: tcId!, values: result.values };
-                }),
+                }).pipe(
+                    Effect.mapError(
+                        (error) =>
+                            new Error(`Не удалось определить условное обозначение позиции "${input.positionId}"`, {
+                                cause: error,
+                            }),
+                    ),
+                ),
         );
 
         const apply = defineJob('analyse-designation:apply', (input: DesignationMid) =>
-            Effect.promise(() => designations.upsert(input.positionId, input.tcId, input.values)).pipe(Effect.asVoid),
+            tryLabeledPromise(`сохранение обозначения для позиции "${input.positionId}"`, () =>
+                designations.upsert(input.positionId, input.tcId, input.values),
+            ).pipe(
+                Effect.asVoid,
+                Effect.mapError(
+                    (error) =>
+                        new Error(`Не удалось записать условное обозначение позиции "${input.positionId}"`, {
+                            cause: error,
+                        }),
+                ),
+            ),
         );
 
         this.run = (input: AnalyseDesignationInput) =>
