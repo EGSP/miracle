@@ -27,9 +27,13 @@ export function NavBar() {
         <ListOrdered className="size-3.5 shrink-0" />
         <Text.Label as="span">Заказы</Text.Label>
       </Link>
-      <Link to="/workers" className={navLinkClass}>
+      <Link
+        to="/operations"
+        search={{ rootId: undefined, runId: undefined }}
+        className={navLinkClass}
+      >
         <WorkerIcon className="size-3.5 shrink-0" />
-        <Text.Label as="span">Воркеры</Text.Label>
+        <Text.Label as="span">Операции</Text.Label>
       </Link>
       <Link to="/product-types" className={navLinkClass}>
         <Tags className="size-3.5 shrink-0" />

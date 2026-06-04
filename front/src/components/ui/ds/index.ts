@@ -25,6 +25,7 @@ export {
   type StructuredListKey,
   type StructuredListProps,
 } from "./structured-list"
+export { TreeView, TreeNode, type TreeViewProps, type TreeNodeProps } from "./tree-view"
 export {
   Dialog,
   type DialogButtonConfig,

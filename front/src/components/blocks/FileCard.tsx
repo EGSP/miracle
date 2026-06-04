@@ -259,7 +259,7 @@ function FileCardBody() {
     <Tile>
       <Stack gap={3}>
         <Stack orientation="horizontal" gap={2} className="items-center justify-between">
-          <Text.Heading as="h3" variant="compact-01" className="truncate">
+          <Text.Heading as="h3" variant="compact-01">
             {file.name}
           </Text.Heading>
           <Text.Label as="span">{file.extension.toUpperCase()}</Text.Label>
@@ -325,7 +325,7 @@ function FileCardBody() {
         )}
 
         {latestContent?.meta?.extractionFailedMessage && (
-          <Text as="p" compact className="text-destructive wrap-anywhere">
+          <Text as="p" compact>
             {latestContent.meta.extractionFailedMessage}
           </Text>
         )}

@@ -21,7 +21,7 @@ export default function ProductTypesPage() {
 
         {isLoading && <Text.Label as="p">Загрузка...</Text.Label>}
         {error && (
-          <Text as="p" compact className="text-destructive">
+          <Text as="p" compact>
             Ошибка: {error.message}
           </Text>
         )}

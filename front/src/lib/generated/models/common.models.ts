@@ -8,9 +8,3 @@ export type CookieSessionResponse = {
     userId: string;
     role: UserRole;
 };
-
-export type OrderAnalysisAvailability = {
-    canAnalyse: boolean;
-    canForceReanalyse?: boolean;
-    errorMessage?: string;
-};

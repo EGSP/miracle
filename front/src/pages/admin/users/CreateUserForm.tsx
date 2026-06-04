@@ -37,7 +37,7 @@ export function CreateUserForm() {
       </Text.Heading>
 
       {isError && (
-        <Text as="p" compact className="text-destructive">
+        <Text as="p" compact>
           {getApiErrorMessage(error)}
         </Text>
       )}

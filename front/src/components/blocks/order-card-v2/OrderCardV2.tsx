@@ -1,8 +1,9 @@
 import { Stack, Text } from "@miracle/aramid"
 import { useGetOrder } from "@/lib/queries/order.query"
 import { ApplicationsTile } from "./applications/ApplicationsTile"
-import { OrderCardV2Header } from "./OrderCardV2Header"
 import type { OrderCardV2Props } from "./OrderCardV2.types"
+import { OrderCardV2Actions } from "./OrderCardV2Actions"
+import { OrderCardV2Header } from "./OrderCardV2Header"
 
 export function OrderCardV2({ orderId }: OrderCardV2Props) {
   const { data: order, isLoading } = useGetOrder(orderId)
@@ -14,6 +15,7 @@ export function OrderCardV2({ orderId }: OrderCardV2Props) {
   return (
     <Stack gap={3}>
       <OrderCardV2Header order={order} />
+      <OrderCardV2Actions orderId={order.id} />
       <ApplicationsTile orderId={order.id} />
     </Stack>
   )

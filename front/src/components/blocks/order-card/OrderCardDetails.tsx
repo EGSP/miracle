@@ -37,7 +37,7 @@ function DesignationSection({ designation }: { designation: Designation }) {
       </Text.Heading>
       <DesignationDisplay designation={designation} />
       {!hasValues ? (
-        <Text.Label as="p" className="text-muted-foreground">
+        <Text.Label as="p">
           Нет значений
         </Text.Label>
       ) : (
@@ -84,7 +84,7 @@ export function OrderCardDetails() {
         {aiRequirements.length > 0 ? (
           <OrderRequirementsTable requirements={aiRequirements} />
         ) : (
-          <Text.Label as="p" className="text-muted-foreground">
+          <Text.Label as="p">
             Нет требований
           </Text.Label>
         )}

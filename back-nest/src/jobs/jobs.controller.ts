@@ -15,6 +15,11 @@ export class JobsController {
         return this.jobs.list(query);
     }
 
+    @Get(':id/tree')
+    tree(@Param('id') id: string): Promise<Stored<JobRun>[]> {
+        return this.jobs.getTree(id);
+    }
+
     @Get(':id/preview-prompt')
     previewPrompt(@Param('id') id: string): Promise<WorkerFinalPrompt> {
         return this.jobs.getPromptPreview(id);

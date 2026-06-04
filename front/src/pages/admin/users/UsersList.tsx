@@ -12,7 +12,7 @@ export function UsersList() {
 
   if (error) {
     return (
-      <Text as="p" compact className="text-destructive">
+      <Text as="p" compact>
         Ошибка: {error.message}
       </Text>
     )
@@ -43,7 +43,7 @@ function UserRow({ user }: { user: User }) {
     <Column as="li" span={16} className="rounded border border-border px-3 py-2">
       <Stack gap={1}>
         <Text.Label as="span">{user.login ?? "—"}</Text.Label>
-        <Text as="span" compact className="text-muted-foreground">
+        <Text as="span" compact>
           ID: {user.id ?? "—"} · {roleLabel}
         </Text>
       </Stack>

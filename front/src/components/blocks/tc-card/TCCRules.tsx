@@ -5,7 +5,8 @@ import type {
   TechnicalCondition,
   TechnicalConditionRule,
 } from "@miracle/types"
-import { ArrayEditor } from "@/components/ui/derivations/array-editor"
+import { useEffect, useState } from "react"
+import { ArrayEditor, moveArrayItem, type ArrayEditorKey } from "@/components/ui/derivations"
 import { Input } from "@/components/ui/ds/input"
 import { Textarea } from "@/components/ui/ds/textarea"
 import { useField } from "@/contexts/dirty-state/useField"
@@ -35,9 +36,39 @@ export function TCCRules() {
   const { technicalCondition, contribute, isSaving, rules } = useTechnicalConditionCardContext()
   const tc = technicalCondition
   const slots = useField<DesignationSlot[]>(`tc-${tc.id}-slots`, tc.designationSlots ?? [])
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(rules.value[0]?.id ?? null)
 
-  const update = (i: number, patch: Partial<TechnicalConditionRule>) =>
-    rules.onChange(rules.value.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+  useEffect(() => {
+    if (!rules.value.length) {
+      if (selectedRuleId !== null) setSelectedRuleId(null)
+      return
+    }
+    if (selectedRuleId === null) return
+    if (rules.value.some((rule) => rule.id === selectedRuleId)) return
+    setSelectedRuleId(rules.value[0]?.id ?? null)
+  }, [rules.value, selectedRuleId])
+
+  const selectedRuleIndex = selectedRuleId
+    ? rules.value.findIndex((rule) => rule.id === selectedRuleId)
+    : -1
+  const selectedRule = selectedRuleIndex >= 0 ? rules.value[selectedRuleIndex] : null
+
+  const update = (ruleId: string, patch: Partial<TechnicalConditionRule>) =>
+    rules.onChange(rules.value.map((r) => (r.id === ruleId ? { ...r, ...patch } : r)))
+
+  const handleAdd = () => {
+    const nextRule = makeRule()
+    rules.onChange([...rules.value, nextRule])
+    setSelectedRuleId(nextRule.id)
+  }
+
+  const handleRemove = (key: ArrayEditorKey, index: number) => {
+    const next = rules.value.filter((rule) => rule.id !== key)
+    rules.onChange(next)
+    if (selectedRuleId === key) {
+      setSelectedRuleId(next[Math.min(index, next.length - 1)]?.id ?? null)
+    }
+  }
 
   useContribute(
     contribute,
@@ -55,36 +86,47 @@ export function TCCRules() {
       </Text.Heading>
       <ArrayEditor
         items={rules.value}
-        onAdd={() => rules.onChange([...rules.value, makeRule()])}
-        onRemove={(i) => rules.onChange(rules.value.filter((_, idx) => idx !== i))}
-        renderItem={(rule, i) => (
+        getKey={(rule) => rule.id}
+        selected={selectedRuleId}
+        onSelected={(key) => setSelectedRuleId(typeof key === "string" ? key : null)}
+        onAdd={handleAdd}
+        onRemove={handleRemove}
+        onMove={(fromIndex, toIndex) => rules.onChange(moveArrayItem(rules.value, fromIndex, toIndex))}
+        renderLabel={(rule, i) => (
           <Stack gap={1}>
+            <Text as="span" compact>
+              {(rule.title ?? "").trim() || `Правило ${i + 1}`}
+            </Text>
             <Text.Helper as="span">{formatRuleUsageLine(rule.id, slots.value)}</Text.Helper>
-            <Input
-              label="Заголовок"
-              placeholder="Напр. 5.3 Климатическое исполнение"
-              value={rule.title ?? ""}
-              onChange={(e) => update(i, { title: e.target.value })}
-              disabled={isSaving}
-              fluid
-            />
-            <div className="flex flex-col gap-0.5">
-              <Textarea
-                label="Текст правила"
-                size="md"
-                placeholder="Таблицы хранятся как markdown-таблицы"
-                value={rule.content}
-                onChange={(e) => update(i, { content: e.target.value })}
-                disabled={isSaving}
-                resizable={true}
-                fluid
-              />
-            </div>
           </Stack>
         )}
         addLabel="Добавить правило"
+        helperText="Выберите правило, чтобы отредактировать название и текст."
         disabled={isSaving}
+        fluid
       />
+      {selectedRule && (
+        <Stack gap={1}>
+          <Input
+            label="Заголовок"
+            placeholder="Напр. 5.3 Климатическое исполнение"
+            value={selectedRule.title ?? ""}
+            onChange={(e) => update(selectedRule.id, { title: e.target.value })}
+            disabled={isSaving}
+            fluid
+          />
+          <Textarea
+            label="Текст правила"
+            size="md"
+            placeholder="Таблицы хранятся как markdown-таблицы"
+            value={selectedRule.content}
+            onChange={(e) => update(selectedRule.id, { content: e.target.value })}
+            disabled={isSaving}
+            resizable={true}
+            fluid
+          />
+        </Stack>
+      )}
     </>
   )
 }

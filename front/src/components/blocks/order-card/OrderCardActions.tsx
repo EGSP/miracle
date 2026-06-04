@@ -1,8 +1,8 @@
 ﻿import { Stack, Text } from "@miracle/aramid"
 import { useMemo } from "react"
 import { Button } from "@/components/ui/ds/button"
-import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
 import { Dialog } from "@/components/ui/ds/modal-dialog"
+import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
 import { useGuardState } from "@/contexts/dirty-state/DirtyGuardContext"
 import { useDialog } from "@/lib/hooks/use-dialog"
 import { useAnalyseOrderDetails, useCanAnalyseOrderDetails } from "@/lib/queries/order.query"
@@ -63,7 +63,7 @@ export function OrderCardActions() {
             },
           ]}
         >
-          <Text as="p" compact className="text-muted-foreground">
+          <Text as="p" compact>
             Текущие результаты анализа заявки (требования, тип продукции и др.) будут удалены, после
             чего запустится новый вывод.
           </Text>
@@ -94,7 +94,7 @@ export function OrderCardActions() {
             onClick={save}
           />
           {isDirtyAnywhere && (
-            <Text as="span" compact className="text-muted-foreground">
+            <Text as="span" compact>
               есть изменения
             </Text>
           )}
@@ -132,12 +132,12 @@ export function OrderCardActions() {
       </Stack>
       <Stack gap={2} orientation="vertical">
         {analyseDisabledMessage && !analyseAvailabilityQuery.isError && (
-          <Text as="p" compact className="text-muted-foreground">
+          <Text as="p" compact>
             {analyseDisabledMessage}
           </Text>
         )}
         {analyseDesignationDisabledMessage && (
-          <Text as="p" compact className="text-muted-foreground">
+          <Text as="p" compact>
             {analyseDesignationDisabledMessage}
           </Text>
         )}

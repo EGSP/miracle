@@ -164,10 +164,32 @@ export class JobsService implements OnApplicationBootstrap {
 
     async list(query: JobRunsQuery): Promise<Stored<JobRun>[]> {
         const rows = await this.prisma.jobRun.findMany({
-            where: query.status ? { status: query.status } : undefined,
+            where: {
+                ...(query.status ? { status: query.status } : {}),
+                ...(query.onlyRoots ? { parentId: null } : {}),
+            },
             orderBy: query.sort ? { createdAt: query.sort } : undefined,
         });
         return rows as unknown as Stored<JobRun>[];
+    }
+
+    /** Плоский список корня и всех потомков (BFS), для UI-дерева. */
+    async getTree(rootId: string): Promise<Stored<JobRun>[]> {
+        const root = await this.prisma.jobRun.findUnique({ where: { id: rootId } });
+        if (!root) {
+            throw new NotFoundException('Прогон не найден');
+        }
+        const result: Stored<JobRun>[] = [root as unknown as Stored<JobRun>];
+        let frontier: string[] = [rootId];
+        while (frontier.length > 0) {
+            const children = await this.prisma.jobRun.findMany({
+                where: { parentId: { in: frontier } },
+                orderBy: { createdAt: 'asc' },
+            });
+            result.push(...(children as unknown as Stored<JobRun>[]));
+            frontier = children.map((c) => c.id);
+        }
+        return result;
     }
 
     async getPromptPreview(id: string): Promise<WorkerFinalPrompt> {

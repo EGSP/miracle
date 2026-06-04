@@ -27,7 +27,7 @@ const tcListDefinition: ListDefinition<Stored<TechnicalCondition>> = {
           label: "Название",
           weight: "1fr",
           render: (tc) => (
-            <Text.Label as="span" className="truncate" expressive>
+            <Text.Label as="span" expressive>
               {tc.name ?? "Без названия"}
             </Text.Label>
           ),
@@ -37,7 +37,7 @@ const tcListDefinition: ListDefinition<Stored<TechnicalCondition>> = {
           label: "Тип продукции",
           weight: "1fr",
           render: (tc) => (
-            <Text.Helper as="span" className="truncate text-muted-foreground">
+            <Text.Helper as="span">
               {tc.lastProductTypeName ?? "Без типа продукции"}
             </Text.Helper>
           ),
@@ -98,12 +98,12 @@ function TechnicalConditionsPageContent() {
 
           {isLoading && <Text.Label as="p">Загрузка…</Text.Label>}
           {error && (
-            <Text as="p" compact className="text-destructive">
+            <Text as="p" compact>
               Ошибка: {error.message}
             </Text>
           )}
           {!isLoading && !error && technicalConditions?.length === 0 && (
-            <Text.Label as="p" className="text-muted-foreground">
+            <Text.Label as="p">
               Нет технических условий
             </Text.Label>
           )}
@@ -127,7 +127,7 @@ function TechnicalConditionsPageContent() {
           />
         ) : (
           <Stack className="border border-border p-4">
-            <Text as="p" compact className="text-muted-foreground">
+            <Text as="p" compact>
               Выберите техническое условие из списка справа.
             </Text>
           </Stack>

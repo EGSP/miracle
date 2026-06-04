@@ -73,7 +73,7 @@ export function InlineMutationNotification({
             onClose={() => setDetailsOpen(false)}
             actions={detailsActions}
           >
-            <Text.Helper as="p" className="break-words">
+            <Text.Helper as="p">
               {message}
             </Text.Helper>
           </Dialog>

@@ -1,2 +1,2 @@
-export { ArrayEditor } from "./array-editor"
+export { ArrayEditor, moveArrayItem, type ArrayEditorKey, type ArrayEditorProps } from "./array-editor"
 export { CopyButton, type CopyButtonProps } from "./copy-button"

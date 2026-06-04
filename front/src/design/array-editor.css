@@ -1,0 +1,125 @@
+/* ─── ArrayEditor ─────────────────────────────────────────────────────────────
+   Editable ordered collection. Визуально следует StructuredList, но действия
+   управляют массивом: select, add, remove, reorder.
+───────────────────────────────────────────────────────────────────────────── */
+
+.array-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2);
+  min-width: 0;
+  width: var(--input-fixed-width);
+}
+
+.array-editor-field--fluid {
+  width: 100%;
+}
+
+.array-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-3);
+  min-width: 0;
+}
+
+.array-editor-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.array-editor-empty {
+  margin: 0;
+  padding-block: var(--aramid-spacing-3);
+  border-bottom: 1px solid var(--aramid-color-gray-20);
+  color: var(--aramid-color-gray-60);
+}
+
+.array-editor-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-height: var(--aramid-spacing-9);
+  overflow: hidden;
+  border-bottom: 1px solid var(--aramid-color-gray-20);
+}
+
+.array-editor--reorderable .array-editor-row {
+  grid-template-columns: var(--aramid-spacing-8) minmax(0, 1fr) auto;
+}
+
+.array-editor:not([data-disabled]) .array-editor-row:hover:not([data-dragging]) {
+  background-color: var(--aramid-color-sand-20);
+}
+
+.array-editor-row[data-selected]::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background-color: var(--aramid-color-brand);
+}
+
+.array-editor-row[data-dragging] {
+  opacity: 0.48;
+}
+
+.array-editor-row[data-drag-over]:not([data-dragging]) {
+  outline: 2px solid var(--aramid-color-sand-60);
+  outline-offset: -2px;
+}
+
+.array-editor-row-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  padding-block: var(--aramid-spacing-3);
+  padding-inline: var(--aramid-spacing-3);
+  border: none;
+  background: transparent;
+  color: var(--aramid-color-gray-100);
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-sm);
+  line-height: var(--aramid-font-line-height-normal);
+  text-align: start;
+  cursor: pointer;
+}
+
+.array-editor-row-label:focus-visible {
+  outline: 2px solid var(--aramid-color-sand-60);
+  outline-offset: -2px;
+}
+
+.array-editor-row-label:disabled {
+  cursor: not-allowed;
+  color: var(--aramid-color-gray-30);
+}
+
+.array-editor-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--aramid-color-gray-50);
+  cursor: grab;
+}
+
+.array-editor-row[data-dragging] .array-editor-drag-handle {
+  cursor: grabbing;
+}
+
+.array-editor-drag-handle svg {
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.array-editor-remove {
+  align-self: center;
+}
+
+.array-editor[data-disabled] .array-editor-row {
+  opacity: 0.4;
+}

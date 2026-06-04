@@ -7,8 +7,7 @@ import HomePage from "./pages/HomePage"
 import OrdersPage from "./pages/OrdersPage"
 import ProductTypesPage from "./pages/ProductTypesPage"
 import TechnicalConditionsPage from "./pages/TechnicalConditionsPage"
-import WorkerPromptPage from "./pages/WorkerPromptPage"
-import WorkersPage from "./pages/WorkersPage"
+import OperationsPage from "./pages/OperationsPage"
 
 const rootRoute = createRootRoute({
   component: App,
@@ -56,18 +55,13 @@ const ordersRoute = createRoute({
   }),
 })
 
-const workersRoute = createRoute({
+const operationsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/workers",
-  component: WorkersPage,
-})
-
-const workerPromptRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/worker-prompt",
-  component: WorkerPromptPage,
+  path: "/operations",
+  component: OperationsPage,
   validateSearch: (search: Record<string, unknown>) => ({
-    workerId: typeof search.workerId === "string" ? search.workerId : undefined,
+    rootId: typeof search.rootId === "string" ? search.rootId : undefined,
+    runId: typeof search.runId === "string" ? search.runId : undefined,
   }),
 })
 
@@ -96,8 +90,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   filesRoute,
   ordersRoute,
-  workersRoute,
-  workerPromptRoute,
+  operationsRoute,
   productTypesRoute,
   technicalConditionsRoute,
   adminRoute,

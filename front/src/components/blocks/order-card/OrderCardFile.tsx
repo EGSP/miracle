@@ -23,7 +23,7 @@ export function OrderCardFile() {
         <Stack orientation="horizontal" gap={2} className="items-center">
           <Text.Label as="span">Файл</Text.Label>
           {fileIdField.isDirty && (
-            <Text as="span" compact className="text-muted-foreground">
+            <Text as="span" compact>
               (изменен)
             </Text>
           )}

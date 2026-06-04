@@ -1,4 +1,4 @@
-import type { DesignationWorkerInput, OrderQuery } from "@miracle/types"
+import type { AnalyseOrderOptions, DesignationWorkerInput, OrderQuery } from "@miracle/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { orders } from "../generated"
 
@@ -26,6 +26,21 @@ export const useCreateOrder = () => {
     mutationFn: () => orders.create({}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY })
+    },
+  })
+}
+
+export const useAnalyseOrder = (orderId: string | undefined) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (options: AnalyseOrderOptions = {}) => {
+      if (!orderId) throw new Error("Order ID is required")
+      return orders.analyse(orderId, options)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ["jobs"] })
     },
   })
 }
