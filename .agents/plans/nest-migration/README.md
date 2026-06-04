@@ -56,7 +56,7 @@
 | `auth.md` | Если эндпоинт требует аутентификации |
 | `errors.md` | При замене `err.*` из старого кода на исключения Nest |
 | `lib.md` | Если исходник импортирует из `back/src/lib/` или `back/src/logger/` — куда такие файлы переезжают и что отложено |
-| `job.md` | При работе с durable-задачами (worker-runtime на Effect): как объявлять Job, композировать, запускать, сохранять и возобновлять |
+| `back-nest/src/jobs/framework/` (JSDoc) | При работе с durable-задачами: объявление Job, запуск под-джобов, memo/progress, возобновление — источник правды в JSDoc самого фреймворка |
 | `client-generator.md` | Если задача — написать новый генератор клиента (`tools/src/client-generator-nest/`) под NestJS |
 
 ### Что читать под конкретную задачу
@@ -92,7 +92,7 @@
 - **Роль-гард** — вариант `AuthGuard` под роли (замена `adminRoleMiddleware`) — перед `admin`. **Сделано** (`AdminGuard`, слой 2).
 - **Multipart** — `@fastify/multipart` — перед `files`. **Сделано** (слой 2).
 - **Вендорные `@Global`-модули** — `yandex/` (`YandexService`), `convert/` (`ConvertService`, pdf→image). **Сделано** (слой 4): порт `lib/yandex/*` и `lib/convert/*`; конфиг через `AppConfigService`. Потребители — scan/LLM-джобы. См. `lib.md`.
-- **Worker-runtime** — **переписан на Effect** как durable-движок задач (`back-nest/src/jobs/`), а не `worker-pool`/`base-worker`. **Сделано** (слой 4). Единица — Job; запись об исполнении — рекурсивный `JobRun` (коллекция `jobRuns`); composition через `pipe`+`andThen`; durable-возобновление по `memo`. Полное руководство — **`job.md`**. Брейкенджи относительно старой модели воркеров — `BREAKING-CHANGES.md`.
+- **Worker-runtime** — **переписан на Effect** как durable-движок задач (`back-nest/src/jobs/`), а не `worker-pool`/`base-worker`. **Сделано** (слой 4). Единица — Job; запись об исполнении — плоский `JobRun` (таблица `job_runs`); оркестрация под-джобов — внутри тела; durable-возобновление по `memo`. Механика — в JSDoc фреймворка `back-nest/src/jobs/framework/`. Брейкенджи относительно старой модели воркеров — `BREAKING-CHANGES.md`.
 
 ### Маршруты — по слоям зависимостей
 
@@ -111,7 +111,7 @@
 6. `file-content.router.ts` → `files-content/`. Зависит от `files` (контент привязан к файлу). Внутри домена **два сервиса**: `FilesContentService` (персистентность коллекции `file-content`: create/get/getContent/softDelete/update/tokens) и `ExtractionService` (оркестрация извлечения; инжектит `FilesService` + `FilesContentService`). `countTokens` — чистый helper (в слое 4 поднят в `back-nest/src/common/count-tokens.ts`). Generator-экстракторы doc/spreadsheet/text — чистые функции в каталоге домена. **Отложено на слой 4:** VISUAL-извлечение (OCR / LLM Vision / TC-LLM) — оно запускает scan-воркеры через worker-runtime; `yandex`/`convert` нужны **только** этим воркерам, поэтому в слое 3 их **не создаём** (был бы мёртвый код). До слоя 4 `ExtractionService` для VISUAL-файлов бросает `NotImplementedException`. Visual-методы добавятся прямо в `ExtractionService`, `FilesContentService` при этом не трогается.
 
 **Слой 4 (сделано) — вершина DI-стека на durable-движке Job (Effect):**
-- **Инфра:** Job-фреймворк `back-nest/src/jobs/` (`job`/`combinators`/`context`/`runner`/`registry`/`job-runtime.service`/`progress`); коллекция `jobRuns`; тип `JobRun` в `types`. Вендоры `yandex/`, `convert/`. См. `job.md`.
+- **Инфра:** Job-фреймворк `back-nest/src/jobs/framework/` (`job`/`context`/`store`/`registry`/`runtime`/`hash-key`), Nest-обёртки — в `jobs/`; тип `JobRun` в `types`. Вендоры `yandex/`, `convert/`. Механика — в JSDoc фреймворка.
 - **Джобы** (бывшие воркеры → листовые Job + apply, замыкают сервисы через провайдеры-фабрики, регистрируются в реестре): scan `ocr`/`llm-vision`/`llm-vision-tc` (в `files-content/`), `tc-extract` (в `technical-conditions/`), `order-analyse` и `designation-analyse` (в `orders/`).
 - **VISUAL-извлечение** включено в `ExtractionService` (`runtime.start` scan-джоба вместо прежнего `NotImplementedException`).
 7. `technical-condition.router.ts` → `technical-conditions/` — инжектит `ProductTypesService`; `POST /:id/extract-details` стартует джоб `tc-extract`. `prepareTechnicalConditionPayload` — приватный метод сервиса.

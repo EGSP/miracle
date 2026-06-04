@@ -23,6 +23,10 @@ const errToMessage = (error: unknown): string => {
     }
 };
 
+/**
+ * Реализация {@link Memo}, замкнутая на конкретный узел. `get` читает значение из памяти узла
+ * (`node.memo`), `set` мутирует его и сразу персистит патчем в хранилище (durable до след. шага).
+ */
 function makeMemo(store: JobStore, node: JobRun) {
     return {
         get: <Value>(key: string) =>
@@ -35,6 +39,10 @@ function makeMemo(store: JobStore, node: JobRun) {
     };
 }
 
+/**
+ * Реализация {@link Progress}, замкнутая на конкретный узел. `set` пишет процент и подпись в
+ * `node.progress` и персистит патчем (только наблюдаемость, не состояние для возобновления).
+ */
 function makeProgress(store: JobStore, node: JobRun) {
     return {
         set: (pct: number, label?: string) =>

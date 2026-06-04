@@ -28,7 +28,7 @@
 ## Слой 4 — worker-runtime переписан на Effect (Job/JobRun)
 
 Самый крупный брейкендж. Старая модель воркеров (`WorkerData` + `worker-pool`) заменена durable-движком
-задач на Effect (см. `job.md`).
+задач на Effect (механика — в JSDoc фреймворка `back-nest/src/jobs/framework/`).
 
 - **Коллекция/модель:** `workers` (`WorkerData`) → новый рекурсивный **`JobRun`** (коллекция `jobRuns`,
   файл `job-runs.json`). Старый `workers.json` — legacy, данные не мигрируются.
