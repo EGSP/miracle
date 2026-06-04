@@ -1,3 +1,6 @@
+import type { Stored } from './db.js';
+import type { Designation } from './designation.js';
+
 export type OrderPositionConfidence = 'high' | 'medium' | 'low';
 
 /**
@@ -40,4 +43,13 @@ export type OrderPosition = {
 export type OrderPositionQuery = {
     id?: string;
     applicationId?: string;
+};
+
+/**
+ * Позиция вместе со своим условным обозначением (1:1, `null` если ещё не определено).
+ * Ответ `GET /order/:id/positions`: питает и отметку наличия в списке, и {@link Designation}-детали.
+ */
+export type OrderPositionWithDesignation = {
+    position: Stored<OrderPosition>;
+    designation: Stored<Designation> | null;
 };

@@ -3,7 +3,7 @@
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { JobRun, Order, OrderApplication, OrderQuery, Stored } from '@miracle/types';
+import type { JobRun, Order, OrderApplication, OrderPositionWithDesignation, OrderQuery, Stored } from '@miracle/types';
 import type { AnalyseOrderDto, CreateTextApplicationDto } from './models';
 
 export const orders = {
@@ -32,6 +32,10 @@ export const orders = {
     listApplications: (id: string) => customInstance<Stored<OrderApplication>[]>({
         method: 'GET',
         url: formatPath('/order/:id/applications', { id }),
+    }),
+    listPositions: (id: string) => customInstance<OrderPositionWithDesignation[]>({
+        method: 'GET',
+        url: formatPath('/order/:id/positions', { id }),
     }),
     addFileApplication: (id: string, file: File) => {
         const formData = new FormData();

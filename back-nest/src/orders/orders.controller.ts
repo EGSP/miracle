@@ -12,13 +12,21 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import type { JobRun, Order, OrderApplication, OrderQuery, Stored } from '@miracle/types';
+import type {
+    JobRun,
+    Order,
+    OrderApplication,
+    OrderPositionWithDesignation,
+    OrderQuery,
+    Stored,
+} from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
 import { UploadedFile } from '../common/uploaded-file.decorator.js';
 import { FilesService } from '../files/files.service.js';
 import { OrdersService } from './orders.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
+import { OrderPositionsService } from './order-positions.service.js';
 import { OrderAnalysisService } from './order-analysis.service.js';
 import { CreateTextApplicationDto } from './dto/create-text-application.dto.js';
 import { AnalyseOrderDto } from './dto/analyse-order.dto.js';
@@ -29,6 +37,7 @@ export class OrdersController {
     constructor(
         private readonly orders: OrdersService,
         private readonly orderApplications: OrderApplicationsService,
+        private readonly orderPositions: OrderPositionsService,
         private readonly orderAnalysis: OrderAnalysisService,
         private readonly files: FilesService,
     ) {}
@@ -70,6 +79,13 @@ export class OrdersController {
     async listApplications(@Param('id') id: string): Promise<Stored<OrderApplication>[]> {
         await this.orders.getOrThrow(id);
         return this.orderApplications.listByOrder(id);
+    }
+
+    /** Позиции заказа вместе с обозначениями (1:1, null если не определено) — для блока продукции. */
+    @Get(':id/positions')
+    async listPositions(@Param('id') id: string): Promise<OrderPositionWithDesignation[]> {
+        await this.orders.getOrThrow(id);
+        return this.orderPositions.listByOrderWithDesignations(id);
     }
 
     /** Загрузка файла и привязка его к заказу одним запросом (multipart/form-data). */

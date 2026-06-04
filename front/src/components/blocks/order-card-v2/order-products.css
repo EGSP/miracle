@@ -1,0 +1,23 @@
+/* Обе панели одной высоты с вертикальной прокруткой. */
+.order-products__pane {
+  height: 420px;
+  overflow-y: auto;
+}
+
+/* Truncate длинных названий/типов в ячейке списка (ячейка уже min-width:0; overflow:hidden). */
+.order-products__name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-products__mark {
+  display: inline-flex;
+  align-items: center;
+  color: var(--aramid-color-green-60);
+}
+
+.order-products__mark--empty {
+  color: var(--aramid-color-gray-50);
+}

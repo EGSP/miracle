@@ -33,6 +33,15 @@ export class DesignationsService {
         return row ? toDesignation(row as DesignationRow) : null;
     }
 
+    /** Обозначения для набора позиций одним запросом (для списка продукции заказа). */
+    async listByPositions(orderPositionIds: string[]): Promise<Stored<Designation>[]> {
+        if (orderPositionIds.length === 0) return [];
+        const rows = await this.prisma.designation.findMany({
+            where: { orderPositionId: { in: orderPositionIds }, deletedAt: null },
+        });
+        return rows.map((row) => toDesignation(row as DesignationRow));
+    }
+
     /** Жёсткое удаление обозначений перечисленных позиций (чистый лист при переанализе). */
     async deleteByPositions(orderPositionIds: string[]): Promise<void> {
         if (orderPositionIds.length === 0) return;

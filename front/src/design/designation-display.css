@@ -24,11 +24,13 @@
 }
 
 .designation-display-part--warn {
-  background-color: var(--aramid-color-yellow-10);
+  background-color: var(--aramid-color-yellow-60);
+  color: var(--aramid-color-white);
 }
 
 .designation-display-part--critical {
-  background-color: var(--aramid-color-red-20);
+  background-color: var(--aramid-color-red-60);
+  color: var(--aramid-color-white);
 }
 
 .designation-display-separator {

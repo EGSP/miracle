@@ -4,10 +4,10 @@ import { AuthPage, LoginForm, RegisterForm } from "./pages/Auth"
 import AdminPage from "./pages/admin/AdminPage"
 import FilesPage from "./pages/FilesPage"
 import HomePage from "./pages/HomePage"
+import OperationsPage from "./pages/OperationsPage"
 import OrdersPage from "./pages/OrdersPage"
 import ProductTypesPage from "./pages/ProductTypesPage"
 import TechnicalConditionsPage from "./pages/TechnicalConditionsPage"
-import OperationsPage from "./pages/OperationsPage"
 
 const rootRoute = createRootRoute({
   component: App,
@@ -52,6 +52,7 @@ const ordersRoute = createRoute({
   component: OrdersPage,
   validateSearch: (search: Record<string, unknown>) => ({
     orderId: typeof search.orderId === "string" ? search.orderId : undefined,
+    positionId: typeof search.positionId === "string" ? search.positionId : undefined,
   }),
 })
 

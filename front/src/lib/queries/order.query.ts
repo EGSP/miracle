@@ -5,6 +5,7 @@ import { orders } from "../generated"
 export const ORDERS_QUERY_KEY = ["orders"] as const
 export const ORDER_ANALYSE_AVAILABILITY_QUERY_KEY = ["order-analyse-availability"] as const
 export const ORDER_JOB_QUERY_KEY = ["order-job"] as const
+export const ORDER_POSITIONS_QUERY_KEY = ["order-positions"] as const
 
 export const useGetOrders = (query: OrderQuery = {}) => {
   return useQuery({
@@ -25,6 +26,14 @@ export const useGetOrderJob = (orderId: string) => {
   return useQuery({
     queryKey: [...ORDER_JOB_QUERY_KEY, orderId] as const,
     queryFn: () => orders.getJob(orderId),
+  })
+}
+
+/** Позиции заказа вместе с обозначениями (1:1) — для блока продукции в карточке. */
+export const useGetOrderPositions = (orderId: string) => {
+  return useQuery({
+    queryKey: [...ORDER_POSITIONS_QUERY_KEY, orderId] as const,
+    queryFn: () => orders.listPositions(orderId),
   })
 }
 
@@ -51,6 +60,7 @@ export const useAnalyseOrder = (orderId: string | undefined) => {
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: ["jobs"] })
       queryClient.invalidateQueries({ queryKey: [...ORDER_JOB_QUERY_KEY, orderId] })
+      queryClient.invalidateQueries({ queryKey: [...ORDER_POSITIONS_QUERY_KEY, orderId] })
     },
   })
 }

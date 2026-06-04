@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { OrderPosition, OrderPositionData, Stored } from '@miracle/types';
+import type { OrderPosition, OrderPositionData, OrderPositionWithDesignation, Stored } from '@miracle/types';
 import { PrismaService } from '../database/prisma.service.js';
+import { OrderApplicationsService } from './order-applications.service.js';
+import { DesignationsService } from './designations.service.js';
 
 /** Поля позиции, которые можно задать при создании/обновлении (без системных полей БД и `applicationId`). */
 export type OrderPositionPatch = Partial<
@@ -36,13 +38,35 @@ function toPosition(row: PositionRow): Stored<OrderPosition> {
 
 @Injectable()
 export class OrderPositionsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly applications: OrderApplicationsService,
+        private readonly designations: DesignationsService,
+    ) {}
 
     async listByApplication(applicationId: string): Promise<Stored<OrderPosition>[]> {
         const rows = await this.prisma.orderPosition.findMany({
             where: { applicationId, deletedAt: null },
         });
         return rows.map((row) => toPosition(row as PositionRow));
+    }
+
+    /**
+     * Все позиции заказа (по его приложениям) вместе с их обозначениями (1:1, `null` если нет).
+     * Обозначения подтягиваются одним запросом и раскладываются по `orderPositionId`.
+     */
+    async listByOrderWithDesignations(orderId: string): Promise<OrderPositionWithDesignation[]> {
+        const apps = await this.applications.listByOrder(orderId);
+        const positionLists = await Promise.all(apps.map((app) => this.listByApplication(app.id)));
+        const positions = positionLists.flat();
+
+        const designations = await this.designations.listByPositions(positions.map((p) => p.id));
+        const byPosition = new Map(designations.map((d) => [d.orderPositionId, d]));
+
+        return positions.map((position) => ({
+            position,
+            designation: byPosition.get(position.id) ?? null,
+        }));
     }
 
     async get(id: string): Promise<Stored<OrderPosition> | null> {
