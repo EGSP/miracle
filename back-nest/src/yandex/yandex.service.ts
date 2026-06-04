@@ -37,12 +37,12 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
     private session?: Session;
     private openaiClient?: OpenAI;
 
-    // Глобальные лимитеры частоты к Yandex (квоты async-режима генерации текста). Живут весь
-    // жизненный цикл приложения в этом scope; одни на все вызовы, поэтому потолок держится
-    // независимо от того, сколько джоб-веток одновременно обращаются к API.
+    // Глобальные лимитеры частоты к Yandex (квоты async-режима foundation models — общие для
+    // текстовой генерации И vision, это один облачный сервис). Живут весь жизненный цикл приложения
+    // в этом scope; одни на все вызовы, поэтому потолок держится независимо от числа джоб-веток.
     private readonly limiterScope = Effect.runSync(Scope.make());
-    private submitLimit: Limit = (effect) => effect; // 10/сек + 5000/час (submit)
-    private pollLimit: Limit = (effect) => effect; // 50/сек (poll)
+    private submitLimit: Limit = (effect) => effect; // 10/сек + 5000/час (submit: текст + vision)
+    private pollLimit: Limit = (effect) => effect; // 50/сек (poll: текст + vision)
 
     constructor(private readonly appConfig: AppConfigService) {}
 
@@ -157,10 +157,12 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
     // ── Мультимодальная LLM (Vision) ───────────────────────────────────────
 
     async submitVisionCompletion(request: VisionRequest): Promise<string> {
+        await Effect.runPromise(this.submitLimit(Effect.void)); // та же квота submit, что и у текстовой генерации
         return submitVisionCompletion(this.getOpenAI(), this.config().folderId, request);
     }
 
     async pollVisionCompletion(taskId: string): Promise<LlmPollResult<string>> {
+        await Effect.runPromise(this.pollLimit(Effect.void)); // та же квота poll, что и у текстовой генерации
         return pollVisionCompletion(this.getOpenAI(), taskId);
     }
 

@@ -9,6 +9,7 @@ import { LlmVisionJob } from './implementations/scan/llm-vision.job.js';
 import { LlmVisionTcJob } from './implementations/scan/llm-vision-tc.job.js';
 import { TcExtractJob } from './implementations/tc-extract.job.js';
 import { ExtractPositionsFromChunkJob } from './implementations/order/extract-positions-from-chunk.job.js';
+import { ExtractVisualJob } from './implementations/order/extract-visual.job.js';
 import { AnalyseDesignationJob } from './implementations/order/analyse-designation.job.js';
 import { AnalyseApplicationJob } from './implementations/order/analyse-application.job.js';
 import { AnalyseOrderJob } from './implementations/order/analyse-order.job.js';
@@ -27,6 +28,7 @@ import { AnalyseOrderJob } from './implementations/order/analyse-order.job.js';
         LlmVisionTcJob,
         TcExtractJob,
         ExtractPositionsFromChunkJob,
+        ExtractVisualJob,
         AnalyseDesignationJob,
         AnalyseApplicationJob,
         AnalyseOrderJob,

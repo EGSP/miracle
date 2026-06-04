@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ExtractionStatus, FileDomain, getFileDomain, type FileModel, type OrderApplication, type Stored } from '@miracle/types';
 import Papa from 'papaparse';
 import fs from 'fs/promises';
+import mammoth from 'mammoth';
 import XLSX from 'xlsx';
 import { FilesService } from '../files/files.service.js';
 import { FilesContentService } from '../files-content/files-content.service.js';
@@ -13,12 +14,16 @@ export type ReadChunk = { chunkKey: string; chunk: unknown };
 const ROWS_PER_CHUNK = 15;
 
 /**
- * Маршрутизатор чтения приложения в чанки (гибрид):
- * - текст → один текстовый чанк;
- * - таблица (xlsx/xls/ods/csv/tsv) → построчное чтение НАПРЯМУЮ (без FileContent), чанк = N строк;
- * - прочие файлы (doc/pdf/скан) → из завершённого извлечения FileContent, чанк = страница.
+ * Читает приложение заказа в чанки для извлечения позиций.
  *
- * Возвращает чанки; их идентичность (`chunkKey`) детерминирована, чтобы запуск был идемпотентным.
+ * Сначала свитч по типу приложения (текст / файл), затем для файла — {@link readFile} со свитчем
+ * по домену (гибрид-роутер):
+ * - таблица (xlsx/csv/…) → построчно напрямую, чанк = {@link ROWS_PER_CHUNK} строк;
+ * - документ (docx) и простой текст (md/txt) → инлайн целиком, один чанк (без FileContent);
+ * - VISUAL (pdf/изображение) → из завершённого FileContent (его обеспечивает дочерний `extract-visual`
+ *   в `analyse-application` ДО чтения), чанк = страница.
+ *
+ * Идентичность чанков (`chunkKey`) детерминирована — запуск извлечения идемпотентен.
  */
 @Injectable()
 export class ApplicationChunkReader {
@@ -28,23 +33,35 @@ export class ApplicationChunkReader {
     ) {}
 
     async read(application: Stored<OrderApplication>): Promise<ReadChunk[]> {
-        const data = application.data;
-
-        if (data.type === 'text') {
-            const text = data.text.trim();
-            return text ? [{ chunkKey: 'text', chunk: { text } }] : [];
+        switch (application.data.type) {
+            case 'text': {
+                const text = application.data.text.trim();
+                return text ? [{ chunkKey: 'text', chunk: { text } }] : [];
+            }
+            case 'file': {
+                const file = await this.files.get(application.data.fileId);
+                if (!file) {
+                    throw new NotFoundException(`Файл "${application.data.fileId}" не найден`);
+                }
+                return this.readFile(file);
+            }
         }
+    }
 
-        const file = await this.files.get(data.fileId);
-        if (!file) {
-            throw new NotFoundException(`Файл "${data.fileId}" не найден`);
+    /** Доменная логика чтения файла. */
+    private async readFile(file: Stored<FileModel>): Promise<ReadChunk[]> {
+        switch (getFileDomain(file.extension ?? '')) {
+            case FileDomain.SPREADSHEET:
+                return this.readSpreadsheet(file);
+            case FileDomain.DOCUMENT:
+                return this.readDocument(file);
+            case FileDomain.TEXT:
+                return this.readPlainText(file);
+            case FileDomain.VISUAL:
+                return this.readFromFileContent(file.id);
+            default:
+                throw new Error(`Тип файла «${file.extension}» не поддерживается для анализа`);
         }
-
-        const domain = getFileDomain(file.extension ?? '');
-        if (domain === FileDomain.SPREADSHEET) {
-            return this.readSpreadsheet(file);
-        }
-        return this.readFromFileContent(data.fileId);
     }
 
     /** Таблица → строки-объекты напрямую через XLSX/papaparse, нарезанные по ROWS_PER_CHUNK. */
@@ -75,7 +92,24 @@ export class ApplicationChunkReader {
         });
     }
 
-    /** Прочие файлы → текст страниц из завершённого извлечения FileContent, чанк на страницу. */
+    /** Документ (docx) → текст целиком одним чанком (инлайн, без FileContent). */
+    private async readDocument(file: Stored<FileModel>): Promise<ReadChunk[]> {
+        const extension = (file.extension ?? '').toLowerCase();
+        if (extension !== 'docx') {
+            throw new Error(`Извлечение документа «${extension}» не реализовано (поддерживается docx)`);
+        }
+        const result = await mammoth.extractRawText({ path: this.files.getFilePath(file) });
+        const text = result.value.trim();
+        return text ? [{ chunkKey: 'document', chunk: { text } }] : [];
+    }
+
+    /** Простой текстовый файл (md/txt) → сырое чтение одним чанком (инлайн, без FileContent). */
+    private async readPlainText(file: Stored<FileModel>): Promise<ReadChunk[]> {
+        const text = (await fs.readFile(this.files.getFilePath(file), 'utf8')).trim();
+        return text ? [{ chunkKey: 'text', chunk: { text } }] : [];
+    }
+
+    /** VISUAL → текст страниц из завершённого извлечения FileContent, чанк на страницу. */
     private async readFromFileContent(fileId: string): Promise<ReadChunk[]> {
         const all = await this.filesContent.getContent(fileId);
         const completed = all.find((c) => c.meta?.extractionStatus === ExtractionStatus.COMPLETED);

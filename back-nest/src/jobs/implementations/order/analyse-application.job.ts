@@ -1,18 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { Effect } from 'effect';
+import { FileDomain, getFileDomain } from '@miracle/types';
 import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs } from '../../framework/context.js';
 import { OrderApplicationsService } from '../../../orders/order-applications.service.js';
 import { ApplicationChunkReader } from '../../../orders/application-chunk-reader.js';
+import { FilesService } from '../../../files/files.service.js';
+import { ExtractVisualJob } from './extract-visual.job.js';
 import { ExtractPositionsFromChunkJob } from './extract-positions-from-chunk.job.js';
 
 type AnalyseApplicationInput = { applicationId: string };
 
 /**
  * Джоб `analyse-application`: одно приложение заказа → позиции.
- * Читает приложение через {@link ApplicationChunkReader} (гибрид-роутер: текст / таблица напрямую /
- * FileContent) и веером запускает `extract-positions-from-chunk` по каждому чанку.
+ *
+ * Для VISUAL-файлов (pdf/изображение) сначала дочерним `extract-visual` обеспечивает извлечение
+ * содержимого (идемпотентно, кэш в FileContent) — это и есть «извлечение внутри пайплайна заказа».
+ * Документы/текст/таблицы читаются ридером инлайн без отдельного шага. Затем читает приложение
+ * через {@link ApplicationChunkReader} и веером запускает `extract-positions-from-chunk` по чанкам.
  *
  * Веер — обычный `Effect.all` (fail-fast): падение любого чанка валит ВСЁ приложение. Это намеренно —
  * родитель (`analyse-order`) ловит падение приложения и продолжает остальные.
@@ -25,7 +31,9 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
 
     constructor(
         applications: OrderApplicationsService,
+        files: FilesService,
         reader: ApplicationChunkReader,
+        extractVisual: ExtractVisualJob,
         extract: ExtractPositionsFromChunkJob,
     ) {
         this.run = (input: AnalyseApplicationInput): Effect.Effect<void, unknown, JobEnv> =>
@@ -34,6 +42,15 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
                 const application = yield* Effect.promise(() => applications.get(input.applicationId));
                 if (!application) {
                     return yield* Effect.fail(new Error(`Приложение "${input.applicationId}" не найдено`));
+                }
+
+                // VISUAL-файл: извлечь содержимое прямо в пайплайне (дочерний awaited-джоб, идемпотентно).
+                if (application.data.type === 'file') {
+                    const fileId = application.data.fileId;
+                    const file = yield* Effect.promise(() => files.get(fileId));
+                    if (file && getFileDomain(file.extension ?? '') === FileDomain.VISUAL) {
+                        yield* jobs.run(extractVisual, [jobs.runId, 'extract-visual', fileId], { fileId });
+                    }
                 }
 
                 const chunks = yield* Effect.promise(() => reader.read(application));
