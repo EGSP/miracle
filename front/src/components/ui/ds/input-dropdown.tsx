@@ -68,7 +68,7 @@ function InputDropdownRoot<T>({
   renderSelectedItem = null,
   ...props
 }: InputDropdownProps<T>) {
-  const isControlled = Object.hasOwn(props, "value")
+  const isControlled = Object.prototype.hasOwnProperty.call(props, "value")
   const controlledValue = props.value ?? null
   const onChange = props.onChange
   const getItemKey = props.getItemKey
