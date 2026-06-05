@@ -37,6 +37,11 @@ export const orders = {
         method: 'GET',
         url: formatPath('/order/:id/positions', { id }),
     }),
+    report: (id: string) => customInstance<Blob>({
+        method: 'GET',
+        url: formatPath('/order/:id/report', { id }),
+        responseType: 'blob',
+    }),
     addFileApplication: (id: string, file: File) => {
         const formData = new FormData();
         formData.append('file', file);

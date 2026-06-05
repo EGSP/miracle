@@ -9,9 +9,10 @@ import {
     Post,
     Query,
     Req,
+    Res,
     UseGuards,
 } from '@nestjs/common';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
     JobRun,
     Order,
@@ -23,11 +24,13 @@ import type {
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
 import { UploadedFile } from '../common/uploaded-file.decorator.js';
+import { BinaryResponse } from '../common/binary-response.decorator.js';
 import { FilesService } from '../files/files.service.js';
 import { OrdersService } from './orders.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
 import { OrderPositionsService } from './order-positions.service.js';
 import { OrderAnalysisService } from './order-analysis.service.js';
+import { OrderReportService } from './order-report.service.js';
 import { CreateTextApplicationDto } from './dto/create-text-application.dto.js';
 import { AnalyseOrderDto } from './dto/analyse-order.dto.js';
 
@@ -39,6 +42,7 @@ export class OrdersController {
         private readonly orderApplications: OrderApplicationsService,
         private readonly orderPositions: OrderPositionsService,
         private readonly orderAnalysis: OrderAnalysisService,
+        private readonly orderReport: OrderReportService,
         private readonly files: FilesService,
     ) {}
 
@@ -86,6 +90,17 @@ export class OrdersController {
     async listPositions(@Param('id') id: string): Promise<OrderPositionWithDesignation[]> {
         await this.orders.getOrThrow(id);
         return this.orderPositions.listByOrderWithDesignations(id);
+    }
+
+    /** Excel-отчёт по распознанной продукции заказа (скачивание xlsx). */
+    @Get(':id/report')
+    @BinaryResponse()
+    async report(@Param('id') id: string, @Res() reply: FastifyReply): Promise<void> {
+        await this.orders.getOrThrow(id);
+        const buffer = await this.orderReport.buildWorkbook(id);
+        reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        reply.header('Content-Disposition', `attachment; filename="order-${id}.xlsx"`);
+        reply.send(buffer);
     }
 
     /** Загрузка файла и привязка его к заказу одним запросом (multipart/form-data). */

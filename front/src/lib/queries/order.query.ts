@@ -37,6 +37,24 @@ export const useGetOrderPositions = (orderId: string) => {
   })
 }
 
+/** Скачивание Excel-отчёта по распознанной продукции заказа (blob → файл). */
+export const useDownloadOrderReport = (orderId: string | undefined) => {
+  return useMutation({
+    mutationFn: async () => {
+      if (!orderId) throw new Error("Order ID is required")
+      const blob = await orders.report(orderId)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `order-${orderId}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    },
+  })
+}
+
 export const useCreateOrder = () => {
   const queryClient = useQueryClient()
 

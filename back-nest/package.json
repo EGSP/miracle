@@ -7,11 +7,9 @@
     "dev:debug": "nest start --debug 9230 --watch",
     "build": "tsc",
     "start": "node dist/main.js",
-
     "db:up": "docker compose -f ../docker-compose.yml up -d postgres",
     "db:down": "docker compose -f ../docker-compose.yml down",
     "db:reset-hard": "docker compose -f ../docker-compose.yml down -v",
-
     "prisma:generate": "dotenv -e ../.env -- prisma generate",
     "prisma:push": "dotenv -e ../.env -- prisma db push",
     "prisma:reset": "dotenv -e ../.env -- prisma migrate reset --force",
@@ -40,6 +38,7 @@
     "canvas": "^3.2.3",
     "dotenv": "^17.4.2",
     "effect": "^3.21.2",
+    "exceljs": "^4.4.0",
     "fastify": "^5.8.5",
     "jose": "^6.2.3",
     "lowdb": "^7.0.1",

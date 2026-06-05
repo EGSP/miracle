@@ -11,6 +11,7 @@ import { OrderPositionsService } from './order-positions.service.js';
 import { DesignationsService } from './designations.service.js';
 import { ApplicationChunkReader } from './application-chunk-reader.js';
 import { OrderAnalysisService } from './order-analysis.service.js';
+import { OrderReportService } from './order-report.service.js';
 
 @Module({
     imports: [AuthModule, FilesModule, FilesContentModule, ProductTypesModule, TechnicalConditionsModule],
@@ -22,6 +23,7 @@ import { OrderAnalysisService } from './order-analysis.service.js';
         DesignationsService,
         ApplicationChunkReader,
         OrderAnalysisService,
+        OrderReportService,
     ],
     exports: [
         OrdersService,
