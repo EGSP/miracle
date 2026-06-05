@@ -21,7 +21,7 @@ export function createJobTreeStore(rootId: string): StoreApi<JobTreeState> {
     rootId,
     nodes: {},
     childrenByParent: {},
-    expanded: new Set([rootId]),
+    expanded: new Set(),
     selectedId: null,
 
     setRootId: (id) => set({ rootId: id }),
@@ -32,7 +32,7 @@ export function createJobTreeStore(rootId: string): StoreApi<JobTreeState> {
       set((s) => ({
         nodes,
         childrenByParent,
-        expanded: s.expanded.size > 0 ? s.expanded : new Set([rootId]),
+        expanded: s.expanded.size > 0 ? s.expanded : new Set([]),
       }))
     },
 
