@@ -11,6 +11,7 @@ import { InlineMutationNotification } from "@/components/ui/external/inline-muta
 import { Input } from "@/components/ui/ds/input"
 import { Dialog } from "@/components/ui/ds/modal-dialog"
 import { Tile } from "@/components/ui/ds/tile"
+import { createUuid } from "@/lib/uuid"
 import {
   DirtyGuardProvider,
   useGuardActions,
@@ -218,7 +219,7 @@ function FileCardBody() {
     const first = applied[0]
     if (!first) return
     setRestoreFileStates([{
-      id: crypto.randomUUID(),
+      id: createUuid(),
       file: first.file,
       status: first.validationError ? "error" : "applied",
       error: first.validationError,

@@ -25,6 +25,7 @@ import { useEffect, useRef, useState } from "react"
 
 import type { AppliedFile, FileState } from "@/components/ui/ds/file-input"
 import { useDirtyGuardContext } from "@/contexts/dirty-state/DirtyGuardContext"
+import { createUuid } from "@/lib/uuid"
 import { getApiErrorMessage } from "@/lib/api"
 import { useUploadFileWithProgress } from "@/lib/queries/file.query"
 
@@ -95,7 +96,7 @@ export function useFileInputUpload({ id }: UseFileInputUploadOptions) {
   // ── Применить файлы — только добавить в список, без загрузки ───────────
   function handleFilesApplied(applied: AppliedFile[]) {
     const newStates: FileState[] = applied.map(({ file, validationError }) => ({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       file,
       status: validationError ? "error" : "applied",
       error: validationError,

@@ -9,6 +9,7 @@
 import { useRef, useState } from "react"
 import type { AppliedFile, FileState } from "@/components/ui/ds/file-input"
 import { getApiErrorMessage } from "@/lib/api"
+import { createUuid } from "@/lib/uuid"
 import { orderApplicationsKey } from "@/lib/queries/order-application.query"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { orders } from "@/lib/generated"
@@ -29,7 +30,7 @@ export function useApplicationFileUpload(orderId: string) {
 
   function handleFilesApplied(applied: AppliedFile[]) {
     const newStates: FileState[] = applied.map(({ file, validationError }) => ({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       file,
       status: validationError ? "error" : "applied",
       error: validationError,
