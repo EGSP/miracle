@@ -1,4 +1,4 @@
-import { Stack, Text } from "@miracle/aramid"
+import { Stack, Text, Grid, Column } from "@miracle/aramid"
 import type { SlotRule, Stored, TechnicalCondition } from "@miracle/types"
 import { useEffect, useState } from "react"
 import { ArrayEditor, moveArrayItem, type ArrayEditorKey } from "@/components/ui/derivations"
@@ -86,54 +86,61 @@ export function TCCSlotRules() {
   )
 
   return (
-    <>
-      <Text.Heading as="p" variant="02">
-        Правила параметров обозначения
-      </Text.Heading>
-      <ArrayEditor
-        items={slotRules.value}
-        getKey={(_, i) => i}
-        selected={selectedIndex}
-        onSelected={(key) => setSelectedIndex(keyToIndex(key))}
-        onAdd={handleAdd}
-        onRemove={handleRemove}
-        onMove={handleMove}
-        renderLabel={(rule, i) => (
+    <Grid narrow fullWidth>
+      <Column span="100%">
+        <Text.Heading as="p" variant="02">
+          Правила параметров обозначения
+        </Text.Heading>
+      </Column>
+      <Column span="50%">
+        <ArrayEditor
+          items={slotRules.value}
+          getKey={(_, i) => i}
+          selected={selectedIndex}
+          onSelected={(key) => setSelectedIndex(keyToIndex(key))}
+          onAdd={handleAdd}
+          onRemove={handleRemove}
+          onMove={handleMove}
+          renderLabel={(rule, i) => (
+            <Stack gap={1}>
+              <Text as="span" compact>
+                {`${i + 1}.`+(rule.name ?? "").trim() || `Параметр ${i + 1}`}
+              </Text>
+              <Text.Helper as="span">
+                {rule.text.trim() ? "Текст правил задан" : "Текст правил не задан"}
+              </Text.Helper>
+            </Stack>
+          )}
+          addLabel="Добавить параметр"
+          helperText="Выберите параметр, чтобы изменить название и текст правил из ТУ."
+          disabled={isSaving}
+          fluid
+        />
+      </Column>
+      <Column span="50%">
+        {selectedRule && selectedIndex !== null && (
           <Stack gap={1}>
-            <Text as="span" compact>
-              {(rule.name ?? "").trim() || `Параметр ${i + 1}`}
-            </Text>
-            <Text.Helper as="span">
-              {rule.text.trim() ? "Текст правил задан" : "Текст правил не задан"}
-            </Text.Helper>
+            <Input
+              label={`${selectedIndex + 1} Название параметра`}
+              placeholder="Напр. Климатическое исполнение"
+              value={selectedRule.name}
+              onChange={(e) => update(selectedIndex, { name: e.target.value })}
+              disabled={isSaving}
+              fluid
+            />
+            <Textarea
+              label="Текст правил из ТУ"
+              placeholder="Таблицы и пункты ТУ для выбора значения параметра"
+              value={selectedRule.text}
+              onChange={(e) => update(selectedIndex, { text: e.target.value })}
+              disabled={isSaving}
+              rows={12}
+              fluid
+              size="lg"
+            />
           </Stack>
         )}
-        addLabel="Добавить параметр"
-        helperText="Выберите параметр, чтобы изменить название и текст правил из ТУ."
-        disabled={isSaving}
-        fluid
-      />
-      {selectedRule && selectedIndex !== null && (
-        <Stack gap={1}>
-          <Input
-            label={`${selectedIndex + 1} Название параметра`}
-            placeholder="Напр. Климатическое исполнение"
-            value={selectedRule.name}
-            onChange={(e) => update(selectedIndex, { name: e.target.value })}
-            disabled={isSaving}
-            fluid
-          />
-          <Textarea
-            label="Текст правил из ТУ"
-            placeholder="Таблицы и пункты ТУ для выбора значения параметра"
-            value={selectedRule.text}
-            onChange={(e) => update(selectedIndex, { text: e.target.value })}
-            disabled={isSaving}
-            rows={12}
-            fluid
-          />
-        </Stack>
-      )}
-    </>
+      </Column>
+    </Grid>
   )
 }
