@@ -35,9 +35,10 @@ export const files = {
         data: formData,
         });
     },
-    streamContent: (id: string) => customInstance<Blob>({
+    streamContent: (id: string, query: { download?: string | undefined }) => customInstance<Blob>({
         method: 'GET',
         url: formatPath('/files/:id/content', { id }),
+        params: query,
         responseType: 'blob',
     }),
 };

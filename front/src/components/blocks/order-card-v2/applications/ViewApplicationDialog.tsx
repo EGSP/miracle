@@ -1,6 +1,6 @@
 import { Text } from "@miracle/aramid"
 import { hasDeletion, type ApplicationData, type OrderApplication, type Stored } from "@miracle/types"
-import { Trash2 } from "lucide-react"
+import { Download, Trash2 } from "lucide-react"
 import { useCallback, useMemo } from "react"
 import type { ReactNode } from "react"
 
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/ds/textarea"
 import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
 import { FileContentPreview } from "@/components/ui/external/file-content-preview"
 import { useDialog } from "@/lib/hooks/use-dialog"
-import { resolveFilePreviewUrl } from "@/lib/resolve-file-preview-url"
+import { resolveFileDownloadUrl, resolveFilePreviewUrl } from "@/lib/resolve-file-preview-url"
 import { useRemoveApplication } from "@/lib/queries/order-application.query"
 import { useGetFiles } from "@/lib/queries/file.query"
 
@@ -20,7 +20,11 @@ type Props = {
   onClose: () => void
 }
 
-function useViewApplicationActions(application: Stored<OrderApplication>, onClose: () => void) {
+function useViewApplicationActions(
+  application: Stored<OrderApplication>,
+  onClose: () => void,
+  leadingActions: DialogButtonConfig[] = [],
+) {
   const removeMutation = useRemoveApplication(application.orderId)
   const data = application.data as ApplicationData
   const isRemoved = hasDeletion(application) || removeMutation.isSuccess
@@ -36,6 +40,7 @@ function useViewApplicationActions(application: Stored<OrderApplication>, onClos
   }, [isRemoved, data, removeMutation.isPending])
 
   const actions: DialogButtonConfig[] = [
+    ...leadingActions,
     {
       label: "Закрыть",
       onClick: onClose,
@@ -115,12 +120,33 @@ function ViewFileApplicationDialog({
   fileId: string
   onClose: () => void
 }) {
-  const { actions, removeMutation } = useViewApplicationActions(application, onClose)
   const { data: files = [], isPending, isError } = useGetFiles({
     id: fileId,
     includeMeta: true,
   })
   const file = files[0]
+
+  const downloadAction: DialogButtonConfig[] = [
+    {
+      label: "Скачать",
+      icon: <Download size={16} />,
+      variant: "tertiary",
+      disabled: !file,
+      onClick: () => {
+        if (!file) return
+        const link = document.createElement("a")
+        link.href = resolveFileDownloadUrl(file)
+        link.rel = "noopener"
+        link.click()
+      },
+    },
+  ]
+
+  const { actions, removeMutation } = useViewApplicationActions(
+    application,
+    onClose,
+    downloadAction,
+  )
 
   return (
     <Dialog

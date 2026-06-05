@@ -108,6 +108,7 @@ export class FilesController {
     @BinaryResponse()
     async streamContent(
         @Param('id') id: string,
+        @Query('download') download: string | undefined,
         @Req() req: FastifyRequest,
         @Res() reply: FastifyReply,
     ): Promise<void> {
@@ -126,8 +127,9 @@ export class FilesController {
         const stats = statSync(filePath);
         const range = req.headers.range;
 
+        const disposition = download !== undefined ? 'attachment' : 'inline';
         reply.header('Content-Type', contentType);
-        reply.header('Content-Disposition', `inline; filename*=UTF-8''${filename}`);
+        reply.header('Content-Disposition', `${disposition}; filename*=UTF-8''${filename}`);
         reply.header('Accept-Ranges', 'bytes');
 
         if (range) {
