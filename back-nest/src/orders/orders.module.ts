@@ -12,6 +12,8 @@ import { DesignationsService } from './designations.service.js';
 import { ApplicationChunkReader } from './application-chunk-reader.js';
 import { OrderAnalysisService } from './order-analysis.service.js';
 import { OrderReportService } from './order-report.service.js';
+import { _1C_ERP_Commerce_Offer } from './reports/1c-erp-commerce-offer.report.js';
+import { _1C_ERP_Commerce_Offer_Extended } from './reports/1c-erp-commerce-offer-extended.report.js';
 
 @Module({
     imports: [AuthModule, FilesModule, FilesContentModule, ProductTypesModule, TechnicalConditionsModule],
@@ -24,6 +26,8 @@ import { OrderReportService } from './order-report.service.js';
         ApplicationChunkReader,
         OrderAnalysisService,
         OrderReportService,
+        _1C_ERP_Commerce_Offer,
+        _1C_ERP_Commerce_Offer_Extended,
     ],
     exports: [
         OrdersService,

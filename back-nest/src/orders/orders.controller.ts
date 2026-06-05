@@ -19,6 +19,7 @@ import type {
     OrderApplication,
     OrderPositionWithDesignation,
     OrderQuery,
+    OrderReportInfo,
     Stored,
 } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
@@ -92,14 +93,25 @@ export class OrdersController {
         return this.orderPositions.listByOrderWithDesignations(id);
     }
 
+    /** Доступные Excel-отчёты по заказу. */
+    @Get(':id/reports')
+    async listReports(@Param('id') id: string): Promise<OrderReportInfo[]> {
+        await this.orders.getOrThrow(id);
+        return this.orderReport.listAvailable();
+    }
+
     /** Excel-отчёт по распознанной продукции заказа (скачивание xlsx). */
     @Get(':id/report')
     @BinaryResponse()
-    async report(@Param('id') id: string, @Res() reply: FastifyReply): Promise<void> {
+    async report(
+        @Param('id') id: string,
+        @Query('reportId') reportId: string | undefined,
+        @Res() reply: FastifyReply,
+    ): Promise<void> {
         await this.orders.getOrThrow(id);
-        const buffer = await this.orderReport.buildWorkbook(id);
+        const buffer = await this.orderReport.buildWorkbook(id, reportId);
         reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        reply.header('Content-Disposition', `attachment; filename="order-${id}.xlsx"`);
+        reply.header('Content-Disposition', `attachment; filename="order-${id}-${reportId}.xlsx"`);
         reply.send(buffer);
     }
 

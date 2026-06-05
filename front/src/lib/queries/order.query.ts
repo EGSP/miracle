@@ -5,6 +5,7 @@ import { orders } from "../generated"
 export const ORDERS_QUERY_KEY = ["orders"] as const
 export const ORDER_JOB_QUERY_KEY = ["order-job"] as const
 export const ORDER_POSITIONS_QUERY_KEY = ["order-positions"] as const
+export const ORDER_REPORTS_QUERY_KEY = ["order-reports"] as const
 
 export const useGetOrders = (query: OrderQuery = {}) => {
   return useQuery({
@@ -36,16 +37,25 @@ export const useGetOrderPositions = (orderId: string) => {
   })
 }
 
+/** Доступные Excel-отчёты для заказа. */
+export const useGetOrderReports = (orderId: string) => {
+  return useQuery({
+    queryKey: [...ORDER_REPORTS_QUERY_KEY, orderId] as const,
+    queryFn: () => orders.listReports(orderId),
+  })
+}
+
 /** Скачивание Excel-отчёта по распознанной продукции заказа (blob → файл). */
 export const useDownloadOrderReport = (orderId: string | undefined) => {
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (reportId: string) => {
       if (!orderId) throw new Error("Order ID is required")
-      const blob = await orders.report(orderId)
+      if (!reportId) throw new Error("Report ID is required")
+      const blob = await orders.report(orderId, { reportId })
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `order-${orderId}.xlsx`
+      link.download = `order-${orderId}-${reportId}.xlsx`
       document.body.appendChild(link)
       link.click()
       link.remove()

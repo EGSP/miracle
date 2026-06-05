@@ -9,6 +9,7 @@ export * from './worker.js';
 export * from './order.js';
 export * from './order-application.js';
 export * from './order-position.js';
+export * from './order-report.js';
 export * from './db.js';
 export * from './file-content.js';
 export * from './product-type.js';
