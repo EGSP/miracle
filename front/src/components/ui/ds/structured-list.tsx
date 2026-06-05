@@ -39,8 +39,13 @@
  *
  * ## Высота строк
  *
- * - Default: 60px (`--structured-list-row-h`)
- * - `condensed`: 36px
+ * - Default: 48px (`--structured-list-row-h`)
+ * - `condensed`: 32px
+ *
+ * ## Overflow
+ *
+ * `overflow` ограничивает прокручиваемую область строк количеством видимых
+ * элементов. Заголовок остается вне скролла.
  *
  * ## Layering
  *
@@ -51,6 +56,7 @@
 import { useNextLayerTokens } from "@miracle/aramid"
 import {
   createContext,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
   useCallback,
@@ -69,6 +75,8 @@ export type StructuredListKey = string | number
 export type ColumnWidth = "1fr" | "2fr" | "4fr" | "6fr" | "8fr" | "12fr" | "16fr" | (string & {})
 
 export type RowWeight = "1fr" | "2fr"
+
+export type StructuredListOverflow = 8 | 12 | 16
 
 export type ColumnRowDef<T> = {
   key: string
@@ -162,8 +170,13 @@ export type StructuredListProps<T> = {
   onSelected?: (keys: StructuredListKey[]) => void
   /** Включает мультиселект: checkbox-индикатор слева, onSelected возвращает >1 */
   multiselect?: boolean
-  /** condensed: высота строки 36px, default: 60px */
+  /** condensed: высота строки 32px, default: 48px */
   condensed?: boolean
+  /**
+   * Ограничивает прокручиваемую область строк количеством видимых элементов.
+   * Заголовок остается закрепленным над списком. Поддерживаемые значения: 8, 12, 16.
+   */
+  overflow?: StructuredListOverflow
   /** Полностью отключает список */
   disabled?: boolean
   className?: string
@@ -178,6 +191,7 @@ function StructuredListRoot<T>({
   onSelected,
   multiselect = false,
   condensed = false,
+  overflow,
   disabled = false,
   className,
 }: StructuredListProps<T>) {
@@ -186,6 +200,7 @@ function StructuredListRoot<T>({
 
   // Refs для стабильных замыканий в обработчиках событий
   const rootRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const activeElRef = useRef<Element | null>(null)
   const activeIndexRef = useRef<number | null>(null)
   const itemsRef = useRef(items)
@@ -208,12 +223,19 @@ function StructuredListRoot<T>({
       return
     }
 
-    // children[0] — заголовок, children[index + 1] — итем
-    const el = rootRef.current.children[index + 1]
+    const body = bodyRef.current
+    if (!body) {
+      activeElRef.current = null
+      rootRef.current.removeAttribute("aria-activedescendant")
+      return
+    }
+
+    const el = body.children[index]
     if (el) {
       el.setAttribute("data-active", "")
       activeElRef.current = el
       rootRef.current.setAttribute("aria-activedescendant", el.id)
+      el.scrollIntoView({ block: "nearest" })
     }
   }, [])
 
@@ -313,6 +335,10 @@ function StructuredListRoot<T>({
     ],
   )
 
+  const rootStyle = overflow
+    ? ({ "--structured-list-overflow-rows": String(overflow) } as CSSProperties)
+    : undefined
+
   return (
     <StructuredListContext.Provider value={contextValue as StructuredListContextValue<unknown>}>
       <div
@@ -336,12 +362,24 @@ function StructuredListRoot<T>({
           if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
           moveToIndex(null)
         }}
-        className={cn("structured-list", condensed && "structured-list--condensed", className)}
+        className={cn(
+          "structured-list",
+          condensed && "structured-list--condensed",
+          overflow && "structured-list--overflow",
+          className,
+        )}
+        style={rootStyle}
       >
         <StructuredListHeader<T> />
-        {items.map((item, index) => (
-          <StructuredListItem<T> key={String(definition.getKey(item))} item={item} index={index} />
-        ))}
+        <div className="structured-list-body" ref={bodyRef}>
+          {items.map((item, index) => (
+            <StructuredListItem<T>
+              key={String(definition.getKey(item))}
+              item={item}
+              index={index}
+            />
+          ))}
+        </div>
       </div>
     </StructuredListContext.Provider>
   )

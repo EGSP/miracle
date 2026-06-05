@@ -131,6 +131,7 @@ export default function OrdersPage() {
               items={orders}
               selected={selected}
               onSelected={handleSelected}
+              overflow={8}
             />
           )}
         </Stack>

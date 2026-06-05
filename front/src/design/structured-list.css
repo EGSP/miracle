@@ -15,6 +15,17 @@
   --structured-list-row-h: var(--aramid-spacing-7); /* 32px */
 }
 
+.structured-list-body {
+  display: block;
+  min-height: 0;
+}
+
+.structured-list--overflow .structured-list-body {
+  max-height: calc(var(--structured-list-row-h) * var(--structured-list-overflow-rows));
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
 /* ─── Header ─────────────────────────────────────────────────────────────── */
 
 .structured-list-header {

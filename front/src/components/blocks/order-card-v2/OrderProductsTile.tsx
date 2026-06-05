@@ -105,6 +105,7 @@ export function OrderProductsTile({ orderId }: { orderId: string }) {
             items={items}
             selected={selected}
             onSelected={handleSelected}
+            overflow={8}
           />
         )}
       </Stack>

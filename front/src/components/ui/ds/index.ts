@@ -22,6 +22,7 @@ export {
   StructuredList,
   type ColumnDef,
   type ListDefinition,
+  type StructuredListOverflow,
   type StructuredListKey,
   type StructuredListProps,
 } from "./structured-list"
