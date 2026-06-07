@@ -25,17 +25,12 @@
  * - Мультиселект (`multiselect`): клик переключает элемент в массиве.
  *   Слева от каждой строки отображается декоративный checkbox.
  *
+ * Ховер обрабатывается CSS `:hover`.
+ *
  * ## Disabled
  *
  * - `disabled` на компоненте — отключает весь список.
  * - `definition.itemDisabled(item)` — отключает конкретный элемент.
- *
- * ## Клавиатурная навигация
- *
- * Фокус на корневом элементе (`role="listbox"`), активный элемент управляется через
- * `aria-activedescendant`. Клавиши: `ArrowUp/Down`, `Home`, `End`, `Enter`/`Space`.
- * Состояние активного элемента (data-active) записывается напрямую в DOM — без
- * React-ре-рендеров. Ховер обрабатывается CSS `:hover`.
  *
  * ## Высота строк
  *
@@ -57,13 +52,10 @@ import { useNextLayerTokens } from "@miracle/aramid"
 import {
   createContext,
   type CSSProperties,
-  type KeyboardEvent,
   type ReactNode,
   useCallback,
   useContext,
-  useId,
   useMemo,
-  useRef,
 } from "react"
 import { cn } from "@/lib/utils"
 import "@/design/structured-list.css"
@@ -135,9 +127,6 @@ function buildGridTemplate(cols: Array<{ width: ColumnWidth }>, multiselect: boo
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
-// activeIndex намеренно исключён из контекста — он меняется при каждом движении
-// мышки/нажатии стрелки и вызвал бы ре-рендер всех итемов. Вместо этого
-// data-active выставляется напрямую в DOM через moveToIndex().
 
 type StructuredListContextValue<T> = {
   definition: ListDefinition<T>
@@ -145,7 +134,6 @@ type StructuredListContextValue<T> = {
   gridTemplate: string
   selected: StructuredListKey[]
   toggle: (item: T) => void
-  getItemId: (item: T) => string
   multiselect: boolean
   disabled: boolean
   selectedBackground: string
@@ -195,49 +183,7 @@ function StructuredListRoot<T>({
   disabled = false,
   className,
 }: StructuredListProps<T>) {
-  const listId = useId()
   const { layerBackground } = useNextLayerTokens()
-
-  // Refs для стабильных замыканий в обработчиках событий
-  const rootRef = useRef<HTMLDivElement>(null)
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const activeElRef = useRef<Element | null>(null)
-  const activeIndexRef = useRef<number | null>(null)
-  const itemsRef = useRef(items)
-  itemsRef.current = items
-  const selectedRef = useRef(selected)
-  selectedRef.current = selected
-  const definitionRef = useRef(definition)
-  definitionRef.current = definition
-  const onSelectedRef = useRef(onSelected)
-  onSelectedRef.current = onSelected
-
-  // Записывает data-active напрямую в DOM — без React ре-рендеров
-  const moveToIndex = useCallback((index: number | null) => {
-    activeElRef.current?.removeAttribute("data-active")
-    activeIndexRef.current = index
-
-    if (index === null || !rootRef.current) {
-      activeElRef.current = null
-      rootRef.current?.removeAttribute("aria-activedescendant")
-      return
-    }
-
-    const body = bodyRef.current
-    if (!body) {
-      activeElRef.current = null
-      rootRef.current.removeAttribute("aria-activedescendant")
-      return
-    }
-
-    const el = body.children[index]
-    if (el) {
-      el.setAttribute("data-active", "")
-      activeElRef.current = el
-      rootRef.current.setAttribute("aria-activedescendant", el.id)
-      el.scrollIntoView({ block: "nearest" })
-    }
-  }, [])
 
   const normalizedColumns = useMemo(
     () => definition.columns.map((c) => normalizeColumn(c)),
@@ -252,63 +198,17 @@ function StructuredListRoot<T>({
   const toggle = useCallback(
     (item: T) => {
       if (disabled) return
-      if (definitionRef.current.itemDisabled?.(item)) return
-      const key = definitionRef.current.getKey(item)
-      const cur = selectedRef.current
+      if (definition.itemDisabled?.(item)) return
+      const key = definition.getKey(item)
       if (multiselect) {
-        const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]
-        onSelectedRef.current?.(next)
+        const next = selected.includes(key) ? selected.filter((k) => k !== key) : [...selected, key]
+        onSelected?.(next)
       } else {
-        onSelectedRef.current?.(cur.includes(key) ? [] : [key])
+        onSelected?.(selected.includes(key) ? [] : [key])
       }
     },
-    [disabled, multiselect],
+    [definition, disabled, multiselect, onSelected, selected],
   )
-
-  const getItemId = useCallback(
-    (item: T) => `${listId}-option-${encodeURIComponent(String(definition.getKey(item)))}`,
-    [listId, definition],
-  )
-
-  const move = (delta: number) => {
-    const cur = itemsRef.current
-    if (!cur.length) return
-    const next =
-      activeIndexRef.current === null
-        ? 0
-        : Math.min(Math.max(activeIndexRef.current + delta, 0), cur.length - 1)
-    moveToIndex(next)
-  }
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (disabled) return
-    switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault()
-        move(1)
-        break
-      case "ArrowUp":
-        event.preventDefault()
-        move(-1)
-        break
-      case "Home":
-        event.preventDefault()
-        if (itemsRef.current.length) moveToIndex(0)
-        break
-      case "End":
-        event.preventDefault()
-        if (itemsRef.current.length) moveToIndex(itemsRef.current.length - 1)
-        break
-      case "Enter":
-      case " ":
-        event.preventDefault()
-        if (activeIndexRef.current !== null) {
-          const item = itemsRef.current[activeIndexRef.current]
-          if (item) toggle(item)
-        }
-        break
-    }
-  }
 
   const contextValue = useMemo<StructuredListContextValue<T>>(
     () => ({
@@ -317,7 +217,6 @@ function StructuredListRoot<T>({
       gridTemplate,
       selected,
       toggle,
-      getItemId,
       multiselect,
       disabled,
       selectedBackground: layerBackground,
@@ -328,7 +227,6 @@ function StructuredListRoot<T>({
       gridTemplate,
       selected,
       toggle,
-      getItemId,
       multiselect,
       disabled,
       layerBackground,
@@ -342,26 +240,6 @@ function StructuredListRoot<T>({
   return (
     <StructuredListContext.Provider value={contextValue as StructuredListContextValue<unknown>}>
       <div
-        ref={rootRef}
-        role="listbox"
-        aria-multiselectable={multiselect || undefined}
-        aria-disabled={disabled || undefined}
-        tabIndex={disabled ? -1 : 0}
-        onKeyDown={handleKeyDown}
-        onFocus={() => {
-          if (disabled || activeIndexRef.current !== null || !itemsRef.current.length) return
-          const sel = selectedRef.current
-          const def = definitionRef.current
-          const firstSelected =
-            sel.length > 0
-              ? itemsRef.current.findIndex((item) => sel.includes(def.getKey(item)))
-              : -1
-          moveToIndex(firstSelected >= 0 ? firstSelected : 0)
-        }}
-        onBlur={(e) => {
-          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
-          moveToIndex(null)
-        }}
         className={cn(
           "structured-list",
           condensed && "structured-list--condensed",
@@ -369,15 +247,12 @@ function StructuredListRoot<T>({
           className,
         )}
         style={rootStyle}
+        data-disabled={disabled || undefined}
       >
         <StructuredListHeader<T> />
-        <div className="structured-list-body" ref={bodyRef}>
-          {items.map((item, index) => (
-            <StructuredListItem<T>
-              key={String(definition.getKey(item))}
-              item={item}
-              index={index}
-            />
+        <div className="structured-list-body" role="list">
+          {items.map((item) => (
+            <StructuredListItem<T> key={String(definition.getKey(item))} item={item} />
           ))}
         </div>
       </div>
@@ -421,14 +296,13 @@ function StructuredListHeader<T>() {
 
 // ─── Item ─────────────────────────────────────────────────────────────────────
 
-function StructuredListItem<T>({ item, index }: { item: T; index: number }) {
+function StructuredListItem<T>({ item }: { item: T }) {
   const {
     definition,
     normalizedColumns,
     gridTemplate,
     selected,
     toggle,
-    getItemId,
     multiselect,
     disabled,
     selectedBackground,
@@ -440,8 +314,7 @@ function StructuredListItem<T>({ item, index }: { item: T; index: number }) {
 
   return (
     <div
-      id={getItemId(item)}
-      role="option"
+      role="listitem"
       aria-selected={isSelected}
       aria-disabled={isItemDisabled || undefined}
       data-selected={isSelected || undefined}
@@ -451,7 +324,6 @@ function StructuredListItem<T>({ item, index }: { item: T; index: number }) {
         gridTemplateColumns: gridTemplate,
         backgroundColor: isSelected ? selectedBackground : undefined,
       }}
-      onMouseDown={(e) => e.preventDefault()}
       onClick={() => {
         if (!isItemDisabled) toggle(item)
       }}
