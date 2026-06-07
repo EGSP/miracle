@@ -6,6 +6,7 @@ import {
     Get,
     NotFoundException,
     Param,
+    Patch,
     Post,
     Query,
     Req,
@@ -34,6 +35,7 @@ import { OrderAnalysisService } from './order-analysis.service.js';
 import { OrderReportService } from './order-report.service.js';
 import { CreateTextApplicationDto } from './dto/create-text-application.dto.js';
 import { AnalyseOrderDto } from './dto/analyse-order.dto.js';
+import { UpdateOrderDto } from './dto/update-order.dto.js';
 
 @Controller('order')
 @UseGuards(AuthGuard)
@@ -60,6 +62,11 @@ export class OrdersController {
     @Get(':id')
     getOne(@Param('id') id: string): Promise<Stored<Order>> {
         return this.orders.getOrThrow(id);
+    }
+
+    @Patch(':id')
+    update(@Param('id') id: string, @Body() body: UpdateOrderDto): Promise<Stored<Order>> {
+        return this.orders.update(id, body);
     }
 
     /**

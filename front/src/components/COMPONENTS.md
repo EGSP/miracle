@@ -151,14 +151,6 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 
 ---
 
-## JobRunCard
-
-Карточка выбранного прогона на странице «Операции» (`blocks/job-run-card/`).
-
-- Текущий прогресс — **`ProgressBar`** (label этапа, helper с % при `determined`, трек + иконка статуса); история `progress.states` не показывается
-
----
-
 ## ProgressBar
 
 `ProgressBar` / `InlineProgressBar` — индикаторы прогресса в духе Carbon с

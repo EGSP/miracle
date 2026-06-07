@@ -1,11 +1,15 @@
-import type { AnalyseOrderOptions, OrderQuery } from "@miracle/types"
+import type { AnalyseOrderOptions, JobStatus, OrderQuery } from "@miracle/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { orders } from "../generated"
+import type { UpdateOrderDto } from "../generated/models"
 
 export const ORDERS_QUERY_KEY = ["orders"] as const
 export const ORDER_JOB_QUERY_KEY = ["order-job"] as const
 export const ORDER_POSITIONS_QUERY_KEY = ["order-positions"] as const
 export const ORDER_REPORTS_QUERY_KEY = ["order-reports"] as const
+export const ORDER_JOB_POLL_INTERVAL_MS = 2500
+
+const TERMINAL_JOB_STATUSES = new Set<JobStatus>(["succeed", "partial", "failed", "cancelled"])
 
 export const useGetOrders = (query: OrderQuery = {}) => {
   return useQuery({
@@ -21,11 +25,24 @@ export const useGetOrder = (id: string) => {
   })
 }
 
-/** Корневой прогон анализа заказа (или null, если не запускался). Поллинг дерева — в самом тайле. */
+/** Корневой прогон анализа заказа (или null, если не запускался). */
 export const useGetOrderJob = (orderId: string) => {
   return useQuery({
     queryKey: [...ORDER_JOB_QUERY_KEY, orderId] as const,
     queryFn: () => orders.getJob(orderId),
+  })
+}
+
+/** Корневой прогон analyse-order с polling до терминального статуса. */
+export const usePollOrderJob = (orderId: string) => {
+  return useQuery({
+    queryKey: [...ORDER_JOB_QUERY_KEY, orderId] as const,
+    queryFn: () => orders.getJob(orderId),
+    refetchInterval: (query) => {
+      const run = query.state.data
+      if (run && TERMINAL_JOB_STATUSES.has(run.status)) return false
+      return ORDER_JOB_POLL_INTERVAL_MS
+    },
   })
 }
 
@@ -69,6 +86,17 @@ export const useCreateOrder = () => {
 
   return useMutation({
     mutationFn: () => orders.create(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY })
+    },
+  })
+}
+
+export const useUpdateOrder = (orderId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: UpdateOrderDto) => orders.update(orderId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY })
     },

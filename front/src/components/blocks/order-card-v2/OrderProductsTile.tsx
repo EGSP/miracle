@@ -35,16 +35,16 @@ const positionListDefinition: ListDefinition<OrderPositionWithDesignation> = {
             </Text.Label>
           ),
         },
-        {
-          key: "type",
-          label: "Тип продукции",
-          weight: "1fr",
-          render: (it) => (
-            <Text.Helper as="span" className="order-products__name">
-              {it.position.productTypeName ?? "Без типа"}
-            </Text.Helper>
-          ),
-        },
+        // {
+        //   key: "type",
+        //   label: "Тип продукции",
+        //   weight: "1fr",
+        //   render: (it) => (
+        //     <Text.Helper as="span" className="order-products__name">
+        //       {it.position.productTypeName ?? "Без типа"}
+        //     </Text.Helper>
+        //   ),
+        // },
       ],
     },
     {
@@ -106,6 +106,7 @@ export function OrderProductsTile({ orderId }: { orderId: string }) {
             selected={selected}
             onSelected={handleSelected}
             overflow={8}
+            condensed
           />
         )}
       </Stack>

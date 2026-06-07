@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { JobRun, Order, OrderApplication, OrderPositionWithDesignation, OrderQuery, OrderReportInfo, Stored } from '@miracle/types';
-import type { AnalyseOrderDto, CreateTextApplicationDto } from './models';
+import type { UpdateOrderDto, AnalyseOrderDto, CreateTextApplicationDto } from './models';
 
 export const orders = {
     create: () => customInstance<Stored<Order>>({
@@ -19,6 +19,11 @@ export const orders = {
     getOne: (id: string) => customInstance<Stored<Order>>({
         method: 'GET',
         url: formatPath('/order/:id', { id }),
+    }),
+    update: (id: string, updateOrderDto: UpdateOrderDto) => customInstance<Stored<Order>>({
+        method: 'PATCH',
+        url: formatPath('/order/:id', { id }),
+        data: updateOrderDto,
     }),
     analyse: (id: string, analyseOrderDto: AnalyseOrderDto) => customInstance<Stored<JobRun>>({
         method: 'POST',

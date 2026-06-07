@@ -56,4 +56,5 @@ export * from './files.schemas.js';
 export * from './files-content.schemas.js';
 export * from './job-runs.schemas.js';
 export * from './order-applications.schemas.js';
+export * from './order.schemas.js';
 // ...

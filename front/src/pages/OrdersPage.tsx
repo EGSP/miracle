@@ -1,5 +1,6 @@
 ﻿import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import type { Order, Stored } from "@miracle/types"
+import { orderDisplayName } from "@miracle/types"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { ListOrdered, Plus } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -40,8 +41,18 @@ const orderListDefinition: ListDefinition<Stored<Order>> = {
       render: () => <ListOrdered className="size-4 shrink-0 text-muted-foreground" />,
     },
     {
+      key: "name",
+      label: "Название",
+      width: "4fr",
+      render: (order) => (
+        <Text.Label as="span" className="order-list__name">
+          {orderDisplayName(order)}
+        </Text.Label>
+      ),
+    },
+    {
       key: "info",
-      width: "1fr",
+      width: "2fr",
       rows: [
         {
           key: "author",

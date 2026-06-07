@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Order, OrderQuery, Stored } from '@miracle/types';
+import { UpdateOrderSchema, type Order, type OrderQuery, type Stored } from '@miracle/types';
+import type { z } from 'zod';
 import { PrismaService } from '../database/prisma.service.js';
+
+type UpdateOrderInput = z.infer<typeof UpdateOrderSchema>;
 
 @Injectable()
 export class OrdersService {
@@ -29,7 +32,21 @@ export class OrdersService {
         if (query.id !== undefined) where['id'] = query.id;
         if (query.authorId !== undefined) where['authorId'] = query.authorId;
 
-        const rows = await this.prisma.order.findMany({ where });
+        const rows = await this.prisma.order.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+        });
         return rows as Stored<Order>[];
+    }
+
+    async update(id: string, input: UpdateOrderInput): Promise<Stored<Order>> {
+        await this.getOrThrow(id);
+        const data: { name?: string | null } = {};
+        if (input.name !== undefined) {
+            const trimmed = input.name?.trim();
+            data.name = trimmed ? trimmed : null;
+        }
+        const row = await this.prisma.order.update({ where: { id }, data });
+        return row as Stored<Order>;
     }
 }
