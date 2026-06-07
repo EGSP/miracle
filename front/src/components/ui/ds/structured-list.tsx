@@ -39,8 +39,9 @@
  *
  * ## Overflow
  *
- * `overflow` ограничивает прокручиваемую область строк количеством видимых
- * элементов. Заголовок остается вне скролла.
+ * `overflow` ограничивает прокручиваемую область: заголовок и строки в одном
+ * scroll-контейнере с `scrollbar-gutter: stable`, заголовок — `position: sticky`.
+ * Колонки header и строк выровнены; видимых строк данных — значение `overflow`.
  *
  * ## Layering
  *
@@ -48,14 +49,17 @@
  * чтобы корректно учитывать глубину слоя Aramid.
  */
 
-import { useNextLayerTokens } from "@miracle/aramid"
+import { useLayerTokens, useNextLayerTokens } from "@miracle/aramid"
 import {
   createContext,
   type CSSProperties,
   type ReactNode,
+  type RefObject,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
+  useRef,
 } from "react"
 import { cn } from "@/lib/utils"
 import "@/design/structured-list.css"
@@ -137,6 +141,9 @@ type StructuredListContextValue<T> = {
   multiselect: boolean
   disabled: boolean
   selectedBackground: string
+  headerRef: RefObject<HTMLDivElement | null>
+  stickyHeader: boolean
+  headerBackground: string
 }
 
 const StructuredListContext = createContext<StructuredListContextValue<unknown> | null>(null)
@@ -161,8 +168,8 @@ export type StructuredListProps<T> = {
   /** condensed: высота строки 32px, default: 48px */
   condensed?: boolean
   /**
-   * Ограничивает прокручиваемую область строк количеством видимых элементов.
-   * Заголовок остается закрепленным над списком. Поддерживаемые значения: 8, 12, 16.
+   * Ограничивает прокручиваемую область количеством видимых строк данных.
+   * Заголовок sticky внутри той же области. Поддерживаемые значения: 8, 12, 16.
    */
   overflow?: StructuredListOverflow
   /** Полностью отключает список */
@@ -184,6 +191,9 @@ function StructuredListRoot<T>({
   className,
 }: StructuredListProps<T>) {
   const { layerBackground } = useNextLayerTokens()
+  const { layerBackground: headerBackground } = useLayerTokens()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
 
   const normalizedColumns = useMemo(
     () => definition.columns.map((c) => normalizeColumn(c)),
@@ -210,6 +220,22 @@ function StructuredListRoot<T>({
     [definition, disabled, multiselect, onSelected, selected],
   )
 
+  useLayoutEffect(() => {
+    if (!overflow) return
+    const header = headerRef.current
+    const scroll = scrollRef.current
+    if (!header || !scroll) return
+
+    const syncHeaderSize = () => {
+      scroll.style.setProperty("--structured-list-header-block-size", `${header.offsetHeight}px`)
+    }
+
+    syncHeaderSize()
+    const observer = new ResizeObserver(syncHeaderSize)
+    observer.observe(header)
+    return () => observer.disconnect()
+  }, [overflow, normalizedColumns, items.length])
+
   const contextValue = useMemo<StructuredListContextValue<T>>(
     () => ({
       definition,
@@ -220,6 +246,9 @@ function StructuredListRoot<T>({
       multiselect,
       disabled,
       selectedBackground: layerBackground,
+      headerRef,
+      stickyHeader: Boolean(overflow),
+      headerBackground,
     }),
     [
       definition,
@@ -230,6 +259,8 @@ function StructuredListRoot<T>({
       multiselect,
       disabled,
       layerBackground,
+      overflow,
+      headerBackground,
     ],
   )
 
@@ -243,17 +274,24 @@ function StructuredListRoot<T>({
         className={cn(
           "structured-list",
           condensed && "structured-list--condensed",
-          overflow && "structured-list--overflow",
           className,
         )}
         style={rootStyle}
         data-disabled={disabled || undefined}
       >
-        <StructuredListHeader<T> />
-        <div className="structured-list-body" role="list">
-          {items.map((item) => (
-            <StructuredListItem<T> key={String(definition.getKey(item))} item={item} />
-          ))}
+        <div
+          ref={scrollRef}
+          className={cn(
+            "structured-list-scroll",
+            overflow && "structured-list-scroll--overflow",
+          )}
+        >
+          <StructuredListHeader<T> />
+          <div className="structured-list-body" role="list">
+            {items.map((item) => (
+              <StructuredListItem<T> key={String(definition.getKey(item))} item={item} />
+            ))}
+          </div>
         </div>
       </div>
     </StructuredListContext.Provider>
@@ -263,12 +301,23 @@ function StructuredListRoot<T>({
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 function StructuredListHeader<T>() {
-  const { normalizedColumns, gridTemplate, multiselect } = useStructuredListContext<T>()
+  const {
+    normalizedColumns,
+    gridTemplate,
+    multiselect,
+    headerRef,
+    stickyHeader,
+    headerBackground,
+  } = useStructuredListContext<T>()
 
   return (
     <div
-      className="structured-list-header"
-      style={{ gridTemplateColumns: gridTemplate }}
+      ref={headerRef}
+      className={cn("structured-list-header", stickyHeader && "structured-list-header--sticky")}
+      style={{
+        gridTemplateColumns: gridTemplate,
+        backgroundColor: stickyHeader ? headerBackground : undefined,
+      }}
       aria-hidden="true"
     >
       {multiselect && <div className="structured-list-header-cell" />}

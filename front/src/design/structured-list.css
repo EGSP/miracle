@@ -14,15 +14,24 @@
   --structured-list-row-h: var(--aramid-spacing-7); /* 32px */
 }
 
-.structured-list-body {
-  display: block;
+.structured-list-scroll {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
-.structured-list--overflow .structured-list-body {
-  max-height: calc(var(--structured-list-row-h) * var(--structured-list-overflow-rows));
+.structured-list-scroll--overflow {
+  max-height: calc(
+    var(--structured-list-row-h) * var(--structured-list-overflow-rows) +
+      var(--structured-list-header-block-size, 0px)
+  );
   overflow-y: auto;
   scrollbar-gutter: stable;
+}
+
+.structured-list-body {
+  display: block;
+  min-height: 0;
 }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */
@@ -30,6 +39,12 @@
 .structured-list-header {
   display: grid;
   border-bottom: 1px solid var(--aramid-color-gray-30);
+}
+
+.structured-list-header--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .structured-list-header-cell {
