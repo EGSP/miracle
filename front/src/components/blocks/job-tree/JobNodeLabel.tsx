@@ -1,6 +1,8 @@
 import { latestJobProgressState } from "@miracle/types"
 import { memo } from "react"
+import { InlineProgressBar } from "@/components/ui/ds/progress-bar"
 import { useJobTreeStore } from "./JobTreeContext"
+import { jobStatusToProgressBarStatus } from "./job-tree.utils"
 import "./job-tree.css"
 
 function JobNodeLabelInner({ id }: { id: string }) {
@@ -8,19 +10,24 @@ function JobNodeLabelInner({ id }: { id: string }) {
   if (!node) return null
 
   const latest = latestJobProgressState(node.progress)
-  const progress = latest
-    ? `${latest.label} (${Math.round(latest.percentNormalized * 100)}%)`
-    : null
 
   return (
     <span className="job-node">
-      <span
-        className={`job-node__dot job-node__dot--${node.status}`}
-        aria-hidden="true"
-      />
       <span className="job-node__job">{node.job}</span>
-      <span className="job-node__status">{node.status}</span>
-      {progress && <span className="job-node__progress">{progress}</span>}
+      {latest && (
+        <span className="job-node__progress">
+          <span className="job-node__progress-label">{latest.label}</span>
+          <InlineProgressBar
+            className="job-node__progress-bar"
+            ariaLabel={`${node.job}: ${latest.label}`}
+            status={jobStatusToProgressBarStatus(node.status)}
+            fill={latest.percentNormalized}
+            determinate={latest.determined}
+            variant="medium"
+            compact
+          />
+        </span>
+      )}
     </span>
   )
 }

@@ -17,6 +17,7 @@
     "prisma:seed": "dotenv -e ../.env -- tsx prisma/seed.ts",
     "prisma:import-product-types": "dotenv -e ../.env -- tsx prisma/import-product-types.ts",
     "prisma:import-technical-conditions": "dotenv -e ../.env -- tsx prisma/import-technical-conditions.ts",
+    "prisma:backfill-job-progress": "dotenv -e ../.env -- tsx prisma/backfill-job-progress.ts",
     "prisma:migrate": "dotenv -e ../.env -- prisma migrate dev"
   },
   "prisma": {

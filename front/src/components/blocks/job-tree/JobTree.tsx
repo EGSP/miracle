@@ -67,7 +67,7 @@ export function JobTree({ rootId, onSelect, onSync }: JobTreeProps) {
   }, [selectedId, store])
 
   return (
-    <TreeView>
+    <TreeView className="job-tree">
       <JobTreeNode id={rootId} parentId={null} level={1} />
     </TreeView>
   )

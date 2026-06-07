@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import "@/design/progress-bar.css"
 
 export type ProgressBarStatus = "running" | "partial" | "succeed" | "failed"
+export type InlineProgressBarVariant = "short" | "medium" | "long"
 
 interface BaseProgressBarProps {
   status: ProgressBarStatus
@@ -34,9 +35,9 @@ export interface ProgressBarProps
 export interface InlineProgressBarProps
   extends Omit<React.ComponentProps<"div">, "children">,
     BaseProgressBarProps {
-  label?: string
+  variant?: InlineProgressBarVariant
   /**
-   * Доступное имя progressbar, если видимый label не нужен.
+   * Доступное имя progressbar.
    */
   ariaLabel?: string
 }
@@ -66,6 +67,7 @@ function getProgressBarState(
   determinate: boolean,
 ) {
   const normalizedFill = normalizeFill(fill)
+  const visualFill = status === "failed" ? 1 : normalizedFill
   const valueNow = Math.round(normalizedFill * 100)
   const shouldAnimateRemainder = !determinate && status === "running" && normalizedFill < 1
   const ariaValueText = determinate
@@ -78,6 +80,7 @@ function getProgressBarState(
     ariaValueText,
     normalizedFill,
     shouldAnimateRemainder,
+    visualFill,
     valueNow,
   }
 }
@@ -155,7 +158,7 @@ function ProgressBar({
   const generatedId = useId()
   const progressState = getProgressBarState(status, fill, determinate)
   const helperId = helperText ? `${id ?? generatedId}-helper` : undefined
-  const rootStyle = getProgressBarStyle(style, progressState.normalizedFill)
+  const rootStyle = getProgressBarStyle(style, progressState.visualFill)
 
   return (
     <div
@@ -189,35 +192,30 @@ function ProgressBar({
 }
 
 function InlineProgressBar({
-  label,
   ariaLabel,
   status,
   fill,
   determinate = false,
   compact = false,
+  variant = "medium",
   className,
   style,
   ...props
 }: InlineProgressBarProps) {
   const progressState = getProgressBarState(status, fill, determinate)
-  const rootStyle = getProgressBarStyle(style, progressState.normalizedFill)
-  const accessibleLabel = ariaLabel ?? props["aria-label"] ?? label ?? "Прогресс"
+  const rootStyle = getProgressBarStyle(style, progressState.visualFill)
+  const accessibleLabel = ariaLabel ?? props["aria-label"] ?? "Прогресс"
 
   return (
     <div
       data-slot="inline-progress-bar"
       data-status={status}
       data-compact={compact ? "true" : undefined}
+      data-variant={variant}
       className={cn("inline-progress-bar", className)}
       style={rootStyle}
       {...props}
     >
-      {label && (
-        <Text.Helper as="span" className="inline-progress-bar-label">
-          {label}
-        </Text.Helper>
-      )}
-
       <ProgressBarTrack
         ariaLabel={accessibleLabel}
         determinate={determinate}

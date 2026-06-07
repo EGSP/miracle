@@ -3,7 +3,9 @@ import { CodeSnippet, Stack, Text } from "@miracle/aramid"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { useJobTreeStore } from "@/components/blocks/job-tree/JobTreeContext"
+import { jobStatusToProgressBarStatus } from "@/components/blocks/job-tree/job-tree.utils"
 import { Button } from "@/components/ui/ds/button"
+import { ProgressBar } from "@/components/ui/ds/progress-bar"
 import { jobs } from "@/lib/generated/jobs.client"
 
 function JsonSnippet({ title, value }: { title: string; value: unknown }) {
@@ -69,23 +71,17 @@ export function JobRunCard() {
       </Stack>
 
       {latestProgress && (
-        <Text as="p" compact>
-          Прогресс: {latestProgress.label} ({Math.round(latestProgress.percentNormalized * 100)}%)
-        </Text>
-      )}
-
-      {run.progress && run.progress.states.length > 0 && (
-        <Stack gap={1}>
-          <Text.Label as="span">История прогресса</Text.Label>
-          <Stack gap={1}>
-            {run.progress.states.map((state, index) => (
-              <Text.Helper as="p" key={`${state.createdAt}-${index}`}>
-                {formatDate(state.createdAt)} · {state.label} (
-                {Math.round(state.percentNormalized * 100)}%)
-              </Text.Helper>
-            ))}
-          </Stack>
-        </Stack>
+        <ProgressBar
+          label={latestProgress.label}
+          helperText={
+            latestProgress.determined
+              ? `${Math.round(latestProgress.percentNormalized * 100)}%`
+              : undefined
+          }
+          status={jobStatusToProgressBarStatus(run.status)}
+          fill={latestProgress.percentNormalized}
+          determinate={latestProgress.determined}
+        />
       )}
 
       {run.error && <Text.Helper as="p">{run.error}</Text.Helper>}

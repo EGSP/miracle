@@ -151,22 +151,32 @@ cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 
 
 ---
 
+## JobRunCard
+
+Карточка выбранного прогона на странице «Операции» (`blocks/job-run-card/`).
+
+- Текущий прогресс — **`ProgressBar`** (label этапа, helper с % при `determined`, трек + иконка статуса); история `progress.states` не показывается
+
+---
+
 ## ProgressBar
 
 `ProgressBar` / `InlineProgressBar` — индикаторы прогресса в духе Carbon с
 дополнительной логикой Aramid: известная часть (`fill`) может сочетаться с
 анимированным неизвестным остатком.
 
-- API: `label`, `helperText?`, `status`, `fill?`, `determinate?`, `compact?`
-- `InlineProgressBar`: `label?`, `ariaLabel?`, `status`, `fill?`, `determinate?`, `compact?`; helper text не используется
+- `ProgressBar`: `label`, `helperText?`, `status`, `fill?`, `determinate?`, `compact?`
+- `InlineProgressBar`: `ariaLabel?`, `status`, `fill?`, `determinate?`, `compact?`, `variant?`; label не рендерит, helper text не используется
 - `status`: `running`, `partial`, `succeed`, `failed`
+- `InlineProgressBar.variant`: `short` = `var(--aramid-spacing-11)` (80px), `medium` = `var(--aramid-spacing-13)` (160px, default), `long` = `var(--input-fixed-width)` (320px)
 - `fill` — число от `0` до `1`; `null` / `undefined` считаются `0`
 - `determinate=true` — обычный статичный прогресс с `aria-valuenow`
 - `determinate=false` — остаток от конца `fill` до `100%` анимируется только для `status="running"`
+- `status="failed"` всегда визуально заполняет трек красным, даже если фактический `fill` равен `0`; доступное значение процента остаётся фактическим
 - `compact=true` — высота трека `var(--aramid-spacing-2)` (4px); обычный режим — `var(--aramid-spacing-3)` (8px)
 - Иконка статуса справа от трека берётся через Aramid `IconIndicator`: `running → in-progress`, `partial → caution-minor`, `succeed → succeeded`, `failed → failed`
-- Ширина: `width: 100%`, `max-width: var(--input-fixed-width)`, `min-width: 0`; компонент имеет максимум как у input, но сжимается в узких контейнерах
-- `InlineProgressBar` отображает опциональный label перед треком в одной строке; длинный label сжимается и обрезается ellipsis, чтобы трек сохранял место
+- `ProgressBar`: `width: 100%`, `max-width: var(--input-fixed-width)`, `min-width: 0`; компонент имеет максимум как у input, но сжимается в узких контейнерах
+- `InlineProgressBar`: фиксированная длина по `variant`, без сжатия; внешний label нужно рендерить отдельно рядом с компонентом
 
 ---
 

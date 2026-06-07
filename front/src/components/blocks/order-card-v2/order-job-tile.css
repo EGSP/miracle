@@ -7,6 +7,8 @@
 }
 
 .order-job__tree {
+  width: 100%;
+  min-width: 0;
   max-height: 320px;
   overflow: auto;
 }

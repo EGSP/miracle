@@ -1,63 +1,56 @@
-/* Лейбл узла дерева прогонов: точка-статус + имя джоба + статус + прогресс.
-   Только Aramid-токены, без заливок-«пилюль» и без хардкода цветов. */
+/* Дерево прогонов: имя джоба (гибкое) + label прогресса + InlineProgressBar. */
+
+.job-tree {
+  width: 100%;
+  min-width: 0;
+}
+
+.job-tree .tree-node__row {
+  min-width: 0;
+}
+
+.job-tree .tree-node__label {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
 
 .job-node {
   display: flex;
   align-items: center;
-  gap: var(--aramid-spacing-2);
+  gap: var(--aramid-spacing-3);
   min-width: 0;
   width: 100%;
 }
 
-.job-node__dot {
-  flex-shrink: 0;
-  width: var(--aramid-spacing-3);
-  height: var(--aramid-spacing-3);
-  border-radius: 50%;
-  background-color: var(--aramid-color-gray-50);
-}
-
-.job-node__dot--queued {
-  background-color: var(--aramid-color-gray-40);
-}
-
-.job-node__dot--running {
-  background-color: var(--aramid-color-semantic-interactive);
-}
-
-.job-node__dot--succeed {
-  background-color: var(--aramid-color-green-60);
-}
-
-/* Частичный успех: оранжевый — отличаем от красного `failed`. */
-.job-node__dot--partial {
-  background-color: var(--aramid-color-orange-60);
-}
-
-.job-node__dot--failed {
-  background-color: var(--aramid-color-semantic-danger);
-}
-
-.job-node__dot--cancelled {
-  background-color: var(--aramid-color-gray-50);
-}
-
 .job-node__job {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.job-node__status {
-  flex-shrink: 0;
-  font-size: var(--aramid-font-size-xs);
-  color: var(--aramid-color-gray-60);
+.job-node__progress {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  gap: var(--aramid-spacing-2);
+  min-width: 0;
 }
 
-.job-node__progress {
-  flex-shrink: 0;
-  font-size: var(--aramid-font-size-xs);
+.job-node__progress-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: var(--aramid-spacing-13);
+  overflow: hidden;
   color: var(--aramid-color-gray-60);
+  font-size: var(--aramid-font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-node__progress-bar {
+  flex-shrink: 0;
 }

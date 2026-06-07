@@ -1,4 +1,20 @@
-import type { JobRun, Stored } from "@miracle/types"
+import type { JobRun, JobStatus, Stored } from "@miracle/types"
+import type { ProgressBarStatus } from "@/components/ui/ds/progress-bar"
+
+/** Статус прогона → статус трека {@link InlineProgressBar}. */
+export function jobStatusToProgressBarStatus(status: JobStatus): ProgressBarStatus {
+  switch (status) {
+    case "partial":
+      return "partial"
+    case "succeed":
+      return "succeed"
+    case "failed":
+    case "cancelled":
+      return "failed"
+    default:
+      return "running"
+  }
+}
 
 export type JobTreeIndexes = {
   nodes: Record<string, Stored<JobRun>>

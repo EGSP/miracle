@@ -3,8 +3,7 @@
    Ширина: максимум как у input, но компонент сжимается внутри узких контейнеров.
 ───────────────────────────────────────────────────────────────────────────── */
 
-.progress-bar,
-.inline-progress-bar {
+.progress-bar {
   --progress-bar-track-size: var(--aramid-spacing-3); /* 8px */
   --progress-bar-status-color: var(--aramid-color-indicator-in-progress);
 
@@ -13,16 +12,34 @@
   max-width: var(--input-fixed-width);
 }
 
+.inline-progress-bar {
+  --progress-bar-track-size: var(--aramid-spacing-3); /* 8px */
+  --progress-bar-status-color: var(--aramid-color-indicator-in-progress);
+  --inline-progress-bar-width: var(--aramid-spacing-13); /* medium = 160px */
+
+  display: flex;
+  align-items: center;
+  flex: 0 0 var(--inline-progress-bar-width);
+  min-width: var(--inline-progress-bar-width);
+  width: var(--inline-progress-bar-width);
+}
+
 .progress-bar {
   display: flex;
   flex-direction: column;
   gap: var(--aramid-spacing-2);
 }
 
-.inline-progress-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--aramid-spacing-2);
+.inline-progress-bar[data-variant="short"] {
+  --inline-progress-bar-width: var(--aramid-spacing-11); /* 80px */
+}
+
+.inline-progress-bar[data-variant="medium"] {
+  --inline-progress-bar-width: var(--aramid-spacing-13); /* 160px */
+}
+
+.inline-progress-bar[data-variant="long"] {
+  --inline-progress-bar-width: var(--input-fixed-width); /* 320px */
 }
 
 .progress-bar[data-compact="true"],
@@ -60,16 +77,6 @@
   flex: 1 1 auto;
   gap: var(--aramid-spacing-2);
   min-width: 0;
-}
-
-.inline-progress-bar-label {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 40%;
-  overflow: hidden;
-  color: var(--aramid-color-gray-100);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .progress-bar-track {
