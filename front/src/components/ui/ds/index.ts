@@ -29,6 +29,8 @@ export {
   type DialogProps,
 } from "./modal-dialog"
 export {
+  InlineProgressBar,
+  type InlineProgressBarProps,
   ProgressBar,
   type ProgressBarProps,
   type ProgressBarStatus,

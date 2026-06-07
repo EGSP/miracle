@@ -3,35 +3,50 @@
    Ширина: максимум как у input, но компонент сжимается внутри узких контейнеров.
 ───────────────────────────────────────────────────────────────────────────── */
 
-.progress-bar {
+.progress-bar,
+.inline-progress-bar {
   --progress-bar-track-size: var(--aramid-spacing-3); /* 8px */
   --progress-bar-status-color: var(--aramid-color-indicator-in-progress);
 
-  display: flex;
-  flex-direction: column;
-  gap: var(--aramid-spacing-2);
   min-width: 0;
   width: 100%;
   max-width: var(--input-fixed-width);
 }
 
-.progress-bar[data-compact="true"] {
+.progress-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2);
+}
+
+.inline-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--aramid-spacing-2);
+}
+
+.progress-bar[data-compact="true"],
+.inline-progress-bar[data-compact="true"] {
   --progress-bar-track-size: var(--aramid-spacing-2); /* 4px */
 }
 
-.progress-bar[data-status="running"] {
+.progress-bar[data-status="running"],
+.inline-progress-bar[data-status="running"] {
   --progress-bar-status-color: var(--aramid-color-indicator-in-progress);
 }
 
-.progress-bar[data-status="partial"] {
+.progress-bar[data-status="partial"],
+.inline-progress-bar[data-status="partial"] {
   --progress-bar-status-color: var(--aramid-color-indicator-caution-minor);
 }
 
-.progress-bar[data-status="succeed"] {
+.progress-bar[data-status="succeed"],
+.inline-progress-bar[data-status="succeed"] {
   --progress-bar-status-color: var(--aramid-color-indicator-succeeded);
 }
 
-.progress-bar[data-status="failed"] {
+.progress-bar[data-status="failed"],
+.inline-progress-bar[data-status="failed"] {
   --progress-bar-status-color: var(--aramid-color-indicator-failed);
 }
 
@@ -42,8 +57,19 @@
 .progress-bar-track-row {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
   gap: var(--aramid-spacing-2);
   min-width: 0;
+}
+
+.inline-progress-bar-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  color: var(--aramid-color-gray-100);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .progress-bar-track {
