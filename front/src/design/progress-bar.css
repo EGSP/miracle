@@ -1,0 +1,111 @@
+/* ─── ProgressBar ─────────────────────────────────────────────────────────────
+   Carbon-like progress bar with Aramid spacing/color tokens.
+   Ширина: максимум как у input, но компонент сжимается внутри узких контейнеров.
+───────────────────────────────────────────────────────────────────────────── */
+
+.progress-bar {
+  --progress-bar-track-size: var(--aramid-spacing-3); /* 8px */
+  --progress-bar-status-color: var(--aramid-color-indicator-in-progress);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2);
+  min-width: 0;
+  width: 100%;
+  max-width: var(--input-fixed-width);
+}
+
+.progress-bar[data-compact="true"] {
+  --progress-bar-track-size: var(--aramid-spacing-2); /* 4px */
+}
+
+.progress-bar[data-status="running"] {
+  --progress-bar-status-color: var(--aramid-color-indicator-in-progress);
+}
+
+.progress-bar[data-status="partial"] {
+  --progress-bar-status-color: var(--aramid-color-indicator-caution-minor);
+}
+
+.progress-bar[data-status="succeed"] {
+  --progress-bar-status-color: var(--aramid-color-indicator-succeeded);
+}
+
+.progress-bar[data-status="failed"] {
+  --progress-bar-status-color: var(--aramid-color-indicator-failed);
+}
+
+.progress-bar-label {
+  color: var(--aramid-color-gray-100);
+}
+
+.progress-bar-track-row {
+  display: flex;
+  align-items: center;
+  gap: var(--aramid-spacing-2);
+  min-width: 0;
+}
+
+.progress-bar-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--progress-bar-track-size);
+  overflow: hidden;
+  background-color: var(--aramid-color-gray-20);
+}
+
+.progress-bar-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: calc(var(--progress-bar-fill) * 100%);
+  background-color: var(--progress-bar-status-color);
+}
+
+.progress-bar-remainder {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--progress-bar-fill) * 100%);
+  inset-inline-end: 0;
+  overflow: hidden;
+}
+
+.progress-bar-remainder-indicator {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 35%;
+  min-inline-size: var(--aramid-spacing-10);
+  background-color: var(--progress-bar-status-color);
+  animation: progress-bar-remainder-slide 1200ms linear infinite;
+}
+
+.progress-bar-status-icon {
+  flex: 0 0 auto;
+  --indicator-gap: 0;
+}
+
+.progress-bar-helper-text {
+  color: var(--aramid-color-gray-60);
+}
+
+.progress-bar[data-status="failed"] .progress-bar-helper-text {
+  color: var(--aramid-color-semantic-danger);
+}
+
+@keyframes progress-bar-remainder-slide {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar-remainder-indicator {
+    animation: none;
+    transform: none;
+  }
+}

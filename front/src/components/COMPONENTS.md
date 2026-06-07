@@ -5,7 +5,7 @@
 - **`packages/aramid`** — внутренний дизайн-пакет. Источник истины для токенов и базовых компонентов (Grid, Stack, Text и т.д.)
 - **`front/src`** — фронтенд-приложение, потребляет Aramid
 - **`front/src/components/ui/`** — UI-компоненты приложения, разбиты по слоям:
-  - **`ds/`** — базовые контролы в духе Carbon v11 + Aramid (`Button`, `Input`, `Dialog` из `modal-dialog`, `Tile`, …). Импорт: `@/components/ui/ds/...` или barrel `@/components/ui/ds`
+  - **`ds/`** — базовые контролы в духе Carbon v11 + Aramid (`Button`, `Input`, `ProgressBar`, `Dialog` из `modal-dialog`, `Tile`, …). Импорт: `@/components/ui/ds/...` или barrel `@/components/ui/ds`
   - **`derivations/`** — виджеты, собранные из `ds` (`CopyButton`, `ArrayEditor`)
   - **`external/`** — чужеродные/legacy-виджеты вне DS (`InlineMutationNotification`, `FileContentPreview`)
 - Tailwind — только в `external/` и отдельных блоках; в `ds/` не используется
@@ -148,6 +148,22 @@ cva("input", { variants: { size: { sm: "input--sm", md: "", lg: "input--lg" } } 
 // Неправильно
 cva("h-8 w-full border border-input ...", { variants: { size: { sm: "h-8 px-2.5 ..." } } })
 ```
+
+---
+
+## ProgressBar
+
+`ProgressBar` — индикатор прогресса в духе Carbon с дополнительной логикой Aramid:
+известная часть (`fill`) может сочетаться с анимированным неизвестным остатком.
+
+- API: `label`, `helperText?`, `status`, `fill?`, `determinate?`, `compact?`
+- `status`: `running`, `partial`, `succeed`, `failed`
+- `fill` — число от `0` до `1`; `null` / `undefined` считаются `0`
+- `determinate=true` — обычный статичный прогресс с `aria-valuenow`
+- `determinate=false` — остаток от конца `fill` до `100%` анимируется только для `status="running"`
+- `compact=true` — высота трека `var(--aramid-spacing-2)` (4px); обычный режим — `var(--aramid-spacing-3)` (8px)
+- Иконка статуса справа от трека берётся через Aramid `IconIndicator`: `running → in-progress`, `partial → caution-minor`, `succeed → succeeded`, `failed → failed`
+- Ширина: `width: 100%`, `max-width: var(--input-fixed-width)`, `min-width: 0`; компонент имеет максимум как у input, но сжимается в узких контейнерах
 
 ---
 
