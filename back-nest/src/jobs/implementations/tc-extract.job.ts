@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ExtractionStatus, type SlotRule } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../framework/job.js';
 import { JobImpl } from '../framework/job-impl.decorator.js';
-import { Jobs } from '../framework/context.js';
+import { Jobs, Progress } from '../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../common/cloud-job.js';
 import { countTokens } from '../../common/count-tokens.js';
 import { tryLabeledPromise } from '../../common/effect-errors.js';
@@ -102,7 +102,12 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
             'tc-extract:llm',
             (input: TcExtractInput): Effect.Effect<TcExtractMid, unknown, JobEnv> =>
                 Effect.gen(function* () {
+                    const progress = yield* Progress;
+                    yield* progress.push(0, { label: 'загрузка текста ТУ' });
+
                     const text = yield* getTcText(tc, filesContent, input.tcId);
+                    yield* progress.push(0.1, { label: 'отправка запроса LLM', determined: false });
+
                     const opId = yield* submitOnce(
                         () =>
                             yandex.submitCompletion({
@@ -116,6 +121,8 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
                             }),
                         {
                             label: `tc extract submit; tc=${input.tcId}`,
+                            submitProgressLabel: 'отправка запроса LLM',
+                            pollProgressLabel: 'ожидание ответа LLM',
                             extraMemo: { finalPrompt: { system: SYSTEM_PROMPT, user: text } },
                         },
                     );
@@ -134,6 +141,9 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
 
         const apply = defineJob('tc-extract:apply', (input: TcExtractMid) =>
             Effect.gen(function* () {
+                const progress = yield* Progress;
+                yield* progress.push(0.9, { label: 'запись разделов ТУ' });
+
                 const sorted = [...input.sections].sort((a, b) => a.index - b.index);
                 const slotRules: SlotRule[] = sorted.map((r) => ({
                     index: r.index,

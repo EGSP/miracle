@@ -70,9 +70,7 @@ export function JobRunCard() {
 
       {latestProgress && (
         <Text as="p" compact>
-          Прогресс:{" "}
-          {latestProgress.label ??
-            `${Math.round(latestProgress.percentNormalized * 100)}%`}
+          Прогресс: {latestProgress.label} ({Math.round(latestProgress.percentNormalized * 100)}%)
         </Text>
       )}
 
@@ -82,11 +80,8 @@ export function JobRunCard() {
           <Stack gap={1}>
             {run.progress.states.map((state, index) => (
               <Text.Helper as="p" key={`${state.createdAt}-${index}`}>
-                {formatDate(state.createdAt)} ·{" "}
-                {state.label ??
-                  `${Math.round(state.percentNormalized * 100)}%`}
-                {state.label != null &&
-                  ` (${Math.round(state.percentNormalized * 100)}%)`}
+                {formatDate(state.createdAt)} · {state.label} (
+                {Math.round(state.percentNormalized * 100)}%)
               </Text.Helper>
             ))}
           </Stack>
@@ -109,7 +104,7 @@ export function JobRunCard() {
         <Button
           variant="secondary"
           label={cancelMutation.isPending ? "Отмена…" : "Отменить прогон"}
-          disabled={cancelMutation.isPending || run.status === "succeeded"}
+          disabled={cancelMutation.isPending || run.status === "succeed"}
           onClick={() => cancelMutation.mutate(cancelTarget)}
         />
         <Button

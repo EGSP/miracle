@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import { ExtractionStatus, ExtractionType } from '@miracle/types';
 import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
-import { Jobs } from '../../framework/context.js';
+import { Jobs, Progress } from '../../framework/context.js';
 import { tryLabeledPromise } from '../../../common/effect-errors.js';
 import { FilesService } from '../../../files/files.service.js';
 import { FilesContentService } from '../../../files-content/files-content.service.js';
@@ -53,8 +53,13 @@ export class ExtractVisualJob implements Job<ExtractVisualInput, void> {
                     filesContent.getContent(input.fileId),
                 );
                 if (existing.some((c) => c.meta?.extractionStatus === ExtractionStatus.COMPLETED)) {
-                    return; // уже извлечено — переиспользуем кэш
+                    const progress = yield* Progress;
+                    yield* progress.push(1, { label: 'использование кэша' });
+                    return;
                 }
+
+                const progress = yield* Progress;
+                yield* progress.push(0, { label: 'подготовка извлечения' });
 
                 const record = yield* tryLabeledPromise(`создание записи визуального извлечения для файла "${input.fileId}"`, () =>
                     filesContent.create({

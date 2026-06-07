@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import { FileDomain, getFileDomain } from '@miracle/types';
 import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
-import { Jobs } from '../../framework/context.js';
+import { Jobs, Progress } from '../../framework/context.js';
 import { tryLabeledPromise } from '../../../common/effect-errors.js';
 import { runFanout, decideFanout } from '../../framework/fanout.js';
 import { JobPartialError } from '../../framework/runtime.js';
@@ -24,7 +24,7 @@ type AnalyseApplicationInput = { applicationId: string };
  * через {@link ApplicationChunkReader} и веером запускает `extract-positions-from-chunk` по чанкам.
  *
  * Веер чанков — best-effort со сводом ({@link decideFanout}): упавший чанк не валит остальные;
- * все чанки упали → приложение `failed`, часть → `partial`, все ок → `succeeded`. Предусловия же
+ * все чанки упали → приложение `failed`, часть → `partial`, все ок → `succeed`. Предусловия же
  * (загрузка заявки/файла, `extract-visual`, чтение чанков) остаются fail-fast — без них веера нет.
  */
 @Injectable()
@@ -43,6 +43,10 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
         this.run = (input: AnalyseApplicationInput): Effect.Effect<void, unknown, JobEnv> =>
             Effect.gen(function* () {
                 const jobs = yield* Jobs;
+                const progress = yield* Progress;
+
+                yield* progress.push(0, { label: 'загрузка заявки' });
+
                 const application = yield* tryLabeledPromise(`загрузка заявки "${input.applicationId}"`, () =>
                     applications.get(input.applicationId),
                 );
@@ -55,13 +59,18 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
                     const fileId = application.data.fileId;
                     const file = yield* tryLabeledPromise(`загрузка файла заявки "${fileId}"`, () => files.get(fileId));
                     if (file && getFileDomain(file.extension ?? '') === FileDomain.VISUAL) {
+                        yield* progress.push(0.05, { label: 'извлечение визуала', determined: false });
                         yield* jobs.run(extractVisual, [jobs.runId, 'extract-visual', fileId], { fileId });
                     }
                 }
 
+                yield* progress.push(0.1, { label: 'чтение чанков' });
+
                 const chunks = yield* tryLabeledPromise(`чтение чанков заявки "${input.applicationId}"`, () =>
                     reader.read(application),
                 );
+                yield* progress.push(0.2, { label: 'извлечение позиций', determined: false });
+
                 const chunkResults = yield* runFanout(
                     chunks.map((c) =>
                         jobs.run(extract, [jobs.runId, 'chunk', c.chunkKey], {

@@ -15,14 +15,14 @@
  * часть детей упала, часть прошла. Заказ/приложение при этом считается выполненным частично, а не
  * проваленным. Применим только к джобам, которые сами решают этот исход (`analyse-order`,
  * `analyse-application`); листовые джобы (напр. `extract-positions-from-chunk`) его не используют —
- * у них только `succeeded`/`failed`.
+ * у них только `succeed`/`failed`.
  *
  * Правило агрегации: все дети упали → `failed`; есть и упавшие, и успешные → `partial`; все успешны
- * → `succeeded`. Для РОДИТЕЛЯ `partial` равнозначен провалу: дочерний прогон в статусе `partial`
+ * → `succeed`. Для РОДИТЕЛЯ `partial` равнозначен провалу: дочерний прогон в статусе `partial`
  * учитывается как неуспешный при сведении и переисполняется только явной командой (как `failed`).
  * На UI отличается лишь цветом (оранжевый против красного).
  */
-export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'cancelled';
+export type JobStatus = 'queued' | 'running' | 'succeed' | 'partial' | 'failed' | 'cancelled';
 
 /**
  * Брендированный идентификатор Job. Нельзя подставить произвольную строку — только значение,
@@ -51,10 +51,12 @@ export type JobKey = ReadonlyArray<JobKeyPart>;
 
 /** Один снимок прогресса джоба (элемент истории). */
 export type JobProgressState = {
-    /** Доля выполнения от 0 до 1 (0 = не начато, 1 = завершено). */
+    /** Доля выполнения от 0 до 1. */
     percentNormalized: number;
-    /** Необязательная подпись текущего этапа для UI. */
-    label?: string;
+    /** false — этап начат, длительность/доля внутри этапа неизвестна. */
+    determined: boolean;
+    /** Подпись текущего этапа для UI (короткое действие без пунктуации). */
+    label: string;
     /** Момент фиксации снимка (epoch ms). */
     createdAt: number;
 };
@@ -69,12 +71,16 @@ export type JobProgress = {
 
 /** Параметры {@link pushJobProgressState} и {@link Progress.push}. */
 export type JobProgressPushOptions = {
-    label?: string;
+    label: string;
+    /** false — этап с неизвестной длительностью (default `true`). */
+    determined?: boolean;
     /**
      * Если `true` (по умолчанию) и `label` совпадает с последним снимком — перезаписать последний
      * элемент (или создать первый, если массив пуст). Иначе — добавить новый снимок в конец.
      */
     override?: boolean;
+    /** Если не передан — берётся percent последнего state (или 0). */
+    percentNormalized?: number;
 };
 
 /** Последний (текущий) снимок прогресса или `undefined`, если история пуста. */
@@ -88,20 +94,28 @@ export function latestJobProgressState(progress?: JobProgress): JobProgressState
  */
 export function pushJobProgressState(
     progress: JobProgress | undefined,
-    percentNormalized: number,
-    options?: JobProgressPushOptions,
+    percentOrOptions: number | JobProgressPushOptions,
+    maybeOptions?: JobProgressPushOptions,
 ): JobProgress {
-    const { label, override = true } = options ?? {};
+    const options: JobProgressPushOptions =
+        typeof percentOrOptions === 'number' ? (maybeOptions as JobProgressPushOptions) : percentOrOptions;
+    const last = progress?.states.at(-1);
+    const percentNormalized =
+        typeof percentOrOptions === 'number'
+            ? percentOrOptions
+            : (options.percentNormalized ?? last?.percentNormalized ?? 0);
+    const { label, override = true, determined = true } = options;
     const state: JobProgressState = {
         percentNormalized,
-        ...(label !== undefined ? { label } : {}),
+        determined,
+        label,
         createdAt: Date.now(),
     };
 
     const states = [...(progress?.states ?? [])];
-    const last = states.at(-1);
+    const lastInStates = states.at(-1);
 
-    if (override && last !== undefined && last.label === label) {
+    if (override && lastInStates !== undefined && lastInStates.label === label) {
         states[states.length - 1] = state;
     } else {
         states.push(state);
@@ -116,7 +130,7 @@ export function pushJobProgressState(
  * Идентичность — {@link keyHash} (уникальный индекс): дедупликация/идемпотентность запусков
  * глобальная, а не «в пределах родителя». `parentId` (id непосредственного родителя; `null`
  * у корня) выражает дерево и используется только для навигации (обход, отмена, агрегация
- * прогресса). Завершённый (`succeeded`) прогон переиспользует свой `output` при повторном вызове.
+ * прогресса). Завершённый (`succeed`) прогон переиспользует свой `output` при повторном вызове.
  *
  * @example корневой прогон
  * ```json
@@ -126,7 +140,7 @@ export function pushJobProgressState(
  * @example дочерний прогон
  * ```json
  * { "id": "run_2", "job": "extract-text", "parentId": "run_1",
- *   "key": ["run_1", "extract"], "keyHash": "[\"run_1\",\"extract\"]", "status": "succeeded", "output": "…" }
+ *   "key": ["run_1", "extract"], "keyHash": "[\"run_1\",\"extract\"]", "status": "succeed", "output": "…" }
  * ```
  */
 export type JobRun = {
@@ -141,7 +155,7 @@ export type JobRun = {
     keyHash: string;
     status: JobStatus;
     input?: unknown;
-    /** Для `succeeded` — выход; переиспользуется при повторном вызове. */
+    /** Для `succeed` — выход; переиспользуется при повторном вызове. */
     output?: unknown;
     /** Для `failed` — сообщение об ошибке. */
     error?: string;

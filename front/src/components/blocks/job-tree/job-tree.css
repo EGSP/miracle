@@ -25,7 +25,7 @@
   background-color: var(--aramid-color-semantic-interactive);
 }
 
-.job-node__dot--succeeded {
+.job-node__dot--succeed {
   background-color: var(--aramid-color-green-60);
 }
 

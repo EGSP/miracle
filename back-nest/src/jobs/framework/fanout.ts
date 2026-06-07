@@ -8,7 +8,7 @@ import { JobPartialError } from './runtime.js';
  * одного НЕ короткозамыкает остальных (в отличие от обычного `Effect.all`, который fail-fast).
  * Возвращает исходы как `Either` (Right — успех, Left — ошибка) в исходном порядке.
  *
- * Решение о статусе родителя (`succeeded`/`partial`/`failed`) принимает {@link decideFanout} —
+ * Решение о статусе родителя (`succeed`/`partial`/`failed`) принимает {@link decideFanout} —
  * оркестратор с несколькими этапами может собрать `Either` из всех вееров и свести их вместе.
  */
 export const runFanout = <A>(
@@ -21,7 +21,7 @@ export const runFanout = <A>(
 
 /**
  * Сводит исходы веера(ов) в статус родителя:
- * - нет падений (или веер пуст) → успех (`void` → узел `succeeded`);
+ * - нет падений (или веер пуст) → успех (`void` → узел `succeed`);
  * - упали все → `Effect.fail(Error)` → узел `failed`;
  * - упала часть → `Effect.fail(JobPartialError)` → узел `partial`.
  *

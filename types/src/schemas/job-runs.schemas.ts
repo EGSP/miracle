@@ -7,7 +7,7 @@ const BooleanFromQuery = z.union([
 ]);
 
 export const JobRunsQuerySchema = z.object({
-    status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']).optional(),
+    status: z.enum(['queued', 'running', 'succeed', 'partial', 'failed', 'cancelled']).optional(),
     sort: z.enum(['asc', 'desc']).optional(),
     /** Только корневые прогоны (`parentId = null`) — для списка операций без выкачки всего лога. */
     onlyRoots: BooleanFromQuery.optional(),

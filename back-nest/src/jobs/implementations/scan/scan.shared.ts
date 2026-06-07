@@ -10,7 +10,7 @@ import {
     type Stored,
 } from '@miracle/types';
 import { defineJob, type Job, type JobEnv } from '../../framework/job.js';
-import { Jobs } from '../../framework/context.js';
+import { Jobs, Progress } from '../../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
 import { formatUnknown, tryLabeledPromise } from '../../../common/effect-errors.js';
 import type { FilesService } from '../../../files/files.service.js';
@@ -132,6 +132,9 @@ export const ocrRecognize =
     (files: FilesDep, yandex: YandexDep): ScanRecognize =>
     (input) =>
         Effect.gen(function* () {
+            const progress = yield* Progress;
+            yield* progress.push(0, { label: 'чтение файла' });
+
             const file = yield* requireFile(files, input.fileId);
             const mime = getMimeType(file.extension);
             if (!mime || !OCR_MIME_TYPES.includes(mime)) {
@@ -144,6 +147,8 @@ export const ocrRecognize =
             );
             const opId = yield* submitOnce(() => yandex.ocrRecognize(mime, bytes), {
                 label: `ocr submit; file=${input.fileId}`,
+                submitProgressLabel: 'отправка на распознавание',
+                pollProgressLabel: 'ожидание распознавания',
             });
             return yield* pollUntilDone<Content[]>(() => yandex.ocrPoll(opId), {
                 label: `ocr poll; opId=${opId}`,
@@ -157,7 +162,13 @@ export const visionRecognize =
     (files: FilesDep, convert: ConvertDep, yandex: YandexDep, systemPrompt: string, userMessage: string): ScanRecognize =>
     (input) =>
         Effect.gen(function* () {
+            const progress = yield* Progress;
+            yield* progress.push(0, { label: 'чтение файла' });
+
             const file = yield* requireFile(files, input.fileId);
+            if (file.extension.toLowerCase() === 'pdf') {
+                yield* progress.push(0.05, { label: 'рендер страниц' });
+            }
             const images = yield* renderPages(files, convert, file);
             const opId = yield* submitOnce(() =>
                 yandex.submitVisionCompletion({
@@ -176,7 +187,11 @@ export const visionRecognize =
                         },
                     ],
                 }),
-                { label: `vision submit; file=${input.fileId}` },
+                {
+                    label: `vision submit; file=${input.fileId}`,
+                    submitProgressLabel: 'отправка на распознавание',
+                    pollProgressLabel: 'ожидание распознавания',
+                },
             );
             const text = yield* pollUntilDone<string>(() => yandex.pollVisionCompletion(opId), {
                 label: `vision poll; opId=${opId}`,
@@ -214,17 +229,22 @@ export const buildRecognizeJob = (
 /** Дочерний `apply`: идемпотентная запись content в filesContent (COMPLETED). */
 export const buildApplyJob = (id: string, filesContent: FilesContentDep): Job<ScanResult, void> =>
     defineJob(`${id}:apply`, (result: ScanResult) =>
-        tryLabeledPromise(`отметка завершённого извлечения для содержимого файла "${result.fileContentId}"`, () =>
-            filesContent.update({
-                id: result.fileContentId,
-                fileId: result.fileId,
-                content: result.content,
-                meta: {
-                    extractionType: result.extractionType,
-                    extractionStatus: ExtractionStatus.COMPLETED,
-                },
-            }),
-        ).pipe(
+        Effect.gen(function* () {
+            const progress = yield* Progress;
+            yield* progress.push(0.9, { label: 'запись содержимого' });
+
+            yield* tryLabeledPromise(`отметка завершённого извлечения для содержимого файла "${result.fileContentId}"`, () =>
+                filesContent.update({
+                    id: result.fileContentId,
+                    fileId: result.fileId,
+                    content: result.content,
+                    meta: {
+                        extractionType: result.extractionType,
+                        extractionStatus: ExtractionStatus.COMPLETED,
+                    },
+                }),
+            );
+        }).pipe(
             Effect.asVoid,
             Effect.mapError(
                 (error) =>

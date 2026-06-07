@@ -27,27 +27,30 @@ export class Memo extends Context.Tag('jobs/Memo')<
 
 /**
  * Отчёт о прогрессе текущего джоба (только наблюдаемость, не состояние для возобновления).
- * `push` дополняет историю {@link JobProgress.states}; при совпадении `label` с последним
- * снимком и `override: true` (по умолчанию) — обновляет последний элемент. Текущее состояние —
- * последний элемент массива. Общий прогресс по дереву собирается отдельно обходом потомков.
+ * `push` дополняет историю снимков; при совпадении `label` с последним снимком и `override: true`
+ * `push(n, options)` — явный percent; `push(options)` — inherit от последнего state.
+ * `determined: false` — этап с неизвестной длительностью.
  *
  * @example
  * ```ts
  * const progress = yield* Progress;
- * yield* progress.push(0, { label: 'чтение источника' });
- * yield* progress.push(0.5, { label: 'опрос LLM' });
+ * yield* progress.push(0, { label: 'загрузка данных' });
+ * yield* progress.push({ label: 'ожидание ответа LLM', determined: false });
  * ```
  */
 export class Progress extends Context.Tag('jobs/Progress')<
     Progress,
     {
-        readonly push: (percentNormalized: number, options?: JobProgressPushOptions) => Effect.Effect<void>;
+        readonly push: (
+            percentOrOptions: number | JobProgressPushOptions,
+            options?: JobProgressPushOptions,
+        ) => Effect.Effect<void>;
     }
 >() {}
 
 /**
  * Запуск дочерних джобов. `run(job, key, input)` находит-или-создаёт прогон по глобальной
- * идентичности `keyHash = hashKey(key)`. Если прогон уже `succeeded` — мгновенно возвращается
+ * идентичности `keyHash = hashKey(key)`. Если прогон уже `succeed` — мгновенно возвращается
  * его `output`; иначе тело исполняется (`parentId` проставляется в текущий узел только для
  * навигации по дереву).
  *

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { type OrderPosition, type Stored, type TechnicalCondition } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
-import { Jobs } from '../../framework/context.js';
+import { Jobs, Progress } from '../../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
 import { countTokens } from '../../../common/count-tokens.js';
 import { tryLabeledPromise, wrapUnknown } from '../../../common/effect-errors.js';
@@ -109,6 +109,9 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
             'analyse-designation:llm',
             (input: AnalyseDesignationInput): Effect.Effect<DesignationMid, unknown, JobEnv> =>
                 Effect.gen(function* () {
+                    const progress = yield* Progress;
+                    yield* progress.push(0, { label: 'загрузка данных' });
+
                     const position = yield* tryLabeledPromise(`загрузка позиции "${input.positionId}"`, () =>
                         positions.get(input.positionId),
                     );
@@ -142,6 +145,8 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                         try: () => [formatRequirements(position), prepareSlotRulesPayload(condition)].join('\n\n'),
                         catch: wrapUnknown(`prepare designation prompt for position "${input.positionId}"`),
                     });
+                    yield* progress.push(0.1, { label: 'отправка запроса LLM', determined: false });
+
                     const opId = yield* submitOnce(
                         () =>
                             yandex.submitCompletion({
@@ -155,6 +160,8 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                             }),
                         {
                             label: `analyse designation submit; position=${input.positionId}; tc=${tcId}`,
+                            submitProgressLabel: 'отправка запроса LLM',
+                            pollProgressLabel: 'ожидание ответа LLM',
                             extraMemo: { finalPrompt: { system: DESIGNATION_PROMPT, user: userMessage } },
                         },
                     );
@@ -174,9 +181,14 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
         );
 
         const apply = defineJob('analyse-designation:apply', (input: DesignationMid) =>
-            tryLabeledPromise(`сохранение обозначения для позиции "${input.positionId}"`, () =>
-                designations.upsert(input.positionId, input.tcId, input.values),
-            ).pipe(
+            Effect.gen(function* () {
+                const progress = yield* Progress;
+                yield* progress.push(0.9, { label: 'запись обозначения' });
+
+                yield* tryLabeledPromise(`сохранение обозначения для позиции "${input.positionId}"`, () =>
+                    designations.upsert(input.positionId, input.tcId, input.values),
+                );
+            }).pipe(
                 Effect.asVoid,
                 Effect.mapError(
                     (error) =>

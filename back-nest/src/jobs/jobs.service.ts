@@ -48,7 +48,7 @@ export class JobsService implements OnApplicationBootstrap {
 
     /**
      * Запускает корневой прогон. `key` — ключ идемпотентности (стиль TanStack); если передан и
-     * прогон с таким `keyHash` уже есть: `succeeded`/`running` → возвращаем существующий (не
+     * прогон с таким `keyHash` уже есть: `succeed`/`running` → возвращаем существующий (не
      * дублируем), `queued`/`failed`/`cancelled` → (пере)запускаем ту же строку. Без `key` каждый
      * запуск уникален (`[job.id, uuid]`) — прежнее поведение «всегда новый корень».
      *
@@ -68,7 +68,7 @@ export class JobsService implements OnApplicationBootstrap {
             input,
         });
         // Идемпотентный ключ: уже выполнен или в процессе — повторно не запускаем.
-        if (root.status === 'succeeded' || root.status === 'running') {
+        if (root.status === 'succeed' || root.status === 'running') {
             return root;
         }
         this.launch(job, root);

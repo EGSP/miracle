@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { OrderPosition, OrderPositionData, ProductType, Stored } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
-import { Jobs, Memo } from '../../framework/context.js';
+import { Jobs, Memo, Progress } from '../../framework/context.js';
 import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
 import { tryLabeledPromise, wrapUnknown } from '../../../common/effect-errors.js';
 import { LLM_MAX_OUTPUT_TOKENS } from '../../../common/llm-limits.js';
@@ -150,6 +150,9 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
             'extract-positions-from-chunk:llm',
             (input: ExtractInput): Effect.Effect<OrderPosition[], unknown, JobEnv> =>
                 Effect.gen(function* () {
+                    const progress = yield* Progress;
+                    yield* progress.push(0, { label: 'загрузка данных' });
+
                     const chunkLabel = input.chunkKey ?? 'unknown';
                     const catalog = yield* tryLabeledPromise('загрузка каталога типов продукции', () => productTypes.getAll());
                     const system = buildSystemPrompt(catalog);
@@ -157,6 +160,8 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
                         try: () => JSON.stringify(input.chunk),
                         catch: wrapUnknown(`serialize chunk "${chunkLabel}"`),
                     });
+
+                    yield* progress.push(0.1, { label: 'отправка запроса LLM', determined: false });
 
                     const opId = yield* submitOnce(
                         () =>
@@ -171,6 +176,8 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
                             }),
                         {
                             label: `extract positions submit; chunk=${chunkLabel}`,
+                            submitProgressLabel: 'отправка запроса LLM',
+                            pollProgressLabel: 'ожидание ответа LLM',
                             extraMemo: { finalPrompt: { system, user: userText } },
                         },
                     );
@@ -196,6 +203,9 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
 
         const apply = defineJob('extract-positions-from-chunk:apply', (created: OrderPosition[]) =>
             Effect.gen(function* () {
+                const progress = yield* Progress;
+                yield* progress.push(0.9, { label: 'запись позиций' });
+
                 const memo = yield* Memo;
                 // Идемпотентность по прогону: при перезапуске удаляем то, что записал ЭТОТ прогон
                 // (id в memo), и пишем заново. Не трогаем позиции других чанков того же приложения.

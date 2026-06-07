@@ -8,12 +8,9 @@ function JobNodeLabelInner({ id }: { id: string }) {
   if (!node) return null
 
   const latest = latestJobProgressState(node.progress)
-  const progressLabel = latest?.label
-  const progress =
-    progressLabel ??
-    (latest?.percentNormalized != null
-      ? `${Math.round(latest.percentNormalized * 100)}%`
-      : null)
+  const progress = latest
+    ? `${latest.label} (${Math.round(latest.percentNormalized * 100)}%)`
+    : null
 
   return (
     <span className="job-node">

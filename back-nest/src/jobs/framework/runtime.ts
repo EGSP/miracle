@@ -1,5 +1,5 @@
 import { Cause, Effect, Option } from 'effect';
-import { pushJobProgressState, type JobKey, type JobProgressPushOptions, type JobRun, type JobStatus } from '@miracle/types';
+import { pushJobProgressState, latestJobProgressState, type JobKey, type JobProgressPushOptions, type JobRun, type JobStatus } from '@miracle/types';
 import { formatUnknown } from '../../common/effect-errors.js';
 import type { Job } from './job.js';
 import { Jobs, Memo, Progress } from './context.js';
@@ -55,9 +55,9 @@ function makeMemo(store: JobStore, node: JobRun) {
  */
 function makeProgress(store: JobStore, node: JobRun) {
     return {
-        push: (percentNormalized: number, options?: JobProgressPushOptions) =>
+        push: (percentOrOptions: number | JobProgressPushOptions, options?: JobProgressPushOptions) =>
             Effect.promise(async () => {
-                node.progress = pushJobProgressState(node.progress, percentNormalized, options);
+                node.progress = pushJobProgressState(node.progress, percentOrOptions, options);
                 await store.patch(node.id, { progress: node.progress });
             }),
     };
@@ -67,7 +67,7 @@ function makeProgress(store: JobStore, node: JobRun) {
  * Реализация сервиса {@link Jobs}, замкнутая на узел-родитель. `run` находит-или-создаёт прогон
  * по глобальной идентичности `keyHash = hashKey(key)` (`parentId` проставляется в текущий узел,
  * но в идентичности не участвует) и решает его судьбу по статусу:
- * - `succeeded` → возвращаем сохранённый `output` (повторно не исполняем);
+ * - `succeed` → возвращаем сохранённый `output` (повторно не исполняем);
  * - `failed`/`cancelled` → пробрасываем ошибку наверх (перезапуск — только явной командой);
  * - `running`/`queued` (новый или артефакт краха) → исполняем в той же строке.
  *
@@ -83,7 +83,7 @@ function makeJobs(store: JobStore, parent: JobRun) {
                 const node = yield* Effect.promise(() =>
                     store.findOrCreate({ job: job.id, parentId: parent.id, key, keyHash: hashKey(key), input }),
                 );
-                if (node.status === 'succeeded') {
+                if (node.status === 'succeed') {
                     return node.output as Output;
                 }
                 // `partial` для родителя равнозначен провалу: переисполняется только явной командой.
@@ -97,7 +97,7 @@ function makeJobs(store: JobStore, parent: JobRun) {
 
 /**
  * Исполняет тело одного джоба на его строке прогона: переводит в `running`, провайдит сервисы
- * (`Jobs`/`Memo`/`Progress`), замкнутые на этот узел, при успехе пишет `output`+`succeeded`,
+ * (`Jobs`/`Memo`/`Progress`), замкнутые на этот узел, при успехе пишет `output`+`succeed`,
  * при ошибке — `failed`+сообщение. Прерывание (отмена волокна) не считается ошибкой и сюда
  * не попадает — статус `cancelled` ставит сервис рантайма.
  */
@@ -111,15 +111,21 @@ export function execute<Input, Output>(
         node.error = undefined;
         yield* Effect.promise(() => store.patch(node.id, { status: 'running', error: undefined }));
 
+        const progressSvc = makeProgress(store, node);
+
         const output = yield* job.run(node.input as Input).pipe(
             Effect.provideService(Jobs, makeJobs(store, node)),
             Effect.provideService(Memo, makeMemo(store, node)),
-            Effect.provideService(Progress, makeProgress(store, node)),
+            Effect.provideService(Progress, progressSvc),
         );
 
-        node.status = 'succeeded';
+        if (latestJobProgressState(node.progress)?.percentNormalized !== 1) {
+            yield* progressSvc.push(1, { label: 'завершено' });
+        }
+
+        node.status = 'succeed';
         node.output = output;
-        yield* Effect.promise(() => store.patch(node.id, { status: 'succeeded', output }));
+        yield* Effect.promise(() => store.patch(node.id, { status: 'succeed', output }));
         return output;
     });
 
