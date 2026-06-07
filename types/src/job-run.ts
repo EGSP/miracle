@@ -49,13 +49,66 @@ export type JobKeyPart =
  */
 export type JobKey = ReadonlyArray<JobKeyPart>;
 
-/** Прогресс джоба (наблюдаемость, не состояние для возобновления). Пишется через сервис `Progress`. */
-export type JobProgress = {
-    /** 0..100. */
-    pct: number;
+/** Один снимок прогресса джоба (элемент истории). */
+export type JobProgressState = {
+    /** Доля выполнения от 0 до 1 (0 = не начато, 1 = завершено). */
+    percentNormalized: number;
     /** Необязательная подпись текущего этапа для UI. */
     label?: string;
+    /** Момент фиксации снимка (epoch ms). */
+    createdAt: number;
 };
+
+/**
+ * Прогресс джоба (наблюдаемость, не состояние для возобновления). Пишется через сервис `Progress`.
+ * Текущее состояние — последний элемент {@link JobProgress.states}.
+ */
+export type JobProgress = {
+    states: JobProgressState[];
+};
+
+/** Параметры {@link pushJobProgressState} и {@link Progress.push}. */
+export type JobProgressPushOptions = {
+    label?: string;
+    /**
+     * Если `true` (по умолчанию) и `label` совпадает с последним снимком — перезаписать последний
+     * элемент (или создать первый, если массив пуст). Иначе — добавить новый снимок в конец.
+     */
+    override?: boolean;
+};
+
+/** Последний (текущий) снимок прогресса или `undefined`, если история пуста. */
+export function latestJobProgressState(progress?: JobProgress): JobProgressState | undefined {
+    return progress?.states.at(-1);
+}
+
+/**
+ * Добавляет или обновляет снимок прогресса. Чистая функция — используется рантаймом и тестами.
+ * @see JobProgressPushOptions.override
+ */
+export function pushJobProgressState(
+    progress: JobProgress | undefined,
+    percentNormalized: number,
+    options?: JobProgressPushOptions,
+): JobProgress {
+    const { label, override = true } = options ?? {};
+    const state: JobProgressState = {
+        percentNormalized,
+        ...(label !== undefined ? { label } : {}),
+        createdAt: Date.now(),
+    };
+
+    const states = [...(progress?.states ?? [])];
+    const last = states.at(-1);
+
+    if (override && last !== undefined && last.label === label) {
+        states[states.length - 1] = state;
+    } else {
+        states.push(state);
+    }
+
+    return { states };
+}
 
 /**
  * Запись об исполнении одного Job — плоская.

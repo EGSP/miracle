@@ -32,7 +32,7 @@ export type JobEnv = Memo | Progress | Jobs;
  *   (input: { applicationId: string }) =>
  *     Effect.gen(function* () {
  *       const progress = yield* Progress;
- *       yield* progress.set(0, 'чтение источника');
+ *       yield* progress.push(0, { label: 'чтение источника' });
  *       // ... вернуть текст
  *       return text;
  *     }),

@@ -1,5 +1,5 @@
 import { Context, type Effect, type Option } from 'effect';
-import type { JobKey, JobProgress } from '@miracle/types';
+import type { JobKey, JobProgressPushOptions } from '@miracle/types';
 import type { Job } from './job.js';
 
 /**
@@ -27,19 +27,21 @@ export class Memo extends Context.Tag('jobs/Memo')<
 
 /**
  * Отчёт о прогрессе текущего джоба (только наблюдаемость, не состояние для возобновления).
- * `set` пишет процент (0..100) и необязательную подпись в `progress` записи. Общий прогресс
- * по дереву собирается отдельно рекурсивным обходом потомков по `parentId`.
+ * `push` дополняет историю {@link JobProgress.states}; при совпадении `label` с последним
+ * снимком и `override: true` (по умолчанию) — обновляет последний элемент. Текущее состояние —
+ * последний элемент массива. Общий прогресс по дереву собирается отдельно обходом потомков.
  *
  * @example
  * ```ts
  * const progress = yield* Progress;
- * yield* progress.set(50, 'опрос LLM');
+ * yield* progress.push(0, { label: 'чтение источника' });
+ * yield* progress.push(0.5, { label: 'опрос LLM' });
  * ```
  */
 export class Progress extends Context.Tag('jobs/Progress')<
     Progress,
     {
-        readonly set: (pct: number, label?: string) => Effect.Effect<void>;
+        readonly push: (percentNormalized: number, options?: JobProgressPushOptions) => Effect.Effect<void>;
     }
 >() {}
 

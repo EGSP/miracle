@@ -1,3 +1,4 @@
+import { latestJobProgressState } from "@miracle/types"
 import { CodeSnippet, Stack, Text } from "@miracle/aramid"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
@@ -17,7 +18,7 @@ function JsonSnippet({ title, value }: { title: string; value: unknown }) {
   )
 }
 
-function formatDate(value: Date | string): string {
+function formatDate(value: Date | string | number): string {
   return new Date(value).toLocaleString("ru-RU", {
     day: "2-digit",
     month: "2-digit",
@@ -54,6 +55,8 @@ export function JobRunCard() {
   const isRunning = run.status === "running"
   const cancelTarget = run.status === "running" || run.status === "queued" ? run.id : rootId
 
+  const latestProgress = latestJobProgressState(run.progress)
+
   return (
     <Stack gap={4}>
       <Stack gap={1}>
@@ -65,10 +68,29 @@ export function JobRunCard() {
         </Text.Helper>
       </Stack>
 
-      {run.progress && (
+      {latestProgress && (
         <Text as="p" compact>
-          Прогресс: {run.progress.label ?? `${Math.round(run.progress.pct)}%`}
+          Прогресс:{" "}
+          {latestProgress.label ??
+            `${Math.round(latestProgress.percentNormalized * 100)}%`}
         </Text>
+      )}
+
+      {run.progress && run.progress.states.length > 0 && (
+        <Stack gap={1}>
+          <Text.Label as="span">История прогресса</Text.Label>
+          <Stack gap={1}>
+            {run.progress.states.map((state, index) => (
+              <Text.Helper as="p" key={`${state.createdAt}-${index}`}>
+                {formatDate(state.createdAt)} ·{" "}
+                {state.label ??
+                  `${Math.round(state.percentNormalized * 100)}%`}
+                {state.label != null &&
+                  ` (${Math.round(state.percentNormalized * 100)}%)`}
+              </Text.Helper>
+            ))}
+          </Stack>
+        </Stack>
       )}
 
       {run.error && <Text.Helper as="p">{run.error}</Text.Helper>}

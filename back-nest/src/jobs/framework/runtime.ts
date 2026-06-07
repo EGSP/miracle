@@ -1,5 +1,5 @@
 import { Cause, Effect, Option } from 'effect';
-import type { JobKey, JobRun, JobStatus } from '@miracle/types';
+import { pushJobProgressState, type JobKey, type JobProgressPushOptions, type JobRun, type JobStatus } from '@miracle/types';
 import { formatUnknown } from '../../common/effect-errors.js';
 import type { Job } from './job.js';
 import { Jobs, Memo, Progress } from './context.js';
@@ -50,14 +50,14 @@ function makeMemo(store: JobStore, node: JobRun) {
 }
 
 /**
- * Реализация {@link Progress}, замкнутая на конкретный узел. `set` пишет процент и подпись в
- * `node.progress` и персистит патчем (только наблюдаемость, не состояние для возобновления).
+ * Реализация {@link Progress}, замкнутая на конкретный узел. `push` дополняет или обновляет
+ * {@link JobProgress.states} и персистит патчем (только наблюдаемость, не состояние для возобновления).
  */
 function makeProgress(store: JobStore, node: JobRun) {
     return {
-        set: (pct: number, label?: string) =>
+        push: (percentNormalized: number, options?: JobProgressPushOptions) =>
             Effect.promise(async () => {
-                node.progress = { pct, ...(label !== undefined ? { label } : {}) };
+                node.progress = pushJobProgressState(node.progress, percentNormalized, options);
                 await store.patch(node.id, { progress: node.progress });
             }),
     };
