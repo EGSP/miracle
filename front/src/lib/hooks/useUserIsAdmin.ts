@@ -1,7 +1,6 @@
 import { USER_ROLES } from "@miracle/types"
-import { useAuthContext } from "@/contexts/AuthContext"
+import { useHasAnyRole } from "@/contexts/access"
 
 export function useUserIsAdmin(): boolean {
-  const { role } = useAuthContext()
-  return role === USER_ROLES.ADMIN
+  return useHasAnyRole([USER_ROLES.ADMIN])
 }

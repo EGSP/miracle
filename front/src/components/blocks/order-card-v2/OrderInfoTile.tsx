@@ -30,26 +30,26 @@ export function OrderInfoTile({ orderId }: { orderId: string }) {
 
   return (
     <Tile>
-      <Stack gap={4}>
+      <Stack gap={2}>
         <Text.Heading as="h3" variant="compact-01">
           Информация
         </Text.Heading>
 
-        <Input
-          label="Название"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder={order?.id}
-          fluid
-        />
-
-        <Button
-          variant="primary"
-          label={updateMutation.isPending ? "Сохранение…" : "Сохранить"}
-          disabled={!canSave}
-          onClick={handleSave}
-        />
-
+        <Stack gap={2}>
+          <Button
+            variant="primary"
+            size="sm"
+            label={updateMutation.isPending ? "Сохранение…" : "Сохранить"}
+            disabled={!canSave}
+            onClick={handleSave}
+          />
+          <Input
+            label="Название"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={order?.id}
+          />
+        </Stack>
         <OrderAnalyseProgress orderId={orderId} />
       </Stack>
     </Tile>

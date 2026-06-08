@@ -17,7 +17,7 @@ export default function HomePage() {
   return (
     <Grid as="main" fullWidth>
       <Column span={16}>
-        <Stack gap={6}>
+        <Stack gap={2}>
           <Stack gap={1}>
             <Text.Heading as="h1" variant="04">
               Miracle
@@ -26,6 +26,11 @@ export default function HomePage() {
               Обработка опросных листов ИИ агентом
             </Text>
           </Stack>
+          <Link to="/auth">
+            <Text as="span">
+              Авторизация
+            </Text>
+          </Link>
 
           {isAuthenticated && (
             <Stack as="section" gap={3} className="items-start">
@@ -42,6 +47,7 @@ export default function HomePage() {
                 )}
               </Stack>
               <Button type="button" size="xs" label="Проверить" onClick={refetchHealth} />
+
             </Stack>
           )}
 

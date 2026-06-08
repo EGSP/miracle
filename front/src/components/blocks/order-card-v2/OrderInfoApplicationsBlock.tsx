@@ -6,10 +6,10 @@ import { OrderInfoTile } from "./OrderInfoTile"
 export function OrderInfoApplicationsBlock({ orderId }: { orderId: string }) {
   return (
     <Grid fullWidth narrow>
-      <Column span={8}>
+      <Column span="50%">
         <OrderInfoTile orderId={orderId} />
       </Column>
-      <Column span={8}>
+      <Column span="50%">
         <ApplicationsTile orderId={orderId} />
       </Column>
     </Grid>

@@ -1,5 +1,7 @@
+import { USER_ROLES } from "@miracle/types"
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router"
 import { App } from "./App"
+import { AccessRouteGuard } from "./contexts/access"
 import { AuthPage, LoginForm, RegisterForm } from "./pages/Auth"
 import AdminPage from "./pages/admin/AdminPage"
 import FilesPage from "./pages/FilesPage"
@@ -40,7 +42,11 @@ const registerRoute = createRoute({
 const filesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/files",
-  component: FilesPage,
+  component: () => (
+    <AccessRouteGuard roles={[USER_ROLES.ADMIN]}>
+      <FilesPage />
+    </AccessRouteGuard>
+  ),
   validateSearch: (search: Record<string, unknown>) => ({
     fileId: typeof search.fileId === "string" ? search.fileId : undefined,
   }),
@@ -59,7 +65,11 @@ const ordersRoute = createRoute({
 const operationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/operations",
-  component: OperationsPage,
+  component: () => (
+    <AccessRouteGuard roles={[USER_ROLES.ADMIN]}>
+      <OperationsPage />
+    </AccessRouteGuard>
+  ),
   validateSearch: (search: Record<string, unknown>) => ({
     rootId: typeof search.rootId === "string" ? search.rootId : undefined,
     runId: typeof search.runId === "string" ? search.runId : undefined,
@@ -75,7 +85,11 @@ const productTypesRoute = createRoute({
 const technicalConditionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/technical-conditions",
-  component: TechnicalConditionsPage,
+  component: () => (
+    <AccessRouteGuard roles={[USER_ROLES.ADMIN]}>
+      <TechnicalConditionsPage />
+    </AccessRouteGuard>
+  ),
   validateSearch: (search: Record<string, unknown>) => ({
     tcId: typeof search.tcId === "string" ? search.tcId : undefined,
   }),
@@ -84,7 +98,11 @@ const technicalConditionsRoute = createRoute({
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
-  component: AdminPage,
+  component: () => (
+    <AccessRouteGuard roles={[USER_ROLES.ADMIN]}>
+      <AdminPage />
+    </AccessRouteGuard>
+  ),
 })
 
 const routeTree = rootRoute.addChildren([

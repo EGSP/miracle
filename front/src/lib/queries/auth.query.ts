@@ -42,6 +42,7 @@ export const useLogout = () => {
     },
     onSuccess: () => {
       authStore.setStatus("unauthorized")
+      window.location.reload()
     },
     onError: () => {
       authStore.setStatus("unauthorized")
