@@ -18,12 +18,7 @@ export function OrderAnalyseDialog({ orderId, onClose }: Props) {
   const hasActiveRun = run ? !TERMINAL_JOB_STATUSES.has(run.status) : false
 
   const handleStart = () => {
-    analyseMutation.mutate(
-      { deleteJobs: true, deleteFileContent: true },
-      {
-        onSuccess: () => onClose(),
-      },
-    )
+    analyseMutation.mutate({ deleteJobs: true, deleteFileContent: true })
   }
 
   const actions: DialogButtonConfig[] = [
