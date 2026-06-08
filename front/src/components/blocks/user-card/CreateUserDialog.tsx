@@ -2,12 +2,11 @@ import { Stack, Text } from "@miracle/aramid"
 import type { Stored, User, UserRole } from "@miracle/types"
 import { USER_ROLES } from "@miracle/types"
 import { Plus } from "lucide-react"
+import { useState } from "react"
 import { Button } from "@/components/ui/ds/button"
 import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
 import { Input } from "@/components/ui/ds/input"
 import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
-import { DirtyGuardProvider, useGuardActions } from "@/contexts/dirty-state/DirtyGuardContext"
-import { useField } from "@/contexts/dirty-state/useField"
 import { useCreateAdminUser } from "@/lib/queries/admin.query"
 import { useDialog } from "@/lib/hooks/use-dialog"
 import { findRoleOption, USER_ROLE_OPTIONS } from "./user-role-options"
@@ -19,24 +18,29 @@ type CreateUserDialogContentProps = {
 
 function CreateUserDialogContent({ onClose, onCreated }: CreateUserDialogContentProps) {
   const createMutation = useCreateAdminUser()
-  const { commitAll, resetAll } = useGuardActions()
 
-  const login = useField("new-user-login", "")
-  const password = useField("new-user-password", "")
-  const role = useField<UserRole>("new-user-role", USER_ROLES.EMPLOYEE)
+  const [login, setLogin] = useState("")
+  const [password, setPassword] = useState("")
+  const [role, setRole] = useState<UserRole>(USER_ROLES.EMPLOYEE)
 
-  const selectedRole = findRoleOption(role.value)
+  const selectedRole = findRoleOption(role)
+
+  const resetForm = () => {
+    setLogin("")
+    setPassword("")
+    setRole(USER_ROLES.EMPLOYEE)
+  }
 
   const handleCreate = () => {
     createMutation.mutate(
       {
-        login: login.value.trim(),
-        password: password.value,
-        role: role.value,
+        login: login.trim(),
+        password,
+        role,
       },
       {
         onSuccess: (created) => {
-          commitAll()
+          resetForm()
           onClose()
           onCreated?.(created)
         },
@@ -45,11 +49,11 @@ function CreateUserDialogContent({ onClose, onCreated }: CreateUserDialogContent
   }
 
   const handleCancel = () => {
-    resetAll()
+    resetForm()
     onClose()
   }
 
-  const canSubmit = login.value.trim().length > 0 && password.value.length > 0
+  const canSubmit = login.trim().length > 0 && password.length > 0
 
   const actions: DialogButtonConfig[] = [
     {
@@ -66,15 +70,15 @@ function CreateUserDialogContent({ onClose, onCreated }: CreateUserDialogContent
   ]
 
   return (
-    <Dialog title="Новый пользователь" size="md" onClose={onClose} actions={actions}>
+    <Dialog title="Новый пользователь" size="md" onClose={handleCancel} actions={actions}>
       <Stack gap={3}>
         <Input
           type="text"
           label="Логин"
           placeholder="Логин"
           autoComplete="username"
-          value={login.value}
-          onChange={login.onInputChange}
+          value={login}
+          onChange={(e) => setLogin(e.target.value)}
           disabled={createMutation.isPending}
         />
         <Input
@@ -82,15 +86,15 @@ function CreateUserDialogContent({ onClose, onCreated }: CreateUserDialogContent
           label="Пароль"
           placeholder="Пароль"
           autoComplete="new-password"
-          value={password.value}
-          onChange={password.onInputChange}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           disabled={createMutation.isPending}
         />
         <Input.Dropdown
           label="Роль"
           items={USER_ROLE_OPTIONS}
           value={selectedRole}
-          onChange={(next) => role.onChange(next?.value ?? USER_ROLES.EMPLOYEE)}
+          onChange={(next) => setRole(next?.value ?? USER_ROLES.EMPLOYEE)}
           getItemKey={(item) => item.value}
           disabled={createMutation.isPending}
           renderSelectedItem={(item) => (
@@ -127,11 +131,7 @@ export function CreateUserDialog({ onCreated }: CreateUserDialogProps) {
       icon={<Plus />}
       label="Новый"
       onClick={() =>
-        open(({ close }) => (
-          <DirtyGuardProvider id="create-user">
-            <CreateUserDialogContent onClose={close} onCreated={onCreated} />
-          </DirtyGuardProvider>
-        ))
+        open(({ close }) => <CreateUserDialogContent onClose={close} onCreated={onCreated} />)
       }
     />
   )

@@ -1,6 +1,6 @@
 import { Stack, Text } from "@miracle/aramid"
 import type { Stored, User, UserRole } from "@miracle/types"
-import { USER_ROLE_LABELS, USER_ROLES } from "@miracle/types"
+import { USER_ROLES } from "@miracle/types"
 import { Button } from "@/components/ui/ds/button"
 import { Input } from "@/components/ui/ds/input"
 import { Tile } from "@/components/ui/ds/tile"
@@ -37,18 +37,8 @@ function UserCardContent({ user, onUserSaved }: UserCardProps) {
   const handleSave = () => {
     if (!role.isDirty) return
 
-    const previousRole = user.role ?? USER_ROLES.EMPLOYEE
-    const nextRole = role.value
-    const previousLabel = USER_ROLE_LABELS[previousRole]
-    const nextLabel = USER_ROLE_LABELS[nextRole]
-
-    const confirmed = window.confirm(
-      `Изменить роль пользователя «${user.login ?? user.id}» с «${previousLabel}» на «${nextLabel}»?`,
-    )
-    if (!confirmed) return
-
     updateMutation.mutate(
-      { role: nextRole },
+      { role: role.value },
       {
         onSuccess: (saved) => {
           commitAll()
