@@ -67,9 +67,14 @@ body:has(dialog.modal-dialog[open]) {
 
 .modal-dialog-header-text {
   flex: 1 1 auto;
+  min-width: 0; /* длинный текст переносится, не сжимая соседние элементы */
   display: flex;
   flex-direction: column;
   gap: var(--aramid-spacing-2); /* 4px между title и description */
+}
+
+.modal-dialog-header [data-modal-close] {
+  flex-shrink: 0;
 }
 
 .modal-dialog-description {
