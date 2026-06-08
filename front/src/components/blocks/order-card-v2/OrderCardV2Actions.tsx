@@ -2,13 +2,12 @@ import { Stack } from "@miracle/aramid"
 import { useState } from "react"
 import { Button } from "@/components/ui/ds/button"
 import { ButtonGroup } from "@/components/ui/ds/button-group"
-import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
-import { useAnalyseOrder } from "@/lib/queries/order.query"
+import { OrderAnalyseDialog } from "./OrderAnalyseDialog"
 import { OrderReportDialog } from "./OrderReportDialog"
 
 export function OrderCardV2Actions({ orderId }: { orderId: string }) {
+  const [analyseDialogOpen, setAnalyseDialogOpen] = useState(false)
   const [reportDialogOpen, setReportDialogOpen] = useState(false)
-  const analyseMutation = useAnalyseOrder(orderId)
 
   return (
     <Stack gap={2}>
@@ -16,9 +15,8 @@ export function OrderCardV2Actions({ orderId }: { orderId: string }) {
         <Button
           variant="primary"
           size="sm"
-          label={analyseMutation.isPending ? "Запуск…" : "Анализ"}
-          disabled={analyseMutation.isPending}
-          onClick={() => analyseMutation.mutate({ deleteJobs: true, deleteFileContent: true })}
+          label="Анализ"
+          onClick={() => setAnalyseDialogOpen(true)}
         />
         <Button
           variant="secondary"
@@ -27,7 +25,9 @@ export function OrderCardV2Actions({ orderId }: { orderId: string }) {
           onClick={() => setReportDialogOpen(true)}
         />
       </ButtonGroup>
-      <InlineMutationNotification mutation={analyseMutation} successMessage="Анализ запущен" />
+      {analyseDialogOpen && (
+        <OrderAnalyseDialog orderId={orderId} onClose={() => setAnalyseDialogOpen(false)} />
+      )}
       {reportDialogOpen && (
         <OrderReportDialog orderId={orderId} onClose={() => setReportDialogOpen(false)} />
       )}
