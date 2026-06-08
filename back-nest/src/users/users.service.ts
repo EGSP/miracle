@@ -9,6 +9,10 @@ export type CreateUserInput = {
     role?: UserRole;
 };
 
+export type UpdateUserInput = {
+    role?: UserRole;
+};
+
 @Injectable()
 export class UsersService {
     constructor(
@@ -45,6 +49,24 @@ export class UsersService {
         });
 
         return this.toPublic(created);
+    }
+
+    async updateUser(id: string, input: UpdateUserInput): Promise<Stored<User>> {
+        const user = await this.prisma.user.findUnique({ where: { id } });
+        if (!user) {
+            throw new NotFoundException(`User ${id} not found`);
+        }
+
+        const updated = await this.prisma.user.update({
+            where: { id },
+            data: {
+                ...(input.role !== undefined && {
+                    role: input.role as 'EMPLOYEE' | 'ADMIN',
+                }),
+            },
+        });
+
+        return this.toPublic(updated);
     }
 
     private toPublic(user: { id: string; login: string; role: string; password: string | null; createdAt: Date; updatedAt: Date; deletedAt: Date | null }): Stored<User> {

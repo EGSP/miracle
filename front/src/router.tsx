@@ -103,6 +103,9 @@ const adminRoute = createRoute({
       <AdminPage />
     </AccessRouteGuard>
   ),
+  validateSearch: (search: Record<string, unknown>) => ({
+    userId: typeof search.userId === "string" ? search.userId : undefined,
+  }),
 })
 
 const routeTree = rootRoute.addChildren([

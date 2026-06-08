@@ -20,10 +20,14 @@ export default function AdminPage() {
           </Stack>
 
           <AdminTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-          {activeTab === "users" && <UsersTab />}
         </Stack>
       </Column>
+
+      {activeTab === "users" && (
+        <Column span={16}>
+          <UsersTab />
+        </Column>
+      )}
     </Grid>
   )
 }

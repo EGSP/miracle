@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { Stored, User } from '@miracle/types';
-import type { CreateUserDto } from './models';
+import type { CreateUserDto, UpdateUserDto } from './models';
 
 export const users = {
     getMe: () => customInstance<Stored<User>>({
@@ -19,6 +19,11 @@ export const users = {
         method: 'POST',
         url: '/users',
         data: createUserDto,
+    }),
+    update: (id: string, updateUserDto: UpdateUserDto) => customInstance<Stored<User>>({
+        method: 'PATCH',
+        url: formatPath('/users/:id', { id }),
+        data: updateUserDto,
     }),
     getById: (id: string) => customInstance<Stored<User>>({
         method: 'GET',

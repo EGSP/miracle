@@ -111,25 +111,25 @@ export default function OrdersPage() {
   return (
     <Grid as="main" fullWidth withRowGap>
       <Column span={16}>
-        <Text.Heading as="h1" variant="02">
-          Заказы
-        </Text.Heading>
+        <Stack gap={3}>
+          <Text.Heading as="h1" variant="02">
+            Заказы
+          </Text.Heading>
+          <Button
+            icon={<Plus />}
+            label={createOrderMutation.isPending ? "Создание…" : "Новый"}
+            size="sm"
+            onClick={handleCreateOrder}
+            disabled={createOrderMutation.isPending}
+          />
+        </Stack>
       </Column>
 
       <Column span={COL_LIST}>
         <Stack as="section" gap={3}>
-          <Stack orientation="horizontal" gap={3} className="items-center justify-between">
-            <Text.Heading as="h2" variant="compact-01">
-              Список заказов
-            </Text.Heading>
-            <Button
-              icon={<Plus />}
-              label={createOrderMutation.isPending ? "Создание…" : "Новый"}
-              size="sm"
-              onClick={handleCreateOrder}
-              disabled={createOrderMutation.isPending}
-            />
-          </Stack>
+          <Text.Heading as="h2" variant="compact-01">
+            Список заказов
+          </Text.Heading>
 
           {isLoading && <Text.Helper as="p">Загрузка…</Text.Helper>}
           {error && <Text.Helper as="p">Ошибка: {error.message}</Text.Helper>}

@@ -56,7 +56,7 @@ export function NavBar() {
         </Link>
       </AccessGuard>
       <AccessGuard roles={[USER_ROLES.ADMIN]}>
-        <Link to="/admin" className={navLinkClass}>
+        <Link to="/admin" search={{ userId: undefined }} className={navLinkClass}>
           <Settings className="size-3.5 shrink-0" />
           <Text.Label as="span">Администрирование</Text.Label>
         </Link>

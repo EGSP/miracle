@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import type { Stored, User } from '@miracle/types';
 import { UsersService } from './users.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
 
 @Controller('users')
 export class UsersController {
@@ -28,6 +29,12 @@ export class UsersController {
     @UseGuards(AuthGuard, AdminGuard)
     create(@Body() dto: CreateUserDto): Promise<Stored<User>> {
         return this.users.createUser(dto);
+    }
+
+    @Patch(':id')
+    @UseGuards(AuthGuard, AdminGuard)
+    update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<Stored<User>> {
+        return this.users.updateUser(id, dto);
     }
 
     // Публичный (без AuthGuard) — переезд старого GET /user/:id.
