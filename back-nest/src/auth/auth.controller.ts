@@ -37,7 +37,11 @@ export class AuthController {
     }
 
     @Post('logout')
-    logout(@Res({ passthrough: true }) reply: FastifyReply): AuthSuccessResponse {
-        return this.auth.logout(reply);
+    logout(
+        @Req() req: FastifyRequest,
+        @Res({ passthrough: true }) reply: FastifyReply,
+    ): Promise<AuthSuccessResponse> {
+        const { refreshToken } = this.tokens.extractFromCookies(req.cookies);
+        return this.auth.logout(refreshToken, reply);
     }
 }

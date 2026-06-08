@@ -8,6 +8,7 @@ import {
 import type { FastifyRequest } from 'fastify';
 import { TokensService } from '../tokens/tokens.service.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { SessionsService } from '../sessions/sessions.service.js';
 import type { AuthenticatedUser } from './current-user.decorator.js';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class AuthGuard implements CanActivate {
     constructor(
         private readonly tokens: TokensService,
         private readonly prisma: PrismaService,
+        private readonly sessions: SessionsService,
     ) {}
 
     async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -25,8 +27,13 @@ export class AuthGuard implements CanActivate {
         if (payload === 'expired') {
             throw new UnauthorizedException('Access token expired');
         }
-        if (payload === 'invalid') {
+        if (payload === 'invalid' || !accessToken) {
             throw new UnauthorizedException('Access token invalid');
+        }
+
+        const sessionActive = await this.sessions.existsByAccessToken(accessToken, payload.sub);
+        if (!sessionActive) {
+            throw new UnauthorizedException('Session revoked or invalid');
         }
 
         const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });

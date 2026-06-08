@@ -3,8 +3,8 @@
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { Stored, User } from '@miracle/types';
-import type { CreateUserDto, UpdateUserDto } from './models';
+import type { PublicSession, Stored, User } from '@miracle/types';
+import type { CreateUserDto, DeleteUserSessionsDto, UpdateUserDto } from './models';
 
 export const users = {
     getMe: () => customInstance<Stored<User>>({
@@ -19,6 +19,19 @@ export const users = {
         method: 'POST',
         url: '/users',
         data: createUserDto,
+    }),
+    listSessions: (id: string) => customInstance<Stored<PublicSession>[]>({
+        method: 'GET',
+        url: formatPath('/users/:id/sessions', { id }),
+    }),
+    deleteAllSessions: (id: string) => customInstance<void>({
+        method: 'DELETE',
+        url: formatPath('/users/:id/sessions/all', { id }),
+    }),
+    deleteSessions: (id: string, deleteUserSessionsDto: DeleteUserSessionsDto) => customInstance<void>({
+        method: 'DELETE',
+        url: formatPath('/users/:id/sessions', { id }),
+        data: deleteUserSessionsDto,
     }),
     update: (id: string, updateUserDto: UpdateUserDto) => customInstance<Stored<User>>({
         method: 'PATCH',

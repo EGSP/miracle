@@ -10,6 +10,6 @@ import { AuthService } from './auth.service.js';
     imports: [TokensModule, forwardRef(() => SessionsModule)],
     controllers: [AuthController],
     providers: [AuthService, AuthGuard, AdminGuard],
-    exports: [AuthGuard, AdminGuard],
+    exports: [AuthGuard, AdminGuard, SessionsModule],
 })
 export class AuthModule {}

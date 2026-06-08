@@ -1,4 +1,4 @@
-import { Stack, Text } from "@miracle/aramid"
+import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import type { Stored, User, UserRole } from "@miracle/types"
 import { USER_ROLES } from "@miracle/types"
 import { Button } from "@/components/ui/ds/button"
@@ -9,6 +9,7 @@ import { DirtyGuardProvider, useGuardActions, useGuardState } from "@/contexts/d
 import { useField } from "@/contexts/dirty-state/useField"
 import { useUpdateAdminUser } from "@/lib/queries/admin.query"
 import { findRoleOption, USER_ROLE_OPTIONS } from "./user-role-options"
+import { UserSessionsTile } from "./UserSessionsTile"
 
 type UserCardProps = {
   user: Stored<User>
@@ -53,76 +54,83 @@ function UserCardContent({ user, onUserSaved }: UserCardProps) {
   }
 
   return (
-    <Tile as="article">
-      <Stack gap={3}>
-        <Stack gap={1}>
-          <Text.Heading as="p" variant="03">
-            {user.login ?? "Без логина"}
-          </Text.Heading>
-          <Text.Helper as="p">ID: {user.id}</Text.Helper>
-        </Stack>
-
-        <Stack gap={2}>
-          <Stack orientation="horizontal" gap={2} className="flex-wrap items-center">
-            <Button
-              type="button"
-              size="md"
-              label={updateMutation.isPending ? "Сохранение..." : "Сохранить"}
-              disabled={!isDirtyAnywhere || updateMutation.isPending}
-              onClick={handleSave}
-            />
-            <Button
-              type="button"
-              size="md"
-              variant="secondary"
-              label="Сбросить"
-              disabled={!isDirtyAnywhere || updateMutation.isPending}
-              onClick={handleReset}
-            />
-          </Stack>
-          <InlineMutationNotification
-            mutation={updateMutation}
-            successMessage="Изменения сохранены"
-          />
-        </Stack>
-
-        <Stack gap={3}>
-          <Text.Heading as="p" variant="compact-01">
-            Данные пользователя
-          </Text.Heading>
-          <Input
-            label="Логин"
-            value={user.login ?? ""}
-            readOnly
-            disabled
-            helperText="Изменение логина пока недоступно"
-          />
-          <Input.Dropdown
-            label="Роль"
-            items={USER_ROLE_OPTIONS}
-            value={selectedRole}
-            onChange={(next) => role.onChange(next?.value ?? USER_ROLES.EMPLOYEE)}
-            getItemKey={(item) => item.value}
-            disabled={updateMutation.isPending}
-            renderSelectedItem={(item) => (
-              <Text as="span" compact>
-                {item?.label ?? USER_ROLE_OPTIONS[0].label}
-              </Text>
-            )}
-            renderListItem={(item) => (
-              <Text as="span" compact>
-                {item?.label ?? ""}
-              </Text>
-            )}
-          >
-            <Input.Dropdown.Selected />
-            <Input.Dropdown.List />
-          </Input.Dropdown>
-          <Input label="Создан" value={formatDate(user.createdAt)} readOnly disabled />
-          <Input label="Обновлён" value={formatDate(user.updatedAt)} readOnly disabled />
-        </Stack>
+    <Stack gap={3}>
+      <Stack gap={1}>
+        <Text.Heading as="p" variant="03">
+          {user.login ?? "Без логина"}
+        </Text.Heading>
+        <Text.Helper as="p">ID: {user.id}</Text.Helper>
       </Stack>
-    </Tile>
+
+      <Stack gap={2}>
+        <Stack orientation="horizontal" gap={2} className="flex-wrap items-center">
+          <Button
+            type="button"
+            size="md"
+            label={updateMutation.isPending ? "Сохранение..." : "Сохранить"}
+            disabled={!isDirtyAnywhere || updateMutation.isPending}
+            onClick={handleSave}
+          />
+          <Button
+            type="button"
+            size="md"
+            variant="secondary"
+            label="Сбросить"
+            disabled={!isDirtyAnywhere || updateMutation.isPending}
+            onClick={handleReset}
+          />
+        </Stack>
+        <InlineMutationNotification
+          mutation={updateMutation}
+          successMessage="Изменения сохранены"
+        />
+      </Stack>
+
+      <Grid fullWidth narrow>
+        <Column span="50%">
+          <Tile as="section">
+            <Stack gap={3}>
+              <Text.Heading as="p" variant="compact-01">
+                Данные пользователя
+              </Text.Heading>
+              <Input
+                label="Логин"
+                value={user.login ?? ""}
+                readOnly
+                disabled
+                helperText="Изменение логина пока недоступно"
+              />
+              <Input.Dropdown
+                label="Роль"
+                items={USER_ROLE_OPTIONS}
+                value={selectedRole}
+                onChange={(next) => role.onChange(next?.value ?? USER_ROLES.EMPLOYEE)}
+                getItemKey={(item) => item.value}
+                disabled={updateMutation.isPending}
+                renderSelectedItem={(item) => (
+                  <Text as="span" compact>
+                    {item?.label ?? USER_ROLE_OPTIONS[0].label}
+                  </Text>
+                )}
+                renderListItem={(item) => (
+                  <Text as="span" compact>
+                    {item?.label ?? ""}
+                  </Text>
+                )}
+              >
+                <Input.Dropdown.Selected />
+                <Input.Dropdown.List />
+              </Input.Dropdown>
+              <Input label="Создан" value={formatDate(user.createdAt)} readOnly disabled />
+              <Input label="Обновлён" value={formatDate(user.updatedAt)} readOnly disabled />
+            </Stack>
+          </Tile>
+        </Column>
+        <Column span="50%">
+          <UserSessionsTile userId={user.id} />
+        </Column>
+      </Grid>
+    </Stack>
   )
 }
 

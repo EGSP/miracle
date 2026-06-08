@@ -84,7 +84,13 @@ export class AuthService {
         return { status: 'success' };
     }
 
-    logout(reply: FastifyReply): AuthSuccessResponse {
+    async logout(
+        refreshToken: string | undefined,
+        reply: FastifyReply,
+    ): Promise<AuthSuccessResponse> {
+        if (refreshToken) {
+            await this.sessions.deleteByRefreshToken(refreshToken);
+        }
         this.tokens.clearCookies(reply);
         return { status: 'success' };
     }

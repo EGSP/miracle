@@ -4,3 +4,9 @@ export type Session = {
   accessToken: string;
   refreshToken: string;
 };
+
+/** Сессия без токенов — для админского просмотра */
+export type PublicSession = {
+  id: string;
+  userId: string;
+};

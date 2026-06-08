@@ -14,3 +14,7 @@ export const UpdateUserSchema = z
     .refine((data) => data.role !== undefined, {
         message: 'At least one field is required',
     });
+
+export const DeleteUserSessionsSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1),
+});

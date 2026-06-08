@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { NewAuthTokens, Session, Stored, UserRole } from '@miracle/types';
+import type { NewAuthTokens, PublicSession, Session, Stored, UserRole } from '@miracle/types';
 import { PrismaService } from '../database/prisma.service.js';
 import type { AuthenticatedUser } from '../auth/current-user.decorator.js';
 import { TokensService } from '../tokens/tokens.service.js';
@@ -25,7 +25,6 @@ export class SessionsService {
     }
 
     async createSession(userId: string): Promise<NewAuthTokens> {
-        await this.clearUserSessions(userId);
         const tokenPair = await this.tokens.signTokens({ sub: userId });
         await this.prisma.session.create({
             data: {
@@ -48,6 +47,14 @@ export class SessionsService {
         });
     }
 
+    async existsByAccessToken(accessToken: string, userId: string): Promise<boolean> {
+        const session = await this.prisma.session.findFirst({
+            where: { accessToken, userId },
+            select: { id: true },
+        });
+        return session !== null;
+    }
+
     async getByRefreshToken(refreshToken: string): Promise<Stored<Session> | null> {
         const session = await this.prisma.session.findFirst({
             where: { refreshToken },
@@ -56,7 +63,31 @@ export class SessionsService {
         return session as Stored<Session> | null;
     }
 
-    private async clearUserSessions(userId: string): Promise<void> {
+    async deleteByRefreshToken(refreshToken: string): Promise<void> {
+        await this.prisma.session.deleteMany({ where: { refreshToken } });
+    }
+
+    async listPublicByUserId(userId: string): Promise<Stored<PublicSession>[]> {
+        const sessions = await this.prisma.session.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                userId: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+        return sessions as Stored<PublicSession>[];
+    }
+
+    async deleteByIdsForUser(userId: string, ids: string[]): Promise<void> {
+        await this.prisma.session.deleteMany({
+            where: { userId, id: { in: ids } },
+        });
+    }
+
+    async deleteAllForUser(userId: string): Promise<void> {
         await this.prisma.session.deleteMany({ where: { userId } });
     }
 }

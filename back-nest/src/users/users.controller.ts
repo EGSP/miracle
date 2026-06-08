@@ -1,15 +1,20 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import type { Stored, User } from '@miracle/types';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import type { PublicSession, Stored, User } from '@miracle/types';
 import { UsersService } from './users.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator.js';
+import { SessionsService } from '../sessions/sessions.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
+import { DeleteUserSessionsDto } from './dto/delete-user-sessions.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 
 @Controller('users')
 export class UsersController {
-    constructor(private readonly users: UsersService) {}
+    constructor(
+        private readonly users: UsersService,
+        private readonly sessions: SessionsService,
+    ) {}
 
     @Get('me')
     @UseGuards(AuthGuard)
@@ -29,6 +34,29 @@ export class UsersController {
     @UseGuards(AuthGuard, AdminGuard)
     create(@Body() dto: CreateUserDto): Promise<Stored<User>> {
         return this.users.createUser(dto);
+    }
+
+    @Get(':id/sessions')
+    @UseGuards(AuthGuard, AdminGuard)
+    listSessions(@Param('id') id: string): Promise<Stored<PublicSession>[]> {
+        return this.sessions.listPublicByUserId(id);
+    }
+
+    @Delete(':id/sessions/all')
+    @HttpCode(204)
+    @UseGuards(AuthGuard, AdminGuard)
+    async deleteAllSessions(@Param('id') id: string): Promise<void> {
+        await this.sessions.deleteAllForUser(id);
+    }
+
+    @Delete(':id/sessions')
+    @HttpCode(204)
+    @UseGuards(AuthGuard, AdminGuard)
+    async deleteSessions(
+        @Param('id') id: string,
+        @Body() dto: DeleteUserSessionsDto,
+    ): Promise<void> {
+        await this.sessions.deleteByIdsForUser(id, dto.ids);
     }
 
     @Patch(':id')
