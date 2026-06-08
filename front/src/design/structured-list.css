@@ -38,6 +38,7 @@
 
 .structured-list-header {
   display: grid;
+  border-top: 1px solid var(--aramid-color-gray-30);
   border-bottom: 1px solid var(--aramid-color-gray-30);
 }
 
@@ -60,15 +61,17 @@
   line-height: var(--aramid-font-line-height-tight);
 }
 
-/* Заголовок с несколькими sub-строками */
+/* Заголовок с несколькими sub-строками — gap на контейнере, без padding у subs */
 .structured-list-header-cell .structured-list-cell-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aramid-spacing-2); /* 4px */
   width: 100%;
 }
 
 .structured-list-header-sub {
   display: flex;
   align-items: flex-start;
-  padding-block-start: var(--aramid-spacing-2); /* 4px */
 }
 
 /* ─── Item ───────────────────────────────────────────────────────────────── */

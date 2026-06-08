@@ -326,10 +326,7 @@ function StructuredListHeader<T>() {
           {col.rows.length === 1 ? (
             (col.rows[0]!.label ?? null)
           ) : (
-            <div
-              className="structured-list-cell-inner"
-              style={{ gridTemplateRows: col.rows.map((r) => r.weight).join(" ") }}
-            >
+            <div className="structured-list-cell-inner">
               {col.rows.map((row) => (
                 <span key={row.key} className="structured-list-header-sub">
                   {row.label}
