@@ -1,13 +1,18 @@
-import { Column, Grid, Stack, Text } from "@miracle/aramid"
+import { Column, Grid, IconIndicator, Stack, Text } from "@miracle/aramid"
 import type { JobRun, Stored } from "@miracle/types"
 import { useNavigate, useSearch } from "@tanstack/react-router"
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import { JobRunCard } from "@/components/blocks/job-run-card/JobRunCard"
 import { JobTree } from "@/components/blocks/job-tree/JobTree"
 import { JobTreeProvider } from "@/components/blocks/job-tree/JobTreeContext"
+import { jobStatusToIconIndicator } from "@/components/blocks/job-tree/job-tree.utils"
+import {
+  type ListDefinition,
+  StructuredList,
+  type StructuredListKey,
+} from "@/components/ui/ds/structured-list"
 import { Tile } from "@/components/ui/ds/tile"
 import { useJobRunsList } from "@/lib/queries/job-runs.query"
-import { cn } from "@/lib/utils"
 import "@/design/operations.css"
 
 const COL_LIST = 4 as const
@@ -23,14 +28,48 @@ function formatDate(value: Date | string): string {
   })
 }
 
+const rootListDefinition: ListDefinition<Stored<JobRun>> = {
+  getKey: (root) => root.id,
+  columns: [
+    {
+      key: "job",
+      label: "Операция",
+      width: "1fr",
+      render: (root) => (
+        <Text.Label as="span" className="operations-list__job">
+          {root.job}
+        </Text.Label>
+      ),
+    },
+    {
+      key: "date",
+      label: "Дата",
+      width: "1fr",
+      render: (root) => <Text.Helper as="span">{formatDate(root.createdAt)}</Text.Helper>,
+    },
+    {
+      key: "status",
+      label: "Статус",
+      width: "1fr",
+      render: (root) => {
+        const indicator = jobStatusToIconIndicator(root.status)
+        return <IconIndicator kind={indicator.kind} label={indicator.label} size={16} />
+      },
+    },
+  ],
+}
+
 export default function OperationsPage() {
   const { rootId, runId } = useSearch({ from: "/operations" })
   const navigate = useNavigate({ from: "/operations" })
 
   const { data: roots, isLoading, error } = useJobRunsList()
 
-  const selectRoot = useCallback(
-    (id: string) => {
+  const selected: StructuredListKey[] = useMemo(() => (rootId ? [rootId] : []), [rootId])
+
+  const handleSelected = useCallback(
+    (keys: StructuredListKey[]) => {
+      const id = (keys[0] as string) ?? undefined
       void navigate({ search: (prev) => ({ ...prev, rootId: id, runId: undefined }) })
     },
     [navigate],
@@ -64,20 +103,13 @@ export default function OperationsPage() {
           )}
 
           {roots && roots.length > 0 && (
-            <ul className="root-list">
-              {roots.map((root) => (
-                <li key={root.id}>
-                  <button
-                    type="button"
-                    className={cn("root-list__item", root.id === rootId && "root-list__item--selected")}
-                    onClick={() => selectRoot(root.id)}
-                  >
-                    <span className="root-list__job">{root.job}</span>
-                    <span className="root-list__meta">{formatDate(root.createdAt)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <StructuredList
+              definition={rootListDefinition}
+              items={roots}
+              selected={selected}
+              onSelected={handleSelected}
+              overflow={8}
+            />
           )}
         </Stack>
       </Column>

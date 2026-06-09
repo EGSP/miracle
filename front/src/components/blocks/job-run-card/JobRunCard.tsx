@@ -1,9 +1,11 @@
-import { latestJobProgressState } from "@miracle/types"
 import { CodeSnippet, Stack, Text } from "@miracle/aramid"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { useJobTreeStore } from "@/components/blocks/job-tree/JobTreeContext"
-import { jobStatusToProgressBarStatus } from "@/components/blocks/job-tree/job-tree.utils"
+import {
+  jobStatusToProgressBarStatus,
+  resolveJobNodeProgress,
+} from "@/components/blocks/job-tree/job-tree.utils"
 import { Button } from "@/components/ui/ds/button"
 import { ProgressBar } from "@/components/ui/ds/progress-bar"
 import { jobs } from "@/lib/generated/jobs.client"
@@ -57,7 +59,7 @@ export function JobRunCard() {
   const isRunning = run.status === "running"
   const cancelTarget = run.status === "running" || run.status === "queued" ? run.id : rootId
 
-  const latestProgress = latestJobProgressState(run.progress)
+  const progress = resolveJobNodeProgress(run)
 
   return (
     <Stack gap={4}>
@@ -70,17 +72,12 @@ export function JobRunCard() {
         </Text.Helper>
       </Stack>
 
-      {latestProgress && (
+      {progress && (
         <ProgressBar
-          label={latestProgress.label}
-          helperText={
-            latestProgress.determined
-              ? `${Math.round(latestProgress.percentNormalized * 100)}%`
-              : undefined
-          }
+          label={progress.label}
           status={jobStatusToProgressBarStatus(run.status)}
-          fill={latestProgress.percentNormalized}
-          determinate={latestProgress.determined}
+          fill={progress.fill}
+          determinate={progress.determinate}
         />
       )}
 

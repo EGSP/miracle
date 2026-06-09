@@ -83,6 +83,23 @@ export function AuthPage() {
   )
 }
 
+/** Встроенный блок входа для защищённых страниц — URL не меняется. */
+export function AuthRequiredPanel() {
+  return authShell(
+    <>
+      <Stack gap={1}>
+        <Text.Heading as="h1" variant="04">
+          Требуется авторизация
+        </Text.Heading>
+        <Text as="p" compact>
+          Войдите, чтобы открыть этот раздел.
+        </Text>
+      </Stack>
+      <LoginForm />
+    </>,
+  )
+}
+
 export function LoginForm() {
   const [loginValue, setLoginValue] = useState("")
   const [passwordValue, setPasswordValue] = useState("")

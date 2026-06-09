@@ -4,7 +4,7 @@ import { TreeView } from "@/components/ui/ds/tree-view"
 import { jobs } from "@/lib/generated/jobs.client"
 import { useJobTreeStore, useJobTreeStoreApi } from "./JobTreeContext"
 import { JobTreeNode } from "./JobTreeNode"
-import { diffTree } from "./job-tree.utils"
+import { diffTree, isJobStatusActive } from "./job-tree.utils"
 
 export const JOB_TREE_POLL_INTERVAL_MS = 2500
 
@@ -55,10 +55,33 @@ export function JobTree({ rootId, onSelect, onSync }: JobTreeProps) {
 
   useEffect(() => {
     initializedRef.current = false
-    void syncTree(true)
-    const id = window.setInterval(() => void syncTree(false), JOB_TREE_POLL_INTERVAL_MS)
-    return () => window.clearInterval(id)
-  }, [syncTree])
+    let intervalId: number | undefined
+
+    const stopPolling = () => {
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId)
+        intervalId = undefined
+      }
+    }
+
+    const tick = async (isInitial: boolean) => {
+      await syncTree(isInitial)
+      const hasActive = Object.values(store.getState().nodes).some((node) =>
+        isJobStatusActive(node.status),
+      )
+      if (hasActive) {
+        if (intervalId === undefined) {
+          intervalId = window.setInterval(() => void tick(false), JOB_TREE_POLL_INTERVAL_MS)
+        }
+      } else {
+        stopPolling()
+      }
+    }
+
+    void tick(true)
+
+    return stopPolling
+  }, [syncTree, store])
 
   useEffect(() => {
     if (!selectedId) return

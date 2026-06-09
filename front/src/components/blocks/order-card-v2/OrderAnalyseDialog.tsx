@@ -1,5 +1,5 @@
-import type { JobStatus } from "@miracle/types"
 import { Stack } from "@miracle/aramid"
+import { isJobStatusActive } from "@/components/blocks/job-tree/job-tree.utils"
 import { Dialog, type DialogButtonConfig } from "@/components/ui/ds/modal-dialog"
 import { InlineMutationNotification } from "@/components/ui/external/inline-mutation-notification"
 import { useAnalyseOrder, usePollOrderJob } from "@/lib/queries/order.query"
@@ -10,12 +10,10 @@ type Props = {
   onClose: () => void
 }
 
-const TERMINAL_JOB_STATUSES = new Set<JobStatus>(["succeed", "partial", "failed", "cancelled"])
-
 export function OrderAnalyseDialog({ orderId, onClose }: Props) {
   const analyseMutation = useAnalyseOrder(orderId)
   const { data: run, isLoading } = usePollOrderJob(orderId)
-  const hasActiveRun = run ? !TERMINAL_JOB_STATUSES.has(run.status) : false
+  const hasActiveRun = run ? isJobStatusActive(run.status) : false
 
   const handleStart = () => {
     analyseMutation.mutate({ deleteJobs: true, deleteFileContent: true })

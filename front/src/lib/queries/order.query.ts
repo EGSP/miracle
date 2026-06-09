@@ -6,6 +6,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
+import {
+  ACTIVE_JOB_STATUSES,
+  isJobStatusTerminal,
+  TERMINAL_JOB_STATUSES,
+} from "@/components/blocks/job-tree/job-tree.utils"
 import { orders } from "../generated"
 import type { UpdateOrderDto } from "../generated/models"
 
@@ -14,15 +19,6 @@ export const ORDER_JOB_QUERY_KEY = ["order-job"] as const
 export const ORDER_POSITIONS_QUERY_KEY = ["order-positions"] as const
 export const ORDER_REPORTS_QUERY_KEY = ["order-reports"] as const
 export const ORDER_JOB_POLL_INTERVAL_MS = 2500
-
-export const TERMINAL_JOB_STATUSES = new Set<JobStatus>([
-  "succeed",
-  "partial",
-  "failed",
-  "cancelled",
-])
-
-const ACTIVE_JOB_STATUSES = new Set<JobStatus>(["queued", "running"])
 
 /** Позиции, отчёты и список job runs после старта или завершения анализа заказа. */
 export function invalidateOrderAnalysisResultQueries(
@@ -70,7 +66,7 @@ export const usePollOrderJob = (orderId: string) => {
     queryFn: () => orders.getJob(orderId),
     refetchInterval: (q) => {
       const run = q.state.data
-      if (run && TERMINAL_JOB_STATUSES.has(run.status)) return false
+      if (run && isJobStatusTerminal(run.status)) return false
       return ORDER_JOB_POLL_INTERVAL_MS
     },
   })

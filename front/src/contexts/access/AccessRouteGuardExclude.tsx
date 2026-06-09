@@ -1,28 +1,32 @@
+import { Text } from "@miracle/aramid"
 import type { UserRole } from "@miracle/types"
 import { Navigate } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { useAuthContext } from "@/contexts/AuthContext"
+import { AuthRequiredPanel } from "@/pages/Auth"
 import { useIsRoleExcluded, useUserRole } from "./useAccessCheck"
 
 type AccessRouteGuardExcludeProps = {
   excludes: UserRole[]
   children: ReactNode
-  loginTo?: string
   redirectTo?: string
 }
 
 export function AccessRouteGuardExclude({
   excludes,
   children,
-  loginTo = "/auth/login",
   redirectTo = "/",
 }: AccessRouteGuardExcludeProps) {
-  const { isAuthenticated } = useAuthContext()
+  const { isAuthenticated, isSessionPending } = useAuthContext()
   const role = useUserRole()
   const excluded = useIsRoleExcluded(excludes)
 
+  if (isSessionPending) {
+    return <Text.Helper as="p">Проверка сессии…</Text.Helper>
+  }
+
   if (!isAuthenticated) {
-    return <Navigate to={loginTo} />
+    return <AuthRequiredPanel />
   }
 
   if (role === undefined || excluded) {

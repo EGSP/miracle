@@ -3,8 +3,23 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/ds/button"
 import { Input } from "@/components/ui/ds/input"
 import { Tile } from "@/components/ui/ds/tile"
-import { useGetOrder, useUpdateOrder } from "@/lib/queries/order.query"
+import { useGetOrder, useGetOrderJob, useUpdateOrder } from "@/lib/queries/order.query"
 import { OrderAnalyseProgress } from "./OrderAnalyseProgress"
+
+function OrderOperationLink({ orderId }: { orderId: string }) {
+  const { data: run } = useGetOrderJob(orderId)
+  if (!run) return null
+
+  const href = `/operations?rootId=${encodeURIComponent(run.id)}`
+
+  return (
+    <Text.Helper as="p">
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        Операция анализа
+      </a>
+    </Text.Helper>
+  )
+}
 
 function normalizeNameInput(value: string): string | null {
   const trimmed = value.trim()
@@ -51,6 +66,7 @@ export function OrderInfoTile({ orderId }: { orderId: string }) {
           />
         </Stack>
         <OrderAnalyseProgress orderId={orderId} />
+        <OrderOperationLink orderId={orderId} />
       </Stack>
     </Tile>
   )

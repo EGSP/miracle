@@ -1,55 +1,25 @@
 import type { UserRole } from "@miracle/types"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext } from "react"
 import { useGetCookieSession } from "@/lib/queries/sessions.query"
-import { useAuthStore } from "@/lib/stores/auth.store"
 
 interface AuthContextType {
   isAuthenticated: boolean
+  isSessionPending: boolean
   userId: string | undefined
   role: UserRole | undefined
-  activate(userId: string, role: UserRole): void
-  deactivate(): void
 }
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthContextProvider({ children }: { children: React.ReactNode }) {
-  const authStore = useAuthStore()
-  const { data: session, error } = useGetCookieSession()
-
-  const [userId, setUserId] = useState<string | undefined>(undefined)
-  const [role, setRole] = useState<UserRole | undefined>(undefined)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-
-  useEffect(() => {
-    if (session) {
-      activate(session.userId, session.role)
-    } else if (error) {
-      // Не трогаем authStore.status — интерсептор уже выставил "unauthorized"
-      deactivate()
-    }
-    // Если ни session, ни error — запрос ещё в процессе, ничего не делаем
-  }, [session, error])
-
-  const activate = (userId: string, role: UserRole) => {
-    setIsAuthenticated(true)
-    setUserId(userId)
-    setRole(role)
-  }
-
-  const deactivate = () => {
-    setIsAuthenticated(false)
-    setUserId(undefined)
-    setRole(undefined)
-  }
+  const { data: session, isPending: isSessionPending } = useGetCookieSession()
 
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated,
-        userId,
-        role,
-        activate,
-        deactivate,
+        isAuthenticated: Boolean(session),
+        isSessionPending,
+        userId: session?.userId,
+        role: session?.role,
       }}
     >
       {children}

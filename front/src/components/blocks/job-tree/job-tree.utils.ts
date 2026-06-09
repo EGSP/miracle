@@ -1,5 +1,95 @@
-import type { JobRun, JobStatus, Stored } from "@miracle/types"
+import type { IconIndicatorKind } from "@miracle/aramid"
+import { latestJobProgressState, type JobRun, type JobStatus, type Stored } from "@miracle/types"
 import type { ProgressBarStatus } from "@/components/ui/ds/progress-bar"
+
+export const TERMINAL_JOB_STATUSES = new Set<JobStatus>([
+  "succeed",
+  "partial",
+  "failed",
+  "cancelled",
+])
+
+export const ACTIVE_JOB_STATUSES = new Set<JobStatus>(["queued", "running"])
+
+export function isJobStatusActive(status: JobStatus): boolean {
+  return ACTIVE_JOB_STATUSES.has(status)
+}
+
+export function isJobStatusTerminal(status: JobStatus): boolean {
+  return TERMINAL_JOB_STATUSES.has(status)
+}
+
+const indicatorByProgressStatus: Record<ProgressBarStatus, IconIndicatorKind> = {
+  running: "in-progress",
+  partial: "caution-minor",
+  succeed: "succeeded",
+  failed: "failed",
+}
+
+const statusLabels: Record<JobStatus, string> = {
+  queued: "В очереди",
+  running: "Выполняется",
+  partial: "Частично",
+  succeed: "Успех",
+  failed: "Ошибка",
+  cancelled: "Отменено",
+}
+
+/** Статус прогона → иконка {@link IconIndicator}. */
+export function jobStatusToIconIndicator(status: JobStatus): {
+  kind: IconIndicatorKind
+  label: string
+} {
+  return {
+    kind: indicatorByProgressStatus[jobStatusToProgressBarStatus(status)],
+    label: statusLabels[status],
+  }
+}
+
+export function getJobStatusLabel(status: JobStatus): string {
+  return statusLabels[status]
+}
+
+function fallbackFillForTerminalStatus(status: JobStatus): number {
+  switch (status) {
+    case "succeed":
+    case "failed":
+    case "cancelled":
+      return 1
+    case "partial":
+      return 0.5
+    default:
+      return 0
+  }
+}
+
+export type JobNodeProgressView = {
+  label: string
+  fill: number
+  determinate: boolean
+}
+
+/** Прогресс для узла дерева: из history или fallback по терминальному статусу. */
+export function resolveJobNodeProgress(node: Stored<JobRun>): JobNodeProgressView | undefined {
+  const latest = latestJobProgressState(node.progress)
+  if (latest) {
+    return {
+      label: latest.label,
+      fill: latest.percentNormalized,
+      determinate: latest.determined,
+    }
+  }
+
+  if (!isJobStatusTerminal(node.status)) {
+    return undefined
+  }
+
+  return {
+    label: statusLabels[node.status],
+    fill: fallbackFillForTerminalStatus(node.status),
+    determinate: true,
+  }
+}
 
 /** Статус прогона → статус трека {@link InlineProgressBar}. */
 export function jobStatusToProgressBarStatus(status: JobStatus): ProgressBarStatus {
