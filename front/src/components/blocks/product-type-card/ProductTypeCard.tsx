@@ -117,7 +117,7 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
           </div>
         </Stack>
 
-        <InlineMutationNotification mutation={updateMutation} successMessage="Сохранено" />
+        <InlineMutationNotification mutation={updateMutation} />
         <InlineMutationNotification mutation={softDeleteMutation} />
       </Stack>
     </Layer>
