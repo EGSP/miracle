@@ -16,6 +16,10 @@ export const productTypes = {
         url: '/product-types',
         data: createProductTypeDto,
     }),
+    getLinkedTechnicalConditions: (id: string) => customInstance<Array<{ id: string; name: string | null }>>({
+        method: 'GET',
+        url: formatPath('/product-types/:id/technical-conditions', { id }),
+    }),
     getOne: (id: string) => customInstance<Stored<ProductType>>({
         method: 'GET',
         url: formatPath('/product-types/:id', { id }),

@@ -34,6 +34,12 @@ export class TechnicalConditionsController {
         return this.tc.create(body);
     }
 
+    /** Тип продукции, связанный с этим ТУ (id + name). */
+    @Get(':id/product-type')
+    getLinkedProductType(@Param('id') id: string): Promise<{ id: string; name: string } | null> {
+        return this.tc.getLinkedProductType(id);
+    }
+
     @Get(':id')
     getOne(@Param('id') id: string): Promise<Stored<TechnicalCondition>> {
         return this.tc.getByIdOrThrow(id);

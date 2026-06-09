@@ -30,6 +30,14 @@ export class ProductTypesController {
         return this.productTypes.create(dto);
     }
 
+    /** ТУ, привязанные к этому типу продукции (id + name). */
+    @Get(':id/technical-conditions')
+    getLinkedTechnicalConditions(
+        @Param('id') id: string,
+    ): Promise<Array<{ id: string; name: string | null }>> {
+        return this.productTypes.getLinkedTechnicalConditions(id);
+    }
+
     @Get(':id')
     getOne(@Param('id') id: string): Promise<Stored<ProductType>> {
         return this.productTypes.getByIdOrThrow(id);

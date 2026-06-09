@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { Stored, TechnicalCondition } from '@miracle/types';
-import type { TechnicalConditionsExtractDetailsResponse } from './models';
+import type { TechnicalConditionsGetLinkedProductTypeResponse, TechnicalConditionsExtractDetailsResponse } from './models';
 
 export const technicalConditions = {
     list: (query: { productTypeId?: string }) => customInstance<Stored<TechnicalCondition>[]>({
@@ -16,6 +16,10 @@ export const technicalConditions = {
         method: 'POST',
         url: '/technical-conditions',
         data: technicalCondition,
+    }),
+    getLinkedProductType: (id: string) => customInstance<TechnicalConditionsGetLinkedProductTypeResponse>({
+        method: 'GET',
+        url: formatPath('/technical-conditions/:id/product-type', { id }),
     }),
     getOne: (id: string) => customInstance<Stored<TechnicalCondition>>({
         method: 'GET',

@@ -4,6 +4,23 @@ import { productTypes } from "../generated"
 
 export const PRODUCT_TYPES_QUERY_KEY = ["product-types"] as const
 
+export type LinkedTechnicalConditionRef = { id: string; name: string | null }
+
+export const linkedTechnicalConditionsKey = (productTypeId: string) =>
+  [...PRODUCT_TYPES_QUERY_KEY, productTypeId, "linked-technical-conditions"] as const
+
+export function linkedTechnicalConditionLabel(tc: LinkedTechnicalConditionRef): string {
+  const trimmed = tc.name?.trim()
+  return trimmed ? trimmed : tc.id
+}
+
+export const useLinkedTechnicalConditions = (productTypeId: string) => {
+  return useQuery({
+    queryKey: linkedTechnicalConditionsKey(productTypeId),
+    queryFn: () => productTypes.getLinkedTechnicalConditions(productTypeId),
+  })
+}
+
 export const useProductTypes = () => {
   return useQuery({
     queryKey: PRODUCT_TYPES_QUERY_KEY,

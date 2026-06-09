@@ -37,6 +37,21 @@ export class TechnicalConditionsService {
         return row;
     }
 
+    /** Тип продукции, привязанный к ТУ (id + name). `null` если связи нет или тип удалён. */
+    async getLinkedProductType(tcId: string): Promise<{ id: string; name: string } | null> {
+        const tc = await this.getByIdOrThrow(tcId);
+        if (!tc.productTypeId) {
+            return null;
+        }
+
+        const productType = await this.productTypes.getById(tc.productTypeId);
+        if (!productType) {
+            return null;
+        }
+
+        return { id: productType.id, name: productType.name };
+    }
+
     async create(body: TechnicalCondition): Promise<Stored<TechnicalCondition>> {
         const payload = await this.preparePayload(body);
         const row = await this.prisma.technicalCondition.create({ data: payload });

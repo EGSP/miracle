@@ -14,6 +14,7 @@ import {
 import { useField } from "@/contexts/dirty-state/useField"
 import { formatSynonymsToText, parseSynonymsFromText } from "@/lib/product-type-synonyms"
 import { useSoftDeleteProductType, useUpdateProductType } from "@/lib/queries/product-type.query"
+import { ProductTypeTcLinks } from "./ProductTypeTcLinks"
 import { SynonymsPreview } from "./SynonymsPreview"
 
 type ProductTypeCardProps = {
@@ -85,6 +86,8 @@ function ProductTypeCardBody({ productType }: ProductTypeCardProps) {
             onClick={handleSoftDelete}
           />
         </Stack>
+
+        <ProductTypeTcLinks productTypeId={productType.id} />
 
         <Stack gap={1}>
           <Text.Label as="span">Название</Text.Label>

@@ -37,6 +37,21 @@ export class ProductTypesService {
         return row;
     }
 
+    /** Активные ТУ, привязанные к типу продукции (облегчённые id + name). */
+    async getLinkedTechnicalConditions(
+        productTypeId: string,
+    ): Promise<Array<{ id: string; name: string | null }>> {
+        await this.getByIdOrThrow(productTypeId);
+
+        const rows = await this.prisma.technicalCondition.findMany({
+            where: { productTypeId, deletedAt: null },
+            select: { id: true, name: true },
+            orderBy: { name: 'asc' },
+        });
+
+        return rows.map((row) => ({ id: row.id, name: row.name }));
+    }
+
     async update(id: string, dto: UpdateProductTypeDto): Promise<Stored<ProductType>> {
         await this.getByIdOrThrow(id);
 

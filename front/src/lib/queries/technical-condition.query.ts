@@ -1,6 +1,14 @@
 import type { TechnicalCondition, TechnicalConditionsQuery } from "@miracle/types"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
 import { technicalConditions } from "../generated"
+import { PRODUCT_TYPES_QUERY_KEY } from "./product-type.query"
+
+function invalidateLinkedTechnicalConditions(queryClient: QueryClient) {
+  queryClient.invalidateQueries({
+    queryKey: PRODUCT_TYPES_QUERY_KEY,
+    predicate: (query) => query.queryKey[2] === "linked-technical-conditions",
+  })
+}
 
 export const TECHNICAL_CONDITIONS_ROOT_KEY = ["technical-conditions"] as const
 
@@ -39,6 +47,7 @@ export const useCreateTechnicalCondition = () => {
     mutationFn: (data: TechnicalCondition) => technicalConditions.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TECHNICAL_CONDITIONS_ROOT_KEY })
+      invalidateLinkedTechnicalConditions(queryClient)
     },
   })
 }
@@ -50,6 +59,7 @@ export const useReplaceTechnicalCondition = (id: string) => {
     mutationFn: (body: TechnicalCondition) => technicalConditions.replace(id, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TECHNICAL_CONDITIONS_ROOT_KEY })
+      invalidateLinkedTechnicalConditions(queryClient)
     },
   })
 }
@@ -61,7 +71,19 @@ export const useDeleteTechnicalCondition = (id: string) => {
     mutationFn: () => technicalConditions.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TECHNICAL_CONDITIONS_ROOT_KEY })
+      invalidateLinkedTechnicalConditions(queryClient)
     },
+  })
+}
+
+export const useLinkedProductType = (tcId: string | undefined) => {
+  return useQuery({
+    queryKey: [...TECHNICAL_CONDITIONS_ROOT_KEY, "linked-product-type", tcId ?? "none"] as const,
+    queryFn: () => {
+      if (!tcId) throw new Error("TC id is required")
+      return technicalConditions.getLinkedProductType(tcId)
+    },
+    enabled: !!tcId,
   })
 }
 

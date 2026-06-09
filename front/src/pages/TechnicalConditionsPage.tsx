@@ -120,6 +120,8 @@ function TechnicalConditionsPageContent() {
               items={sortedTechnicalConditions}
               selected={selected}
               onSelected={handleSelected}
+              fluid
+              overflow={12}
             />
           )}
         </Stack>
