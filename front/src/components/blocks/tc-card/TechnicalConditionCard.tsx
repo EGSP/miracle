@@ -1,6 +1,7 @@
-import { Column, Grid, Layer, Stack, Text } from "@miracle/aramid"
+import { Stack, Text } from "@miracle/aramid"
 import type { Stored, TechnicalCondition } from "@miracle/types"
 import type * as React from "react"
+import { Tile } from "@/components/ui/ds/tile"
 import { DirtyGuardProvider, useGuardActions } from "@/contexts/dirty-state/DirtyGuardContext"
 import { useDraft } from "@/contexts/draft-api/DraftContext"
 import {
@@ -84,32 +85,20 @@ function TechnicalConditionCardBody() {
   const { technicalCondition } = useTechnicalConditionCardContext()
 
   return (
-    <Layer>
-      <Grid withRowGap className="border border-border p-3">
-        <Column span="100%">
-          <Text.Heading as="p" variant="03">
-            Техническое условие{" "}
-            <Text as="span" expressive>
-              ({technicalCondition.id})
-            </Text>
-          </Text.Heading>
-        </Column>
-        <Column span="100%">
-          <TCCActions />
-        </Column>
-        <Column span="100%">
-          <TCCInfo />
-        </Column>
-        <Column span="100%">
-          <Stack gap={2}>
-            <TCCSlotRules />
-          </Stack>
-        </Column>
-        <Column span="100%">
-          <TCCTemplates />
-        </Column>
-      </Grid>
-    </Layer>
+    <Tile as="section">
+      <Stack gap={5}>
+        <Text.Heading as="p" variant="03">
+          Техническое условие{" "}
+          <Text as="span" expressive>
+            ({technicalCondition.id})
+          </Text>
+        </Text.Heading>
+        <TCCActions />
+        <TCCInfo />
+        <TCCSlotRules />
+        <TCCTemplates />
+      </Stack>
+    </Tile>
   )
 }
 
