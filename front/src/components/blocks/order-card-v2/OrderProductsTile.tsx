@@ -88,7 +88,7 @@ export function OrderProductsTile({ orderId }: { orderId: string }) {
 
   return (
     <Tile className="order-products__pane">
-      <Stack gap={3}>
+      <Stack gap={3} className="order-products__content">
         <Text.Heading as="h3" variant="compact-01">
           Продукция
         </Text.Heading>
@@ -105,7 +105,6 @@ export function OrderProductsTile({ orderId }: { orderId: string }) {
             items={items}
             selected={selected}
             onSelected={handleSelected}
-            overflow={8}
             condensed
           />
         )}

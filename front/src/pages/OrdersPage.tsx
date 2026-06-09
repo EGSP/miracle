@@ -142,7 +142,7 @@ export default function OrdersPage() {
               items={orders}
               selected={selected}
               onSelected={handleSelected}
-              overflow={8}
+              overflow={12}
             />
           )}
         </Stack>

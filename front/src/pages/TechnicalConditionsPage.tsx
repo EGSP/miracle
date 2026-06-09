@@ -1,7 +1,7 @@
 ﻿import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import type { Stored, TechnicalCondition } from "@miracle/types"
 import { useNavigate, useSearch } from "@tanstack/react-router"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { CreateTechnicalConditionDialog } from "@/components/blocks/tc-card/CreateTechnicalConditionDialog"
 import { TechnicalConditionCard } from "@/components/blocks/tc-card/TechnicalConditionCard"
 import {
@@ -54,6 +54,13 @@ function TechnicalConditionsPageContent() {
 
   const { data: technicalConditions, isLoading, error } = useTechnicalConditions()
 
+  const sortedTechnicalConditions = useMemo(() => {
+    if (!technicalConditions) return undefined
+    return [...technicalConditions].sort((a, b) =>
+      (a.name ?? "").localeCompare(b.name ?? "", "ru"),
+    )
+  }, [technicalConditions])
+
   const [selectedTc, setSelectedTc] = useState<Stored<TechnicalCondition> | null>(null)
 
   const selected: StructuredListKey[] = selectedTc ? [selectedTc.id] : []
@@ -102,15 +109,15 @@ function TechnicalConditionsPageContent() {
               Ошибка: {error.message}
             </Text>
           )}
-          {!isLoading && !error && technicalConditions?.length === 0 && (
+          {!isLoading && !error && sortedTechnicalConditions?.length === 0 && (
             <Text.Label as="p">
               Нет технических условий
             </Text.Label>
           )}
-          {technicalConditions && technicalConditions.length > 0 && (
+          {sortedTechnicalConditions && sortedTechnicalConditions.length > 0 && (
             <StructuredList
               definition={tcListDefinition}
-              items={technicalConditions}
+              items={sortedTechnicalConditions}
               selected={selected}
               onSelected={handleSelected}
             />

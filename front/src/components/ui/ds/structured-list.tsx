@@ -42,6 +42,12 @@
  * `overflow` ограничивает прокручиваемую область: заголовок и строки в одном
  * scroll-контейнере с `scrollbar-gutter: stable`, заголовок — `position: sticky`.
  * Колонки header и строк выровнены; видимых строк данных — значение `overflow`.
+ * Если `overflow` не задан числом, список заполняет доступную высоту контейнера
+ * и сжимается до минимальной высоты в 8 строк данных + header.
+ *
+ * ## Width
+ *
+ * `fluid` растягивает список на доступную ширину контейнера.
  *
  * ## Layering
  *
@@ -172,6 +178,8 @@ export type StructuredListProps<T> = {
    * Заголовок sticky внутри той же области. Поддерживаемые значения: 8, 12, 16.
    */
   overflow?: StructuredListOverflow
+  /** Растягивает список на доступную ширину контейнера. По умолчанию включён. */
+  fluid?: boolean
   /** Полностью отключает список */
   disabled?: boolean
   className?: string
@@ -187,13 +195,17 @@ function StructuredListRoot<T>({
   multiselect = false,
   condensed = false,
   overflow,
+  fluid = true,
   disabled = false,
   className,
 }: StructuredListProps<T>) {
   const { layerBackground } = useNextLayerTokens()
   const { layerBackground: headerBackground } = useLayerTokens()
+  const rootRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
+  const hasFixedOverflow = typeof overflow === "number"
+  const fillsAvailableHeight = !hasFixedOverflow
 
   const normalizedColumns = useMemo(
     () => definition.columns.map((c) => normalizeColumn(c)),
@@ -221,20 +233,22 @@ function StructuredListRoot<T>({
   )
 
   useLayoutEffect(() => {
-    if (!overflow) return
+    const root = rootRef.current
     const header = headerRef.current
     const scroll = scrollRef.current
-    if (!header || !scroll) return
+    if (!root || !header || !scroll) return
 
     const syncHeaderSize = () => {
-      scroll.style.setProperty("--structured-list-header-block-size", `${header.offsetHeight}px`)
+      const headerBlockSize = `${header.offsetHeight}px`
+      root.style.setProperty("--structured-list-header-block-size", headerBlockSize)
+      scroll.style.setProperty("--structured-list-header-block-size", headerBlockSize)
     }
 
     syncHeaderSize()
     const observer = new ResizeObserver(syncHeaderSize)
     observer.observe(header)
     return () => observer.disconnect()
-  }, [overflow, normalizedColumns, items.length])
+  }, [normalizedColumns, items.length])
 
   const contextValue = useMemo<StructuredListContextValue<T>>(
     () => ({
@@ -247,7 +261,7 @@ function StructuredListRoot<T>({
       disabled,
       selectedBackground: layerBackground,
       headerRef,
-      stickyHeader: Boolean(overflow),
+      stickyHeader: hasFixedOverflow || fillsAvailableHeight,
       headerBackground,
     }),
     [
@@ -259,21 +273,25 @@ function StructuredListRoot<T>({
       multiselect,
       disabled,
       layerBackground,
-      overflow,
+      hasFixedOverflow,
+      fillsAvailableHeight,
       headerBackground,
     ],
   )
 
-  const rootStyle = overflow
+  const rootStyle = hasFixedOverflow
     ? ({ "--structured-list-overflow-rows": String(overflow) } as CSSProperties)
     : undefined
 
   return (
     <StructuredListContext.Provider value={contextValue as StructuredListContextValue<unknown>}>
       <div
+        ref={rootRef}
         className={cn(
           "structured-list",
           condensed && "structured-list--condensed",
+          fillsAvailableHeight && "structured-list--fill-height",
+          fluid && "structured-list--fluid",
           className,
         )}
         style={rootStyle}
@@ -283,7 +301,8 @@ function StructuredListRoot<T>({
           ref={scrollRef}
           className={cn(
             "structured-list-scroll",
-            overflow && "structured-list-scroll--overflow",
+            hasFixedOverflow && "structured-list-scroll--overflow",
+            fillsAvailableHeight && "structured-list-scroll--fill-height",
           )}
         >
           <StructuredListHeader<T> />

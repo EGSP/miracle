@@ -1,7 +1,16 @@
-/* Обе панели одной высоты с вертикальной прокруткой. */
+/* Панель ограничивает высоту, а прокрутку берёт вложенный StructuredList. */
 .order-products__pane {
   height: 500px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.order-products__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Truncate длинных названий/типов в ячейке списка (ячейка уже min-width:0; overflow:hidden). */

@@ -31,7 +31,7 @@ export default function ProductTypesPage() {
         {productTypes &&
           productTypes.length > 0 &&
           productTypes.map((item) => (
-            <Column span="50%">
+            <Column span="25%">
               <ProductTypeCard key={item.id} productType={item} />
             </Column>
           ))}
