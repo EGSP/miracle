@@ -163,6 +163,7 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
                         productTypeId: condition.productTypeId,
                         lastProductTypeName: condition.lastProductTypeName,
                         slotRules,
+                        designationDecodeExamples: condition.designationDecodeExamples,
                         displayTemplates: condition.displayTemplates ?? [],
                     }),
                 );

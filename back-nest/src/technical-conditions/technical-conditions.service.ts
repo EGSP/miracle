@@ -79,12 +79,15 @@ export class TechnicalConditionsService {
             lastProductTypeName = body.lastProductTypeName?.trim() || existing?.lastProductTypeName;
         }
 
+        const designationDecodeExamples = body.designationDecodeExamples?.trim() || undefined;
+
         return {
             name,
             fileId,
             productTypeId,
             lastProductTypeName,
             slotRules: body.slotRules ?? [],
+            designationDecodeExamples,
             displayTemplates: body.displayTemplates ?? [],
         };
     }

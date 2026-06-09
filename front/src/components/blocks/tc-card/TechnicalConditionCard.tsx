@@ -44,6 +44,7 @@ function TechnicalConditionCardProvider({
       productTypeId: merged.productTypeId,
       lastProductTypeName: merged.lastProductTypeName,
       slotRules: merged.slotRules ?? [],
+      designationDecodeExamples: merged.designationDecodeExamples,
       displayTemplates: merged.displayTemplates ?? [],
     }
 

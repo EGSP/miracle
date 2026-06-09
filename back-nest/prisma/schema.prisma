@@ -168,9 +168,11 @@ model TechnicalCondition {
   productTypeId       String?
   lastProductTypeName String?
   // SlotRule[]
-  slotRules           Json?
+  slotRules                  Json?
+  // Примеры расшифровки фрагментов из заявок (текст, markdown)
+  designationDecodeExamples  String?
   // DisplayTemplate[]
-  displayTemplates    Json?
+  displayTemplates           Json?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

@@ -41,6 +41,10 @@ export function TCCSlotRules() {
   const tc = technicalCondition
 
   const slotRules = useField<SlotRule[]>(`tc-${tc.id}-slot-rules`, tc.slotRules ?? [])
+  const designationDecodeExamples = useField<string>(
+    `tc-${tc.id}-decode-examples`,
+    tc.designationDecodeExamples ?? "",
+  )
   const [selectedIndex, setSelectedIndex] = useState<number | null>(slotRules.value.length > 0 ? 0 : null)
 
   const selectedRule =
@@ -82,6 +86,15 @@ export function TCCSlotRules() {
     (draft): Stored<TechnicalCondition> => ({
       ...draft,
       slotRules: slotRules.value.map((rule, i) => ({ ...rule, index: i })),
+    }),
+  )
+
+  useContribute(
+    contribute,
+    `tc-${tc.id}-decode-examples`,
+    (draft): Stored<TechnicalCondition> => ({
+      ...draft,
+      designationDecodeExamples: designationDecodeExamples.value.trim() || undefined,
     }),
   )
 
@@ -140,6 +153,19 @@ export function TCCSlotRules() {
             />
           </Stack>
         )}
+      </Column>
+      <Column span="100%">
+        <Textarea
+          label="Примеры расшифровки из заявок"
+          placeholder={'«подземное размещение» → слот «Место размещения» → 5\n«НЭМС-700-МГ-5-1» в названии — готовый шифр, не требование'}
+          helperText="Короткие примеры: как фрагменты из заявок (формулировки, шифры, сокращения) сопоставляются с параметрами обозначения. Помогает при разборе заявок, где встречаются похожие, но не идентичные обозначения."
+          value={designationDecodeExamples.value}
+          onChange={(e) => designationDecodeExamples.onChange(e.target.value)}
+          disabled={isSaving}
+          rows={8}
+          fluid
+          size="lg"
+        />
       </Column>
     </Grid>
   )

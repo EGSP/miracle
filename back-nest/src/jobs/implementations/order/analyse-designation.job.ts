@@ -32,8 +32,9 @@ const DesignationResultJsonSchema = z.toJSONSchema(DesignationResultZodSchema) a
 const DESIGNATION_PROMPT = `Ты определяешь значения параметров условного обозначения промышленной продукции.
 
 На вход поступает:
-1. Текст требований заказчика — пары "параметр" → "значение".
-2. Список параметров обозначения (слотов) с правилами выбора из Технического Условия (ТУ).
+1. Текст требований заказчика — список дословных строк из заявки.
+2. (Опционально) Примеры расшифровки похожих фрагментов из заявок.
+3. Список параметров обозначения (слотов) с правилами выбора из Технического Условия (ТУ).
 
 Для каждого слота:
 - Подбери значение строго из допустимых вариантов правил ТУ. Не придумывай новые коды.
@@ -63,6 +64,15 @@ function formatRequirements(position: Stored<OrderPosition>): string {
         'Требования:',
         ...requirements.map((line) => `- ${line}`),
     ].join('\n');
+}
+
+function prepareDecodeExamplesPayload(tc: Stored<TechnicalCondition>): string | null {
+    const text = tc.designationDecodeExamples?.trim();
+    if (!text) {
+        return null;
+    }
+
+    return ['=== ПРИМЕРЫ РАСШИФРОВКИ ИЗ ЗАЯВОК ===', '', text].join('\n');
 }
 
 function prepareSlotRulesPayload(tc: Stored<TechnicalCondition>): string {
@@ -142,7 +152,14 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                     if (!condition) return yield* Effect.fail(new Error(`ТУ "${tcId}" не найдено`));
 
                     const userMessage = yield* Effect.try({
-                        try: () => [formatRequirements(position), prepareSlotRulesPayload(condition)].join('\n\n'),
+                        try: () =>
+                            [
+                                formatRequirements(position),
+                                prepareDecodeExamplesPayload(condition),
+                                prepareSlotRulesPayload(condition),
+                            ]
+                                .filter(Boolean)
+                                .join('\n\n'),
                         catch: wrapUnknown(`prepare designation prompt for position "${input.positionId}"`),
                     });
                     yield* progress.push(0.1, { label: 'отправка запроса LLM', determined: false });
