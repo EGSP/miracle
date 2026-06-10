@@ -10,6 +10,9 @@ import { JobPartialError } from './runtime.js';
  *
  * Решение о статусе родителя (`succeed`/`partial`/`failed`) принимает {@link decideFanout} —
  * оркестратор с несколькими этапами может собрать `Either` из всех вееров и свести их вместе.
+ *
+ * @deprecated Используйте `Swarm.run(..., { failureMode })` из `swarm.ts`: там запуск и политика
+ * свода ошибок описываются одной семантической операцией.
  */
 export const runFanout = <A>(
     effects: ReadonlyArray<Effect.Effect<A, unknown, JobEnv>>,
@@ -26,6 +29,9 @@ export const runFanout = <A>(
  * - упала часть → `Effect.fail(JobPartialError)` → узел `partial`.
  *
  * `label` — человекочитаемое описание родителя для сообщения об ошибке (попадёт в `error` узла).
+ *
+ * @deprecated Используйте `Swarm.run(..., { failureMode: 'partial' })`. Для других правил свода
+ * есть `all`, `atLeastOne` и `bestEffort`.
  */
 export const decideFanout = (
     label: string,

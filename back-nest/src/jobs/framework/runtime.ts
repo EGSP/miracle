@@ -16,6 +16,7 @@ import type { Job } from './job.js';
 import { Jobs, JobTools, Memo, Progress, ToolMemo } from './context.js';
 import { hashKey } from './hash-key.js';
 import type { JobTool } from './job-tool.js';
+import { SwarmPartialError } from './swarm.js';
 import type { JobStore } from './store.js';
 
 /** Ошибка, пробрасываемая наверх, когда дочерний прогон находится в терминальном неуспешном статусе. */
@@ -308,8 +309,9 @@ export function execute<Input, Output>(
             // Прерывание (отмена волокна) — не ошибка: статус `cancelled` ставит сервис рантайма.
             if (Cause.isInterruptedOnly(cause)) return Effect.void;
             const error = Cause.squash(cause);
-            // Частичный успех веера красим в `partial`; всё остальное — `failed`.
-            const status: JobStatus = error instanceof JobPartialError ? 'partial' : 'failed';
+            // Частичный успех группы операций красим в `partial`; всё остальное — `failed`.
+            const status: JobStatus =
+                error instanceof JobPartialError || error instanceof SwarmPartialError ? 'partial' : 'failed';
             return Effect.promise(() => store.patch(node.id, { status, error: errToMessage(error) }));
         }),
     );
