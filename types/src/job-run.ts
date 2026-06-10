@@ -49,6 +49,52 @@ export type JobKeyPart =
  */
 export type JobKey = ReadonlyArray<JobKeyPart>;
 
+/**
+ * Брендированный тип JobTool. В отличие от {@link JobKey}, это не идентичность конкретного вызова,
+ * а связь durable-слота с классом тула и версией его модели `memo`.
+ *
+ * Версионируйте `type`, когда меняется смысл сохранённой памяти: например
+ * `order.extractPositions.llm.v2`. Ключ вызова (`JobToolKey`) должен описывать только конкретный
+ * объект обработки внутри текущего `JobRun`.
+ */
+export type JobToolType = string & { readonly __jobTool: unique symbol };
+
+/** Элемент ключа вызова JobTool: компактное JSON-значение в стиле TanStack Query. */
+export type JobToolKeyPart = string | number | boolean | null;
+
+/**
+ * Структурный ключ вызова JobTool внутри текущего `JobRun`.
+ *
+ * Если ключ не передан, рантайм использует пустой массив — это подходит только для одного вызова
+ * данного типа тула в рамках job. При множественных вызовах job обязана передать семантический ключ:
+ * `['chunk', chunkKey]`, `['file', fileId]`, `['position', positionId]`.
+ */
+export type JobToolKey = ReadonlyArray<JobToolKeyPart>;
+
+/**
+ * Durable-слот одного вызова JobTool внутри `JobRun.memo.tool_calls`.
+ *
+ * `memo` — единственное состояние тула. Фреймворк не хранит рядом `status`, `output`, `error` или
+ * `inputHash`: конкретный тул сам решает по своей модели памяти, завершён ли он, что вернуть и что
+ * сохранить для восстановления.
+ */
+export type ToolCall<MemoModel = unknown> = {
+    /** Тип класса/версии тула, породившего слот. */
+    type: JobToolType;
+    /** Читаемый структурный ключ вызова, заданный job. */
+    key: JobToolKey;
+    /** Локальная typed-память тула; форму знает определение конкретного JobTool. */
+    memo: MemoModel;
+};
+
+/**
+ * Системная часть `JobRun.memo`, где рантайм хранит память вызовов JobTool.
+ *
+ * Ключ map — `keyHash = hashKey([tool.type, ...key])`. Отдельный `id` не нужен: идентичность слота
+ * полностью задаётся парой `type + key`.
+ */
+export type JobRunTools = Record<string, ToolCall>;
+
 /** Один снимок прогресса джоба (элемент истории). */
 export type JobProgressState = {
     /** Доля выполнения от 0 до 1. */

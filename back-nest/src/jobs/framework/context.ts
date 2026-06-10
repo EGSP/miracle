@@ -1,6 +1,67 @@
-import { Context, type Effect, type Option } from 'effect';
+import { Context, Effect, type Option } from 'effect';
 import type { JobKey, JobProgressPushOptions } from '@miracle/types';
 import type { Job } from './job.js';
+import type { JobTool, JobToolRunOptions } from './job-tool.js';
+
+/**
+ * Typed-доступ к локальной памяти текущего вызова JobTool.
+ *
+ * Сервис всегда замкнут на один слот `JobRun.memo.tool_calls[keyHash]`: тул не знает о `JobRun`,
+ * соседних тулах, `tool_calls` и физическом способе сохранения. Если тела `memo` ещё нет, рантайм
+ * создаёт пустой объект и сразу персистит его в текущем `JobRun`.
+ *
+ * @example
+ * ```ts
+ * type LlmMemo = {
+ *   opId?: string;
+ *   rawResponse?: string;
+ *   result?: OrderPosition[];
+ * };
+ *
+ * const memo = yield* ToolMemo.typed<LlmMemo>();
+ * const cached = yield* memo.get((m) => m.result);
+ * if (cached) return cached;
+ *
+ * const opId = yield* memo.get((m) => m.opId);
+ * if (!opId) {
+ *   const created = yield* submitOperation();
+ *   yield* memo.set((m) => m.opId, created);
+ * }
+ * ```
+ */
+export class ToolMemo extends Context.Tag('jobs/ToolMemo')<ToolMemo, ToolMemo.Service<ToolMemo.Model>>() {}
+
+export namespace ToolMemo {
+    /** Модель памяти JobTool. Делайте поля опциональными: начальное тело memo — пустой объект. */
+    export type Model = object;
+
+    /**
+     * Сервис памяти одного вызова JobTool.
+     *
+     * `get()` / `set(memo)` работают со всем объектом памяти. Варианты с селектором предназначены
+     * для прямых top-level полей вида `(m) => m.opId`; не используйте там вычисления или вложенные
+     * пути, потому что `set` извлекает имя поля через Proxy.
+     */
+    export interface Service<MemoModel extends Model> {
+        readonly get: {
+            (): Effect.Effect<MemoModel>;
+            <Value>(selector: (memo: MemoModel) => Value): Effect.Effect<Value>;
+        };
+        readonly set: {
+            (memo: MemoModel): Effect.Effect<void>;
+            <Value>(selector: (memo: MemoModel) => Value, value: Value): Effect.Effect<void>;
+        };
+    }
+
+    /**
+     * Возвращает `ToolMemo` с моделью конкретного тула.
+     *
+     * Контекстный тег в Effect один, поэтому тип модели задаётся в месте использования внутри
+     * класса JobTool.
+     */
+    export const typed = <MemoModel extends Model>(): Effect.Effect<Service<MemoModel>, never, ToolMemo> =>
+        Effect.map(ToolMemo, (memo) => memo as unknown as Service<MemoModel>);
+}
 
 /**
  * Контрольная точка (memo) текущего джоба. Реализацию даёт рантайм, привязав её к строке прогона:
@@ -79,5 +140,23 @@ export class Jobs extends Context.Tag('jobs/Jobs')<
             key: JobKey,
             input: Input,
         ) => Effect.Effect<Output, unknown>;
+    }
+>() {}
+
+/**
+ * Запуск typed JobTool внутри текущего `JobRun`.
+ *
+ * В отличие от {@link Jobs}, сервис не создаёт дочерний `JobRun` и не даёт тулу доступ к дереву или
+ * прогрессу. Он только выделяет scoped-слот в `memo.tool_calls`, провайдит {@link ToolMemo} и
+ * исполняет Effect тела тула.
+ */
+export class JobTools extends Context.Tag('jobs/JobTools')<
+    JobTools,
+    {
+        readonly run: <Input, Output, MemoModel extends ToolMemo.Model, Error>(
+            tool: JobTool<Input, Output, MemoModel, Error>,
+            input: Input,
+            options?: JobToolRunOptions,
+        ) => Effect.Effect<Output, Error>;
     }
 >() {}

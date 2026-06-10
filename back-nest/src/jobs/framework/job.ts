@@ -1,6 +1,6 @@
 import type { Effect } from 'effect';
 import type { JobId } from '@miracle/types';
-import type { Jobs, Memo, Progress } from './context.js';
+import type { Jobs, JobTools, Memo, Progress } from './context.js';
 
 export type { JobId } from '@miracle/types';
 
@@ -15,10 +15,11 @@ export const brandJobId = (id: string): JobId => id as JobId;
  * - {@link Memo} — контрольные точки внутри одного джоба (durable get/set);
  * - {@link Progress} — отчёт о прогрессе (наблюдаемость);
  * - {@link Jobs} — запуск дочерних джобов (`Jobs.run`).
+ * - {@link JobTools} — запуск typed-тулов внутри текущего `JobRun` без дочернего узла.
  *
- * Все три сервиса провайдит рантайм, замыкая их на строку текущего прогона.
+ * Все сервисы провайдит рантайм, замыкая их на строку текущего прогона.
  */
-export type JobEnv = Memo | Progress | Jobs;
+export type JobEnv = Memo | Progress | Jobs | JobTools;
 
 /**
  * Job — единица работы. Это плоское значение (без деревьев/последовательностей): id плюс тело,
