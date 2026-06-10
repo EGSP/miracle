@@ -43,6 +43,24 @@ export const submitOnce = (
     submit: () => Promise<string>,
     options?: SubmitOnceOptions | Record<string, unknown>,
 ): Effect.Effect<string, Error, Memo | Progress> =>
+    submitOnceEffect(
+        Effect.tryPromise({
+            try: submit,
+            catch: wrapUnknown((isSubmitOnceOptions(options) ? options.label : undefined) ?? 'submit cloud operation'),
+        }),
+        options,
+    );
+
+/**
+ * Effect-вариант {@link submitOnce}: submit уже возвращает typed Effect-ошибку сервиса.
+ *
+ * Используйте для новых клиентов (например, Yandex Responses), чтобы не стирать ошибку транспорта в
+ * `unknown`/`Error` на границе Promise.
+ */
+export const submitOnceEffect = <Error, Requirements>(
+    submit: Effect.Effect<string, Error, Requirements> | (() => Effect.Effect<string, Error, Requirements>),
+    options?: SubmitOnceOptions | Record<string, unknown>,
+): Effect.Effect<string, Error, Requirements | Memo | Progress> =>
     Effect.gen(function* () {
         const normalizedOptions: SubmitOnceOptions = isSubmitOnceOptions(options) ? options : { extraMemo: options };
         const memo = yield* Memo;
@@ -70,11 +88,7 @@ export const submitOnce = (
             yield* progress.push({ label: submitProgressLabel, determined: false });
         }
 
-        const label = normalizedOptions.label ?? 'submit cloud operation';
-        const opId = yield* Effect.tryPromise({
-            try: submit,
-            catch: wrapUnknown(label),
-        });
+        const opId = yield* (typeof submit === 'function' ? submit() : submit);
         yield* memo.set('opId', opId); // memo durable ДО опроса
 
         if (reportProgress) {
@@ -93,15 +107,30 @@ export const pollUntilDone = <Output>(
     check: () => Promise<{ done: boolean; result?: Output }>,
     options?: PollUntilDoneOptions | number,
 ): Effect.Effect<Output, Error> =>
+    pollUntilDoneEffect(
+        Effect.tryPromise({
+            try: check,
+            catch: wrapUnknown(
+                (typeof options === 'number' ? undefined : options?.label) ?? 'poll cloud operation',
+            ),
+        }),
+        options,
+    );
+
+/**
+ * Effect-вариант {@link pollUntilDone}: один poll возвращает typed Effect-ошибку сервиса.
+ */
+export const pollUntilDoneEffect = <Output, Error, Requirements>(
+    check:
+        | Effect.Effect<{ done: boolean; result?: Output }, Error, Requirements>
+        | (() => Effect.Effect<{ done: boolean; result?: Output }, Error, Requirements>),
+    options?: PollUntilDoneOptions | number,
+): Effect.Effect<Output, Error, Requirements> =>
     Effect.gen(function* () {
         const normalizedOptions = typeof options === 'number' ? { intervalMs: options } : (options ?? {});
         const intervalMs = normalizedOptions.intervalMs ?? 3000;
-        const label = normalizedOptions.label ?? 'poll cloud operation';
         while (true) {
-            const result = yield* Effect.tryPromise({
-                try: check,
-                catch: wrapUnknown(label),
-            });
+            const result = yield* (typeof check === 'function' ? check() : check);
             if (result.done) {
                 return result.result as Output;
             }

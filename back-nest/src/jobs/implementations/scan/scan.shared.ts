@@ -3,19 +3,18 @@ import { Effect } from 'effect';
 import {
     ExtractionStatus,
     type ExtractionType,
-    getMimeType,
     validatePageRanges,
     type Content,
     type FileModel,
     type Stored,
 } from '@miracle/types';
 import { defineJob, type Job, type JobEnv } from '../../framework/job.js';
-import { Jobs, Progress } from '../../framework/context.js';
-import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
+import { Jobs, Memo, Progress } from '../../framework/context.js';
+import { submitOnceEffect, pollUntilDoneEffect } from '../../../common/cloud-job.js';
 import { formatUnknown, tryLabeledPromise } from '../../../common/effect-errors.js';
 import type { FilesService } from '../../../files/files.service.js';
 import type { FilesContentService } from '../../../files-content/files-content.service.js';
-import type { YandexService } from '../../../yandex/yandex.service.js';
+import { YANDEX_MODELS, YandexInput, type YandexService } from '../../../yandex/yandex.service.js';
 import type { ConvertService } from '../../../convert/convert.service.js';
 
 /**
@@ -23,9 +22,6 @@ import type { ConvertService } from '../../../convert/convert.service.js';
  * инъецируемые классы (по файлу на джоб); здесь — промпты, чтение файла, рендер страниц и
  * сборка детей `recognize`/`apply`, чтобы три класса не дублировали логику.
  */
-
-/** MIME, поддерживаемые Yandex OCR (async). */
-export const OCR_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
 export const LLM_VISION_PROMPT = `Ты — ассистент для извлечения содержимого из документов со сложной структурой.
 Тебе передаются страницы документа в виде изображений.
@@ -91,7 +87,7 @@ type FilesDep = Pick<FilesService, 'get' | 'getFilePath'>;
 type FilesContentDep = Pick<FilesContentService, 'update'>;
 type YandexDep = Pick<
     YandexService,
-    'ocrRecognize' | 'ocrPoll' | 'submitVisionCompletion' | 'pollVisionCompletion'
+    'createResponse' | 'retrieveResponse'
 >;
 type ConvertDep = Pick<ConvertService, 'pdfToImages'>;
 
@@ -127,36 +123,6 @@ const renderPages = (files: FilesDep, convert: ConvertDep, file: Stored<FileMode
         return [{ page: 1, base64, dataUrl: `data:${mimeType};base64,${base64}` }];
     });
 
-/** OCR-распознавание (Yandex OCR async). */
-export const ocrRecognize =
-    (files: FilesDep, yandex: YandexDep): ScanRecognize =>
-    (input) =>
-        Effect.gen(function* () {
-            const progress = yield* Progress;
-            yield* progress.push(0, { label: 'чтение файла' });
-
-            const file = yield* requireFile(files, input.fileId);
-            const mime = getMimeType(file.extension);
-            if (!mime || !OCR_MIME_TYPES.includes(mime)) {
-                return yield* Effect.fail(
-                    new Error(`Расширение «${file.extension}» не поддерживается Yandex OCR (jpeg/png/pdf)`),
-                );
-            }
-            const bytes = yield* tryLabeledPromise(`чтение исходного файла OCR "${input.fileId}"`, () =>
-                fs.readFile(files.getFilePath(file)),
-            );
-            const opId = yield* submitOnce(() => yandex.ocrRecognize(mime, bytes), {
-                label: `ocr submit; file=${input.fileId}`,
-                submitProgressLabel: 'отправка на распознавание',
-                pollProgressLabel: 'ожидание распознавания',
-            });
-            return yield* pollUntilDone<Content[]>(() => yandex.ocrPoll(opId), {
-                label: `ocr poll; opId=${opId}`,
-            });
-        }).pipe(
-            Effect.mapError((error) => new Error(`Не удалось распознать файл "${input.fileId}" через OCR`, { cause: error })),
-        );
-
 /** LLM Vision-распознавание: рендер страниц → vision-комплишн (async). */
 export const visionRecognize =
     (files: FilesDep, convert: ConvertDep, yandex: YandexDep, systemPrompt: string, userMessage: string): ScanRecognize =>
@@ -170,22 +136,17 @@ export const visionRecognize =
                 yield* progress.push(0.05, { label: 'рендер страниц' });
             }
             const images = yield* renderPages(files, convert, file);
-            const opId = yield* submitOnce(() =>
-                yandex.submitVisionCompletion({
+            const opId = yield* submitOnceEffect(
+                yandex.createResponse({
+                    model: YANDEX_MODELS.vision,
                     instructions: systemPrompt,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: [
-                                ...images.map((page) => ({
-                                    type: 'input_image' as const,
-                                    image_url: page.dataUrl,
-                                    detail: 'auto' as const,
-                                })),
-                                { type: 'input_text' as const, text: userMessage },
-                            ],
-                        },
+                    input: [
+                        YandexInput.user([
+                            ...images.map((page) => YandexInput.imageDataUrl(page.dataUrl)),
+                            YandexInput.text(userMessage),
+                        ]),
                     ],
+                    maxOutputTokens: 40000,
                 }),
                 {
                     label: `vision submit; file=${input.fileId}`,
@@ -193,10 +154,15 @@ export const visionRecognize =
                     pollProgressLabel: 'ожидание распознавания',
                 },
             );
-            const text = yield* pollUntilDone<string>(() => yandex.pollVisionCompletion(opId), {
-                label: `vision poll; opId=${opId}`,
-            });
-            return [{ text }];
+            const completed = yield* pollUntilDoneEffect(
+                yandex.retrieveResponse(opId).pipe(
+                    Effect.map((poll) => (poll.done ? { done: true, result: poll } : { done: false })),
+                ),
+                { label: `vision poll; opId=${opId}` },
+            );
+            const memo = yield* Memo;
+            yield* memo.set('yandexResponse', completed.response);
+            return [{ text: completed.outputText }];
         }).pipe(
             Effect.mapError((error) => new Error(`Не удалось распознать файл "${input.fileId}" через Vision`, { cause: error })),
         );

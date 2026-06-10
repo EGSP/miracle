@@ -4,13 +4,13 @@ import { z } from 'zod';
 import { ExtractionStatus, type SlotRule } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../framework/job.js';
 import { JobImpl } from '../framework/job-impl.decorator.js';
-import { Jobs, Progress } from '../framework/context.js';
-import { submitOnce, pollUntilDone } from '../../common/cloud-job.js';
+import { Jobs, Memo, Progress } from '../framework/context.js';
+import { submitOnceEffect, pollUntilDoneEffect } from '../../common/cloud-job.js';
 import { countTokens } from '../../common/count-tokens.js';
-import { tryLabeledPromise } from '../../common/effect-errors.js';
+import { tryLabeledPromise, wrapUnknown } from '../../common/effect-errors.js';
 import { TechnicalConditionsService } from '../../technical-conditions/technical-conditions.service.js';
 import { FilesContentService } from '../../files-content/files-content.service.js';
-import { YandexService } from '../../yandex/yandex.service.js';
+import { YANDEX_MODELS, YandexInput, YandexService } from '../../yandex/yandex.service.js';
 
 const TCDetailsZodSchema = z.object({
     sections: z
@@ -108,17 +108,18 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
                     const text = yield* getTcText(tc, filesContent, input.tcId);
                     yield* progress.push(0.1, { label: 'отправка запроса LLM', determined: false });
 
-                    const opId = yield* submitOnce(
-                        () =>
-                            yandex.submitCompletion({
-                                messages: [
-                                    { role: 'system', text: SYSTEM_PROMPT },
-                                    { role: 'user', text },
-                                ],
-                                temperature: 0.1,
-                                maxTokens: countTokens(`${SYSTEM_PROMPT}\n\n${text}`) * 10,
-                                jsonSchema: TCDetailsJsonSchema,
-                            }),
+                    const opId = yield* submitOnceEffect(
+                        yandex.createResponse({
+                            model: YANDEX_MODELS.text,
+                            instructions: SYSTEM_PROMPT,
+                            input: [YandexInput.user([YandexInput.text(text)])],
+                            temperature: 0.1,
+                            maxOutputTokens: countTokens(`${SYSTEM_PROMPT}\n\n${text}`) * 10,
+                            jsonSchema: {
+                                name: 'ExtractTechnicalConditionSections',
+                                schema: TCDetailsJsonSchema,
+                            },
+                        }),
                         {
                             label: `tc extract submit; tc=${input.tcId}`,
                             submitProgressLabel: 'отправка запроса LLM',
@@ -126,10 +127,18 @@ export class TcExtractJob implements Job<TcExtractInput, void> {
                             extraMemo: { finalPrompt: { system: SYSTEM_PROMPT, user: text } },
                         },
                     );
-                    const result = yield* pollUntilDone<TCDetailsResult>(
-                        () => yandex.pollCompletionJson(opId, TCDetailsZodSchema),
+                    const completed = yield* pollUntilDoneEffect(
+                        yandex.retrieveResponse(opId).pipe(
+                            Effect.map((poll) => (poll.done ? { done: true, result: poll } : { done: false })),
+                        ),
                         { label: `tc extract poll; opId=${opId}` },
                     );
+                    const result = yield* Effect.try({
+                        try: () => TCDetailsZodSchema.parse(JSON.parse(completed.outputText)),
+                        catch: wrapUnknown(`parse tc extract response; opId=${opId}`),
+                    });
+                    const memo = yield* Memo;
+                    yield* memo.set('yandexResponse', completed.response);
                     return { tcId: input.tcId, sections: result.sections };
                 }).pipe(
                     Effect.mapError(

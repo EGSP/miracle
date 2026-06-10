@@ -1,48 +1,160 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { Duration, Effect, Exit, RateLimiter, Scope } from 'effect';
-import { Session } from '@yandex-cloud/nodejs-sdk';
-import { textGenerationService } from '@yandex-cloud/nodejs-sdk/ai-foundation_models-v1';
-import { operationService } from '@yandex-cloud/nodejs-sdk/operation';
-import { ocrService } from '@yandex-cloud/nodejs-sdk/ai-ocr-v1';
+import { Data, Duration, Effect, Exit, RateLimiter, Scope } from 'effect';
 import OpenAI from 'openai';
-import type { ZodSchema } from 'zod';
-import type { Content } from '@miracle/types';
+import type {
+    EasyInputMessage,
+    Response,
+    ResponseCreateParamsNonStreaming,
+    ResponseInputContent,
+    ResponseInputImage,
+    ResponseInputText,
+    ResponseOutputItem,
+} from 'openai/resources/responses/responses.js';
+import { formatUnknown } from '../common/effect-errors.js';
 import { AppConfigService } from '../config/app-config.service.js';
-import type { AsyncLlmClient, AsyncOcrClient, AsyncOperationClient } from './yandex-sdk.types.js';
-import type { LlmPollResult, LlmRequest } from './yandex-llm.types.js';
-import {
-    pollVisionCompletion,
-    submitVisionCompletion,
-    type VisionRequest,
-} from './yandex-vision.js';
 
-const MODEL_SUFFIX = 'yandexgpt-5.1/latest';
-
-/** Удаляет markdown-обёртку ```json ... ``` если модель добавила её вопреки инструкциям. */
-function stripMarkdownFences(raw: string): string {
-    return raw.replace(/^```(?:json)?\s*\n?|\n?```\s*$/g, '').trim();
-}
+export const YANDEX_MODELS = {
+    text: 'yandexgpt-5.1/latest',
+    vision: 'qwen3.6-35b-a3b/latest',
+} as const;
 
 type YandexConfig = { apiKey: string; folderId: string };
-
-/**
- * `@Global` вендор-обёртка над Yandex Cloud SDK (порт back/src/lib/yandex/*).
- * Сессия/клиенты создаются лениво и переиспользуются. Конфиг — из `AppConfigService`;
- * при его отсутствии методы кидают понятную ошибку (приложение поднимается без Yandex-кредов).
- */
 type Limit = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
 
+export type YandexJsonSchemaFormat = {
+    readonly name: string;
+    readonly schema: Record<string, unknown>;
+    readonly description?: string;
+    readonly strict?: boolean;
+};
+
+export type YandexCreateResponseRequest = {
+    readonly model?: string;
+    readonly instructions?: string;
+    readonly input: ResponseCreateParamsNonStreaming['input'];
+    readonly temperature?: number;
+    readonly maxOutputTokens?: number;
+    readonly jsonSchema?: YandexJsonSchemaFormat;
+    readonly metadata?: ResponseCreateParamsNonStreaming['metadata'];
+};
+
+export type YandexCompletedResponse = {
+    readonly done: true;
+    readonly response: Response;
+    readonly outputText: string;
+};
+
+export type YandexResponsePollResult = { readonly done: false; readonly response: Response } | YandexCompletedResponse;
+
+export class YandexConfigError extends Data.TaggedError('YandexConfigError')<{
+    readonly message: string;
+}> {}
+
+export class YandexTransportError extends Data.TaggedError('YandexTransportError')<{
+    readonly operation: 'create' | 'retrieve';
+    readonly cause: unknown;
+}> {
+    override get message(): string {
+        return `Yandex Responses ${this.operation}: ${formatUnknown(this.cause)}`;
+    }
+}
+
+export class YandexResponseError extends Data.TaggedError('YandexResponseError')<{
+    readonly responseId: string;
+    readonly message: string;
+    readonly response?: Response;
+}> {}
+
+export type YandexError = YandexConfigError | YandexTransportError | YandexResponseError;
+
+export const YandexInput = {
+    text: (text: string): ResponseInputText => ({ type: 'input_text', text }),
+    imageDataUrl: (
+        imageUrl: string,
+        detail: ResponseInputImage['detail'] = 'auto',
+    ): ResponseInputImage => ({
+        type: 'input_image',
+        image_url: imageUrl,
+        detail,
+    }),
+    user: (content: ReadonlyArray<ResponseInputContent>): EasyInputMessage => ({
+        role: 'user',
+        content: [...content],
+    }),
+} as const;
+
+const stripMarkdownFences = (raw: string): string => raw.replace(/^```(?:json)?\s*\n?|\n?```\s*$/g, '').trim();
+
+const extractOutputText = (output: ResponseOutputItem[] | undefined): string => {
+    const texts: string[] = [];
+    for (const item of output ?? []) {
+        if (item.type === 'message') {
+            for (const content of item.content) {
+                if (content.type === 'output_text') {
+                    texts.push(content.text);
+                }
+            }
+        }
+    }
+    return texts.join('');
+};
+
+const collectOutputHints = (output: ResponseOutputItem[] | undefined): string[] => {
+    const hints: string[] = [];
+    for (const item of output ?? []) {
+        if (item.type === 'message') {
+            for (const part of item.content) {
+                if (part.type === 'refusal') {
+                    const refusal = part.refusal.trim();
+                    if (refusal) {
+                        hints.push(`Отказ модели: ${refusal}`);
+                    }
+                }
+            }
+        }
+        const withError = item as ResponseOutputItem & { error?: string | null };
+        if (typeof withError.error === 'string' && withError.error.trim()) {
+            hints.push(`Ошибка элемента (${item.type}): ${withError.error.trim()}`);
+        }
+    }
+    return hints;
+};
+
+const formatFailedResponse = (response: Response, responseId: string): string => {
+    const status = response.status ?? 'unknown';
+    const parts: string[] = [`Yandex Responses: запрос "${responseId}" завершился со статусом "${status}"`];
+    if (response.error) {
+        const err = response.error as unknown as Record<string, unknown>;
+        const code = err['code'] ? `[${String(err['code'])}] ` : '';
+        const message = typeof err['message'] === 'string' ? err['message'] : '';
+        parts.push(`${code}${message}`);
+        const { code: _code, message: _message, ...rest } = err;
+        if (Object.keys(rest).length > 0) {
+            parts.push(`details: ${JSON.stringify(rest)}`);
+        }
+    }
+    if (response.incomplete_details?.reason) {
+        parts.push(`Причина незавершения: ${response.incomplete_details.reason}`);
+    }
+    parts.push(...collectOutputHints(response.output));
+    parts.push(`fullBody: ${JSON.stringify(response)}`);
+    return parts.join(' — ');
+};
+
+/**
+ * Effectful-клиент Yandex AI через OpenAI-compatible Responses API.
+ *
+ * Сервис не делит запросы на text/vision/ocr: это единый transport boundary для фоновых
+ * `responses.create` / `responses.retrieve`. Доменные сценарии, JSON parsing и memo живут выше
+ * уровнем — в jobs или JobTool.
+ */
 @Injectable()
 export class YandexService implements OnModuleInit, OnModuleDestroy {
-    private session?: Session;
     private openaiClient?: OpenAI;
 
-    // Глобальные лимитеры частоты к Yandex (квоты async-режима foundation models — общие для
-    // текстовой генерации И vision, это один облачный сервис). Живут весь жизненный цикл приложения
-    // в этом scope; одни на все вызовы, поэтому потолок держится независимо от числа джоб-веток.
     private readonly limiterScope = Effect.runSync(Scope.make());
-    private submitLimit: Limit = (effect) => effect; // 10/сек + 5000/час (submit: текст + vision)
-    private pollLimit: Limit = (effect) => effect; // 50/сек (poll: текст + vision)
+    private submitLimit: Limit = (effect) => effect;
+    private pollLimit: Limit = (effect) => effect;
 
     constructor(private readonly appConfig: AppConfigService) {}
 
@@ -64,151 +176,197 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
         await Effect.runPromise(Scope.close(this.limiterScope, Exit.void));
     }
 
-    private config(): YandexConfig {
+    /**
+     * Создаёт фоновый запрос в Yandex Responses API и возвращает его `responseId`.
+     *
+     * Метод только отправляет работу в облако. Он НЕ ждёт результата модели: это важно для durable
+     * jobs, потому что `responseId` нужно сохранить в `Memo`/`ToolMemo` сразу после submit. Тогда
+     * при рестарте job продолжит polling существующего запроса, а не отправит модель повторно.
+     *
+     * `jsonSchema` — удобная надстройка сервиса: вызывающий передаёт обычный JSON Schema, а сервис
+     * сам встраивает её в `text.format` Responses API.
+     *
+     * @example
+     * ```ts
+     * const responseId = yield* yandex.createResponse({
+     *   model: YANDEX_MODELS.text,
+     *   instructions: systemPrompt,
+     *   input: [YandexInput.user([YandexInput.text(userText)])],
+     *   jsonSchema: { name: 'ExtractPositions', schema: PositionsJsonSchema },
+     * });
+     * yield* memo.set('responseId', responseId);
+     * ```
+     */
+    createResponse(request: YandexCreateResponseRequest): Effect.Effect<string, YandexError> {
+        const self = this;
+        return Effect.gen(function* () {
+            const client = yield* self.openAi();
+            const config = yield* self.config();
+            const response = yield* self.submitLimit(
+                Effect.tryPromise({
+                    try: (signal) =>
+                        client.responses.create(self.toCreateParams(config, request), {
+                            signal,
+                        }),
+                    catch: (cause) => new YandexTransportError({ operation: 'create', cause }),
+                }),
+            );
+            if (!response.id) {
+                return yield* new YandexResponseError({
+                    responseId: 'unknown',
+                    message: 'Yandex Responses не вернул идентификатор фонового запроса',
+                    response,
+                });
+            }
+            return response.id;
+        });
+    }
+
+    /**
+     * Однократно читает состояние фонового запроса.
+     *
+     * `retrieve` здесь означает "получить текущее состояние уже созданного response". Метод делает
+     * ровно один HTTP-запрос и возвращает:
+     * - `{ done: false, response }`, если Yandex ещё обрабатывает задачу;
+     * - `{ done: true, response, outputText }`, если задача завершилась успешно;
+     * - typed ошибку, если транспорт упал или Yandex вернул terminal failure.
+     *
+     * Этот метод нужен для jobs/job-tools с собственной durable-памятью: внешний код сам решает,
+     * где хранить `responseId`, как часто повторять polling и какие части полного `response`
+     * сохранить для диагностики/метрик (`usage`, `output`, `status`, и т.п.).
+     *
+     * @example
+     * ```ts
+     * const poll = yield* yandex.retrieveResponse(responseId);
+     * if (!poll.done) {
+     *   yield* Effect.sleep(Duration.seconds(3));
+     *   // потом вызвать retrieveResponse ещё раз
+     * }
+     * yield* memo.set('yandexResponse', poll.response);
+     * ```
+     */
+    retrieveResponse(responseId: string): Effect.Effect<YandexResponsePollResult, YandexError> {
+        const self = this;
+        return Effect.gen(function* () {
+            const client = yield* self.openAi();
+            const response = yield* self.pollLimit(
+                Effect.tryPromise({
+                    try: (signal) => client.responses.retrieve(responseId, { stream: false }, { signal }),
+                    catch: (cause) => new YandexTransportError({ operation: 'retrieve', cause }),
+                }),
+            );
+
+            if (response.status === 'queued' || response.status === 'in_progress') {
+                return { done: false, response } as const;
+            }
+            if (response.status === 'failed' || response.status === 'cancelled' || response.status === 'incomplete') {
+                return yield* new YandexResponseError({
+                    responseId,
+                    message: formatFailedResponse(response, responseId),
+                    response,
+                });
+            }
+
+            const outputText = stripMarkdownFences(response.output_text || extractOutputText(response.output));
+            if (!outputText) {
+                return yield* new YandexResponseError({
+                    responseId,
+                    message: `Yandex Responses: ответ "${responseId}" не содержит текста`,
+                    response,
+                });
+            }
+            return { done: true, response, outputText } as const;
+        });
+    }
+
+    /**
+     * Повторяет {@link retrieveResponse}, пока запрос не завершится успешно.
+     *
+     * Это удобный shortcut для простых сценариев, где не нужно контролировать каждый poll. Внутри
+     * используется interruptible `Effect.sleep`, поэтому ожидание корректно прерывается при отмене
+     * fiber/job.
+     *
+     * Для durable jobs чаще лучше явно использовать `createResponse` + сохранить `responseId` +
+     * `retrieveResponse` в цикле/через `pollUntilDoneEffect`: так промежуточный идентификатор уже
+     * записан в memo до долгого ожидания. `waitResponse` подходит, когда `responseId` уже сохранён
+     * или когда повторная отправка не страшна.
+     *
+     * @example
+     * ```ts
+     * const completed = yield* yandex.waitResponse(responseId);
+     * console.log(completed.response.usage);
+     * ```
+     */
+    waitResponse(responseId: string, intervalMs = 3000): Effect.Effect<YandexCompletedResponse, YandexError> {
+        const self = this;
+        return Effect.gen(function* () {
+            while (true) {
+                const poll = yield* self.retrieveResponse(responseId);
+                if (poll.done) return poll;
+                yield* Effect.sleep(Duration.millis(intervalMs));
+            }
+        });
+    }
+
+    private config(): Effect.Effect<YandexConfig, YandexConfigError> {
         const apiKey = this.appConfig.yandexApiKey;
         const folderId = this.appConfig.yandexFolderId;
         if (!apiKey || !folderId) {
-            throw new Error(
-                'Yandex Cloud не сконфигурирован: задайте YANDEX_CLOUD_API_KEY и YANDEX_CLOUD_FOLDER_ID',
+            return Effect.fail(
+                new YandexConfigError({
+                    message: 'Yandex Cloud не сконфигурирован: задайте YANDEX_CLOUD_API_KEY и YANDEX_CLOUD_FOLDER_ID',
+                }),
             );
         }
-        return { apiKey, folderId };
+        return Effect.succeed({ apiKey, folderId });
     }
 
-    private getSession(): Session {
-        if (!this.session) {
-            // SDK шлёт `Authorization: Bearer <token>`; Yandex различает IAM-токен (t1.) и API-ключ (AQVN) по префиксу.
-            this.session = new Session({ iamToken: this.config().apiKey });
-        }
-        return this.session;
-    }
-
-    private getOpenAI(): OpenAI {
-        if (!this.openaiClient) {
-            const { apiKey, folderId } = this.config();
-            this.openaiClient = new OpenAI({
-                apiKey,
-                baseURL: 'https://ai.api.cloud.yandex.net/v1',
-                project: folderId,
-            });
-        }
-        return this.openaiClient;
-    }
-
-    // ── Текстовая LLM (YandexGPT) ──────────────────────────────────────────
-
-    async submitCompletion(request: LlmRequest): Promise<string> {
-        await Effect.runPromise(this.submitLimit(Effect.void)); // занять слот квоты submit (10/сек + 5000/час)
-        const { folderId } = this.config();
-        const client = this.getSession().client(
-            textGenerationService.TextGenerationAsyncServiceClient,
-        ) as unknown as AsyncLlmClient;
-
-        const op = await client.completion(
-            textGenerationService.CompletionRequest.fromPartial({
-                modelUri: `gpt://${folderId}/${MODEL_SUFFIX}`,
-                completionOptions: {
-                    stream: false,
-                    temperature: request.temperature ?? 0.3,
-                    maxTokens: request.maxTokens ?? 2000,
-                },
-                messages: request.messages,
-                ...(request.jsonSchema ? { jsonSchema: { schema: request.jsonSchema } } : {}),
-            }),
-        );
-
-        if (!op.id) {
-            throw new Error('YandexGPT не вернул идентификатор операции');
-        }
-        return op.id;
-    }
-
-    async pollCompletion(operationId: string): Promise<LlmPollResult<string>> {
-        await Effect.runPromise(this.pollLimit(Effect.void)); // занять слот квоты poll (50/сек)
-        const opClient = this.getSession().client(
-            operationService.OperationServiceClient,
-        ) as unknown as AsyncOperationClient;
-
-        const op = await opClient.get({ operationId });
-        if (!op.done) {
-            return { done: false };
-        }
-        if (op.error) {
-            throw new Error(`Операция LLM "${operationId}" завершилась с ошибкой: ${op.error.message}`);
-        }
-        if (!op.response) {
-            throw new Error(`Операция LLM "${operationId}" завершена, но не содержит ответа`);
-        }
-
-        const response = textGenerationService.CompletionResponse.decode(op.response.value);
-        const text = stripMarkdownFences(response.alternatives[0]?.message?.text ?? '');
-        return { done: true, result: text };
-    }
-
-    async pollCompletionJson<T>(operationId: string, schema: ZodSchema<T>): Promise<LlmPollResult<T>> {
-        const poll = await this.pollCompletion(operationId);
-        if (!poll.done) {
-            return { done: false };
-        }
-        const data = schema.parse(JSON.parse(poll.result));
-        return { done: true, result: data };
-    }
-
-    // ── Мультимодальная LLM (Vision) ───────────────────────────────────────
-
-    async submitVisionCompletion(request: VisionRequest): Promise<string> {
-        await Effect.runPromise(this.submitLimit(Effect.void)); // та же квота submit, что и у текстовой генерации
-        return submitVisionCompletion(this.getOpenAI(), this.config().folderId, request);
-    }
-
-    async pollVisionCompletion(taskId: string): Promise<LlmPollResult<string>> {
-        await Effect.runPromise(this.pollLimit(Effect.void)); // та же квота poll, что и у текстовой генерации
-        return pollVisionCompletion(this.getOpenAI(), taskId);
-    }
-
-    // ── Асинхронный OCR ────────────────────────────────────────────────────
-
-    async ocrRecognize(mimeType: string, content: Buffer): Promise<string> {
-        const { folderId } = this.config();
-        const client = this.getSession().client(
-            ocrService.TextRecognitionAsyncServiceClient,
-        ) as unknown as AsyncOcrClient;
-
-        const op = await client.recognize({
-            mimeType,
-            content,
-            folderId,
-            languageCodes: ['ru'],
-            model: '',
+    private openAi(): Effect.Effect<OpenAI, YandexConfigError> {
+        const self = this;
+        return Effect.gen(function* () {
+            if (!self.openaiClient) {
+                const { apiKey, folderId } = yield* self.config();
+                self.openaiClient = new OpenAI({
+                    apiKey,
+                    baseURL: 'https://ai.api.cloud.yandex.net/v1',
+                    project: folderId,
+                });
+            }
+            return self.openaiClient;
         });
-        if (!op.id) {
-            throw new Error('Yandex OCR не вернул идентификатор операции');
-        }
-        return op.id;
     }
 
-    /** Однократная проверка статуса OCR-операции; при завершении — читает страницы. */
-    async ocrPoll(operationId: string): Promise<LlmPollResult<Content[]>> {
-        const opClient = this.getSession().client(
-            operationService.OperationServiceClient,
-        ) as unknown as AsyncOperationClient;
+    private modelUri(config: YandexConfig, model: string | undefined): string {
+        const selected = model ?? YANDEX_MODELS.text;
+        return selected.startsWith('gpt://') ? selected : `gpt://${config.folderId}/${selected}`;
+    }
 
-        const op = await opClient.get({ operationId });
-        if (!op.done) {
-            return { done: false };
-        }
-        if (op.error) {
-            throw new Error(`Операция OCR "${operationId}" завершилась с ошибкой: ${op.error.message}`);
-        }
-
-        const ocrClient = this.getSession().client(
-            ocrService.TextRecognitionAsyncServiceClient,
-        ) as unknown as AsyncOcrClient;
-
-        const pages: Content[] = [];
-        for await (const page of ocrClient.getRecognition({ operationId })) {
-            pages.push({ page: page.page, text: page.textAnnotation?.fullText });
-        }
-        return { done: true, result: pages };
+    private toCreateParams(
+        config: YandexConfig,
+        request: YandexCreateResponseRequest,
+    ): ResponseCreateParamsNonStreaming {
+        return {
+            model: this.modelUri(config, request.model),
+            input: request.input,
+            instructions: request.instructions,
+            temperature: request.temperature ?? 0.3,
+            max_output_tokens: request.maxOutputTokens,
+            metadata: request.metadata,
+            background: true,
+            stream: false,
+            ...(request.jsonSchema
+                ? {
+                      text: {
+                          format: {
+                              type: 'json_schema' as const,
+                              name: request.jsonSchema.name,
+                              schema: request.jsonSchema.schema,
+                              description: request.jsonSchema.description,
+                              strict: request.jsonSchema.strict,
+                          },
+                      },
+                  }
+                : {}),
+        };
     }
 }

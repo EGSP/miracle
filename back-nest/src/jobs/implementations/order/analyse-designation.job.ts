@@ -4,14 +4,14 @@ import { z } from 'zod';
 import { type OrderPosition, type Stored, type TechnicalCondition } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
-import { Jobs, Progress } from '../../framework/context.js';
-import { submitOnce, pollUntilDone } from '../../../common/cloud-job.js';
+import { Jobs, Memo, Progress } from '../../framework/context.js';
+import { submitOnceEffect, pollUntilDoneEffect } from '../../../common/cloud-job.js';
 import { countTokens } from '../../../common/count-tokens.js';
 import { tryLabeledPromise, wrapUnknown } from '../../../common/effect-errors.js';
 import { OrderPositionsService } from '../../../orders/order-positions.service.js';
 import { DesignationsService } from '../../../orders/designations.service.js';
 import { TechnicalConditionsService } from '../../../technical-conditions/technical-conditions.service.js';
-import { YandexService } from '../../../yandex/yandex.service.js';
+import { YANDEX_MODELS, YandexInput, YandexService } from '../../../yandex/yandex.service.js';
 
 const DesignationResultZodSchema = z.object({
     values: z
@@ -164,17 +164,18 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                     });
                     yield* progress.push(0.1, { label: 'отправка запроса LLM', determined: false });
 
-                    const opId = yield* submitOnce(
-                        () =>
-                            yandex.submitCompletion({
-                                messages: [
-                                    { role: 'system', text: DESIGNATION_PROMPT },
-                                    { role: 'user', text: userMessage },
-                                ],
-                                temperature: 0.1,
-                                maxTokens: countTokens(DESIGNATION_PROMPT + userMessage) * 4,
-                                jsonSchema: DesignationResultJsonSchema,
-                            }),
+                    const opId = yield* submitOnceEffect(
+                        yandex.createResponse({
+                            model: YANDEX_MODELS.text,
+                            instructions: DESIGNATION_PROMPT,
+                            input: [YandexInput.user([YandexInput.text(userMessage)])],
+                            temperature: 0.1,
+                            maxOutputTokens: countTokens(DESIGNATION_PROMPT + userMessage) * 4,
+                            jsonSchema: {
+                                name: 'AnalyseDesignation',
+                                schema: DesignationResultJsonSchema,
+                            },
+                        }),
                         {
                             label: `analyse designation submit; position=${input.positionId}; tc=${tcId}`,
                             submitProgressLabel: 'отправка запроса LLM',
@@ -182,10 +183,18 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                             extraMemo: { finalPrompt: { system: DESIGNATION_PROMPT, user: userMessage } },
                         },
                     );
-                    const result = yield* pollUntilDone<DesignationResult>(
-                        () => yandex.pollCompletionJson(opId, DesignationResultZodSchema),
+                    const completed = yield* pollUntilDoneEffect(
+                        yandex.retrieveResponse(opId).pipe(
+                            Effect.map((poll) => (poll.done ? { done: true, result: poll } : { done: false })),
+                        ),
                         { label: `analyse designation poll; opId=${opId}` },
                     );
+                    const result = yield* Effect.try({
+                        try: () => DesignationResultZodSchema.parse(JSON.parse(completed.outputText)),
+                        catch: wrapUnknown(`parse analyse designation response; opId=${opId}`),
+                    });
+                    const memo = yield* Memo;
+                    yield* memo.set('yandexResponse', completed.response);
                     return { positionId: input.positionId, tcId: tcId!, values: result.values };
                 }).pipe(
                     Effect.mapError(
