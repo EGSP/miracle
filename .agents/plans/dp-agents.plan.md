@@ -232,7 +232,7 @@ model PreparedDocument {
 
 **LLM Vision** лимитируется отдельно — существующий `RateLimiter` в `YandexService`; не смешивать с лимитом kreuzberg.
 
-Справочник паттернов: `.agents/desk/effect-patterns.md`, `.agents/desk/job-patterns.md`.
+Справочник паттернов: `.agents/desk/document-prepare/patterns.md`.
 
 ### Health-gating
 
@@ -390,7 +390,7 @@ Multipart `POST /extract`, байты с диска через `FilesService.get
 - Скелетная job `prepare-document` в `jobs/implementations/document-prepare/` (или временные stub jobs — см. reconciliation ниже).
 - **Не переключать читателей** — `FileContent` и extraction path без изменений.
 
-**Reconciliation после Фазы 1:** текущая реализация может содержать две stub jobs в `document-prepare/jobs/`. Следующий шаг — привести к одной `prepare-document`, перенести job в `jobs/implementations/document-prepare/`, убрать `@JobImpl` из доменного модуля. См. `.agents/desk/job-patterns.md`.
+**Reconciliation после Фазы 1:** текущая реализация может содержать две stub jobs в `document-prepare/jobs/`. Следующий шаг — привести к одной `prepare-document`, перенести job в `jobs/implementations/document-prepare/`, убрать `@JobImpl` из доменного модуля. См. `.agents/desk/document-prepare/job-patterns.md`.
 
 ### Фаза 2 — Kreuzberg integration (non-vision)
 
@@ -448,7 +448,7 @@ Multipart `POST /extract`, байты с диска через `FilesService.get
 | Kreuzberg SPOF | Health-gating + мониторинг; при необходимости реплики. |
 | LLM cost/latency для всех PDF | Осознанное MVP-решение; fast-path для text-layer PDF — позже. |
 | Массовая загрузка заявок | `KreuzbergConcurrencyLimiter` (process-local) + `Swarm` для batch enqueue; нагрузочное тестирование в Фазе 4. |
-| Форма root job | **Решено:** одна `prepare-document`, engine в input; см. `.agents/desk/job-patterns.md`. |
+| Форма root job | **Решено:** одна `prepare-document`, engine в input; см. `.agents/desk/document-prepare/job-patterns.md`. |
 | Содержимое `meta` | Что сохранять из ответа kreuzberg (tables, tokens) — уточнить в Фазе 2. |
 | Миграция исторических `FileContent` | Re-prepare vs one-off SQL — решить перед Фазой 6. |
 | Деплой kreuzberg на прод | PM2-хост + Docker только для сервисов; обновить deploy-скрипты. |
@@ -509,8 +509,8 @@ Multipart `POST /extract`, байты с диска через `FilesService.get
 Проект документируется на русском. При реализации каждой фазы обновлять:
 
 - `.agents/plans/dp.report.md` — журнал изменений.
-- `.agents/desk/` — справочные паттерны для implementer-субагентов (`effect-patterns.md`, `job-patterns.md`).
+- `.agents/desk/<задача>/` — артефакты исследований; для DPS: `.agents/desk/document-prepare/patterns.md`.
 - README модуля `document-prepare` (по аналогии с существующими).
 - `.env.example` и env schema при добавлении переменных.
 
-Перед запуском implementer-субагентов предоставлять паттерны из `.agents/desk/`.
+Перед запуском implementer-субагентов указывать `deskDir` (например `.agents/desk/document-prepare/`) — implementer читает `patterns.md`.

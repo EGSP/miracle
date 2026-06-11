@@ -35,7 +35,7 @@
 2. JobTools `vision.render.v1`, `vision.recognize.v1` в `prepare-document` (ветка `engine=llm-vision`).
 3. Durable `opId` в ToolMemo для submit→poll.
 
-Паттерны: `.agents/desk/effect-patterns.md`, `.agents/desk/job-patterns.md`.
+Паттерны: `.agents/desk/document-prepare/patterns.md` (см. также `effect-patterns.md`, `job-patterns.md` в той же папке).
 
 ---
 
@@ -132,8 +132,7 @@
 
 **Сделано (только документация):**
 
-- Создана `.agents/desk/effect-patterns.md` — Effect.gen, tryLabeledPromise, ToolMemo, Semaphore limiter.
-- Создана `.agents/desk/job-patterns.md` — одна `prepare-document`, размещение файлов, JobTool, миграция Фазы 1.
+- Паттерны DPS в `.agents/desk/document-prepare/`: `patterns.md`, `effect-patterns.md`, `job-patterns.md`.
 - Обновлён `.agents/plans/dp-agents.plan.md` под новые решения.
 - Обновлён `.agents/plans/dp.report.md` — статус reconciliation, журнал.
 

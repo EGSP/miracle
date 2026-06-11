@@ -1,0 +1,13 @@
+{
+  "goal": "Паттерны Effect и jobs framework для Document Prepare Service",
+  "outputDir": ".agents/desk/document-prepare/",
+  "createdAt": "2026-06-11",
+  "artifacts": ["report.md", "patterns.md", "effect-patterns.md", "job-patterns.md"],
+  "keyPaths": [
+    "back-nest/src/jobs/framework/",
+    "back-nest/src/jobs/implementations/document-prepare/",
+    "back-nest/src/document-prepare/",
+    "back-nest/src/common/effect-errors.ts",
+    "back-nest/src/common/cloud-job.ts"
+  ]
+}
