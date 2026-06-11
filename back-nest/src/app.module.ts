@@ -15,6 +15,7 @@ import { FilesModule } from './files/files.module.js';
 import { FilesContentModule } from './files-content/files-content.module.js';
 import { TechnicalConditionsModule } from './technical-conditions/technical-conditions.module.js';
 import { OrdersModule } from './orders/orders.module.js';
+import { DocumentPrepareModule } from './document-prepare/document-prepare.module.js';
 
 @Module({
     imports: [
@@ -34,6 +35,7 @@ import { OrdersModule } from './orders/orders.module.js';
         FilesContentModule,
         TechnicalConditionsModule,
         OrdersModule,
+        DocumentPrepareModule,
     ],
 })
 export class AppModule {}

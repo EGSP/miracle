@@ -66,4 +66,14 @@ export class AppConfigService {
     get yandexFolderId(): string | undefined {
         return this.config.get('YANDEX_CLOUD_FOLDER_ID', { infer: true });
     }
+
+    /** Базовый URL REST-сервиса Kreuzberg. */
+    get kreuzbergUrl(): string {
+        return this.config.get('KREUZBERG_URL', { infer: true });
+    }
+
+    /** Лимит одновременных HTTP-запросов к kreuzberg (Фаза 2+). */
+    get dpsMaxConcurrency(): number {
+        return this.config.get('DPS_MAX_CONCURRENCY', { infer: true });
+    }
 }

@@ -28,6 +28,13 @@ enum JobStatus {
   cancelled
 }
 
+enum PrepareStatus {
+  queued
+  running
+  succeeded
+  failed
+}
+
 // ── Модели ────────────────────────────────────────────────────────────────────
 
 model User {
@@ -79,7 +86,31 @@ model File {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
+  preparedDocuments PreparedDocument[]
+
   @@map("files")
+}
+
+// Подготовленный документ (markdown) — результат DPS. На один fileId в MVP — одна актуальная запись.
+model PreparedDocument {
+  id       String        @id @default(uuid())
+  file     File          @relation(fields: [fileId], references: [id])
+  fileId   String
+  status   PrepareStatus
+  engine   String        // 'kreuzberg' | 'llm-vision'
+  markdown String?
+  pages    Json?         // [{ page, markdown }]
+  meta     Json?
+  error    String?
+  jobRunId String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
+
+  @@index([fileId])
+  @@index([status])
+  @@index([fileId, status])
+  @@map("prepared_documents")
 }
 
 // К одному файлу может быть несколько записей контента (разные попытки извлечения).
