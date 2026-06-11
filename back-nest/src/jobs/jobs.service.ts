@@ -9,7 +9,7 @@ import {
 import { DiscoveryService, Reflector } from '@nestjs/core';
 import { randomUUID } from 'node:crypto';
 import { Cause, Effect, Fiber } from 'effect';
-import type { JobKey, JobRun, JobRunsQuery, Stored, WorkerFinalPrompt } from '@miracle/types';
+import type { JobKey, JobRun, JobRunsQuery, Stored } from '@miracle/types';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
 import {
@@ -190,31 +190,6 @@ export class JobsService implements OnApplicationBootstrap {
             frontier = children.map((c) => c.id);
         }
         return result;
-    }
-
-    async getPromptPreview(id: string): Promise<WorkerFinalPrompt> {
-        const root = await this.store.findById(id);
-        if (!root) {
-            throw new NotFoundException('Прогон не найден');
-        }
-        const prompt = await this.findFinalPrompt(root);
-        if (!prompt) {
-            throw new NotFoundException('У прогона ещё нет сохранённого промпта');
-        }
-        return prompt;
-    }
-
-    /** Рекурсивно ищет сохранённый промпт (`memo.finalPrompt`) в поддереве прогона по `parentId`. */
-    private async findFinalPrompt(node: JobRun): Promise<WorkerFinalPrompt | undefined> {
-        const prompt = node.memo?.['finalPrompt'];
-        if (prompt && typeof prompt === 'object') {
-            return prompt as WorkerFinalPrompt;
-        }
-        for (const child of await this.store.childrenOf(node.id)) {
-            const found = await this.findFinalPrompt(child);
-            if (found) return found;
-        }
-        return undefined;
     }
 
     async delete(id: string): Promise<void> {

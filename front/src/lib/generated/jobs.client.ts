@@ -3,7 +3,7 @@
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { JobRun, Stored, WorkerFinalPrompt } from '@miracle/types';
+import type { JobRun, Stored } from '@miracle/types';
 import type { JobRunsQueryDto } from './models';
 
 export const jobs = {
@@ -15,10 +15,6 @@ export const jobs = {
     tree: (id: string) => customInstance<Stored<JobRun>[]>({
         method: 'GET',
         url: formatPath('/jobs/:id/tree', { id }),
-    }),
-    previewPrompt: (id: string) => customInstance<WorkerFinalPrompt>({
-        method: 'GET',
-        url: formatPath('/jobs/:id/preview-prompt', { id }),
     }),
     cancel: (id: string) => customInstance<void>({
         method: 'POST',

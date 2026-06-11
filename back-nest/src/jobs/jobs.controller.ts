@@ -1,5 +1,5 @@
 import { Controller, Delete, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
-import type { JobRun, Stored, WorkerFinalPrompt } from '@miracle/types';
+import type { JobRun, Stored } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { JobRunsQueryDto } from './dto/job-runs-query.dto.js';
 import { JobsService } from './jobs.service.js';
@@ -18,11 +18,6 @@ export class JobsController {
     @Get(':id/tree')
     tree(@Param('id') id: string): Promise<Stored<JobRun>[]> {
         return this.jobs.getTree(id);
-    }
-
-    @Get(':id/preview-prompt')
-    previewPrompt(@Param('id') id: string): Promise<WorkerFinalPrompt> {
-        return this.jobs.getPromptPreview(id);
     }
 
     @Post(':id/cancel')
