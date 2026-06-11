@@ -15,6 +15,8 @@ import { AnalyseDesignationJob } from './implementations/order/analyse-designati
 import { AnalyseApplicationJob } from './implementations/order/analyse-application.job.js';
 import { AnalyseOrderJob } from './implementations/order/analyse-order.job.js';
 import { PrepareDocumentJob } from './implementations/document-prepare/prepare-document.job.js';
+import { KreuzbergExtractTool } from './implementations/document-prepare/tools/kreuzberg-extract.tool.js';
+import { PrepareApplyTool } from './implementations/document-prepare/tools/prepare-apply.tool.js';
 
 /**
  * Единый модуль реализаций джобов: держит все джоб-классы как провайдеры и импортирует доменные
@@ -35,6 +37,8 @@ import { PrepareDocumentJob } from './implementations/document-prepare/prepare-d
         AnalyseApplicationJob,
         AnalyseOrderJob,
         PrepareDocumentJob,
+        KreuzbergExtractTool,
+        PrepareApplyTool,
     ],
 })
 export class JobImplementationsModule {}

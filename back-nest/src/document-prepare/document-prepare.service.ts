@@ -76,12 +76,43 @@ export class DocumentPrepareService {
     }
 
     /**
-     * Создаёт или обновляет запись подготовки и ставит корневую stub-джобу.
-     * Re-prepare перезаписывает единственную актуальную запись на `fileId`.
+     * Создаёт или обновляет запись подготовки и ставит корневую job `prepare-document`.
+     * На один `fileId` — одна актуальная {@link PreparedDocument}; key `['prepare-document', fileId]`.
+     *
+     * Re-prepare после `succeed`: удаляет старый root JobRun, сбрасывает запись и запускает заново.
+     * При уже идущем прогоне (`running`/`queued` JobRun) — без сброса markdown/meta, возврат текущего состояния.
+     * При `failed`/`cancelled` JobRun — сброс записи; `jobs.start` переиспользует ту же строку по key.
      */
     async enqueuePrepare(fileId: string): Promise<EnqueuePrepareResult> {
         const file = await this.requireSupportedFile(fileId);
         const engine = routePreparedEngine(file)!;
+
+        const key = prepareJobKey(fileId);
+        const existingRun = await this.jobs.findByKey([...key]);
+
+        if (existingRun?.status === 'running' || existingRun?.status === 'queued') {
+            let prepared = await this.getLatestByFile(fileId);
+            if (!prepared) {
+                prepared = await this.prisma.preparedDocument.create({
+                    data: {
+                        fileId,
+                        status: 'queued',
+                        engine,
+                        jobRunId: existingRun.id,
+                    },
+                });
+            } else if (prepared.jobRunId !== existingRun.id) {
+                prepared = await this.prisma.preparedDocument.update({
+                    where: { id: prepared.id },
+                    data: { jobRunId: existingRun.id },
+                });
+            }
+            return { prepared, jobRun: existingRun };
+        }
+
+        if (existingRun?.status === 'succeed') {
+            await this.jobs.deleteRunTree(existingRun.id);
+        }
 
         const existing = await this.getLatestByFile(fileId);
         const prepared = existing
@@ -105,7 +136,6 @@ export class DocumentPrepareService {
                   },
               });
 
-        const key = prepareJobKey(fileId);
         const jobRun = await this.jobs.start(
             PREPARE_DOCUMENT_JOB_ID,
             { fileId, preparedDocumentId: prepared.id, engine },

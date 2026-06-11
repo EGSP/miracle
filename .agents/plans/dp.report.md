@@ -2,11 +2,11 @@
 
 ## Текущий статус
 
-**Фаза 1: инфраструктурный каркас DPS — выполнена (reconciliation завершён)**
+**Фаза 2: kreuzberg integration (non-vision) — выполнена**
 
-Модуль `document-prepare`, Prisma-модель `PreparedDocument`, docker/env для kreuzberg, API GET/POST, одна stub job `prepare-document`, каркас `KreuzbergConcurrencyLimiter`, заглушки адаптеров. Читатели `FileContent` не затронуты.
+`KreuzbergHttpExtractor` (multipart POST /extract), JobTools `kreuzberg.extract.v1` и `prepare.apply.v1`, ветка `engine=kreuzberg` в `prepare-document`, health-gating (`GET /health` + поле `kreuzberg` в backend `/health`). LLM Vision остаётся stub. Читатели `FileContent` и upload-хук не затронуты.
 
-**Следующий шаг:** Фаза 2 — `KreuzbergHttpExtractor`, JobTools, health-gating, использование limiter в HTTP-адаптере.
+**Следующий шаг:** Фаза 3 — LLM Vision (`vision.render.v1`, `vision.recognize.v1`).
 
 ---
 
@@ -29,18 +29,69 @@
 
 ## Следующий шаг
 
-**Фаза 2 — Kreuzberg integration**
+**Фаза 3 — LLM Vision integration**
 
-1. `KreuzbergHttpExtractor`: multipart POST /extract → markdown.
-2. JobTools `kreuzberg.extract.v1`, `prepare.apply.v1` в `prepare-document` (ветка `engine=kreuzberg`).
-3. Подключить `KreuzbergConcurrencyLimiter.withPermit` в HTTP-адаптере.
-4. Health-gating kreuzberg.
+1. `LlmVisionExtractor`: ConvertService + Yandex/cloud-job.
+2. JobTools `vision.render.v1`, `vision.recognize.v1` в `prepare-document` (ветка `engine=llm-vision`).
+3. Durable `opId` в ToolMemo для submit→poll.
 
-Паттерны для implementer: `.agents/desk/effect-patterns.md`, `.agents/desk/job-patterns.md`.
+Паттерны: `.agents/desk/effect-patterns.md`, `.agents/desk/job-patterns.md`.
 
 ---
 
 ## Журнал изменений
+
+### 2026-06-11 — Фаза 2 DPS: kreuzberg integration
+
+**Сделано:**
+
+- `KreuzbergHttpExtractor`: чтение файла с диска, `POST ${KREUZBERG_URL}/extract` (multipart `files`, `output_format=markdown`), парсинг JSON-массива `[{ content, … }]`, typed `ExtractError`.
+- Health: `checkHealth()` — `GET /health`, fallback `GET /version`; поле `kreuzberg` в `GET /health` backend.
+- Health-gating: перед extract проверка доступности; при `down` — быстрый `failed`.
+- `KreuzbergConcurrencyLimiter.withPermit` оборачивает фактический HTTP-вызов в адаптере.
+- JobTools: `kreuzberg.extract.v1` (FilesService + ToolMemo), `prepare.apply.v1` (markSucceeded, idempotent).
+- `prepare-document.job.ts`: ветка kreuzberg через tools + progress; llm-vision — stub; ошибки → `markFailed` + failed JobRun.
+- Регистрация: `KreuzbergHttpExtractor` в `DocumentPrepareModule`; tools в `JobImplementationsModule`; `HealthModule` импортирует `DocumentPrepareModule`.
+- Обновлены `document-prepare/README.md`, `dp.report.md`.
+
+**HTTP-контракт (зафиксирован для проверки):**
+
+- `POST /extract`: `files=@<file>`, `output_format=markdown`.
+- Ответ: JSON-массив, markdown в `content` (первый элемент).
+- Health: `GET /health` → `{"status":"healthy","version":"…"}`.
+
+**Проверки:**
+
+- `npx tsc` в `back-nest` — OK.
+- Live kreuzberg не запускался — интеграция против контейнера не проверена.
+
+**Ограничения:**
+
+- Vision/pdf/jpg/png — stub (Фаза 3).
+- Upload-хук, readers, Prisma migrations — без изменений.
+- `meta` сохраняет `mimeType`, `kreuzbergMetadata`, `tables` из ответа API при наличии.
+
+**Fixup (re-prepare idempotency):**
+
+- `enqueuePrepare`: перед сбросом `PreparedDocument` проверяет root JobRun по key `['prepare-document', fileId]`.
+- `succeed` → `deleteRunTree` старого root, затем сброс записи и новый `jobs.start`.
+- `running`/`queued` → без сброса markdown/meta; возврат текущей `PreparedDocument` и существующего JobRun (при необходимости синхронизация `jobRunId`).
+- `failed`/`cancelled` / нет run — прежний сброс + `jobs.start` (переиспользует строку по key; input не обновляется из-за `upsert update:{}`, в MVP `preparedDocumentId` тот же).
+- `back-nest/src/document-prepare/document-prepare.service.ts`
+
+**Файлы:**
+
+- `back-nest/src/document-prepare/adapters/kreuzberg-http.extractor.ts`
+- `back-nest/src/document-prepare/document-prepare.module.ts`
+- `back-nest/src/jobs/implementations/document-prepare/prepare-document.job.ts`
+- `back-nest/src/jobs/implementations/document-prepare/tools/kreuzberg-extract.tool.ts`
+- `back-nest/src/jobs/implementations/document-prepare/tools/prepare-apply.tool.ts`
+- `back-nest/src/jobs/job-implementations.module.ts`
+- `back-nest/src/health/health.controller.ts`
+- `back-nest/src/health/health.module.ts`
+- `back-nest/src/document-prepare/README.md`
+
+---
 
 ### 2026-06-11 — Reconciliation Фазы 1 DPS
 
