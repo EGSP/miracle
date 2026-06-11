@@ -13,17 +13,43 @@
   - `POST /documents/:fileId/prepare` — ручная (повторная) подготовка.
 - Одна корневая джоба `prepare-document` через durable `JobRun`; движок — в `input.engine` и `PreparedDocument.engine`.
 
-## Фаза 2 (текущая): kreuzberg для non-vision
+## Фаза 3 (текущая): LLM Vision для pdf/jpg/png
+
+Реализована ветка `engine=llm-vision` для домена `VISUAL` (pdf, jpg, png).
+
+**Поток:**
+
+1. `POST /documents/:fileId/prepare` → `DocumentPrepareService.enqueuePrepare` → job `prepare-document`.
+2. Job: `markRunning` → `vision.render.v1` → `vision.recognize.v1` → `prepare.apply.v1` → `succeeded`.
+3. При ошибке: `PreparedDocument.status=failed`, `JobRun.status=failed` с понятным сообщением.
+
+**JobTools** (`jobs/implementations/document-prepare/tools/`):
+
+| Tool | Назначение |
+|------|------------|
+| `vision.render.v1` | PDF → JPEG через `ConvertService`, jpg/png → dataUrl; кэш `images` в ToolMemo |
+| `vision.recognize.v1` | Yandex Vision submit→poll; durable `opId`, `finalPrompt`, `yandexResponse`, `markdown` в ToolMemo |
+| `prepare.apply.v1` | `markSucceeded` в БД, idempotent через `applied: true` в ToolMemo |
+
+**Адаптер:** `adapters/llm-vision.extractor.ts`
+
+- Промпты: `LLM_VISION_PROMPT`, `LLM_VISION_USER` из `scan.shared.ts` (не TC_VISION).
+- Модель: `YANDEX_MODELS.vision`, `maxOutputTokens: 40000`.
+- PDF: `ConvertService.pdfToImages` (scale 2.5), учёт `file.settings?.usedPages` через `validatePageRanges`.
+- Результат: `PreparedResult` с единой строкой `markdown` и `meta` (`source: llm-vision`, `model`, `pageCount`, `usage`).
+
+**Durable recovery:** при рестарте job во время распознавания `vision.recognize.v1` восстанавливает `opId` из ToolMemo и продолжает polling без повторной отправки.
+
+## Фаза 2: kreuzberg для non-vision
 
 Реализована ветка `engine=kreuzberg` для доменов `DOCUMENT`, `SPREADSHEET`, `TEXT`.
 
 **Поток:**
 
-1. `POST /documents/:fileId/prepare` → `DocumentPrepareService.enqueuePrepare` → job `prepare-document`.
+1. `POST /documents/:fileId/prepare` → job `prepare-document`.
 2. Job: `markRunning` → `kreuzberg.extract.v1` → `prepare.apply.v1` → `succeeded`.
-3. При ошибке: `PreparedDocument.status=failed`, `JobRun.status=failed` с понятным сообщением.
 
-**JobTools** (`jobs/implementations/document-prepare/tools/`):
+**JobTools:**
 
 | Tool | Назначение |
 |------|------------|
@@ -34,8 +60,9 @@
 
 - Домен: `back-nest/src/document-prepare/` (без `@JobImpl`).
 - Job: `back-nest/src/jobs/implementations/document-prepare/prepare-document.job.ts`.
-- HTTP-адаптер: `adapters/kreuzberg-http.extractor.ts`.
-- Лимитер: `kreuzberg-concurrency.limiter.ts` — оборачивает фактический POST `/extract`.
+- HTTP-адаптер kreuzberg: `adapters/kreuzberg-http.extractor.ts`.
+- LLM Vision-адаптер: `adapters/llm-vision.extractor.ts`.
+- Лимитер kreuzberg: `kreuzberg-concurrency.limiter.ts`.
 
 ### Контракт с kreuzberg REST
 
@@ -47,7 +74,7 @@
 | Health | `GET` | `/health` | — ответ `{"status":"healthy","version":"…"}` |
 | Fallback health | `GET` | `/version` | — ответ `{"version":"…"}` |
 
-**Ожидаемый ответ POST /extract** (официальная документация kreuzberg):
+**Ожидаемый ответ POST /extract:**
 
 ```json
 [
@@ -58,15 +85,6 @@
     "tables": []
   }
 ]
-```
-
-Адаптер также принимает альтернативные формы: `markdown`, `text`, `results[0].content` — для устойчивости. При нераспознанном ответе — `ExtractError` с фрагментом тела (до 500 символов).
-
-**Проверка при запуске контейнера:**
-
-```bash
-curl http://localhost:8000/health
-curl -F "files=@document.docx" -F "output_format=markdown" http://localhost:8000/extract
 ```
 
 ### Health в backend
@@ -81,8 +99,6 @@ curl -F "files=@document.docx" -F "output_format=markdown" http://localhost:8000
 }
 ```
 
-Перед извлечением адаптер проверяет доступность kreuzberg (`/health`, fallback `/version`). При `down` — быстрый `failed`, без зависания в `running`.
-
 ### Env
 
 | Переменная | Назначение |
@@ -90,13 +106,14 @@ curl -F "files=@document.docx" -F "output_format=markdown" http://localhost:8000
 | `KREUZBERG_URL` | Базовый URL REST kreuzberg |
 | `KREUZBERG_HOST_PORT` | Порт контейнера (docker-compose) |
 | `DPS_MAX_CONCURRENCY` | Лимит параллельных HTTP к kreuzberg (Semaphore в процессе) |
+| `YANDEX_CLOUD_API_KEY` | API-ключ Yandex Cloud для LLM Vision |
+| `YANDEX_CLOUD_FOLDER_ID` | Folder ID Yandex Cloud |
 
 ## Не реализовано (следующие фазы)
 
-- **LLM Vision** (`engine=llm-vision`, pdf/jpg/png) — stub «DPS LLM Vision extractor is not implemented yet» (Фаза 3).
-- JobTools `vision.render.v1`, `vision.recognize.v1`.
 - Автоподготовка на upload (Фаза 4).
 - Переключение читателей с `FileContent` (Фаза 5).
+- Deprecation legacy extraction (Фаза 6).
 
 ## Фаза 1 (завершена)
 

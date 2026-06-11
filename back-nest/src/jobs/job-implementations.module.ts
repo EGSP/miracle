@@ -17,6 +17,8 @@ import { AnalyseOrderJob } from './implementations/order/analyse-order.job.js';
 import { PrepareDocumentJob } from './implementations/document-prepare/prepare-document.job.js';
 import { KreuzbergExtractTool } from './implementations/document-prepare/tools/kreuzberg-extract.tool.js';
 import { PrepareApplyTool } from './implementations/document-prepare/tools/prepare-apply.tool.js';
+import { VisionRenderTool } from './implementations/document-prepare/tools/vision-render.tool.js';
+import { VisionRecognizeTool } from './implementations/document-prepare/tools/vision-recognize.tool.js';
 
 /**
  * Единый модуль реализаций джобов: держит все джоб-классы как провайдеры и импортирует доменные
@@ -38,6 +40,8 @@ import { PrepareApplyTool } from './implementations/document-prepare/tools/prepa
         AnalyseOrderJob,
         PrepareDocumentJob,
         KreuzbergExtractTool,
+        VisionRenderTool,
+        VisionRecognizeTool,
         PrepareApplyTool,
     ],
 })

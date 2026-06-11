@@ -2,11 +2,11 @@
 
 ## Текущий статус
 
-**Фаза 2: kreuzberg integration (non-vision) — выполнена**
+**Фаза 3: LLM Vision integration (vision/pdf) — выполнена**
 
-`KreuzbergHttpExtractor` (multipart POST /extract), JobTools `kreuzberg.extract.v1` и `prepare.apply.v1`, ветка `engine=kreuzberg` в `prepare-document`, health-gating (`GET /health` + поле `kreuzberg` в backend `/health`). LLM Vision остаётся stub. Читатели `FileContent` и upload-хук не затронуты.
+`LlmVisionExtractor` (ConvertService + Yandex Vision), JobTools `vision.render.v1` и `vision.recognize.v1`, ветка `engine=llm-vision` в `prepare-document` (render → recognize → apply). Durable `opId` / `finalPrompt` / результат — в ToolMemo `vision.recognize.v1`. Промпты из `scan.shared.ts` (`LLM_VISION_*`, не TC). Legacy `llm-vision.job` и `files-content` не затронуты.
 
-**Следующий шаг:** Фаза 3 — LLM Vision (`vision.render.v1`, `vision.recognize.v1`).
+**Следующий шаг:** Фаза 4 — автоподготовка на upload + backpressure.
 
 ---
 
@@ -29,17 +29,49 @@
 
 ## Следующий шаг
 
-**Фаза 3 — LLM Vision integration**
+**Фаза 4 — автоподготовка на upload + backpressure**
 
-1. `LlmVisionExtractor`: ConvertService + Yandex/cloud-job.
-2. JobTools `vision.render.v1`, `vision.recognize.v1` в `prepare-document` (ветка `engine=llm-vision`).
-3. Durable `opId` в ToolMemo для submit→poll.
+1. Хук в `FilesService.saveUpload` / `OrderApplication` creation.
+2. `DocumentPrepareService.enqueuePrepare` с роутингом по домену.
+3. `Swarm` concurrency при батч-загрузке.
 
 Паттерны: `.agents/desk/document-prepare/patterns.md` (см. также `effect-patterns.md`, `job-patterns.md` в той же папке).
 
 ---
 
 ## Журнал изменений
+
+### 2026-06-11 — Фаза 3 DPS: LLM Vision integration
+
+**Сделано:**
+
+- `LlmVisionExtractor` (`@Injectable`): `renderPages` (PDF через `ConvertService.pdfToImages` scale 2.5 + `usedPages`; jpg/png → dataUrl), `submit`/`pollOnce`/`toPreparedResult`, `extract` для прямого вызова.
+- Промпты: `LLM_VISION_PROMPT`, `LLM_VISION_USER` из `scan.shared.ts`; модель `YANDEX_MODELS.vision`, `maxOutputTokens: 40000`.
+- JobTools: `vision.render.v1` (кэш `images` в ToolMemo), `vision.recognize.v1` (durable `opId`, `finalPrompt`, `yandexResponse`, `markdown` в ToolMemo; submit→poll без job-level `Memo`/`submitOnceEffect`).
+- `prepare-document.job.ts`: ветка `engine=llm-vision` — render → recognize → apply; симметричная обработка ошибок с kreuzberg.
+- Регистрация: `LlmVisionExtractor` в `DocumentPrepareModule`; tools в `JobImplementationsModule`.
+- Обновлены `document-prepare/README.md`, `dp.report.md`.
+
+**Проверки:**
+
+- `npx tsc` в `back-nest` — OK.
+
+**Ограничения:**
+
+- Upload-хук, readers, legacy jobs, Prisma — без изменений.
+- Live Yandex Vision не тестировался — интеграция против API не проверена.
+
+**Файлы:**
+
+- `back-nest/src/document-prepare/adapters/llm-vision.extractor.ts`
+- `back-nest/src/document-prepare/document-prepare.module.ts`
+- `back-nest/src/jobs/implementations/document-prepare/prepare-document.job.ts`
+- `back-nest/src/jobs/implementations/document-prepare/tools/vision-render.tool.ts`
+- `back-nest/src/jobs/implementations/document-prepare/tools/vision-recognize.tool.ts`
+- `back-nest/src/jobs/job-implementations.module.ts`
+- `back-nest/src/document-prepare/README.md`
+
+---
 
 ### 2026-06-11 — Фаза 2 DPS: kreuzberg integration
 

@@ -1,0 +1,17 @@
+{
+  "goal": "Справочник миграции LLM Vision в DPS Фаза 3 (vision.render.v1, vision.recognize.v1)",
+  "outputDir": ".agents/desk/document-prepare/",
+  "createdAt": "2026-06-11T00:00:00.000Z",
+  "artifacts": ["llm-vision-migration.md"],
+  "keyPaths": [
+    "back-nest/src/jobs/implementations/scan/scan.shared.ts",
+    "back-nest/src/jobs/implementations/scan/llm-vision.job.ts",
+    "back-nest/src/common/cloud-job.ts",
+    "back-nest/src/yandex/yandex.service.ts",
+    "back-nest/src/convert/convert.service.ts",
+    "back-nest/src/jobs/implementations/document-prepare/prepare-document.job.ts",
+    "back-nest/src/jobs/implementations/document-prepare/tools/kreuzberg-extract.tool.ts",
+    "back-nest/src/jobs/implementations/document-prepare/tools/prepare-apply.tool.ts",
+    "back-nest/src/document-prepare/adapters/llm-vision.extractor.ts"
+  ]
+}

@@ -6,6 +6,7 @@
 |--------|------|------------|
 | Effect | [effect-patterns.md](./effect-patterns.md) | `Effect.gen`, `tryLabeledPromise`, ToolMemo, Semaphore limiter, tagged errors |
 | Job / JobTool | [job-patterns.md](./job-patterns.md) | `prepare-document`, размещение файлов, JobTool, миграция Фазы 1 |
+| LLM Vision (Фаза 3) | [llm-vision-migration.md](./llm-vision-migration.md) | Декомпозиция tools, ToolMemo submit/poll, промпты, риски |
 
 ## Быстрый чеклист
 

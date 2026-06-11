@@ -8,8 +8,8 @@ import type { ExtractError, PreparedEngine } from '../../../document-prepare/ext
 import { DocumentPrepareService } from '../../../document-prepare/document-prepare.service.js';
 import { KreuzbergExtractTool } from './tools/kreuzberg-extract.tool.js';
 import { PrepareApplyTool } from './tools/prepare-apply.tool.js';
-
-const LLM_VISION_NOT_IMPLEMENTED = 'DPS LLM Vision extractor is not implemented yet';
+import { VisionRenderTool } from './tools/vision-render.tool.js';
+import { VisionRecognizeTool } from './tools/vision-recognize.tool.js';
 
 export type PrepareDocumentInput = {
     fileId: string;
@@ -26,7 +26,7 @@ const formatJobError = (error: unknown): string => {
 
 /**
  * Корневая джоба подготовки документа.
- * Фаза 2: ветка kreuzberg через JobTools; llm-vision — stub до Фазы 3.
+ * Фаза 2: kreuzberg; Фаза 3: llm-vision через JobTools.
  */
 @Injectable()
 @JobImpl()
@@ -37,6 +37,8 @@ export class PrepareDocumentJob implements Job<PrepareDocumentInput, void> {
     constructor(
         documentPrepare: DocumentPrepareService,
         kreuzbergExtractTool: KreuzbergExtractTool,
+        visionRenderTool: VisionRenderTool,
+        visionRecognizeTool: VisionRecognizeTool,
         prepareApplyTool: PrepareApplyTool,
     ) {
         const markFailedAndFail = (preparedDocumentId: string, error: unknown) =>
@@ -57,26 +59,35 @@ export class PrepareDocumentJob implements Job<PrepareDocumentInput, void> {
                     documentPrepare.markRunning(input.preparedDocumentId, jobs.runId),
                 );
 
-                if (input.engine === 'kreuzberg') {
-                    const pipeline = Effect.gen(function* () {
-                        yield* progress.push(0.1, { label: 'извлечение через kreuzberg' });
-                        const result = yield* tools.run(kreuzbergExtractTool, { fileId: input.fileId });
-                        yield* progress.push(0.8, { label: 'сохранение результата' });
-                        yield* tools.run(prepareApplyTool, {
-                            preparedDocumentId: input.preparedDocumentId,
-                            result,
-                        });
-                    });
+                const pipeline =
+                    input.engine === 'kreuzberg'
+                        ? Effect.gen(function* () {
+                              yield* progress.push(0.1, { label: 'извлечение через kreuzberg' });
+                              const result = yield* tools.run(kreuzbergExtractTool, { fileId: input.fileId });
+                              yield* progress.push(0.8, { label: 'сохранение результата' });
+                              yield* tools.run(prepareApplyTool, {
+                                  preparedDocumentId: input.preparedDocumentId,
+                                  result,
+                              });
+                          })
+                        : Effect.gen(function* () {
+                              yield* progress.push(0.05, { label: 'рендер страниц' });
+                              const { images } = yield* tools.run(visionRenderTool, { fileId: input.fileId });
+                              yield* progress.push(0.2, { label: 'распознавание через LLM Vision' });
+                              const result = yield* tools.run(visionRecognizeTool, {
+                                  fileId: input.fileId,
+                                  images,
+                              });
+                              yield* progress.push(0.8, { label: 'сохранение результата' });
+                              yield* tools.run(prepareApplyTool, {
+                                  preparedDocumentId: input.preparedDocumentId,
+                                  result,
+                              });
+                          });
 
-                    yield* pipeline.pipe(
-                        Effect.catchAll((error) => markFailedAndFail(input.preparedDocumentId, error)),
-                    );
-                } else {
-                    yield* tryLabeledPromise('mark failed', () =>
-                        documentPrepare.markFailed(input.preparedDocumentId, LLM_VISION_NOT_IMPLEMENTED),
-                    );
-                    return yield* Effect.fail(new Error(LLM_VISION_NOT_IMPLEMENTED));
-                }
+                yield* pipeline.pipe(
+                    Effect.catchAll((error) => markFailedAndFail(input.preparedDocumentId, error)),
+                );
 
                 yield* progress.push(1, { label: 'завершено' });
             });
