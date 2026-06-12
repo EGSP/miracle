@@ -136,7 +136,7 @@
 ## Не реализовано (следующие фазы)
 
 - `tc-extract.job` на `PreparedDocument` (остаток Фазы 5).
-- Deprecation legacy extraction (Фаза 6).
+- Legacy `FileContent` readers (front, `tc-extract`, scan jobs) — вне DPS extraction path (Фаза 7 завершена).
 
 ## Фаза 1 (завершена)
 

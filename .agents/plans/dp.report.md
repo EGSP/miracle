@@ -2,15 +2,13 @@
 
 ## Текущий статус
 
-**Фаза 6: Deprecation FileContent extraction — выполнена**
+**Фаза 7: Dependency audit — выполнена**
 
-Синхронный путь `files-content/extraction/*` помечен `@deprecated`. `POST /files-content/:fileId/extract` возвращает **410 Gone** с указанием DPS. Read-only GET/soft-delete и таблица `FileContent` без изменений.
+Удалены `mammoth`, `papaparse`, `xlsx`, `@types/papaparse` и каталог `files-content/extraction/*` из `back-nest`. `exceljs` сохранён (отчёты orders). Отчёт: `.agents/desk/document-prepare/phase-7-dependency-audit.md`.
 
-**Фаза 5:** `ApplicationChunkReader` на Effect + `PreparedDocument`; `analyse-application` без `extract-visual`. `tc-extract.job` — вне scope.
+**DPS (фазы 4–6):** автоподготовка через `onFileSaved`, readers на `PreparedDocument`, extract endpoint → 410.
 
-**Фаза 4 (уточнение):** хук `FilesService.onFileSaved` / `notifyFileSaved`; DPS подписывается через `DocumentPrepareUploadListener`; `enqueuePrepareBatch` удалён.
-
-**Следующий шаг:** Фаза 7 — dependency audit; остаток — `tc-extract.job`.
+**Остаток вне DPS:** `tc-extract.job`, legacy scan jobs → `FileContent`; front `useExtractFileContent` → миграция на DPS API.
 
 ---
 
@@ -33,19 +31,27 @@
 
 ## Следующий шаг
 
-**Фаза 7 — dependency audit субагентом**
-
-1. Импорты `mammoth`, `xlsx`, `papaparse`, `files-content/extraction/*`.
-2. Отделить report-generation deps.
-3. Удаление из `package.json` только после отчёта.
-
-**Остаток Фазы 5:** `tc-extract.job` → `PreparedDocument`.
+Миграция потребителей legacy `FileContent`: `tc-extract.job`, front `FileCard`, scan jobs (по приоритету продукта).
 
 Паттерны: `.agents/desk/document-prepare/patterns.md`.
 
 ---
 
 ## Журнал изменений
+
+### 2026-06-12 — Фаза 7 DPS: dependency audit
+
+**Сделано:**
+
+- Аудит extraction vs report deps; отчёт `phase-7-dependency-audit.md`.
+- Удалены пакеты `mammoth`, `papaparse`, `xlsx`, `@types/papaparse` из `back-nest/package.json`.
+- Удалён код `files-content/extraction/*`, `ExtractionService` из модуля, orphan DTO extract query.
+
+**Оставлено:** `exceljs` (orders reports), `FilesContentService` (legacy jobs + read-only API).
+
+**Проверки:** `npx tsc` в `back-nest` — OK.
+
+---
 
 ### 2026-06-12 — DPS: хук upload, Effect reader, без extract-visual
 
