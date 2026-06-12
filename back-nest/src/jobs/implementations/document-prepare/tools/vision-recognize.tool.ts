@@ -2,13 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { Duration, Effect } from 'effect';
 import { brandJobToolType, type JobTool } from '../../../framework/job-tool.js';
 import { ToolMemo } from '../../../framework/context.js';
-import {
-    LlmVisionExtractor,
-    yandexToExtractError,
-    type VisionPageImage,
-} from '../../../../document-prepare/adapters/llm-vision.extractor.js';
-import type { ExtractError, PreparedResult } from '../../../../document-prepare/extractor.port.js';
 import type { YandexCompletedResponse } from '../../../../yandex/yandex.service.js';
+import { LlmVisionExtractor } from '../../../../document-prepare/adapters/llm-vision.extractor.js';
+import { yandexToExtractError } from '../../../../document-prepare/errors.js';
+import type { ExtractError, PreparedResult } from '../../../../document-prepare/extractor.port.js';
+import type { VisionPageImage } from '../../../../document-prepare/vision/render-pages.js';
+
+const POLL_INTERVAL_MS = 3000;
 
 type VisionRecognizeInput = {
     readonly fileId: string;
@@ -17,13 +17,10 @@ type VisionRecognizeInput = {
 
 type VisionRecognizeMemo = {
     opId?: string;
-    finalPrompt?: { system: string; user: string };
     yandexResponse?: unknown;
     markdown?: string;
     meta?: Record<string, unknown>;
 };
-
-const POLL_INTERVAL_MS = 3000;
 
 /** JobTool: LLM Vision submit→poll с durable checkpoint в ToolMemo. */
 @Injectable()
@@ -50,7 +47,6 @@ export class VisionRecognizeTool
                     Effect.mapError((error) => yandexToExtractError(error, input.fileId)),
                 );
                 yield* memo.set((m) => m.opId, opId);
-                yield* memo.set((m) => m.finalPrompt, this.extractor.getFinalPrompt());
             }
 
             const completed = yield* this.pollUntilDone(opId, input.fileId);
@@ -78,7 +74,7 @@ export class VisionRecognizeTool
                 const poll = yield* this.extractor.pollOnce(opId).pipe(
                     Effect.mapError((error) => yandexToExtractError(error, fileId)),
                 );
-                if ('outputText' in poll) {
+                if (poll.done === true) {
                     return poll;
                 }
                 yield* Effect.sleep(Duration.millis(POLL_INTERVAL_MS));

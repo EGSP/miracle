@@ -1,9 +1,7 @@
-import fs from 'fs/promises';
 import { Effect } from 'effect';
 import {
     ExtractionStatus,
     type ExtractionType,
-    validatePageRanges,
     type Content,
     type FileModel,
     type Stored,
@@ -16,36 +14,19 @@ import type { FilesService } from '../../../files/files.service.js';
 import type { FilesContentService } from '../../../files-content/files-content.service.js';
 import { YANDEX_MODELS, YandexInput, type YandexService } from '../../../yandex/yandex.service.js';
 import type { ConvertService } from '../../../convert/convert.service.js';
+import {
+    LLM_VISION_PROMPT,
+    LLM_VISION_USER,
+} from '../../../document-prepare/vision/prompts.js';
+import { renderVisionPages } from '../../../document-prepare/vision/render-pages.js';
+
+export { LLM_VISION_PROMPT, LLM_VISION_USER };
 
 /**
  * Общая «начинка» scan-джобов (OCR / LLM Vision / LLM Vision ТУ). Сами джобы — отдельные
  * инъецируемые классы (по файлу на джоб); здесь — промпты, чтение файла, рендер страниц и
  * сборка детей `recognize`/`apply`, чтобы три класса не дублировали логику.
  */
-
-export const LLM_VISION_PROMPT = `Ты — ассистент для извлечения содержимого из документов со сложной структурой.
-Тебе передаются страницы документа в виде изображений.
-Извлеки весь текст и структурированные данные: таблицы, списки, поля форм.
-
-Варианты с отметкой (чекбокс, крестик, галочка, выбор одного из нескольких):
-Смотри только на отметку на изображении, не на смысл слов в подписи.
-
-Для каждого варианта в таком блоке — отдельная строка (без символов ☑ ☐ ✓ ✗ [x] и без слов «отмечено», «вариант N»):
-  Выбрано: <дословный текст этого варианта из документа>
-  Не выбрано: <дословный текст этого варианта из документа>
-
-Правила:
-- В одном блоке выбора (одна строка таблицы, один номер пункта, один вопрос) у каждой альтернативы должна быть строка «Выбрано:» или «Не выбрано:». Не оставляй в блоке выбора строк без этих префиксов.
-- Если отмечен один из нескольких — у него «Выбрано:», у остальных альтернатив того же блока — «Не выбрано:».
-- Если можно отметить несколько — у каждой отмеченной «Выбрано:», у каждой неотмеченной «Не выбрано:».
-- Префикс — только статус отметки. Текст после двоеточия копируй из документа как есть, даже если там «без …», «не …» или строка «Не требуется».
-
-Перед вариантами блока можно один раз вывести заголовок из документа (номер пункта, название графы), без префикса.
-
-Остальной текст без отметок — как в документе, в исходном порядке.
-Не добавляй комментариев от себя.`;
-
-export const LLM_VISION_USER = 'Извлеки содержимое документа.';
 
 export const TC_VISION_PROMPT = `Ты — ассистент для извлечения содержимого из документов Технических Условий (ТУ).
 Тебе передаются страницы PDF в виде изображений.
@@ -101,26 +82,10 @@ const requireFile = (files: FilesDep, fileId: string): Effect.Effect<Stored<File
 const renderPages = (files: FilesDep, convert: ConvertDep, file: Stored<FileModel>) =>
     Effect.gen(function* () {
         const filePath = files.getFilePath(file);
-        const ext = file.extension.toLowerCase();
-        if (ext === 'pdf') {
-            const buffer = yield* tryLabeledPromise(`чтение PDF-файла "${file.id}"`, () => fs.readFile(filePath));
-            const spec = file.settings?.usedPages?.trim();
-            let pageNumbers: number[] | undefined;
-            if (spec) {
-                const result = validatePageRanges(spec);
-                if (!result.ok) {
-                    return yield* Effect.fail(new Error(`Настройка usedPages: ${result.message}`));
-                }
-                pageNumbers = result.pages;
-            }
-            return yield* tryLabeledPromise(`рендеринг страниц PDF файла "${file.id}"`, () =>
-                convert.pdfToImages(buffer, { scale: 2.5, pageNumbers }),
-            );
-        }
-        const buffer = yield* tryLabeledPromise(`чтение файла изображения "${file.id}"`, () => fs.readFile(filePath));
-        const base64 = buffer.toString('base64');
-        const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
-        return [{ page: 1, base64, dataUrl: `data:${mimeType};base64,${base64}` }];
+        const images = yield* renderVisionPages(convert, file, filePath).pipe(
+            Effect.mapError((error) => new Error(error.message)),
+        );
+        return images;
     });
 
 /** LLM Vision-распознавание: рендер страниц → vision-комплишн (async). */

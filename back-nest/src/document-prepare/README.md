@@ -27,13 +27,16 @@
 
 | Tool | Назначение |
 |------|------------|
-| `vision.render.v1` | PDF → JPEG через `ConvertService`, jpg/png → dataUrl; кэш `images` в ToolMemo |
-| `vision.recognize.v1` | Yandex Vision submit→poll; durable `opId`, `finalPrompt`, `yandexResponse`, `markdown` в ToolMemo |
+| `vision.render.v1` | `FilesService.effects.get` → PDF/JPEG через `ConvertService`, jpg/png → dataUrl; **без** кэша `images` в ToolMemo (re-render при resume) |
+| `vision.recognize.v1` | Yandex Vision submit→poll; durable `opId`, `yandexResponse`, `markdown` в ToolMemo |
 | `prepare.apply.v1` | `markSucceeded` в БД, idempotent через `applied: true` в ToolMemo |
 
-**Адаптер:** `adapters/llm-vision.extractor.ts`
+**Адаптер:** `adapters/llm-vision.extractor.ts` (`implements DocumentExtractor`)
 
-- Промпты: `LLM_VISION_PROMPT`, `LLM_VISION_USER` из `scan.shared.ts` (не TC_VISION).
+- Промпты: `LLM_VISION_PROMPT`, `LLM_VISION_USER` в `vision/prompts.ts` (не TC_VISION).
+- Рендер страниц: `vision/render-pages.ts` (`renderVisionPages`).
+- `extract()`: полный цикл render → submit → poll → `PreparedResult`; гранулярные методы (`renderPages`, `submit`, `pollOnce`, …) — для ToolMemo в `vision.recognize.v1`.
+- Poll до завершения: inline в `extract()` и в `vision.recognize.v1` (интервал 3000 ms).
 - Модель: `YANDEX_MODELS.vision`, `maxOutputTokens: 40000`.
 - PDF: `ConvertService.pdfToImages` (scale 2.5), учёт `file.settings?.usedPages` через `validatePageRanges`.
 - Результат: `PreparedResult` с единой строкой `markdown` и `meta` (`source: llm-vision`, `model`, `pageCount`, `usage`).
@@ -53,7 +56,7 @@
 
 | Tool | Назначение |
 |------|------------|
-| `kreuzberg.extract.v1` | Загрузка файла с диска, HTTP kreuzberg, кэш в ToolMemo |
+| `kreuzberg.extract.v1` | `FilesService.effects.get` → HTTP kreuzberg, кэш в ToolMemo |
 | `prepare.apply.v1` | `markSucceeded` в БД, idempotent через `applied: true` в ToolMemo |
 
 **Размещение:**

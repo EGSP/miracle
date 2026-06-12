@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Effect } from 'effect';
 import { brandJobToolType, type JobTool } from '../../../framework/job-tool.js';
 import { ToolMemo } from '../../../framework/context.js';
-import { formatUnknown, tryLabeledPromise } from '../../../../common/effect-errors.js';
+import { formatUnknown } from '../../../../common/effect-errors.js';
 import { FilesService } from '../../../../files/files.service.js';
 import { KreuzbergHttpExtractor } from '../../../../document-prepare/adapters/kreuzberg-http.extractor.js';
 import type { ExtractError, PreparedPage, PreparedResult } from '../../../../document-prepare/extractor.port.js';
@@ -39,9 +39,7 @@ export class KreuzbergExtractTool
                 return { markdown: cachedMarkdown, pages, meta };
             }
 
-            const file = yield* tryLabeledPromise(`загрузка файла "${input.fileId}"`, () =>
-                this.files.get(input.fileId),
-            ).pipe(
+            const file = yield* this.files.effects.get(input.fileId).pipe(
                 Effect.mapError(
                     (error): ExtractError => ({
                         _tag: 'ExtractError',

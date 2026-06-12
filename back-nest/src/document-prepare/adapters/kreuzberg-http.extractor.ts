@@ -6,6 +6,7 @@ import type { FileModel } from '@miracle/types';
 import { formatUnknown } from '../../common/effect-errors.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import type { DocumentExtractor, ExtractError, PreparedResult } from '../extractor.port.js';
+import { extractError, isExtractError } from '../errors.js';
 import { KreuzbergConcurrencyLimiter } from '../kreuzberg-concurrency.limiter.js';
 
 const EXTRACT_TIMEOUT_MS = 120_000;
@@ -17,14 +18,6 @@ export type KreuzbergHealthStatus = {
     readonly version?: string;
     readonly error?: string;
 };
-
-const extractError = (message: string): ExtractError => ({ _tag: 'ExtractError', message });
-
-const isExtractError = (error: unknown): error is ExtractError =>
-    typeof error === 'object' &&
-    error !== null &&
-    '_tag' in error &&
-    (error as ExtractError)._tag === 'ExtractError';
 
 const responseFragment = (text: string): string =>
     text.length <= RESPONSE_FRAGMENT_MAX ? text : `${text.slice(0, RESPONSE_FRAGMENT_MAX)}…`;

@@ -10,7 +10,9 @@ import path from 'path';
 import { pipeline } from 'stream/promises';
 import { randomUUID } from 'crypto';
 import type { FastifyRequest } from 'fastify';
+import { Effect } from 'effect';
 import type { FileModel, FileWithMeta, FilesQuery, Stored } from '@miracle/types';
+import { tryLabeledPromise } from '../common/effect-errors.js';
 import { AppConfigService } from '../config/app-config.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { fixFileNameEncoding } from './file-name-encoding.js';
@@ -98,6 +100,11 @@ export class FilesService implements OnApplicationBootstrap {
         const row = await this.prisma.file.findUnique({ where: { id } });
         return row as Stored<FileModel> | null;
     }
+
+    readonly effects = {
+        get: (id: string): Effect.Effect<Stored<FileModel> | null, Error> =>
+            tryLabeledPromise(`загрузка файла "${id}"`, () => this.get(id)),
+    };
 
     async getByAuthor(authorId: string): Promise<Stored<FileModel>[]> {
         const rows = await this.prisma.file.findMany({ where: { authorId } });
