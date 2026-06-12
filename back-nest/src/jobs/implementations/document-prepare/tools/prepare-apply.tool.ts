@@ -30,7 +30,7 @@ export class PrepareApplyTool implements JobTool<PrepareApplyInput, void, Prepar
                 return;
             }
 
-            yield* tryLabeledPromise('mark succeeded', () =>
+            yield* tryLabeledPromise('отметка успешной подготовки', () =>
                 this.documentPrepare.markSucceeded(input.preparedDocumentId, {
                     markdown: input.result.markdown,
                     pages: input.result.pages,

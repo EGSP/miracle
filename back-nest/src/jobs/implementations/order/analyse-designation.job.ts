@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Effect } from 'effect';
+import { Effect, Option } from 'effect';
 import { z } from 'zod';
 import { type OrderPosition, type Stored, type TechnicalCondition } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs, Memo, Progress } from '../../framework/context.js';
-import { submitOnceEffect, pollUntilDoneEffect } from '../../../common/cloud-job.js';
 import { countTokens } from '../../../common/count-tokens.js';
 import { tryLabeledPromise, wrapUnknown } from '../../../common/effect-errors.js';
 import { OrderPositionsService } from '../../../orders/order-positions.service.js';
@@ -164,36 +163,35 @@ export class AnalyseDesignationJob implements Job<AnalyseDesignationInput, void>
                     });
                     yield* progress.push(0.1, { label: 'отправка запроса LLM', determined: false });
 
-                    const opId = yield* submitOnceEffect(
-                        yandex.createResponse({
-                            model: YANDEX_MODELS.text,
-                            instructions: DESIGNATION_PROMPT,
-                            input: [YandexInput.user([YandexInput.text(userMessage)])],
-                            temperature: 0.1,
-                            maxOutputTokens: countTokens(DESIGNATION_PROMPT + userMessage) * 4,
-                            jsonSchema: {
-                                name: 'AnalyseDesignation',
-                                schema: DesignationResultJsonSchema,
-                            },
-                        }),
-                        {
-                            label: `analyse designation submit; position=${input.positionId}; tc=${tcId}`,
-                            submitProgressLabel: 'отправка запроса LLM',
-                            pollProgressLabel: 'ожидание ответа LLM',
-                            extraMemo: { finalPrompt: { system: DESIGNATION_PROMPT, user: userMessage } },
-                        },
-                    );
-                    const completed = yield* pollUntilDoneEffect(
-                        yandex.retrieveResponse(opId).pipe(
-                            Effect.map((poll) => (poll.done ? { done: true, result: poll } : { done: false })),
-                        ),
-                        { label: `analyse designation poll; opId=${opId}` },
-                    );
+                    // submit-once: opId сохраняется в memo ДО ожидания — при рестарте job продолжает
+                    // polling существующей операции, а не отправляет LLM повторно.
+                    const memo = yield* Memo;
+                    const savedOpId = yield* memo.get<string>('opId');
+                    const opId = yield* Option.match(savedOpId, {
+                        onSome: (id) => Effect.succeed(id),
+                        onNone: () =>
+                            Effect.gen(function* () {
+                                yield* memo.set('finalPrompt', { system: DESIGNATION_PROMPT, user: userMessage });
+                                const id = yield* yandex.createResponse({
+                                    model: YANDEX_MODELS.text,
+                                    instructions: DESIGNATION_PROMPT,
+                                    input: [YandexInput.user([YandexInput.text(userMessage)])],
+                                    temperature: 0.1,
+                                    maxOutputTokens: countTokens(DESIGNATION_PROMPT + userMessage) * 4,
+                                    jsonSchema: { name: 'AnalyseDesignation', schema: DesignationResultJsonSchema },
+                                });
+                                yield* memo.set('opId', id);
+                                return id;
+                            }),
+                    });
+
+                    yield* progress.push({ label: 'ожидание ответа LLM', determined: false });
+                    const completed = yield* yandex.poll(opId);
+
                     const result = yield* Effect.try({
                         try: () => DesignationResultZodSchema.parse(JSON.parse(completed.outputText)),
                         catch: wrapUnknown(`parse analyse designation response; opId=${opId}`),
                     });
-                    const memo = yield* Memo;
                     yield* memo.set('yandexResponse', completed.response);
                     return { positionId: input.positionId, tcId: tcId!, values: result.values };
                 }).pipe(

@@ -72,8 +72,13 @@ export class AppConfigService {
         return this.config.get('KREUZBERG_URL', { infer: true });
     }
 
-    /** Лимит одновременных HTTP-запросов к kreuzberg (Фаза 2+). */
+    /** Лимит одновременных HTTP-запросов к kreuzberg. */
     get dpsMaxConcurrency(): number {
         return this.config.get('DPS_MAX_CONCURRENCY', { infer: true });
+    }
+
+    /** Глобальный лимит одновременных запросов к Yandex AI (поверх rate-лимитеров). */
+    get yandexMaxConcurrency(): number {
+        return this.config.get('YANDEX_MAX_CONCURRENCY', { infer: true });
     }
 }

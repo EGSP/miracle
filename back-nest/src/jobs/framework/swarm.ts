@@ -1,4 +1,4 @@
-import { Effect, Either, type Types } from 'effect';
+import { Data, Effect, Either, type Types } from 'effect';
 import { formatUnknown } from '../../common/effect-errors.js';
 
 /**
@@ -8,15 +8,10 @@ import { formatUnknown } from '../../common/effect-errors.js';
  * завершилась успешно. Если Swarm используется внутри `Job`, runtime распознаёт этот сигнал и
  * пишет текущему `JobRun` статус `partial`.
  */
-export class SwarmPartialError extends Error {
-    constructor(
-        public readonly failures: ReadonlyArray<unknown>,
-        message: string,
-    ) {
-        super(message);
-        this.name = 'SwarmPartialError';
-    }
-}
+export class SwarmPartialError extends Data.TaggedError('SwarmPartialError')<{
+    readonly failures: ReadonlyArray<unknown>;
+    readonly message: string;
+}> {}
 
 /**
  * Политика свода независимых операций Swarm.
@@ -99,10 +94,10 @@ function applyFailureMode<Success, Failure>(
                 );
             }
             return Effect.fail(
-                new SwarmPartialError(
-                    summary.failures,
-                    `${options.label}: ${failed} из ${total} операций завершились ошибкой${detail ? `: ${detail}` : ''}`,
-                ),
+                new SwarmPartialError({
+                    failures: summary.failures,
+                    message: `${options.label}: ${failed} из ${total} операций завершились ошибкой${detail ? `: ${detail}` : ''}`,
+                }),
             );
     }
 }

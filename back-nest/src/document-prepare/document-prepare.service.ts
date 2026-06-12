@@ -4,6 +4,7 @@ import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { FilesService } from '../files/files.service.js';
 import { JobsService } from '../jobs/jobs.service.js';
+import type { PreparedResult } from './extractor.port.js';
 import { PREPARE_DOCUMENT_JOB_ID, prepareJobKey, routePreparedEngine } from './router.js';
 
 type PreparedDocumentRow = Awaited<ReturnType<PrismaService['preparedDocument']['findFirst']>>;
@@ -23,6 +24,27 @@ export class DocumentPrepareService {
         private readonly files: FilesService,
         private readonly jobs: JobsService,
     ) {}
+
+    /**
+     * Процесс-локальные мьютексы постановки подготовки — по одному на `fileId`. Гарантируют 1:1
+     * «файл → актуальный PreparedDocument» на уровне сервиса (без уникального индекса в БД), чтобы
+     * конкурентные триггеры (хук `onFileSaved` + ручной POST, двойной upload) не создавали дубли.
+     */
+    private readonly enqueueLocks = new Map<string, Promise<unknown>>();
+
+    /** Сериализует `fn` по ключу `fileId`: следующий вызов ждёт завершения предыдущего. */
+    private withFileLock<T>(fileId: string, fn: () => Promise<T>): Promise<T> {
+        const prev = this.enqueueLocks.get(fileId) ?? Promise.resolve();
+        const result = prev.then(fn, fn);
+        const tail = result.catch(() => undefined);
+        this.enqueueLocks.set(fileId, tail);
+        void tail.then(() => {
+            if (this.enqueueLocks.get(fileId) === tail) {
+                this.enqueueLocks.delete(fileId);
+            }
+        });
+        return result;
+    }
 
     async getLatestByFile(fileId: string): Promise<NonNullable<PreparedDocumentRow> | null> {
         const row = await this.prisma.preparedDocument.findFirst({
@@ -45,16 +67,12 @@ export class DocumentPrepareService {
 
     async markSucceeded(
         preparedDocumentId: string,
-        data: {
-            markdown: string;
-            pages?: unknown;
-            meta?: unknown;
-        },
+        data: Pick<PreparedResult, 'markdown' | 'pages' | 'meta'>,
     ): Promise<void> {
         await this.prisma.preparedDocument.update({
             where: { id: preparedDocumentId },
             data: {
-                status: 'succeeded',
+                status: 'succeed',
                 markdown: data.markdown,
                 pages: data.pages as object | undefined,
                 meta: data.meta as object | undefined,
@@ -82,6 +100,10 @@ export class DocumentPrepareService {
      * При `failed`/`cancelled` JobRun — сброс записи; `jobs.start` переиспользует ту же строку по key.
      */
     async enqueuePrepare(fileId: string): Promise<EnqueuePrepareResult> {
+        return this.withFileLock(fileId, () => this.enqueuePrepareInternal(fileId));
+    }
+
+    private async enqueuePrepareInternal(fileId: string): Promise<EnqueuePrepareResult> {
         const file = await this.requireSupportedFile(fileId);
         const engine = routePreparedEngine(file)!;
 

@@ -5,8 +5,8 @@ import { Effect } from 'effect';
 import type { FileModel } from '@miracle/types';
 import { formatUnknown } from '../../common/effect-errors.js';
 import { AppConfigService } from '../../config/app-config.service.js';
-import type { DocumentExtractor, ExtractError, PreparedResult } from '../extractor.port.js';
-import { extractError, isExtractError } from '../errors.js';
+import type { PreparedResult } from '../extractor.port.js';
+import { ExtractError, extractError } from '../errors.js';
 import { KreuzbergConcurrencyLimiter } from '../kreuzberg-concurrency.limiter.js';
 
 const EXTRACT_TIMEOUT_MS = 120_000;
@@ -81,42 +81,30 @@ export function parseKreuzbergExtractBody(
     return null;
 }
 
-/** HTTP-адаптер kreuzberg: multipart POST /extract → markdown. */
+/** HTTP-адаптер kreuzberg: multipart POST /extract → markdown (single-step extract). */
 @Injectable()
-export class KreuzbergHttpExtractor implements DocumentExtractor {
-    readonly engine = 'kreuzberg' as const;
-
+export class KreuzbergHttpExtractor {
     constructor(
         private readonly config: AppConfigService,
         private readonly limiter: KreuzbergConcurrencyLimiter,
     ) {}
 
     extract(file: FileModel, filePath: string): Effect.Effect<PreparedResult, ExtractError> {
+        // Без предварительного health-check: при недоступности kreuzberg сам POST /extract вернёт
+        // ошибку транспорта, которую мы маппим в ExtractError. Лишний round-trip на каждый документ
+        // не нужен. Здоровье сервиса отдельно отдаёт health.controller через checkHealth().
         return this.limiter.withPermit(
-            Effect.gen(this, function* () {
-                const health = yield* Effect.tryPromise({
-                    try: () => this.checkHealth(),
-                    catch: (error) => extractError(`Проверка kreuzberg: ${formatUnknown(error)}`),
-                });
-                if (health.status === 'down') {
-                    return yield* Effect.fail(
-                        extractError(`Kreuzberg недоступен: ${health.error ?? 'сервис не отвечает'}`),
-                    );
-                }
-
-                const result = yield* Effect.tryPromise({
-                    try: () => this.postExtract(filePath),
-                    catch: (error) =>
-                        isExtractError(error)
-                            ? error
-                            : extractError(`HTTP kreuzberg /extract: ${formatUnknown(error)}`),
-                });
-                return result;
+            Effect.tryPromise({
+                try: () => this.postExtract(filePath),
+                catch: (error) =>
+                    error instanceof ExtractError
+                        ? error
+                        : extractError(`HTTP kreuzberg /extract: ${formatUnknown(error)}`),
             }),
         );
     }
 
-    /** Быстрая проверка GET /health (fallback: GET /version). */
+    /** Быстрая проверка GET /health (fallback: GET /version). Используется health.controller. */
     async checkHealth(): Promise<KreuzbergHealthStatus> {
         const base = this.config.kreuzbergUrl.replace(/\/$/, '');
 

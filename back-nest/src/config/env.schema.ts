@@ -23,8 +23,13 @@ export const envSchema = z.object({
     YANDEX_CLOUD_FOLDER_ID: z.string().optional(),
     /** Базовый URL REST-сервиса Kreuzberg (Docker). */
     KREUZBERG_URL: z.string().url().default('http://localhost:8000'),
-    /** Лимит одновременных HTTP-запросов к kreuzberg (Фаза 2+). */
+    /** Лимит одновременных HTTP-запросов к kreuzberg. */
     DPS_MAX_CONCURRENCY: z.coerce.number().int().positive().default(4),
+    /**
+     * Глобальный лимит одновременных запросов к Yandex AI (поверх rate-лимитеров).
+     * Yandex отклоняет более ~10 параллельных запросов; держим запас.
+     */
+    YANDEX_MAX_CONCURRENCY: z.coerce.number().int().positive().default(8),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

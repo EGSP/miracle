@@ -1,5 +1,7 @@
 # Аудит Document Prepare Service (DPS)
 
+> **Статус (2026-06-12, после отработки):** C1, C2, C3, A1, A2, A3, A5, A8, E3/E4 и мелочи стиля — **реализованы**. Vision сведён к единому `extract()` (durable opId намеренно отброшен — решение владельца, KISS). `succeeded→succeed` — миграция подготовлена, не запущена. E2 (Data.TaggedError по всей системе) и A6-консолидация вынесены в [`../../effect-adoption/effect-adoption-audit.md`](../../effect-adoption/effect-adoption-audit.md). A6 (глобальный семафор Yandex) — реализован. Этот файл — исходные находки.
+
 **Дата:** 2026-06-12
 **Аудитор:** Claude (Opus 4.8)
 **Область:** модуль `back-nest/src/document-prepare` + его джобы/инструменты, точки интеграции (`files`, listener), потребитель (`ApplicationChunkReader` → анализ заказа), пересечение с legacy-форком (`extract-visual` / `scan.shared` / `FileContent`).

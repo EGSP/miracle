@@ -18,6 +18,7 @@ import { AppConfigService } from '../config/app-config.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
 import { fixFileNameEncoding } from './file-name-encoding.js';
+import { FileNotFoundError } from './files.errors.js';
 import { FILE_UPLOAD_CONFIG } from './file-upload.config.js';
 
 /** Колбэк после появления записи `File` (файл уже на диске). */
@@ -91,7 +92,7 @@ export class FilesService implements OnApplicationBootstrap {
     }
 
     getStoredFileName(file: FileModel): string {
-        return file.extension ? `${file.id}.${file.extension}` : file.id!;
+        return file.extension ? `${file.id}.${file.extension}` : file.id;
     }
 
     getFilePath(file: FileModel): string {
@@ -160,6 +161,17 @@ export class FilesService implements OnApplicationBootstrap {
     readonly effects = {
         get: (id: string): Effect.Effect<Stored<FileModel> | null, Error> =>
             tryLabeledPromise(`загрузка файла "${id}"`, () => this.get(id)),
+        /**
+         * Как {@link FilesService.effects.get}, но падает {@link FileNotFoundError}, если файла нет.
+         * Убирает повторяющийся `get → null-guard → fail("не найден")` в потребителях (tools, ридеры)
+         * и даёт типизированный тег для `catchTag`.
+         */
+        require: (id: string): Effect.Effect<Stored<FileModel>, FileNotFoundError | Error> =>
+            tryLabeledPromise(`загрузка файла "${id}"`, () => this.get(id)).pipe(
+                Effect.flatMap((row) =>
+                    row ? Effect.succeed(row) : Effect.fail(new FileNotFoundError({ id })),
+                ),
+            ),
     };
 
     async getByAuthor(authorId: string): Promise<Stored<FileModel>[]> {

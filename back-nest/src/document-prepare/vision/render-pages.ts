@@ -3,8 +3,7 @@ import { Effect } from 'effect';
 import { validatePageRanges, type FileModel } from '@miracle/types';
 import { formatUnknown, tryLabeledPromise } from '../../common/effect-errors.js';
 import type { ConvertService } from '../../convert/convert.service.js';
-import type { ExtractError } from '../extractor.port.js';
-import { extractError } from '../errors.js';
+import { extractError, type ExtractError } from '../errors.js';
 
 /** Страница документа для LLM Vision (PdfPageImage-совместимый тип). */
 export type VisionPageImage = {

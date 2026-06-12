@@ -5,7 +5,6 @@ import type { OrderPosition, OrderPositionData, ProductType, Stored } from '@mir
 import { brandJobId, defineJob, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs, Memo, Progress } from '../../framework/context.js';
-import { submitOnceEffect, pollUntilDoneEffect } from '../../../common/cloud-job.js';
 import { tryLabeledPromise, wrapUnknown } from '../../../common/effect-errors.js';
 import { LLM_MAX_OUTPUT_TOKENS } from '../../../common/llm-limits.js';
 import { resolveProductType } from '../../../orders/resolve-product-type.js';
@@ -163,38 +162,37 @@ export class ExtractPositionsFromChunkJob implements Job<ExtractInput, void> {
 
                     yield* progress.push(0.1, { label: 'отправка запроса LLM', determined: false });
 
-                    const opId = yield* submitOnceEffect(
-                        yandex.createResponse({
-                            model: YANDEX_MODELS.text,
-                            instructions: system,
-                            input: [YandexInput.user([YandexInput.text(userText)])],
-                            temperature: 0.1,
-                            maxOutputTokens: LLM_MAX_OUTPUT_TOKENS,
-                            jsonSchema: {
-                                name: 'ExtractPositions',
-                                schema: PositionsJsonSchema,
-                            },
-                        }),
-                        {
-                            label: `extract positions submit; chunk=${chunkLabel}`,
-                            submitProgressLabel: 'отправка запроса LLM',
-                            pollProgressLabel: 'ожидание ответа LLM',
-                            extraMemo: { finalPrompt: { system, user: userText } },
-                        },
-                    );
-                    const completed = yield* pollUntilDoneEffect(
-                        yandex.retrieveResponse(opId).pipe(
-                            Effect.map((poll) => (poll.done ? { done: true, result: poll } : { done: false })),
-                        ),
-                        { label: `extract positions poll; opId=${opId}` },
-                    );
+                    // submit-once: opId сохраняется в memo ДО ожидания, поэтому при рестарте job
+                    // продолжает polling существующей операции, а не отправляет LLM повторно.
+                    const memo = yield* Memo;
+                    const savedOpId = yield* memo.get<string>('opId');
+                    const opId = yield* Option.match(savedOpId, {
+                        onSome: (id) => Effect.succeed(id),
+                        onNone: () =>
+                            Effect.gen(function* () {
+                                yield* memo.set('finalPrompt', { system, user: userText });
+                                const id = yield* yandex.createResponse({
+                                    model: YANDEX_MODELS.text,
+                                    instructions: system,
+                                    input: [YandexInput.user([YandexInput.text(userText)])],
+                                    temperature: 0.1,
+                                    maxOutputTokens: LLM_MAX_OUTPUT_TOKENS,
+                                    jsonSchema: { name: 'ExtractPositions', schema: PositionsJsonSchema },
+                                });
+                                yield* memo.set('opId', id);
+                                return id;
+                            }),
+                    });
+
+                    yield* progress.push({ label: 'ожидание ответа LLM', determined: false });
+                    const completed = yield* yandex.poll(opId);
+
                     const out = yield* Effect.try({
                         try: () => PositionsZodSchema.parse(JSON.parse(completed.outputText)),
                         catch: wrapUnknown(`parse extract positions response; opId=${opId}`),
                     });
                     // Диагностика: сохраняем сырой ответ модели (до резолва типа по каталогу) рядом
                     // с finalPrompt в memo — чтобы видеть, что именно вернул LLM в productType.
-                    const memo = yield* Memo;
                     yield* memo.set('yandexResponse', completed.response);
                     yield* memo.set('rawResponse', out);
                     return out.positions.map((p) => toOrderPosition(p, input.applicationId, catalog));

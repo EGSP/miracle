@@ -1,16 +1,11 @@
+import { Data } from 'effect';
 import type { YandexError } from '../yandex/yandex.service.js';
-import type { ExtractError } from './extractor.port.js';
 
-export const extractError = (message: string): ExtractError => ({ _tag: 'ExtractError', message });
+/** Ошибка извлечения содержимого файла в markdown (граница DPS-экстракторов и их тулзов). */
+export class ExtractError extends Data.TaggedError('ExtractError')<{ readonly message: string }> {}
 
-export const isExtractError = (error: unknown): error is ExtractError =>
-    typeof error === 'object' &&
-    error !== null &&
-    '_tag' in error &&
-    (error as ExtractError)._tag === 'ExtractError';
+export const extractError = (message: string): ExtractError => new ExtractError({ message });
 
-/** Преобразует ошибку Yandex в ExtractError для границы job. */
-export const yandexToExtractError = (error: YandexError, fileId: string): ExtractError => ({
-    _tag: 'ExtractError',
-    message: `Не удалось распознать файл "${fileId}" через Vision: ${error.message}`,
-});
+/** Преобразует ошибку Yandex в {@link ExtractError} для границы job. */
+export const yandexToExtractError = (error: YandexError, fileId: string): ExtractError =>
+    new ExtractError({ message: `Не удалось распознать файл "${fileId}" через Vision: ${error.message}` });

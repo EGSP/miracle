@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Chunk, Effect, Stream } from 'effect';
+import { Chunk, Data, Effect, Stream } from 'effect';
 import { FileDomain, getFileDomain, type OrderApplication, type Stored } from '@miracle/types';
 import { formatUnknown, tryLabeledPromise } from '../common/effect-errors.js';
 import { DocumentPrepareService } from '../document-prepare/document-prepare.service.js';
@@ -8,21 +8,17 @@ import { FilesService } from '../files/files.service.js';
 /** Один чанк для извлечения позиций: стабильный ключ + JSON-сериализуемый кусок данных. */
 export type ReadChunk = { chunkKey: string; chunk: unknown };
 
-export type ApplicationReadError = {
-    readonly _tag: 'ApplicationReadError';
+export class ApplicationReadError extends Data.TaggedError('ApplicationReadError')<{
     readonly message: string;
-};
+}> {}
 
-const readError = (message: string): ApplicationReadError => ({
-    _tag: 'ApplicationReadError',
-    message,
-});
+const readError = (message: string): ApplicationReadError => new ApplicationReadError({ message });
 
 /**
  * Читает приложение заказа в чанки для извлечения позиций (только Effect API).
  *
  * Текстовое приложение — один чанк `{ chunkKey: 'text', … }`.
- * Файловое — markdown из {@link PreparedDocument} (`succeeded`) для всех доменов.
+ * Файловое — markdown из {@link PreparedDocument} (`succeed`) для всех доменов.
  * Подготовку запускает только DPS; ридер не ставит jobs и падает на неподготовленном файле.
  */
 @Injectable()
@@ -51,15 +47,9 @@ export class ApplicationChunkReader {
                 }
                 case 'file': {
                     const fileId = application.data.fileId;
-                    const file = yield* this.files.effects.get(fileId).pipe(
-                        Effect.flatMap((row) =>
-                            row
-                                ? Effect.succeed(row)
-                                : Effect.fail(readError(`Файл "${fileId}" не найден`)),
-                        ),
+                    const file = yield* this.files.effects.require(fileId).pipe(
                         Effect.mapError(
-                            (error): ApplicationReadError =>
-                                readError(formatUnknown(error)),
+                            (error): ApplicationReadError => readError(formatUnknown(error)),
                         ),
                     );
                     return yield* this.readFile(file);
@@ -110,7 +100,7 @@ export class ApplicationChunkReader {
             }
 
             switch (prepared.status) {
-                case 'succeeded': {
+                case 'succeed': {
                     const markdown = (prepared.markdown ?? '').trim();
                     if (!markdown) {
                         return yield* Effect.fail(

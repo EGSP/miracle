@@ -141,6 +141,12 @@ const formatFailedResponse = (response: Response, responseId: string): string =>
     return parts.join(' — ');
 };
 
+/** Интервал между опросами фоновой операции в {@link YandexService.poll}. */
+const POLL_INTERVAL = Duration.seconds(3);
+
+/** Дедлайн суммарного ожидания фоновой операции в {@link YandexService.poll}. */
+const POLL_TIMEOUT = Duration.minutes(30);
+
 /**
  * Effectful-клиент Yandex AI через OpenAI-compatible Responses API.
  *
@@ -156,6 +162,14 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
     private submitLimit: Limit = (effect) => effect;
     private pollLimit: Limit = (effect) => effect;
 
+    /**
+     * Глобальный лимит одновременных запросов к Yandex (поверх rate-лимитеров). Накрывает ВСЕ
+     * вызовы транспорта (create/retrieve) независимо от домена и функции: Yandex отклоняет более
+     * ~10 параллельных запросов. Permit удерживается только на время самого HTTP-вызова, а не на
+     * время ожидания rate-лимитера — поэтому семафор всегда самый внутренний wrapper.
+     */
+    private concurrencyLimit: Limit = (effect) => effect;
+
     constructor(private readonly appConfig: AppConfigService) {}
 
     async onModuleInit(): Promise<void> {
@@ -170,6 +184,9 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
 
         this.submitLimit = (effect) => perHour(perSecond(effect));
         this.pollLimit = pollPerSecond;
+
+        const semaphore = Effect.runSync(Effect.makeSemaphore(this.appConfig.yandexMaxConcurrency));
+        this.concurrencyLimit = (effect) => semaphore.withPermits(1)(effect);
     }
 
     async onModuleDestroy(): Promise<void> {
@@ -203,13 +220,15 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
             const client = yield* self.openAi();
             const config = yield* self.config();
             const response = yield* self.submitLimit(
-                Effect.tryPromise({
-                    try: (signal) =>
-                        client.responses.create(self.toCreateParams(config, request), {
-                            signal,
-                        }),
-                    catch: (cause) => new YandexTransportError({ operation: 'create', cause }),
-                }),
+                self.concurrencyLimit(
+                    Effect.tryPromise({
+                        try: (signal) =>
+                            client.responses.create(self.toCreateParams(config, request), {
+                                signal,
+                            }),
+                        catch: (cause) => new YandexTransportError({ operation: 'create', cause }),
+                    }),
+                ),
             );
             if (!response.id) {
                 return yield* new YandexResponseError({
@@ -250,10 +269,12 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
         return Effect.gen(function* () {
             const client = yield* self.openAi();
             const response = yield* self.pollLimit(
-                Effect.tryPromise({
-                    try: (signal) => client.responses.retrieve(responseId, { stream: false }, { signal }),
-                    catch: (cause) => new YandexTransportError({ operation: 'retrieve', cause }),
-                }),
+                self.concurrencyLimit(
+                    Effect.tryPromise({
+                        try: (signal) => client.responses.retrieve(responseId, { stream: false }, { signal }),
+                        catch: (cause) => new YandexTransportError({ operation: 'retrieve', cause }),
+                    }),
+                ),
             );
 
             if (response.status === 'queued' || response.status === 'in_progress') {
@@ -280,32 +301,43 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
     }
 
     /**
-     * Повторяет {@link retrieveResponse}, пока запрос не завершится успешно.
+     * Повторяет {@link retrieveResponse}, пока запрос не завершится успешно — единый источник
+     * правды для ожидания фоновой операции Yandex.
      *
-     * Это удобный shortcut для простых сценариев, где не нужно контролировать каждый poll. Внутри
-     * используется interruptible `Effect.sleep`, поэтому ожидание корректно прерывается при отмене
-     * fiber/job.
+     * `responseId` нужно сохранить в `Memo`/`ToolMemo` ДО вызова `poll`: тогда при рестарте job
+     * продолжит ожидание существующего запроса, а не отправит модель повторно.
      *
-     * Для durable jobs чаще лучше явно использовать `createResponse` + сохранить `responseId` +
-     * `retrieveResponse` в цикле/через `pollUntilDoneEffect`: так промежуточный идентификатор уже
-     * записан в memo до долгого ожидания. `waitResponse` подходит, когда `responseId` уже сохранён
-     * или когда повторная отправка не страшна.
+     * Дедлайн {@link POLL_TIMEOUT} ограничивает суммарное ожидание (фоновые операции бывают
+     * долгими, но не бесконечными). Таймер намеренно НЕ персистится: при рестарте отсчёт
+     * начинается заново — это допустимо, прод-сервер не перезапускается каждые несколько минут.
+     * Внутри — interruptible `Effect.sleep`, поэтому ожидание корректно прерывается при отмене job.
      *
      * @example
      * ```ts
-     * const completed = yield* yandex.waitResponse(responseId);
+     * const completed = yield* yandex.poll(responseId);
      * console.log(completed.response.usage);
      * ```
      */
-    waitResponse(responseId: string, intervalMs = 3000): Effect.Effect<YandexCompletedResponse, YandexError> {
+    poll(responseId: string): Effect.Effect<YandexCompletedResponse, YandexError> {
         const self = this;
         return Effect.gen(function* () {
             while (true) {
-                const poll = yield* self.retrieveResponse(responseId);
-                if (poll.done) return poll;
-                yield* Effect.sleep(Duration.millis(intervalMs));
+                const result = yield* self.retrieveResponse(responseId);
+                if (result.done) return result;
+                yield* Effect.sleep(POLL_INTERVAL);
             }
-        });
+        }).pipe(
+            Effect.timeoutFail({
+                duration: POLL_TIMEOUT,
+                onTimeout: () =>
+                    new YandexResponseError({
+                        responseId,
+                        message: `Yandex Responses: превышено время ожидания запроса "${responseId}" (${Duration.toMinutes(
+                            POLL_TIMEOUT,
+                        )} мин)`,
+                    }),
+            }),
+        );
     }
 
     private config(): Effect.Effect<YandexConfig, YandexConfigError> {

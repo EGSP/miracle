@@ -3,13 +3,15 @@ import { Effect } from 'effect';
 import { brandJobId, type Job } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { JobTools, Jobs, Progress } from '../../framework/context.js';
+import type { ToolMemo } from '../../framework/context.js';
+import type { JobTool } from '../../framework/job-tool.js';
 import { formatUnknown, tryLabeledPromise } from '../../../common/effect-errors.js';
-import type { ExtractError, PreparedEngine } from '../../../document-prepare/extractor.port.js';
+import { ExtractError } from '../../../document-prepare/errors.js';
+import type { PreparedEngine, PreparedResult } from '../../../document-prepare/extractor.port.js';
 import { DocumentPrepareService } from '../../../document-prepare/document-prepare.service.js';
 import { KreuzbergExtractTool } from './tools/kreuzberg-extract.tool.js';
+import { VisionExtractTool } from './tools/vision-extract.tool.js';
 import { PrepareApplyTool } from './tools/prepare-apply.tool.js';
-import { VisionRenderTool } from './tools/vision-render.tool.js';
-import { VisionRecognizeTool } from './tools/vision-recognize.tool.js';
 
 export type PrepareDocumentInput = {
     fileId: string;
@@ -17,16 +19,18 @@ export type PrepareDocumentInput = {
     engine: PreparedEngine;
 };
 
-const formatJobError = (error: unknown): string => {
-    if (error && typeof error === 'object' && '_tag' in error && (error as ExtractError)._tag === 'ExtractError') {
-        return (error as ExtractError).message;
-    }
-    return formatUnknown(error);
-};
+/** Тул извлечения, унифицированный по входу/выходу для диспетчеризации по движку. */
+type ExtractTool = JobTool<{ readonly fileId: string }, PreparedResult, ToolMemo.Model, ExtractError>;
+
+const formatJobError = (error: unknown): string =>
+    error instanceof ExtractError ? error.message : formatUnknown(error);
 
 /**
  * Корневая джоба подготовки документа.
- * Фаза 2: kreuzberg; Фаза 3: llm-vision через JobTools.
+ *
+ * Оркестрация engine-agnostic: по {@link PreparedEngine} выбирается тул извлечения (kreuzberg /
+ * vision), который сам приводит файл к markdown; затем apply-тул сохраняет результат. Джоба не
+ * знает внутренней механики движков — только сопоставление `engine → тул`.
  */
 @Injectable()
 @JobImpl()
@@ -37,14 +41,20 @@ export class PrepareDocumentJob implements Job<PrepareDocumentInput, void> {
     constructor(
         documentPrepare: DocumentPrepareService,
         kreuzbergExtractTool: KreuzbergExtractTool,
-        visionRenderTool: VisionRenderTool,
-        visionRecognizeTool: VisionRecognizeTool,
+        visionExtractTool: VisionExtractTool,
         prepareApplyTool: PrepareApplyTool,
     ) {
+        const extractTools: Record<PreparedEngine, ExtractTool> = {
+            kreuzberg: kreuzbergExtractTool,
+            'llm-vision': visionExtractTool,
+        };
+
         const markFailedAndFail = (preparedDocumentId: string, error: unknown) =>
             Effect.gen(function* () {
                 const message = formatJobError(error);
-                yield* tryLabeledPromise('mark failed', () => documentPrepare.markFailed(preparedDocumentId, message));
+                yield* tryLabeledPromise('отметка проваленной подготовки', () =>
+                    documentPrepare.markFailed(preparedDocumentId, message),
+                );
                 return yield* Effect.fail(error instanceof Error ? error : new Error(message));
             });
 
@@ -55,35 +65,21 @@ export class PrepareDocumentJob implements Job<PrepareDocumentInput, void> {
                 const progress = yield* Progress;
 
                 yield* progress.push(0, { label: 'подготовка документа' });
-                yield* tryLabeledPromise('mark running', () =>
+                yield* tryLabeledPromise('отметка запущенной подготовки', () =>
                     documentPrepare.markRunning(input.preparedDocumentId, jobs.runId),
                 );
 
-                const pipeline =
-                    input.engine === 'kreuzberg'
-                        ? Effect.gen(function* () {
-                              yield* progress.push(0.1, { label: 'извлечение через kreuzberg' });
-                              const result = yield* tools.run(kreuzbergExtractTool, { fileId: input.fileId });
-                              yield* progress.push(0.8, { label: 'сохранение результата' });
-                              yield* tools.run(prepareApplyTool, {
-                                  preparedDocumentId: input.preparedDocumentId,
-                                  result,
-                              });
-                          })
-                        : Effect.gen(function* () {
-                              yield* progress.push(0.05, { label: 'рендер страниц' });
-                              const { images } = yield* tools.run(visionRenderTool, { fileId: input.fileId });
-                              yield* progress.push(0.2, { label: 'распознавание через LLM Vision' });
-                              const result = yield* tools.run(visionRecognizeTool, {
-                                  fileId: input.fileId,
-                                  images,
-                              });
-                              yield* progress.push(0.8, { label: 'сохранение результата' });
-                              yield* tools.run(prepareApplyTool, {
-                                  preparedDocumentId: input.preparedDocumentId,
-                                  result,
-                              });
-                          });
+                const pipeline = Effect.gen(function* () {
+                    yield* progress.push(0.1, { label: 'извлечение содержимого' });
+                    const result = yield* tools.run(extractTools[input.engine], {
+                        fileId: input.fileId,
+                    });
+                    yield* progress.push(0.8, { label: 'сохранение результата' });
+                    yield* tools.run(prepareApplyTool, {
+                        preparedDocumentId: input.preparedDocumentId,
+                        result,
+                    });
+                });
 
                 yield* pipeline.pipe(
                     Effect.catchAll((error) => markFailedAndFail(input.preparedDocumentId, error)),

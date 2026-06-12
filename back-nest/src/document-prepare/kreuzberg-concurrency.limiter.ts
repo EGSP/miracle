@@ -4,7 +4,7 @@ import { AppConfigService } from '../config/app-config.service.js';
 
 /**
  * Singleton process-local лимитер параллельных HTTP-запросов к kreuzberg.
- * Использование в HTTP-адаптере — Фаза 2.
+ * Применяется в {@link KreuzbergHttpExtractor.extract}, оборачивая каждый POST /extract в permit.
  */
 @Injectable()
 export class KreuzbergConcurrencyLimiter implements OnModuleInit {

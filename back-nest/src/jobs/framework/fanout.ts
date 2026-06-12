@@ -49,9 +49,9 @@ export const decideFanout = (
             );
         }
         return yield* Effect.fail(
-            new JobPartialError(
+            new JobPartialError({
                 failures,
-                `${label}: ${failures.length} из ${total} дочерних операций завершились ошибкой: ${detail}`,
-            ),
+                message: `${label}: ${failures.length} из ${total} дочерних операций завершились ошибкой: ${detail}`,
+            }),
         );
     });

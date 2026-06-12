@@ -1,4 +1,4 @@
-import { Cause, Effect, Option, SynchronizedRef } from 'effect';
+import { Cause, Data, Effect, Option, SynchronizedRef } from 'effect';
 import {
     pushJobProgressState,
     latestJobProgressState,
@@ -20,11 +20,12 @@ import { SwarmPartialError } from './swarm.js';
 import type { JobStore } from './store.js';
 
 /** Ошибка, пробрасываемая наверх, когда дочерний прогон находится в терминальном неуспешном статусе. */
-export class JobChildFailedError extends Error {
-    constructor(public readonly child: JobRun) {
-        const childError = child.error ? `: ${child.error}` : '';
-        super(`Дочерний прогон "${child.id}" (${child.job}) завершился со статусом ${child.status}${childError}`);
-        this.name = 'JobChildFailedError';
+export class JobChildFailedError extends Data.TaggedError('JobChildFailedError')<{
+    readonly child: JobRun;
+}> {
+    override get message(): string {
+        const childError = this.child.error ? `: ${this.child.error}` : '';
+        return `Дочерний прогон "${this.child.id}" (${this.child.job}) завершился со статусом ${this.child.status}${childError}`;
     }
 }
 
@@ -34,15 +35,10 @@ export class JobChildFailedError extends Error {
  * `failed`); при этом ошибка всё равно всплывает наверх — для родителя `partial` равнозначен
  * провалу (его исход считается неуспешным при сведении). См. {@link JobStatus} и `fanout.ts`.
  */
-export class JobPartialError extends Error {
-    constructor(
-        public readonly failures: ReadonlyArray<unknown>,
-        message: string,
-    ) {
-        super(message);
-        this.name = 'JobPartialError';
-    }
-}
+export class JobPartialError extends Data.TaggedError('JobPartialError')<{
+    readonly failures: ReadonlyArray<unknown>;
+    readonly message: string;
+}> {}
 
 const errToMessage = (error: unknown): string => formatUnknown(error);
 
@@ -261,7 +257,7 @@ function makeJobs(store: JobStore, parent: JobRun) {
                 }
                 // `partial` для родителя равнозначен провалу: переисполняется только явной командой.
                 if (node.status === 'failed' || node.status === 'cancelled' || node.status === 'partial') {
-                    return yield* Effect.fail(new JobChildFailedError(node));
+                    return yield* Effect.fail(new JobChildFailedError({ child: node }));
                 }
                 return yield* execute(store, job, node);
             }),
