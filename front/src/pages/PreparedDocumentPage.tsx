@@ -1,9 +1,10 @@
-import { CodeSnippet, Column, Grid, Stack, Text } from "@miracle/aramid"
+import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import { useSearch } from "@tanstack/react-router"
 import { PreparedDocumentInfo } from "@/components/blocks/prepared-document/PreparedDocumentInfo"
 import { Tile } from "@/components/ui/ds/tile"
-import { useGetFiles } from "@/lib/queries/file.query"
+import { Markdown } from "@/components/ui/external/markdown"
 import { useGetPreparedDocument } from "@/lib/queries/document-prepare.query"
+import { useGetFiles } from "@/lib/queries/file.query"
 
 export default function PreparedDocumentPage() {
   const { fileId } = useSearch({ from: "/prepared-document" })
@@ -39,7 +40,9 @@ export default function PreparedDocumentPage() {
               <Stack gap={1}>
                 <Text.Label as="span">Markdown</Text.Label>
                 {prepared.markdown ? (
-                  <CodeSnippet variant="lg">{prepared.markdown}</CodeSnippet>
+                  <div className="markdown-host">
+                    <Markdown>{prepared.markdown}</Markdown>
+                  </div>
                 ) : (
                   <Text.Helper as="p">Текст markdown пока пуст.</Text.Helper>
                 )}

@@ -1,0 +1,129 @@
+/* ─── Markdown preview (react-markdown) ──────────────────────────────────────
+   Заполняет контейнер родителя; скролл — внутри блока при переполнении.
+──────────────────────────────────────────────────────────────────────────── */
+
+.markdown {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--aramid-spacing-4);
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-sm);
+  line-height: var(--aramid-font-line-height-normal);
+  color: var(--aramid-color-gray-100);
+  word-break: break-word;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin-block: var(--aramid-spacing-4) var(--aramid-spacing-3);
+  font-weight: var(--aramid-font-weight-semibold);
+  line-height: var(--aramid-font-line-height-tight);
+}
+
+.markdown h1 {
+  font-size: var(--aramid-font-size-lg);
+}
+
+.markdown h2 {
+  font-size: var(--aramid-font-size-md);
+}
+
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  font-size: var(--aramid-font-size-sm);
+}
+
+.markdown p {
+  margin-block: var(--aramid-spacing-3);
+}
+
+.markdown ul,
+.markdown ol {
+  margin-block: var(--aramid-spacing-3);
+  padding-inline-start: var(--aramid-spacing-6);
+}
+
+.markdown li + li {
+  margin-top: var(--aramid-spacing-2);
+}
+
+.markdown blockquote {
+  margin-block: var(--aramid-spacing-3);
+  padding-inline-start: var(--aramid-spacing-4);
+  border-inline-start: 3px solid var(--aramid-color-gray-30);
+  color: var(--aramid-color-gray-70);
+}
+
+.markdown hr {
+  margin-block: var(--aramid-spacing-4);
+  border: 0;
+  border-top: 1px solid var(--aramid-color-gray-20);
+}
+
+.markdown code {
+  font-family: var(--aramid-font-family-mono);
+  font-size: 0.92em;
+  padding-inline: 0.25em;
+  border-radius: 2px;
+  background-color: var(--aramid-color-gray-20);
+}
+
+.markdown pre {
+  margin-block: var(--aramid-spacing-3);
+  padding: var(--aramid-spacing-3);
+  overflow: auto;
+  border: 1px solid var(--aramid-color-gray-20);
+  background-color: var(--aramid-color-gray-10);
+}
+
+.markdown pre code {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.markdown table {
+  width: 100%;
+  margin-block: var(--aramid-spacing-3);
+  border-collapse: collapse;
+  font-size: var(--aramid-font-size-xs);
+}
+
+.markdown th,
+.markdown td {
+  padding: var(--aramid-spacing-2) var(--aramid-spacing-3);
+  border: 1px solid var(--aramid-color-gray-20);
+  text-align: start;
+  vertical-align: top;
+}
+
+.markdown th {
+  background-color: var(--aramid-color-gray-10);
+  font-weight: var(--aramid-font-weight-semibold);
+}
+
+/* Обёртка для страниц/диалогов: задаёт область просмотра, внутри — `.markdown`. */
+.markdown-host {
+  box-sizing: border-box;
+  min-height: 320px;
+  height: min(70vh, 960px);
+  border: 1px solid var(--aramid-color-gray-20);
+  background-color: var(--aramid-color-gray-10);
+}
