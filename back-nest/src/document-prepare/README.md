@@ -13,7 +13,20 @@
   - `POST /documents/:fileId/prepare` — ручная (повторная) подготовка.
 - Одна корневая джоба `prepare-document` через durable `JobRun`; движок — в `input.engine` и `PreparedDocument.engine`.
 
-## Фаза 3 (текущая): LLM Vision для pdf/jpg/png
+## Фаза 4: автоподготовка на upload
+
+`FilesService` не знает о DPS. После `create` / `saveUpload` вызывается `notifyFileSaved(file)` — подписчики через `onFileSaved(handler)`.
+
+`DocumentPrepareUploadListener` в DPS подписывается на хук и fire-and-forget ставит `enqueuePrepare` для поддерживаемых форматов (ошибки в лог, upload не падает).
+
+**Поведение:**
+
+- Поддерживаемые домены → job `prepare-document`; неподдерживаемые — пропуск.
+- Идемпотентность — `enqueuePrepare`, key `['prepare-document', fileId]`.
+- Файлы заявок: `FilesService.create(fileInput, { tx })` в транзакции с `OrderApplication`, затем `notifyFileSaved` после commit.
+- Глобальный лимит kreuzberg — `KreuzbergConcurrencyLimiter`; разметку инициирует только DPS, не потребители.
+
+## Фаза 3: LLM Vision для pdf/jpg/png
 
 Реализована ветка `engine=llm-vision` для домена `VISUAL` (pdf, jpg, png).
 
@@ -112,10 +125,17 @@
 | `YANDEX_CLOUD_API_KEY` | API-ключ Yandex Cloud для LLM Vision |
 | `YANDEX_CLOUD_FOLDER_ID` | Folder ID Yandex Cloud |
 
+## Фаза 5: читатели на `PreparedDocument`
+
+`ApplicationChunkReader` — только Effect API: `read(application)` и `getMarkdown(fileId)` (`Stream`, одна итерация = весь markdown). Не запускает подготовку; на неподготовленном файле — `ApplicationReadError`.
+
+`analyse-application` читает через `reader.read()`; `extract-visual` не вызывается — разметка только через DPS.
+
+**Не в scope:** `tc-extract.job`.
+
 ## Не реализовано (следующие фазы)
 
-- Автоподготовка на upload (Фаза 4).
-- Переключение читателей с `FileContent` (Фаза 5).
+- `tc-extract.job` на `PreparedDocument` (остаток Фазы 5).
 - Deprecation legacy extraction (Фаза 6).
 
 ## Фаза 1 (завершена)

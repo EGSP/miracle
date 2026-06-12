@@ -7,7 +7,7 @@ export type CreateFileContentInput = Omit<FileContent, 'id'>;
 
 /**
  * Слой данных над таблицей `file_contents`: создание/чтение/мягкое удаление записей извлечения.
- * Оркестрацию самого извлечения см. в {@link ExtractionService}.
+ * Read-only для клиентов; новое извлечение — через Document Prepare Service, не через {@link ExtractionService}.
  */
 @Injectable()
 export class FilesContentService {

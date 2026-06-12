@@ -2,7 +2,10 @@ import { ExtractionStatus, ExtractionType } from '@miracle/types';
 import type { FileContent, FileModel, Stored } from '@miracle/types';
 import mammoth from 'mammoth';
 
-/** Извлечение текста из документов (docx через mammoth). */
+/**
+ * @deprecated Синхронный экстрактор для `FileContent`. Заменён DPS (kreuzberg / llm-vision).
+ * Извлечение текста из документов (docx через mammoth).
+ */
 export async function* extractDocumentContent(
     dbFile: Stored<FileModel>,
     pathToFile: string,

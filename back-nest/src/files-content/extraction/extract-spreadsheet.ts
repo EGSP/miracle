@@ -12,7 +12,10 @@ function toMarkdownTable(rows: Record<string, unknown>[], fields: string[]): str
     return [header, divider, ...lines].join('\n');
 }
 
-/** Извлечение содержимого таблиц (xlsx/xls/ods через XLSX; csv/tsv через papaparse). */
+/**
+ * @deprecated Синхронный экстрактор для `FileContent`. Заменён DPS (kreuzberg).
+ * Извлечение содержимого таблиц (xlsx/xls/ods через XLSX; csv/tsv через papaparse).
+ */
 export async function* extractSpreadsheetContent(
     dbFile: Stored<FileModel>,
     pathToFile: string,

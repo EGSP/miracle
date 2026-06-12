@@ -1,5 +1,6 @@
 import {
     BadRequestException,
+    Inject,
     Injectable,
     PayloadTooLargeException,
     type OnApplicationBootstrap,
@@ -12,14 +13,29 @@ import { randomUUID } from 'crypto';
 import type { FastifyRequest } from 'fastify';
 import { Effect } from 'effect';
 import type { FileModel, FileWithMeta, FilesQuery, Stored } from '@miracle/types';
-import { tryLabeledPromise } from '../common/effect-errors.js';
+import { formatUnknown, tryLabeledPromise } from '../common/effect-errors.js';
 import { AppConfigService } from '../config/app-config.service.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
 import { fixFileNameEncoding } from './file-name-encoding.js';
 import { FILE_UPLOAD_CONFIG } from './file-upload.config.js';
 
+/** Колбэк после появления записи `File` (файл уже на диске). */
+export type FileSavedHandler = (file: Stored<FileModel>) => void;
+
 // id опционален: если передан — используется как имя файла на диске; иначе Prisma генерирует uuid.
 export type CreateFileInput = Omit<FileModel, 'id'> & { id?: string };
+
+/** Клиент БД с делегатом `file` — `PrismaService` или интерактивная транзакция. */
+export type FileDbClient = Pick<PrismaService, 'file'>;
+
+export type CreateFileOptions = {
+    /**
+     * Интерактивная транзакция. `onFileSaved` не вызывается внутри `create` —
+     * после успешного `$transaction` вызови {@link notifyFileSaved}.
+     */
+    readonly tx?: FileDbClient;
+};
 
 // Тип одного multipart-файла, как его отдаёт `req.file()` (@fastify/multipart).
 export type MultipartFile = NonNullable<Awaited<ReturnType<FastifyRequest['file']>>>;
@@ -28,10 +44,42 @@ const ALLOWED_MIME_TYPES = FILE_UPLOAD_CONFIG.allowedMimeTypes as readonly strin
 
 @Injectable()
 export class FilesService implements OnApplicationBootstrap {
+    private readonly logger: AppLogger;
+    private readonly fileSavedHandlers = new Set<FileSavedHandler>();
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly config: AppConfigService,
-    ) {}
+        @Inject(AppLoggerService) loggerFactory: AppLoggerService,
+    ) {
+        this.logger = loggerFactory.forContext(FilesService.name);
+    }
+
+    /**
+     * Подписка на сохранение файла: запись `File` в БД, байты на диске.
+     * Возвращает отписку. Доменные модули (например DPS) вешают обработчики сами.
+     */
+    onFileSaved(handler: FileSavedHandler): () => void {
+        this.fileSavedHandlers.add(handler);
+        return () => {
+            this.fileSavedHandlers.delete(handler);
+        };
+    }
+
+    /** Уведомляет подписчиков; ошибки обработчиков логируются, не пробрасываются. */
+    notifyFileSaved(file: Stored<FileModel>): void {
+        for (const handler of this.fileSavedHandlers) {
+            try {
+                handler(file);
+            } catch (error) {
+                this.logger.error(
+                    `Обработчик onFileSaved упал (fileId=${file.id})`,
+                    error,
+                    { fileId: file.id, detail: formatUnknown(error) },
+                );
+            }
+        }
+    }
 
     async onApplicationBootstrap(): Promise<void> {
         await mkdir(this.getUploadsDir(), { recursive: true });
@@ -50,15 +98,23 @@ export class FilesService implements OnApplicationBootstrap {
         return path.join(this.getUploadsDir(), this.getStoredFileName(file));
     }
 
-    async create(data: CreateFileInput): Promise<Stored<FileModel>> {
-        const row = await this.prisma.file.create({ data });
-        return row as Stored<FileModel>;
+    /**
+     * Создаёт запись `File` в БД (файл на диске уже должен существовать).
+     * Без `tx` — сразу {@link notifyFileSaved}; с `tx` — notify после commit снаружи.
+     */
+    async create(data: CreateFileInput, options?: CreateFileOptions): Promise<Stored<FileModel>> {
+        const db = options?.tx ?? this.prisma;
+        const row = await db.file.create({ data });
+        const file = row as Stored<FileModel>;
+        if (!options?.tx) {
+            this.notifyFileSaved(file);
+        }
+        return file;
     }
 
     /**
-     * Записывает загруженный multipart-файл на диск и возвращает данные для создания записи `File`.
-     * В БД ничего не пишет — это позволяет вызывающему создать `File` в общей транзакции
-     * (например, вместе с `OrderApplication`).
+     * Записывает загруженный multipart-файл на диск и возвращает данные для {@link create}.
+     * В БД ничего не пишет — для атомарности с другими сущностями передай `{ tx }` в `create`.
      */
     async writeUploadToDisk(data: MultipartFile, authorId: string): Promise<CreateFileInput> {
         if (!ALLOWED_MIME_TYPES.includes(data.mimetype)) {

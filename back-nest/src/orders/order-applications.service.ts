@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { ApplicationData, OrderApplication, Stored } from '@miracle/types';
 import { PrismaService } from '../database/prisma.service.js';
-import type { CreateFileInput } from '../files/files.service.js';
+import { FilesService, type CreateFileInput } from '../files/files.service.js';
 
 @Injectable()
 export class OrderApplicationsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly files: FilesService,
+    ) {}
 
     async listByOrder(orderId: string): Promise<Stored<OrderApplication>[]> {
         const rows = await this.prisma.orderApplication.findMany({
@@ -41,14 +44,16 @@ export class OrderApplicationsService {
      * Транзакция гарантирует, что не появится `File` без приложения.
      */
     async createFile(orderId: string, fileInput: CreateFileInput): Promise<Stored<OrderApplication>> {
-        const row = await this.prisma.$transaction(async (tx) => {
-            const file = await tx.file.create({ data: fileInput });
-            const data: ApplicationData = { type: 'file', fileId: file.id };
-            return tx.orderApplication.create({
+        const { application, file } = await this.prisma.$transaction(async (tx) => {
+            const createdFile = await this.files.create(fileInput, { tx });
+            const data: ApplicationData = { type: 'file', fileId: createdFile.id };
+            const createdApp = await tx.orderApplication.create({
                 data: { orderId, authorId: fileInput.authorId, data },
             });
+            return { application: createdApp, file: createdFile };
         });
-        return row as Stored<OrderApplication>;
+        this.files.notifyFileSaved(file);
+        return application as Stored<OrderApplication>;
     }
 
     /**

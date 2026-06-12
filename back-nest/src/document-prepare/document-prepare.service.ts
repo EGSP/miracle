@@ -4,7 +4,6 @@ import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { FilesService } from '../files/files.service.js';
 import { JobsService } from '../jobs/jobs.service.js';
-import type { PreparedEngine } from './extractor.port.js';
 import { PREPARE_DOCUMENT_JOB_ID, prepareJobKey, routePreparedEngine } from './router.js';
 
 type PreparedDocumentRow = Awaited<ReturnType<PrismaService['preparedDocument']['findFirst']>>;
@@ -16,7 +15,6 @@ export type EnqueuePrepareResult = {
 
 /**
  * CRUD и оркестрация {@link PreparedDocument}: постановка корневых джоб подготовки.
- * Автоподготовка на upload — Фаза 4.
  */
 @Injectable()
 export class DocumentPrepareService {

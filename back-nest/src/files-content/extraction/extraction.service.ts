@@ -22,11 +22,10 @@ type ContentGenerator = (
 ) => AsyncGenerator<Omit<FileContent, 'id'>, void, void>;
 
 /**
- * Оркестрация извлечения содержимого файла: определить домен, запустить нужный экстрактор,
- * записать результат через {@link FilesContentService}.
+ * @deprecated Синхронный путь извлечения в `FileContent` заменён Document Prepare Service (DPS).
+ * Новые записи не создаются через этот сервис; используйте `POST /documents/:fileId/prepare`.
  *
- * Generator-путь (DOCUMENT/SPREADSHEET/TEXT) реализован. VISUAL (OCR/LLM Vision) тянет
- * worker-runtime + scan-воркеры + `yandex`/`convert` — отложен на слой 4.
+ * Generator-путь (DOCUMENT/SPREADSHEET/TEXT) и VISUAL через jobs оставлен для совместимости кода.
  */
 @Injectable()
 export class ExtractionService {
@@ -42,7 +41,7 @@ export class ExtractionService {
     }
 
     /**
-     * Гейт «уже извлечено / повтор после ошибки» + запуск извлечения.
+     * @deprecated HTTP-вызов отключён (410). Не используйте для новых сценариев — только DPS.
      * @throws BadRequestException если контент уже извлечён (и повтор не запрошен/не применим).
      */
     async extract(fileId: string, options?: { retryIfLastFailed?: boolean }): Promise<void> {
@@ -60,6 +59,7 @@ export class ExtractionService {
         await this.runExtraction(fileId);
     }
 
+    /** @deprecated Внутренний путь sync/VISUAL extraction; не вызывается из HTTP после Фазы 6. */
     private async runExtraction(fileId: string): Promise<void> {
         const file = await this.files.get(fileId);
         if (!file) {

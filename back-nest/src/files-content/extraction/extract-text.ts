@@ -2,7 +2,10 @@ import { ExtractionStatus, ExtractionType } from '@miracle/types';
 import type { FileContent, FileModel, Stored } from '@miracle/types';
 import fs from 'fs/promises';
 
-/** Извлечение содержимого простых текстовых файлов (сырое чтение utf8). */
+/**
+ * @deprecated Синхронный экстрактор для `FileContent`. Заменён DPS (kreuzberg).
+ * Извлечение содержимого простых текстовых файлов (сырое чтение utf8).
+ */
 export async function* extractTextContent(
     dbFile: Stored<FileModel>,
     pathToFile: string,

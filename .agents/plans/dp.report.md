@@ -2,11 +2,15 @@
 
 ## Текущий статус
 
-**Фаза 3: LLM Vision integration (vision/pdf) — выполнена**
+**Фаза 6: Deprecation FileContent extraction — выполнена**
 
-`LlmVisionExtractor` (ConvertService + Yandex Vision), JobTools `vision.render.v1` и `vision.recognize.v1`, ветка `engine=llm-vision` в `prepare-document` (render → recognize → apply). Durable `opId` / `finalPrompt` / результат — в ToolMemo `vision.recognize.v1`. Промпты из `scan.shared.ts` (`LLM_VISION_*`, не TC). Legacy `llm-vision.job` и `files-content` не затронуты.
+Синхронный путь `files-content/extraction/*` помечен `@deprecated`. `POST /files-content/:fileId/extract` возвращает **410 Gone** с указанием DPS. Read-only GET/soft-delete и таблица `FileContent` без изменений.
 
-**Следующий шаг:** Фаза 4 — автоподготовка на upload + backpressure.
+**Фаза 5:** `ApplicationChunkReader` на Effect + `PreparedDocument`; `analyse-application` без `extract-visual`. `tc-extract.job` — вне scope.
+
+**Фаза 4 (уточнение):** хук `FilesService.onFileSaved` / `notifyFileSaved`; DPS подписывается через `DocumentPrepareUploadListener`; `enqueuePrepareBatch` удалён.
+
+**Следующий шаг:** Фаза 7 — dependency audit; остаток — `tc-extract.job`.
 
 ---
 
@@ -18,7 +22,7 @@
 4. **Vision** (`pdf`, `jpg`, `png`) → LLM Vision; OCR не используется.
 5. **Все PDF** на старте → LLM Vision; fast-path для PDF с текстовым слоем — позже.
 6. **Автоподготовка** на upload + явный эндпоинт re-prepare.
-7. **Queue/concurrency лимиты** — process-local `KreuzbergConcurrencyLimiter` (Semaphore) для глобального лимита HTTP kreuzberg в одном backend-процессе; `Swarm` — для batch enqueue локально, не как глобальный limiter.
+7. **Queue/concurrency лимиты** — process-local `KreuzbergConcurrencyLimiter` (Semaphore) для глобального лимита HTTP kreuzberg в одном backend-процессе. Разметку инициирует только DPS (хук `onFileSaved`), не потребители.
 8. **`PreparedDocument`** — новая модель; `FileContent` депрекейтится постепенно.
 9. **MVP-модель простая** — без `configHash`/`version`; расширение для A/B — отдельной миграцией (`variant`, `config`, `configHash`).
 10. **Jobs-with-tools**: одна корневая job **`prepare-document`**, движок в `input.engine`; шаги extract/recognize/apply — JobTool/ToolMemo, не child JobRun. Job implementation — `jobs/implementations/document-prepare/`.
@@ -29,19 +33,113 @@
 
 ## Следующий шаг
 
-**Фаза 4 — автоподготовка на upload + backpressure**
+**Фаза 7 — dependency audit субагентом**
 
-1. Хук в `FilesService.saveUpload` / `OrderApplication` creation.
-2. `DocumentPrepareService.enqueuePrepare` с роутингом по домену.
-3. `Swarm` concurrency при батч-загрузке.
+1. Импорты `mammoth`, `xlsx`, `papaparse`, `files-content/extraction/*`.
+2. Отделить report-generation deps.
+3. Удаление из `package.json` только после отчёта.
 
-Паттерны: `.agents/desk/document-prepare/patterns.md` (см. также `effect-patterns.md`, `job-patterns.md` в той же папке).
+**Остаток Фазы 5:** `tc-extract.job` → `PreparedDocument`.
+
+Паттерны: `.agents/desk/document-prepare/patterns.md`.
 
 ---
 
 ## Журнал изменений
 
-### 2026-06-11 — Фаза 3 DPS: LLM Vision integration
+### 2026-06-12 — DPS: хук upload, Effect reader, без extract-visual
+
+**Сделано:**
+
+- `FilesService.onFileSaved` / `notifyFileSaved` — без зависимости от DPS; `DocumentPrepareUploadListener` подписывается в `onModuleInit`.
+- Удалён `enqueuePrepareBatch`; убран `forwardRef` Files ↔ DPS.
+- `OrderApplicationsService.createFile` → `notifyFileSaved` после транзакции.
+- `ApplicationChunkReader` — Effect (`read`, `getMarkdown` как `Stream`); `analyse-application` без `extract-visual`.
+
+**Проверки:** `npx tsc` в `back-nest` — OK.
+
+---
+
+### 2026-06-12 — Фаза 6 DPS: Deprecation FileContent extraction
+
+**Сделано:**
+
+- `POST /files-content/:fileId/extract` → `GoneException` (410), сообщение на русском: использовать `POST /documents/:fileId/prepare` или автоподготовку на upload.
+- `@deprecated` на `ExtractionService`, `extract()`, generators, метод контроллера.
+- Комментарий deprecation в `FilesContentModule`; обновлён JSDoc `FilesContentService`.
+- Отчёт: `.agents/desk/document-prepare/phase-6-deprecate-filecontent-extraction.md`.
+
+**Проверки:**
+
+- `npx tsc --noEmit` в `back-nest` — OK.
+
+**Ограничения:**
+
+- `ExtractionService` и generators оставлены в коде (удаление — Фаза 7).
+- Frontend `useExtractFileContent` → 410 (миграция UI — отдельно).
+- Legacy jobs (`extract-visual`, `tc-extract`) не используют HTTP extract.
+
+**Файлы:**
+
+- `back-nest/src/files-content/files-content.controller.ts`
+- `back-nest/src/files-content/files-content.module.ts`
+- `back-nest/src/files-content/files-content.service.ts`
+- `back-nest/src/files-content/extraction/extraction.service.ts`
+- `back-nest/src/files-content/extraction/extract-document.ts`
+- `back-nest/src/files-content/extraction/extract-spreadsheet.ts`
+- `back-nest/src/files-content/extraction/extract-text.ts`
+
+---
+
+### 2026-06-12 — Фаза 4 DPS: автоподготовка на upload + backpressure
+
+**Сделано:**
+
+- `FilesService.saveUpload`: после `create` — fire-and-forget `enqueuePrepare` для поддерживаемых доменов; ошибки в лог, upload не падает.
+- Circular DI: `forwardRef` между `FilesModule` и `DocumentPrepareModule`.
+- `DocumentPrepareService.enqueuePrepareBatch(fileIds)`: `Swarm.run`, `failureMode: 'bestEffort'`, `concurrency: 4`.
+- Обновлены `document-prepare/README.md`, `dp.report.md`.
+
+**Проверки:**
+
+- `npx tsc --noEmit` в `back-nest` — OK.
+
+- `back-nest/src/files/files.service.ts`
+- `back-nest/src/files/files.module.ts`
+- `back-nest/src/document-prepare/document-prepare.service.ts`
+- `back-nest/src/document-prepare/document-prepare.module.ts`
+- `back-nest/src/document-prepare/README.md`
+
+---
+
+### 2026-06-12 — Фаза 5 DPS (orders): ApplicationChunkReader на PreparedDocument
+
+**Сделано:**
+
+- `ApplicationChunkReader`: чтение файловых приложений через `DocumentPrepareService` / `PreparedDocument` вместо mammoth, xlsx, papaparse, fs и `FileContent`.
+- Async generator `getMarkdown(fileId)` — сейчас одна итерация с полным markdown; задел под будущее чанкование.
+- `read()` / `readFile()`: для `DOCUMENT`, `SPREADSHEET`, `TEXT`, `VISUAL` — один чанк `{ chunkKey: 'markdown', chunk: { text } }`.
+- Ошибки при `queued` / `running` / `failed` / отсутствии `PreparedDocument`.
+- `OrdersModule`: импорт `DocumentPrepareModule` для DI.
+- Обновлены JSDoc `ApplicationChunkReader`, `document-prepare/README.md`, desk-отчёт фазы 5.
+
+**Не в scope:**
+
+- Order jobs (`analyse-application`, `extract-visual` и др.) — без изменений.
+- `tc-extract.job` — без изменений.
+
+**Проверки:**
+
+- `npx tsc --noEmit` в `back-nest` — OK.
+
+**Файлы:**
+
+- `back-nest/src/orders/application-chunk-reader.ts`
+- `back-nest/src/orders/orders.module.ts`
+- `back-nest/src/document-prepare/README.md`
+- `.agents/desk/document-prepare/phase-5-switch-readers-to-prepared-document.md`
+
+---
 
 **Сделано:**
 

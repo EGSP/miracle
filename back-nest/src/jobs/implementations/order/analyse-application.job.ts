@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { Effect } from 'effect';
-import { FileDomain, getFileDomain } from '@miracle/types';
 import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs, Progress } from '../../framework/context.js';
@@ -8,9 +7,10 @@ import { tryLabeledPromise } from '../../../common/effect-errors.js';
 import { runFanout, decideFanout } from '../../framework/fanout.js';
 import { JobPartialError } from '../../framework/runtime.js';
 import { OrderApplicationsService } from '../../../orders/order-applications.service.js';
-import { ApplicationChunkReader } from '../../../orders/application-chunk-reader.js';
-import { FilesService } from '../../../files/files.service.js';
-import { ExtractVisualJob } from './extract-visual.job.js';
+import {
+    ApplicationChunkReader,
+    type ApplicationReadError,
+} from '../../../orders/application-chunk-reader.js';
 import { ExtractPositionsFromChunkJob } from './extract-positions-from-chunk.job.js';
 
 type AnalyseApplicationInput = { applicationId: string };
@@ -18,14 +18,12 @@ type AnalyseApplicationInput = { applicationId: string };
 /**
  * Джоб `analyse-application`: одно приложение заказа → позиции.
  *
- * Для VISUAL-файлов (pdf/изображение) сначала дочерним `extract-visual` обеспечивает извлечение
- * содержимого (идемпотентно, кэш в FileContent) — это и есть «извлечение внутри пайплайна заказа».
- * Документы/текст/таблицы читаются ридером инлайн без отдельного шага. Затем читает приложение
- * через {@link ApplicationChunkReader} и веером запускает `extract-positions-from-chunk` по чанкам.
+ * Читает приложение через {@link ApplicationChunkReader} (только `PreparedDocument` для файлов;
+ * подготовку не запускает — её обеспечивает DPS на upload). Веером запускает
+ * `extract-positions-from-chunk` по чанкам.
  *
- * Веер чанков — best-effort со сводом ({@link decideFanout}): упавший чанк не валит остальные;
- * все чанки упали → приложение `failed`, часть → `partial`, все ок → `succeed`. Предусловия же
- * (загрузка заявки/файла, `extract-visual`, чтение чанков) остаются fail-fast — без них веера нет.
+ * Веер чанков — best-effort ({@link decideFanout}): упавший чанк не валит остальные.
+ * Предусловия (заявка, готовый PreparedDocument) — fail-fast.
  */
 @Injectable()
 @JobImpl()
@@ -35,9 +33,7 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
 
     constructor(
         applications: OrderApplicationsService,
-        files: FilesService,
         reader: ApplicationChunkReader,
-        extractVisual: ExtractVisualJob,
         extract: ExtractPositionsFromChunkJob,
     ) {
         this.run = (input: AnalyseApplicationInput): Effect.Effect<void, unknown, JobEnv> =>
@@ -54,20 +50,15 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
                     return yield* Effect.fail(new Error(`Приложение "${input.applicationId}" не найдено`));
                 }
 
-                // VISUAL-файл: извлечь содержимое прямо в пайплайне (дочерний awaited-джоб, идемпотентно).
-                if (application.data.type === 'file') {
-                    const fileId = application.data.fileId;
-                    const file = yield* tryLabeledPromise(`загрузка файла заявки "${fileId}"`, () => files.get(fileId));
-                    if (file && getFileDomain(file.extension ?? '') === FileDomain.VISUAL) {
-                        yield* progress.push(0.05, { label: 'извлечение визуала', determined: false });
-                        yield* jobs.run(extractVisual, [jobs.runId, 'extract-visual', fileId], { fileId });
-                    }
-                }
-
                 yield* progress.push(0.1, { label: 'чтение чанков' });
 
-                const chunks = yield* tryLabeledPromise(`чтение чанков заявки "${input.applicationId}"`, () =>
-                    reader.read(application),
+                const chunks = yield* reader.read(application).pipe(
+                    Effect.mapError(
+                        (error: ApplicationReadError) =>
+                            new Error(`Не удалось прочитать приложение "${input.applicationId}": ${error.message}`, {
+                                cause: error,
+                            }),
+                    ),
                 );
                 yield* progress.push(0.2, { label: 'извлечение позиций', determined: false });
 
@@ -83,10 +74,11 @@ export class AnalyseApplicationJob implements Job<AnalyseApplicationInput, void>
                 yield* decideFanout(`анализ приложения "${input.applicationId}"`, chunkResults);
             }).pipe(
                 Effect.mapError((error) =>
-                    // Сигнал `partial` нельзя терять под обёрткой — иначе узел покрасится в `failed`.
                     error instanceof JobPartialError
                         ? error
-                        : new Error(`Не удалось проанализировать приложение "${input.applicationId}"`, { cause: error }),
+                        : new Error(`Не удалось проанализировать приложение "${input.applicationId}"`, {
+                              cause: error,
+                          }),
                 ),
             );
     }

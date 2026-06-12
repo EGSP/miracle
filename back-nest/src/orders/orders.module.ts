@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
+import { DocumentPrepareModule } from '../document-prepare/document-prepare.module.js';
 import { FilesModule } from '../files/files.module.js';
 import { FilesContentModule } from '../files-content/files-content.module.js';
 import { ProductTypesModule } from '../product-types/product-types.module.js';
@@ -16,7 +17,14 @@ import { _1C_ERP_Commerce_Offer } from './reports/1c-erp-commerce-offer.report.j
 import { _1C_ERP_Commerce_Offer_Extended } from './reports/1c-erp-commerce-offer-extended.report.js';
 
 @Module({
-    imports: [AuthModule, FilesModule, FilesContentModule, ProductTypesModule, TechnicalConditionsModule],
+    imports: [
+        AuthModule,
+        DocumentPrepareModule,
+        FilesModule,
+        FilesContentModule,
+        ProductTypesModule,
+        TechnicalConditionsModule,
+    ],
     controllers: [OrdersController],
     providers: [
         OrdersService,

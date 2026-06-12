@@ -1,6 +1,7 @@
 import {
     Controller,
     Get,
+    GoneException,
     HttpCode,
     Param,
     Post,
@@ -10,18 +11,14 @@ import {
 import type { FileContent, Stored } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { FilesContentService } from './files-content.service.js';
-import { ExtractionService } from './extraction/extraction.service.js';
 import { FileContentQueryDto } from './dto/file-content-query.dto.js';
 import { SoftDeleteContentQueryDto } from './dto/soft-delete-content-query.dto.js';
-import { ExtractContentQueryDto } from './dto/extract-content-query.dto.js';
 
+/** Read-only API над историческими записями `FileContent`. Синхронное извлечение — через DPS. */
 @Controller('files-content')
 @UseGuards(AuthGuard)
 export class FilesContentController {
-    constructor(
-        private readonly filesContent: FilesContentService,
-        private readonly extraction: ExtractionService,
-    ) {}
+    constructor(private readonly filesContent: FilesContentService) {}
 
     @Get('records/:contentId/tokens')
     async getTokens(@Param('contentId') contentId: string): Promise<{ tokens: number }> {
@@ -51,12 +48,14 @@ export class FilesContentController {
         return content;
     }
 
+    /**
+     * @deprecated Используйте DPS: `POST /documents/:fileId/prepare` или автоподготовку при upload.
+     */
     @Post(':fileId/extract')
-    @HttpCode(204)
-    async extract(
-        @Param('fileId') fileId: string,
-        @Query() query: ExtractContentQueryDto,
-    ): Promise<void> {
-        await this.extraction.extract(fileId, { retryIfLastFailed: query.retryIfLastFailed });
+    async extract(@Param('fileId') _fileId: string): Promise<void> {
+        throw new GoneException(
+            'Эндпоинт устарел. Используйте Document Prepare Service: POST /documents/:fileId/prepare ' +
+                'или автоподготовку при загрузке файла.',
+        );
     }
 }
