@@ -7,15 +7,22 @@
 - Модель `PreparedDocument` в PostgreSQL (статусы `queued` / `running` / `succeed` / `failed`).
 - Роутинг по домену файла (`router.ts`): vision (pdf/jpg/png) → `llm-vision`, остальное (`DOCUMENT`/`SPREADSHEET`/`TEXT`) → `kreuzberg`.
 - HTTP API:
-  - `GET /documents/:fileId/prepared` — статус и результат;
-  - `POST /documents/:fileId/prepare` — ручная (повторная) подготовка.
+  - `GET /documents/:fileId` — подготовленный документ (`PreparedDocument`) или `null`;
+  - `GET /documents/:fileId/status` — лёгкий статус (`{ status }` или `null`) для поллинга;
+  - `POST /documents/:fileId/prepare` — поставить (повторную) подготовку в очередь, отдаёт `{ runId }`.
 - Одна корневая джоба `prepare-document` через durable `JobRun`; движок — в `input.engine` и `PreparedDocument.engine`.
+
+## Разделение ответственности
+
+- **Сервис** только СТАВИТ в очередь: создаёт/сбрасывает `queued`-строку и запускает джобу. `enqueuePrepare` — fire-and-forget, возвращает `JobRun` для трекинга.
+- **Джоба** владеет ВСЕМИ переходами статуса `PreparedDocument` (`running`/`succeed`/`failed`), ключ — `fileId`.
+- Состояние читается по `fileId` (`GET /documents/:fileId[/status]`), а не возвращается из `enqueue`.
 
 ## Поток подготовки
 
 1. Источник: хук `onFileSaved` (автоподготовка на upload) **или** `POST /documents/:fileId/prepare`.
-2. `DocumentPrepareService.enqueuePrepare(fileId)` → ставит/переиспользует job по key `['prepare-document', fileId]`.
-3. Джоба `prepare-document` (engine-agnostic): `markRunning` → `document.extract.v1` → `prepare.apply.v1` → `succeed`.
+2. `DocumentPrepareService.enqueuePrepare(fileId)` → `queued`-строка + старт job по key `['prepare-document', fileId]` → `JobRun`.
+3. Джоба `prepare-document` (engine-agnostic): `markRunning(fileId)` → extract-тул по движку → `prepare.apply.v1` (`markSucceeded`) → `succeed`.
 4. При ошибке: `PreparedDocument.status=failed` + `JobRun.status=failed` с сообщением.
 
 Джоба **не ветвится по механике** движка: она лишь сопоставляет `engine → тул` (`kreuzberg`/`vision`) и запускает его; тул сам приводит файл к `PreparedResult`.
@@ -43,8 +50,9 @@
 
 ## Идемпотентность и 1:1
 
-- На один `fileId` — одна актуальная `PreparedDocument`. Гарантируется **на уровне сервиса**: процесс-локальный per-`fileId` мьютекс в `enqueuePrepare` сериализует конкурентные триггеры (хук + ручной POST + двойной upload). Уникального индекса в БД нет намеренно.
-- Реанализ после `succeed`: старый root `JobRun` сносится (чистка memo) → честное переизвлечение. После `failed`/`cancelled`: та же строка переиспользуется, job-runtime resume'ит с чекпойнтов ToolMemo.
+- На один `fileId` — одна актуальная `PreparedDocument`. Гарантируется **на уровне сервиса**: процесс-локальный per-`fileId` мьютекс в `enqueuePrepare` сериализует конкурентные триггеры (хук + ручной POST + двойной upload), исключая дубли строки и двойной запуск джобы. Уникального индекса в БД нет намеренно.
+- Пока прогон `running`/`queued` — повторный `enqueue` возвращает его как есть (не дублирует, не сбрасывает).
+- Re-prepare завершённого прогона (`succeed`/`failed`/…) — **всегда свежее**: старый root `JobRun` сносится (`deleteRunTree`, чистка memo), прежняя строка `PreparedDocument` **удаляется из БД** и создаётся новая `queued` (без накопления истории и устаревших данных), джоба извлекает заново. Resume с чекпойнтов ToolMemo работает только внутри одного прогона (восстановление после краша через `onApplicationBootstrap`), не при явном re-prepare.
 
 ## Контракт с kreuzberg REST
 

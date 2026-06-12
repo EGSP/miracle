@@ -1,21 +1,20 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { FileModel, JobRun } from '@miracle/types';
-import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { FilesService } from '../files/files.service.js';
 import { JobsService } from '../jobs/jobs.service.js';
-import type { PreparedResult } from './extractor.port.js';
+import type { PreparedEngine, PreparedResult } from './extractor.port.js';
 import { PREPARE_DOCUMENT_JOB_ID, prepareJobKey, routePreparedEngine } from './router.js';
 
 type PreparedDocumentRow = Awaited<ReturnType<PrismaService['preparedDocument']['findFirst']>>;
 
-export type EnqueuePrepareResult = {
-    prepared: NonNullable<PreparedDocumentRow>;
-    jobRun: JobRun;
-};
-
 /**
- * CRUD и оркестрация {@link PreparedDocument}: постановка корневых джоб подготовки.
+ * {@link PreparedDocument}: постановка подготовки в очередь и чтение состояния.
+ *
+ * Разделение ответственности: сервис лишь СТАВИТ в очередь (создаёт queued-строку и запускает
+ * корневую джобу `prepare-document`), после чего ВСЕ переходы статуса (`running`/`succeed`/`failed`)
+ * принадлежат самой джобе. `enqueuePrepare` — fire-and-forget: возвращает `JobRun` для трекинга,
+ * актуальное состояние читается по `fileId` ({@link getLatestByFile}).
  */
 @Injectable()
 export class DocumentPrepareService {
@@ -26,9 +25,10 @@ export class DocumentPrepareService {
     ) {}
 
     /**
-     * Процесс-локальные мьютексы постановки подготовки — по одному на `fileId`. Гарантируют 1:1
-     * «файл → актуальный PreparedDocument» на уровне сервиса (без уникального индекса в БД), чтобы
-     * конкурентные триггеры (хук `onFileSaved` + ручной POST, двойной upload) не создавали дубли.
+     * Процесс-локальные мьютексы постановки — по одному на `fileId`. Гарантируют 1:1 «файл →
+     * актуальный PreparedDocument» на уровне сервиса (без уникального индекса в БД): конкурентные
+     * триггеры (хук `onFileSaved` + ручной POST, двойной upload) сериализуются, дублей строки и
+     * двойного запуска джобы не возникает.
      */
     private readonly enqueueLocks = new Map<string, Promise<unknown>>();
 
@@ -46,31 +46,29 @@ export class DocumentPrepareService {
         return result;
     }
 
+    /** Актуальная (не удалённая) запись подготовки по файлу или `null`. */
     async getLatestByFile(fileId: string): Promise<NonNullable<PreparedDocumentRow> | null> {
-        const row = await this.prisma.preparedDocument.findFirst({
+        return this.prisma.preparedDocument.findFirst({
             where: { fileId, deletedAt: null },
             orderBy: { updatedAt: 'desc' },
         });
-        return row;
     }
 
-    async markRunning(preparedDocumentId: string, jobRunId: string): Promise<void> {
-        await this.prisma.preparedDocument.update({
-            where: { id: preparedDocumentId },
-            data: {
-                status: 'running',
-                jobRunId,
-                error: null,
-            },
+    // ── Переходы статуса (вызываются джобой `prepare-document`, ключ — fileId) ──────────────
+
+    async markRunning(fileId: string, jobRunId: string): Promise<void> {
+        await this.prisma.preparedDocument.updateMany({
+            where: { fileId, deletedAt: null },
+            data: { status: 'running', jobRunId, error: null },
         });
     }
 
     async markSucceeded(
-        preparedDocumentId: string,
+        fileId: string,
         data: Pick<PreparedResult, 'markdown' | 'pages' | 'meta'>,
     ): Promise<void> {
-        await this.prisma.preparedDocument.update({
-            where: { id: preparedDocumentId },
+        await this.prisma.preparedDocument.updateMany({
+            where: { fileId, deletedAt: null },
             data: {
                 status: 'succeed',
                 markdown: data.markdown,
@@ -81,98 +79,49 @@ export class DocumentPrepareService {
         });
     }
 
-    async markFailed(preparedDocumentId: string, error: string): Promise<void> {
-        await this.prisma.preparedDocument.update({
-            where: { id: preparedDocumentId },
-            data: {
-                status: 'failed',
-                error,
-            },
+    async markFailed(fileId: string, error: string): Promise<void> {
+        await this.prisma.preparedDocument.updateMany({
+            where: { fileId, deletedAt: null },
+            data: { status: 'failed', error },
         });
     }
 
+    // ── Постановка в очередь ───────────────────────────────────────────────────────────────
+
     /**
-     * Создаёт или обновляет запись подготовки и ставит корневую job `prepare-document`.
-     * На один `fileId` — одна актуальная {@link PreparedDocument}; key `['prepare-document', fileId]`.
-     *
-     * Re-prepare после `succeed`: удаляет старый root JobRun, сбрасывает запись и запускает заново.
-     * При уже идущем прогоне (`running`/`queued` JobRun) — без сброса markdown/meta, возврат текущего состояния.
-     * При `failed`/`cancelled` JobRun — сброс записи; `jobs.start` переиспользует ту же строку по key.
+     * Ставит подготовку файла в очередь и возвращает `JobRun` для трекинга. Идемпотентно по
+     * `fileId`: пока прогон `running`/`queued` — возвращает его как есть. Завершённый прогон
+     * (`succeed`/`failed`/…) при повторном вызове сносится — re-prepare всегда делает свежее
+     * извлечение. Дальнейшие статусы `PreparedDocument` проставляет джоба.
      */
-    async enqueuePrepare(fileId: string): Promise<EnqueuePrepareResult> {
-        return this.withFileLock(fileId, () => this.enqueuePrepareInternal(fileId));
+    async enqueuePrepare(fileId: string): Promise<JobRun> {
+        return this.withFileLock(fileId, () => this.enqueueInternal(fileId));
     }
 
-    private async enqueuePrepareInternal(fileId: string): Promise<EnqueuePrepareResult> {
+    private async enqueueInternal(fileId: string): Promise<JobRun> {
         const file = await this.requireSupportedFile(fileId);
         const engine = routePreparedEngine(file)!;
-
         const key = prepareJobKey(fileId);
+
         const existingRun = await this.jobs.findByKey([...key]);
-
         if (existingRun?.status === 'running' || existingRun?.status === 'queued') {
-            let prepared = await this.getLatestByFile(fileId);
-            if (!prepared) {
-                prepared = await this.prisma.preparedDocument.create({
-                    data: {
-                        fileId,
-                        status: 'queued',
-                        engine,
-                        jobRunId: existingRun.id,
-                    },
-                });
-            } else if (prepared.jobRunId !== existingRun.id) {
-                prepared = await this.prisma.preparedDocument.update({
-                    where: { id: prepared.id },
-                    data: { jobRunId: existingRun.id },
-                });
-            }
-            return { prepared, jobRun: existingRun };
+            return existingRun;
         }
-
-        if (existingRun?.status === 'succeed') {
+        if (existingRun) {
             await this.jobs.deleteRunTree(existingRun.id);
         }
 
-        const existing = await this.getLatestByFile(fileId);
-        const prepared = existing
-            ? await this.prisma.preparedDocument.update({
-                  where: { id: existing.id },
-                  data: {
-                      status: 'queued',
-                      engine,
-                      markdown: null,
-                      pages: Prisma.DbNull,
-                      meta: Prisma.DbNull,
-                      error: null,
-                      jobRunId: null,
-                  },
-              })
-            : await this.prisma.preparedDocument.create({
-                  data: {
-                      fileId,
-                      status: 'queued',
-                      engine,
-                  },
-              });
+        await this.createQueued(fileId, engine);
+        return this.jobs.start(PREPARE_DOCUMENT_JOB_ID, { fileId, engine }, [...key]);
+    }
 
-        const jobRun = await this.jobs.start(
-            PREPARE_DOCUMENT_JOB_ID,
-            { fileId, preparedDocumentId: prepared.id, engine },
-            [...key],
-        );
-
-        if (prepared.jobRunId !== jobRun.id) {
-            await this.prisma.preparedDocument.update({
-                where: { id: prepared.id },
-                data: { jobRunId: jobRun.id },
-            });
-        }
-
-        return {
-            prepared: { ...prepared, jobRunId: jobRun.id },
-            jobRun,
-        };
+    /**
+     * Создаёт свежую `queued`-строку подготовки файла, предварительно удалив прежнюю из БД.
+     * Re-prepare не накапливает историю и не оставляет устаревших данных — всегда чистая строка.
+     */
+    private async createQueued(fileId: string, engine: PreparedEngine): Promise<void> {
+        await this.prisma.preparedDocument.deleteMany({ where: { fileId } });
+        await this.prisma.preparedDocument.create({ data: { fileId, status: 'queued', engine } });
     }
 
     /** Проверяет, что файл существует и поддерживается роутером DPS. */

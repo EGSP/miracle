@@ -7,7 +7,7 @@ import { DocumentPrepareService } from '../../../../document-prepare/document-pr
 import type { PreparedResult } from '../../../../document-prepare/extractor.port.js';
 
 type PrepareApplyInput = {
-    readonly preparedDocumentId: string;
+    readonly fileId: string;
     readonly result: PreparedResult;
 };
 
@@ -31,7 +31,7 @@ export class PrepareApplyTool implements JobTool<PrepareApplyInput, void, Prepar
             }
 
             yield* tryLabeledPromise('отметка успешной подготовки', () =>
-                this.documentPrepare.markSucceeded(input.preparedDocumentId, {
+                this.documentPrepare.markSucceeded(input.fileId, {
                     markdown: input.result.markdown,
                     pages: input.result.pages,
                     meta: input.result.meta,

@@ -15,7 +15,6 @@ import { PrepareApplyTool } from './tools/prepare-apply.tool.js';
 
 export type PrepareDocumentInput = {
     fileId: string;
-    preparedDocumentId: string;
     engine: PreparedEngine;
 };
 
@@ -49,43 +48,41 @@ export class PrepareDocumentJob implements Job<PrepareDocumentInput, void> {
             'llm-vision': visionExtractTool,
         };
 
-        const markFailedAndFail = (preparedDocumentId: string, error: unknown) =>
+        const markFailedAndFail = (fileId: string, error: unknown) =>
             Effect.gen(function* () {
                 const message = formatJobError(error);
                 yield* tryLabeledPromise('отметка проваленной подготовки', () =>
-                    documentPrepare.markFailed(preparedDocumentId, message),
+                    documentPrepare.markFailed(fileId, message),
                 );
                 return yield* Effect.fail(error instanceof Error ? error : new Error(message));
             });
 
         this.run = (input) =>
             Effect.gen(function* () {
+                if (input.engine === 'llm-vision') {
+                    return yield* Effect.fail(new Error('LLM Vision is not supported yet'));
+                }
+
                 const jobs = yield* Jobs;
                 const tools = yield* JobTools;
                 const progress = yield* Progress;
 
                 yield* progress.push(0, { label: 'подготовка документа' });
                 yield* tryLabeledPromise('отметка запущенной подготовки', () =>
-                    documentPrepare.markRunning(input.preparedDocumentId, jobs.runId),
+                    documentPrepare.markRunning(input.fileId, jobs.runId),
                 );
 
-                const pipeline = Effect.gen(function* () {
-                    yield* progress.push(0.1, { label: 'извлечение содержимого' });
-                    const result = yield* tools.run(extractTools[input.engine], {
-                        fileId: input.fileId,
-                    });
-                    yield* progress.push(0.8, { label: 'сохранение результата' });
-                    yield* tools.run(prepareApplyTool, {
-                        preparedDocumentId: input.preparedDocumentId,
-                        result,
-                    });
-                });
+                yield* progress.push(0.1, { label: 'извлечение содержимого' });
+                const result = yield* tools.run(extractTools[input.engine], { fileId: input.fileId });
 
-                yield* pipeline.pipe(
-                    Effect.catchAll((error) => markFailedAndFail(input.preparedDocumentId, error)),
-                );
+                yield* progress.push(0.8, { label: 'сохранение результата' });
+                yield* tools.run(prepareApplyTool, { fileId: input.fileId, result });
 
                 yield* progress.push(1, { label: 'завершено' });
-            });
+            }).pipe(
+                // Любая ошибка генератора (включая guard и шаги до/после извлечения) → PreparedDocument
+                // помечается failed, ошибка пробрасывается дальше → JobRun тоже failed.
+                Effect.catchAll((error) => markFailedAndFail(input.fileId, error)),
+            );
     }
 }

@@ -1,41 +1,34 @@
-import { Controller, Get, HttpCode, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
-import type { JobRun } from '@miracle/types';
+import { Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { DocumentPrepareService } from './document-prepare.service.js';
 
 type PreparedDocumentResponse = NonNullable<Awaited<ReturnType<DocumentPrepareService['getLatestByFile']>>>;
-
-type PrepareResponse = {
-    prepared: PreparedDocumentResponse;
-    jobRun: Pick<JobRun, 'id' | 'job' | 'status' | 'key'>;
-};
 
 @Controller('documents')
 @UseGuards(AuthGuard)
 export class DocumentPrepareController {
     constructor(private readonly documentPrepare: DocumentPrepareService) {}
 
-    @Get(':fileId/prepared')
-    async getPrepared(@Param('fileId') fileId: string): Promise<PreparedDocumentResponse> {
-        const prepared = await this.documentPrepare.getLatestByFile(fileId);
-        if (!prepared) {
-            throw new NotFoundException('Подготовленный документ не найден');
-        }
-        return prepared;
+    /** Подготовленный документ по файлу или `null`, если подготовки ещё не было. */
+    @Get(':fileId')
+    getPrepared(@Param('fileId') fileId: string): Promise<PreparedDocumentResponse | null> {
+        return this.documentPrepare.getLatestByFile(fileId);
     }
 
+    /** Лёгкий статус подготовки для поллинга: `status` или `null`, если документа нет. */
+    @Get(':fileId/status')
+    async getStatus(
+        @Param('fileId') fileId: string,
+    ): Promise<{ status: PreparedDocumentResponse['status'] | null }> {
+        const prepared = await this.documentPrepare.getLatestByFile(fileId);
+        return { status: prepared?.status ?? null };
+    }
+
+    /** Ставит (повторную) подготовку в очередь; возвращает id прогона для трекинга. */
     @Post(':fileId/prepare')
     @HttpCode(200)
-    async prepare(@Param('fileId') fileId: string): Promise<PrepareResponse> {
-        const { prepared, jobRun } = await this.documentPrepare.enqueuePrepare(fileId);
-        return {
-            prepared,
-            jobRun: {
-                id: jobRun.id,
-                job: jobRun.job,
-                status: jobRun.status,
-                key: jobRun.key,
-            },
-        };
+    async prepare(@Param('fileId') fileId: string): Promise<{ runId: string }> {
+        const run = await this.documentPrepare.enqueuePrepare(fileId);
+        return { runId: run.id };
     }
 }
