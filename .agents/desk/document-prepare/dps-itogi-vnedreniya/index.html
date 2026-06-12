@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DPS — итоги внедрения Document Prepare Service</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f7f8fa; --ink: #19191c; --muted: #6c707e;
+    --accent: #7048e8; --accent2: #3573f0; --accent3: #0d9488;
+    --warn: #b25f00; --danger: #c9362c; --ok: #067d17; --line: #ebecf0;
+    --code-bg: #f7f8fa; --code-ink: #19191c; --cmt: #8c8c8c; --kw: #0033b3;
+    --str: #067d17; --fn: #00627a;
+    --maxw: 980px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.7 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 120px; }
+  header.top {
+    border-bottom: 1px solid var(--line); margin-bottom: 28px;
+    padding: 40px 22px 26px; background: linear-gradient(180deg, #ffffff, #f0f4ff);
+  }
+  header.top .inner { max-width: var(--maxw); margin: 0 auto; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -.2px; color: var(--ink); }
+  .sub { color: var(--muted); font-size: 16px; margin: 0; }
+  .badge {
+    display: inline-block; margin-top: 14px; margin-right: 8px; padding: 5px 11px; border-radius: 999px;
+    background: #f1f2f4; border: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  h2 {
+    font-size: 23px; margin: 52px 0 14px; padding-top: 14px; letter-spacing: -.2px;
+    border-top: 1px solid var(--line);
+  }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 10px; }
+  h3 { font-size: 18px; margin: 28px 0 10px; color: #383a42; }
+  p { margin: 12px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code.inl {
+    background: #f1f2f4; border: 1px solid #e3e5e8; border-radius: 5px;
+    padding: 1px 6px; font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: .88em;
+    color: #0a3069;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: 13px; line-height: 1.55;
+    color: var(--code-ink);
+  }
+  pre.flow { background: #fafbfc; color: #383a42; }
+  .lead { font-size: 18px; color: #383a42; }
+  .why, .note, .warnbox, .okbox {
+    border-radius: 10px; padding: 14px 16px 14px 18px; margin: 18px 0;
+    border: 1px solid var(--line);
+  }
+  .why { border-left: 3px solid var(--accent); background: #f4f1fd; }
+  .note { border-left: 3px solid var(--accent2); background: #eef3fe; }
+  .warnbox { border-left: 3px solid var(--warn); background: #fff7ea; }
+  .okbox { border-left: 3px solid var(--accent3); background: #ecfdf5; }
+  .why .t, .note .t, .warnbox .t, .okbox .t {
+    display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+  .why .t { color: var(--accent); }
+  .note .t { color: var(--accent2); }
+  .warnbox .t { color: var(--warn); }
+  .okbox .t { color: var(--accent3); }
+  nav.toc {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; margin: 8px 0 10px;
+  }
+  nav.toc h2 { border: 0; margin: 0 0 10px; padding: 0; font-size: 16px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc li { margin: 3px 0; }
+  nav.toc .part { list-style: none; margin: 12px 0 4px -22px; font-weight: 600; color: #383a42; }
+  table.cmp { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px; }
+  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+  table.cmp th { background: #f2f3f5; color: var(--ink); }
+  table.cmp td code { font-size: 12.5px; }
+  table.cmp tr.legacy td { background: #fffaf5; }
+  table.cmp tr.new td { background: #f6fffa; }
+  .timeline { list-style: none; padding: 0; margin: 20px 0; }
+  .timeline li {
+    position: relative; padding: 0 0 22px 28px; border-left: 2px solid var(--line);
+    margin-left: 8px;
+  }
+  .timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .timeline li::before {
+    content: ""; position: absolute; left: -7px; top: 6px;
+    width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--line);
+  }
+  .timeline li.done::before { background: var(--accent3); }
+  .timeline .phase-title { font-weight: 600; color: var(--ink); }
+  .timeline .phase-desc { color: var(--muted); font-size: 15px; margin-top: 2px; }
+  ul.checklist { list-style: none; padding: 0; margin: 16px 0; }
+  ul.checklist li { padding: 8px 0 8px 32px; position: relative; border-bottom: 1px dashed var(--line); }
+  ul.checklist li::before {
+    content: "☐"; position: absolute; left: 4px; color: var(--muted); font-size: 18px;
+  }
+  .prio-high { color: var(--danger); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+  .prio-med { color: var(--warn); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+  .prio-low { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .col { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--panel); }
+  .col h4 { margin: 0 0 8px; font-size: 13px; letter-spacing: .3px; text-transform: uppercase; }
+  .col.before h4 { color: var(--danger); }
+  .col.after h4 { color: var(--ok); }
+  footer { color: var(--muted); font-size: 14px; margin-top: 60px; border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <h1>DPS — итоги внедрения Document Prepare Service</h1>
+    <p class="sub">Расширенный отчёт: что изменилось в miracle/back-nest, как работать с подготовкой документов сейчас, где остался legacy и что упростить дальше.</p>
+    <span class="badge">Дата: 2026-06-12</span>
+    <span class="badge">Markdown-версия: <code class="inl">.agents/desk/document-prepare/dps-itogi-vnedreniya.md</code></span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <h2>Содержание</h2>
+  <ol>
+    <li class="part">Обзор</li>
+    <li><a href="#s0">0. Зачем появился DPS</a></li>
+    <li><a href="#s1">1. Что было → что стало</a></li>
+    <li><a href="#s2">2. Хронология фаз 1–7</a></li>
+    <li class="part">Работа с системой</li>
+    <li><a href="#s3">3. Поток для оператора и API</a></li>
+    <li><a href="#s4">4. Архитектура для разработчика</a></li>
+    <li><a href="#s5">5. Анализ заявок и контракты</a></li>
+    <li class="part">Технический долг</li>
+    <li><a href="#s6">6. Legacy параллельно с DPS</a></li>
+    <li><a href="#s7">7. Дублирующаяся логика</a></li>
+    <li><a href="#s8">8. Когнитивная нагрузка</a></li>
+    <li><a href="#s9">9. Что упростить (приоритеты)</a></li>
+    <li class="part">Справочник</li>
+    <li><a href="#s10">10. Карта модулей</a></li>
+    <li><a href="#s11">11. Чеклист для нового кода</a></li>
+    <li><a href="#s12">12. Ссылки и артефакты</a></li>
+  </ol>
+</nav>
+
+<p class="lead">До DPS извлечение текста из файлов было разрозненным: синхронные HTTP-вызовы с mammoth и SheetJS, отдельные vision-джобы, разный формат выхода в <code class="inl">FileContent</code>. Document Prepare Service (DPS) ввёл единый асинхронный конвейер: файл на диске → durable job <code class="inl">prepare-document</code> → унифицированный <strong>markdown</strong> в <code class="inl">PreparedDocument</code>. Этот документ — итог внедрения для тех, кто подключает новые фичи или разбирает, почему что-то «не извлекается» как раньше.</p>
+
+<!-- ===== 0 ===== -->
+<h2 id="s0"><span class="num">0</span>Зачем появился DPS</h2>
+
+<div class="grid2">
+  <div class="col before">
+    <h4>Проблемы старой модели</h4>
+    <ul>
+      <li>Синхронный extract в HTTP — таймауты на больших файлах</li>
+      <li>Разный выход: plain text, CSV-в-тексте, постраничный JSON</li>
+      <li>Vision и non-vision — разные пайплайны и точки входа</li>
+      <li>Потребители сами запускали извлечение (orders, UI)</li>
+      <li><code class="inl">FileContent</code> без жёсткой связи с <code class="inl">File</code></li>
+    </ul>
+  </div>
+  <div class="col after">
+    <h4>Цели DPS</h4>
+    <ul>
+      <li>Один выход: <strong>markdown</strong> в <code class="inl">PreparedDocument</code></li>
+      <li>Durable jobs + восстановление после рестарта</li>
+      <li>Роутинг по домену файла (kreuzberg / LLM Vision)</li>
+      <li>Автоподготовка на upload; re-prepare по API</li>
+      <li>Потребители только <em>читают</em>, не запускают разметку</li>
+    </ul>
+  </div>
+</div>
+
+<div class="okbox"><span class="t">Ключевое правило после внедрения</span>Вся разметка файлов в markdown инициируется <strong>только DPS</strong> (хук <code class="inl">FilesService.onFileSaved</code> или явный <code class="inl">POST /documents/:fileId/prepare</code>). Домены orders, tc, scan не должны ставить prepare сами.</div>
+
+<!-- ===== 1 ===== -->
+<h2 id="s1"><span class="num">1</span>Что было → что стало</h2>
+
+<table class="cmp">
+  <tr><th>Было</th><th>Стало</th></tr>
+  <tr class="new">
+    <td><code class="inl">POST /files-content/:fileId/extract</code><br>mammoth, xlsx, papaparse — синхронно</td>
+    <td>Job <code class="inl">prepare-document</code> → <code class="inl">PreparedDocument.markdown</code><br>extract endpoint → <strong>410 Gone</strong></td>
+  </tr>
+  <tr class="new">
+    <td>Разнородный выход в <code class="inl">FileContent</code></td>
+    <td>Единая строка markdown (+ опционально <code class="inl">pages</code>, <code class="inl">meta</code>)</td>
+  </tr>
+  <tr class="new">
+    <td>Vision: <code class="inl">extract-visual</code>, scan <code class="inl">llm-vision</code></td>
+    <td>Tools <code class="inl">vision.render.v1</code> + <code class="inl">vision.recognize.v1</code></td>
+  </tr>
+  <tr class="new">
+    <td>Заявки: inline mammoth/XLSX в <code class="inl">ApplicationChunkReader</code></td>
+    <td>Reader на Effect → только <code class="inl">PreparedDocument</code></td>
+  </tr>
+  <tr class="new">
+    <td><code class="inl">FilesService</code> знал о DPS (circular DI)</td>
+    <td>Хук <code class="inl">onFileSaved</code>; DPS подписывается через <code class="inl">DocumentPrepareUploadListener</code></td>
+  </tr>
+  <tr class="new">
+    <td>Order создавал <code class="inl">File</code> через <code class="inl">tx.file.create</code></td>
+    <td><code class="inl">files.create(data, { tx })</code> + <code class="inl">notifyFileSaved</code> после commit</td>
+  </tr>
+</table>
+
+<!-- ===== 2 ===== -->
+<h2 id="s2"><span class="num">2</span>Хронология фаз 1–7</h2>
+
+<ul class="timeline">
+  <li class="done">
+    <div class="phase-title">Фаза 1 — инфраструктура</div>
+    <div class="phase-desc">Модуль <code class="inl">document-prepare</code>, Prisma <code class="inl">PreparedDocument</code>, kreuzberg в docker, одна job <code class="inl">prepare-document</code>.</div>
+  </li>
+  <li class="done">
+    <div class="phase-title">Фаза 2 — Kreuzberg</div>
+    <div class="phase-desc">HTTP-адаптер, tool <code class="inl">kreuzberg.extract.v1</code>, <code class="inl">KreuzbergConcurrencyLimiter</code>, health-gating.</div>
+  </li>
+  <li class="done">
+    <div class="phase-title">Фаза 3 — LLM Vision</div>
+    <div class="phase-desc"><code class="inl">LlmVisionExtractor</code>, tools render/recognize, промпты в <code class="inl">vision/</code>, ToolMemo для <code class="inl">opId</code>.</div>
+  </li>
+  <li class="done">
+    <div class="phase-title">Фаза 4 — автоподготовка</div>
+    <div class="phase-desc"><code class="inl">onFileSaved</code> → fire-and-forget <code class="inl">enqueuePrepare</code>. Upload не падает при ошибке enqueue.</div>
+  </li>
+  <li class="done">
+    <div class="phase-title">Фаза 5 — readers</div>
+    <div class="phase-desc"><code class="inl">ApplicationChunkReader</code> на Effect/Stream; <code class="inl">analyse-application</code> без <code class="inl">extract-visual</code>.</div>
+  </li>
+  <li class="done">
+    <div class="phase-title">Фаза 6 — deprecation</div>
+    <div class="phase-desc">Sync extract → 410; legacy endpoint как мост для старых клиентов.</div>
+  </li>
+  <li class="done">
+    <div class="phase-title">Фаза 7 — dependency audit</div>
+    <div class="phase-desc">Удалены mammoth, papaparse, xlsx из back-nest; <code class="inl">exceljs</code> сохранён для отчётов orders.</div>
+  </li>
+</ul>
+
+<!-- ===== 3 ===== -->
+<h2 id="s3"><span class="num">3</span>Поток для оператора и API</h2>
+
+<h3>Жизненный цикл файла</h3>
+<ol>
+  <li>Загрузка: <code class="inl">POST /files/upload</code> или файл заявки заказа (<code class="inl">POST /orders/:id/applications/file</code>).</li>
+  <li>Запись <code class="inl">File</code> в БД → <code class="inl">notifyFileSaved</code>.</li>
+  <li>DPS (если формат поддерживается) ставит job <code class="inl">prepare-document</code>, статус <code class="inl">queued</code>.</li>
+  <li>Ожидание: <code class="inl">running</code> → <code class="inl">succeeded</code> или <code class="inl">failed</code>.</li>
+  <li>Проверка: <code class="inl">GET /documents/:fileId/prepared</code>.</li>
+  <li>Повтор: <code class="inl">POST /documents/:fileId/prepare</code>.</li>
+</ol>
+
+<table class="cmp">
+  <tr><th>Endpoint</th><th>Назначение</th><th>Статус</th></tr>
+  <tr><td><code class="inl">GET /documents/:fileId/prepared</code></td><td>Статус и markdown</td><td>Актуальный</td></tr>
+  <tr><td><code class="inl">POST /documents/:fileId/prepare</code></td><td>Re-prepare</td><td>Актуальный</td></tr>
+  <tr><td><code class="inl">POST /files-content/:fileId/extract</code></td><td>Синхронное извлечение</td><td><strong>410 Gone</strong></td></tr>
+  <tr><td><code class="inl">GET /files-content/:fileId</code></td><td>История FileContent</td><td>Read-only</td></tr>
+</table>
+
+<div class="warnbox"><span class="t">Front ещё не мигрирован</span><code class="inl">FileCard</code> и <code class="inl">useExtractFileContent</code> вызывают старый extract → пользователь получит 410. Целевое: статус PreparedDocument и кнопка re-prepare через DPS API.</div>
+
+<h3>Роутинг форматов (MVP)</h3>
+<table class="cmp">
+  <tr><th>Домен</th><th>Расширения</th><th>Движок</th></tr>
+  <tr><td>DOCUMENT</td><td>docx, doc, odt, …</td><td><code class="inl">kreuzberg</code></td></tr>
+  <tr><td>SPREADSHEET</td><td>xlsx, csv, …</td><td><code class="inl">kreuzberg</code></td></tr>
+  <tr><td>TEXT</td><td>md, txt</td><td><code class="inl">kreuzberg</code></td></tr>
+  <tr><td>VISUAL</td><td>pdf, jpg, png</td><td><code class="inl">llm-vision</code> (все PDF через vision на старте)</td></tr>
+</table>
+
+<!-- ===== 4 ===== -->
+<h2 id="s4"><span class="num">4</span>Архитектура для разработчика</h2>
+
+<pre class="flow">Upload / create File
+       │
+       ▼
+FilesService.notifyFileSaved(file)
+       │
+       ▼
+DocumentPrepareUploadListener ──► DocumentPrepareService.enqueuePrepare(fileId)
+       │                              routePreparedEngine(file) → engine
+       ▼
+Job prepare-document  (key: ['prepare-document', fileId])
+       │
+       ├── engine=kreuzberg ──► kreuzberg.extract.v1 ──► prepare.apply.v1
+       │
+       └── engine=llm-vision ──► vision.render.v1 ──► vision.recognize.v1 ──► prepare.apply.v1
+       │
+       ▼
+PreparedDocument (status, markdown, meta)
+       │
+       ▼
+Потребители: ApplicationChunkReader.read() — только чтение, без enqueue</pre>
+
+<h3>Куда смотреть в коде</h3>
+<table class="cmp">
+  <tr><th>Задача</th><th>Путь</th></tr>
+  <tr><td>Роутинг форматов</td><td><code class="inl">document-prepare/router.ts</code></td></tr>
+  <tr><td>Постановка job, re-prepare</td><td><code class="inl">document-prepare.service.ts</code></td></tr>
+  <tr><td>Upload-хук DPS</td><td><code class="inl">document-prepare-upload.listener.ts</code></td></tr>
+  <tr><td>Хук файлов</td><td><code class="inl">files.service.ts</code> — <code class="inl">onFileSaved</code>, <code class="inl">create({ tx })</code>, <code class="inl">effects.get</code></td></tr>
+  <tr><td>Job + tools</td><td><code class="inl">jobs/implementations/document-prepare/</code></td></tr>
+  <tr><td>Vision промпты / рендер</td><td><code class="inl">document-prepare/vision/</code></td></tr>
+  <tr><td>Ошибки extractors</td><td><code class="inl">document-prepare/errors.ts</code></td></tr>
+  <tr><td>Чтение markdown заявки</td><td><code class="inl">orders/application-chunk-reader.ts</code></td></tr>
+</table>
+
+<div class="note"><span class="t">Файл в транзакции (заявка заказа)</span>
+<pre>await prisma.$transaction(async (tx) => {
+  const file = await files.create(fileInput, { tx });
+  const app = await tx.orderApplication.create({ … fileId: file.id });
+  return { file, app };
+});
+files.notifyFileSaved(file);  // только после commit</pre>
+Без <code class="inl">notifyFileSaved</code> DPS не узнает о файле — prepare не стартует.</div>
+
+<h3>Env</h3>
+<table class="cmp">
+  <tr><th>Переменная</th><th>Назначение</th></tr>
+  <tr><td><code class="inl">KREUZBERG_URL</code></td><td>REST kreuzberg</td></tr>
+  <tr><td><code class="inl">DPS_MAX_CONCURRENCY</code></td><td>Semaphore на HTTP kreuzberg (process-local)</td></tr>
+  <tr><td><code class="inl">YANDEX_CLOUD_*</code></td><td>LLM Vision</td></tr>
+</table>
+
+<!-- ===== 5 ===== -->
+<h2 id="s5"><span class="num">5</span>Анализ заявок и контракты</h2>
+
+<p>Джоба <code class="inl">analyse-application</code> <strong>не готовит</strong> файлы. Она вызывает <code class="inl">ApplicationChunkReader.read(application)</code>, который для file-applications требует <code class="inl">PreparedDocument.status === 'succeeded'</code>.</p>
+
+<table class="cmp">
+  <tr><th>Статус PreparedDocument</th><th>Поведение reader</th></tr>
+  <tr><td>нет записи</td><td>Ошибка: нет подготовленного документа</td></tr>
+  <tr><td><code class="inl">queued</code> / <code class="inl">running</code></td><td>Ошибка: ожидает / подготавливается</td></tr>
+  <tr><td><code class="inl">failed</code></td><td>Ошибка с текстом из <code class="inl">prepared.error</code></td></tr>
+  <tr><td><code class="inl">succeeded</code></td><td>Один чанк <code class="inl">{ chunkKey: 'markdown', chunk: { text } }</code></td></tr>
+</table>
+
+<div class="why"><span class="t">Планируемый контракт на уровне заказа</span>Анализ заказа возможен, когда <strong>все</strong> file-applications имеют готовый PreparedDocument. Сейчас проверка fail-fast внутри reader по каждому файлу; явный gate на уровне оркестратора заказа — кандидат на улучшение.</div>
+
+<p>API reader (только Effect):</p>
+<pre>read(application): Effect&lt;ReadChunk[], ApplicationReadError&gt;
+getMarkdown(fileId): Stream&lt;string, ApplicationReadError&gt;  // сейчас одна итерация</pre>
+
+<!-- ===== 6 ===== -->
+<h2 id="s6"><span class="num">6</span>Legacy параллельно с DPS</h2>
+
+<p>Два мира данных — главный источник путаницы:</p>
+
+<table class="cmp">
+  <tr><th>Компонент</th><th>Модель</th><th>Статус</th></tr>
+  <tr class="new"><td><code class="inl">ApplicationChunkReader</code>, <code class="inl">analyse-application</code></td><td><code class="inl">PreparedDocument</code></td><td>Новый путь</td></tr>
+  <tr class="legacy"><td><code class="inl">tc-extract.job</code></td><td><code class="inl">FileContent</code></td><td>Не мигрирован</td></tr>
+  <tr class="legacy"><td>Scan: <code class="inl">llm-vision</code>, <code class="inl">ocr</code>, <code class="inl">llm-vision-tc</code></td><td><code class="inl">FileContent</code> via <code class="inl">scan.shared.ts</code></td><td>Дублирует vision-pipeline</td></tr>
+  <tr class="legacy"><td><code class="inl">extract-visual.job</code></td><td><code class="inl">FileContent</code></td><td>Не вызывается из analyse-application</td></tr>
+  <tr class="legacy"><td><code class="inl">front</code> FileCard</td><td>extract UI</td><td>410</td></tr>
+  <tr class="legacy"><td><code class="inl">back/</code> (lowdb)</td><td>Свой extraction</td><td>Вне back-nest</td></tr>
+</table>
+
+<!-- ===== 7 ===== -->
+<h2 id="s7"><span class="num">7</span>Дублирующаяся логика</h2>
+
+<h3>7.1 Два vision-пайплайна</h3>
+<div class="grid2">
+  <div class="col">
+    <h4 style="color:var(--accent3)">DPS</h4>
+    <p><code class="inl">LlmVisionExtractor</code> + JobTools<br>
+    <code class="inl">vision/prompts.ts</code>, <code class="inl">render-pages.ts</code><br>
+    Результат → <code class="inl">PreparedDocument</code></p>
+  </div>
+  <div class="col">
+    <h4 style="color:var(--warn)">Legacy scan</h4>
+    <p><code class="inl">scan.shared.ts</code> → <code class="inl">visionRecognize</code><br>
+    Child jobs, <code class="inl">submitOnceEffect</code><br>
+    Результат → <code class="inl">FileContent</code></p>
+  </div>
+</div>
+<p>Промпты <code class="inl">LLM_VISION_*</code> re-export в scan для старых jobs; изменения scale/usedPages/poll нужно помнить в двух ветках, пока scan не выведен.</p>
+
+<h3>7.2 Poll Yandex</h3>
+<p>Inline-цикл в <code class="inl">LlmVisionExtractor.extract()</code> и в <code class="inl">VisionRecognizeTool</code> — намеренное дублирование (KISS). При смене интервала или условия <code class="inl">done</code> править два места.</p>
+
+<h3>7.3 Загрузка файла в DPS tools</h3>
+<pre>files.effects.get(fileId) → mapError → fail if null → getFilePath</pre>
+<p>Повторяется в <code class="inl">kreuzberg-extract.tool.ts</code> и <code class="inl">vision-render.tool.ts</code>. Кандидат: <code class="inl">files.effects.require(fileId)</code>.</p>
+
+<h3>7.4 DocumentExtractor vs tools</h3>
+<ul>
+  <li>Kreuzberg: tool вызывает <code class="inl">extractor.extract()</code> целиком.</li>
+  <li>Vision: tool — гранулярно (<code class="inl">renderPages</code>, <code class="inl">submit</code>, <code class="inl">pollOnce</code>); <code class="inl">extract()</code> дублирует цикл для порта.</li>
+</ul>
+
+<!-- ===== 8 ===== -->
+<h2 id="s8"><span class="num">8</span>Когнитивная нагрузка и лишние действия</h2>
+
+<h3>Для разработчика</h3>
+<table class="cmp">
+  <tr><th>Тема</th><th>Нагрузка</th></tr>
+  <tr><td>Два API</td><td><code class="inl">/files-content/...</code> vs <code class="inl">/documents/...</code></td></tr>
+  <tr><td>Кто запускает prepare</td><td>Только DPS; не из order/tc jobs</td></tr>
+  <tr><td><code class="inl">notifyFileSaved</code> после <code class="inl">{ tx }</code></td><td>Легко забыть на новом пути создания File</td></tr>
+  <tr><td>Engine не в job key</td><td>Один prepare на fileId; engine из роутера при enqueue</td></tr>
+  <tr><td>Vision без кэша images</td><td>Re-render при resume — см. JSDoc <code class="inl">vision.render.v1</code></td></tr>
+  <tr><td>Limiter vs очередь jobs</td><td><code class="inl">DPS_MAX_CONCURRENCY</code> режет HTTP kreuzberg, не число JobRun в БД</td></tr>
+</table>
+
+<h3>Для пользователя продукта</h3>
+<table class="cmp">
+  <tr><th>Тема</th><th>Нагрузка</th></tr>
+  <tr><td>Асинхронность</td><td>Upload ≠ готовый markdown</td></tr>
+  <tr><td>Анализ до prepare</td><td>Падение с текстом про PreparedDocument</td></tr>
+  <tr><td>Кнопка «извлечь» в UI</td><td>410 до миграции front</td></tr>
+  <tr><td>Restore файла</td><td>Автоподготовка не перезапускается без нового create</td></tr>
+</table>
+
+<h3>Лишние / спорные артефакты</h3>
+<ol>
+  <li><code class="inl">extract-visual.job</code> — мёртв для analyse-application.</li>
+  <li>Две зеркальные ветки в <code class="inl">prepare-document.job.ts</code>.</li>
+  <li>410 endpoint extract — временный мост.</li>
+  <li><code class="inl">scan.shared</code> vision path — большой дубликат при выводе scan.</li>
+</ol>
+
+<!-- ===== 9 ===== -->
+<h2 id="s9"><span class="num">9</span>Что упростить (приоритеты)</h2>
+
+<h3><span class="prio-high">Высокий</span></h3>
+<ol>
+  <li>Мигрировать <strong>front</strong> на PreparedDocument (статус, re-prepare).</li>
+  <li><code class="inl">files.effects.require(fileId)</code> — убрать boilerplate в DPS tools.</li>
+  <li>Единый <code class="inl">getPreparedMarkdown(fileId)</code> в DocumentPrepareService (логика статусов сейчас в ApplicationChunkReader).</li>
+</ol>
+
+<h3><span class="prio-med">Средний</span></h3>
+<ol>
+  <li><code class="inl">tc-extract.job</code> → PreparedDocument.</li>
+  <li>Deprecate scan vision jobs или перевести на DPS.</li>
+  <li>Gate «все application prepared» перед batch analyse-order.</li>
+</ol>
+
+<h3><span class="prio-low">Низкий</span></h3>
+<ol>
+  <li>Таблица <code class="inl">engine → steps[]</code> в prepare-document.job.</li>
+  <li>Удалить POST extract после миграции клиентов.</li>
+  <li>Убрать <code class="inl">extract-visual.job</code> из registry.</li>
+</ol>
+
+<!-- ===== 10 ===== -->
+<h2 id="s10"><span class="num">10</span>Карта модулей</h2>
+
+<pre class="flow">back-nest/src/
+  document-prepare/              # домен DPS (без @JobImpl)
+    adapters/                    # kreuzberg-http, llm-vision
+    vision/                      # prompts, render-pages
+    errors.ts
+    document-prepare-upload.listener.ts
+    document-prepare.service.ts
+    document-prepare.controller.ts
+  jobs/implementations/document-prepare/
+    prepare-document.job.ts
+    tools/                       # kreuzberg.extract, vision.*, prepare.apply
+  files/
+    files.service.ts             # onFileSaved, create({ tx }), effects.get
+  files-content/                 # read-only FileContent, extract → 410
+  orders/
+    application-chunk-reader.ts  # Effect → PreparedDocument</pre>
+
+<!-- ===== 11 ===== -->
+<h2 id="s11"><span class="num">11</span>Чеклист для нового кода</h2>
+
+<ul class="checklist">
+  <li>Новый потребитель текста файла → <code class="inl">PreparedDocument</code>, не <code class="inl">FileContent</code></li>
+  <li>Не вызывать <code class="inl">enqueuePrepare</code> из доменов-потребителей — только хук или POST API</li>
+  <li>Создание File в транзакции → <code class="inl">files.create(..., { tx })</code> + <code class="inl">notifyFileSaved</code> после commit</li>
+  <li>Шаги prepare — JobTool + ToolMemo, не child JobRun</li>
+  <li>Vision-промпты — из <code class="inl">document-prepare/vision/prompts.ts</code></li>
+  <li>Документация на русском: README модуля + <code class="inl">dp.report.md</code></li>
+</ul>
+
+<!-- ===== 12 ===== -->
+<h2 id="s12"><span class="num">12</span>Ссылки и артефакты</h2>
+
+<table class="cmp">
+  <tr><th>Документ</th><th>Назначение</th></tr>
+  <tr><td><code class="inl">.agents/desk/document-prepare/patterns.md</code></td><td>Точка входа паттернов</td></tr>
+  <tr><td><code class="inl">effect-patterns.md</code>, <code class="inl">job-patterns.md</code></td><td>Effect, JobTool, Swarm, limiter</td></tr>
+  <tr><td><code class="inl">phase-3</code> … <code class="inl">phase-7</code></td><td>Отчёты по фазам</td></tr>
+  <tr><td><code class="inl">document-prepare/README.md</code></td><td>Операционная документация модуля</td></tr>
+  <tr><td><code class="inl">.agents/plans/dp-agents.plan.md</code></td><td>Архитектурный план</td></tr>
+  <tr><td><code class="inl">.agents/plans/dp.report.md</code></td><td>Журнал реализации</td></tr>
+  <tr><td><code class="inl">dps-itogi-vnedreniya.md</code></td><td>Краткая markdown-версия этого отчёта</td></tr>
+</table>
+
+<footer>
+  Document Prepare Service — итоги внедрения в проекте miracle (back-nest).<br>
+  При изменениях DPS обновляйте <code class="inl">dp.report.md</code>, README модуля и при необходимости этот файл.
+</footer>
+
+</div>
+</body>
+</html>
