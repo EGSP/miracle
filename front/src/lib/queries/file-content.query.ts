@@ -19,16 +19,12 @@ export const useGetFileContentTokens = (fileId: string, contentId: string | unde
   })
 }
 
-export const useExtractFileContent = (fileId: string) => {
-  const queryClient = useQueryClient()
-
+export const useExtractFileContent = (_fileId: string) => {
   return useMutation({
-    mutationFn: ({ retryIfLastFailed = false }: { retryIfLastFailed?: boolean } = {}) =>
-      filesContent.extract(fileId, { retryIfLastFailed }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: [...FILE_CONTENT_QUERY_KEY, fileId],
-      })
+    mutationFn: (_options?: { retryIfLastFailed?: boolean }) => {
+      throw new Error(
+        "Извлечение через FileContent устарело. Используйте Document Prepare Service: POST /documents/:fileId/prepare.",
+      )
     },
   })
 }

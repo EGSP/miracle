@@ -61,10 +61,60 @@
   border-color: var(--aramid-color-gray-20);
 }
 
+.application-item--prepare-failed {
+  border-color: var(--aramid-color-semantic-danger);
+}
+
+.application-item--prepare-failed:hover:not(:disabled) {
+  border-color: var(--aramid-color-semantic-danger);
+}
+
+.application-item--prepare-failed:focus-visible {
+  outline-color: var(--aramid-color-semantic-danger);
+}
+
 .application-item__icon {
   display: inline-flex;
   flex-shrink: 0;
   color: var(--aramid-color-gray-60);
+}
+
+/* ─── Индикатор статуса подготовки документа (DPS) ──────────────────────────── */
+
+.application-item__status--muted {
+  color: var(--aramid-color-gray-40);
+}
+
+.application-item__status--queued {
+  color: var(--aramid-color-gray-60);
+}
+
+.application-item__status--running {
+  color: var(--aramid-color-blue-60);
+}
+
+.application-item__status--succeed {
+  color: var(--aramid-color-green-60);
+}
+
+.application-item__status--failed {
+  color: var(--aramid-color-red-60);
+}
+
+.application-item__spin {
+  animation: application-item-spin 0.9s linear infinite;
+}
+
+@keyframes application-item-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .application-item__spin {
+    animation: none;
+  }
 }
 
 .application-item__label {

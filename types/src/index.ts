@@ -12,6 +12,7 @@ export * from './order-position.js';
 export * from './order-report.js';
 export * from './db.js';
 export * from './file-content.js';
+export * from './prepared-document.js';
 export * from './product-type.js';
 export * from './technical-condition.js';
 export * from './designation.js';

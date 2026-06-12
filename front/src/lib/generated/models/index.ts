@@ -11,3 +11,4 @@ export * from './files.models';
 export * from './filesContent.models';
 export * from './technicalConditions.models';
 export * from './orders.models';
+export * from './documentPrepare.models';

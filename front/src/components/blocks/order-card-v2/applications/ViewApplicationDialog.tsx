@@ -1,6 +1,14 @@
-import { Text } from "@miracle/aramid"
-import { hasDeletion, type ApplicationData, type OrderApplication, type Stored } from "@miracle/types"
-import { Download, Trash2 } from "lucide-react"
+import { Stack, Text } from "@miracle/aramid"
+import {
+  hasDeletion,
+  type ApplicationData,
+  type FileModel,
+  type OrderApplication,
+  type PrepareStatus,
+  type Stored,
+} from "@miracle/types"
+import { Link } from "@tanstack/react-router"
+import { ScanText, Trash2 } from "lucide-react"
 import { useCallback, useMemo } from "react"
 import type { ReactNode } from "react"
 
@@ -10,6 +18,13 @@ import { InlineMutationNotification } from "@/components/ui/external/inline-muta
 import { FileContentPreview } from "@/components/ui/external/file-content-preview"
 import { useDialog } from "@/lib/hooks/use-dialog"
 import { resolveFileDownloadUrl, resolveFilePreviewUrl } from "@/lib/resolve-file-preview-url"
+import {
+  canEnqueuePrepare,
+  isDocumentPrepared,
+  preparedDocumentPreviewSearch,
+  usePrepareDocument,
+  usePreparedStatus,
+} from "@/lib/queries/document-prepare.query"
 import { useRemoveApplication } from "@/lib/queries/order-application.query"
 import { useGetFiles } from "@/lib/queries/file.query"
 
@@ -23,7 +38,7 @@ type Props = {
 function useViewApplicationActions(
   application: Stored<OrderApplication>,
   onClose: () => void,
-  leadingActions: DialogButtonConfig[] = [],
+  middleActions: DialogButtonConfig[] = [],
 ) {
   const removeMutation = useRemoveApplication(application.orderId)
   const data = application.data as ApplicationData
@@ -40,13 +55,13 @@ function useViewApplicationActions(
   }, [isRemoved, data, removeMutation.isPending])
 
   const actions: DialogButtonConfig[] = [
-    ...leadingActions,
     {
       label: "Закрыть",
       onClick: onClose,
       variant: "secondary",
       disabled: removeMutation.isPending,
     },
+    ...middleActions,
     {
       label: removeMutation.isPending ? "Удаление…" : "Удалить",
       icon: <Trash2 size={16} />,
@@ -63,9 +78,11 @@ function useViewApplicationActions(
 
 function ApplicationDialogFooter({
   removeMutation,
+  prepareMutation,
   children,
 }: {
   removeMutation: ReturnType<typeof useRemoveApplication>
+  prepareMutation?: ReturnType<typeof usePrepareDocument>
   children: ReactNode
 }) {
   return (
@@ -74,8 +91,49 @@ function ApplicationDialogFooter({
       {removeMutation.isSuccess && (
         <Text.Helper as="p">{REMOVE_SUCCESS_MESSAGE}</Text.Helper>
       )}
+      {prepareMutation && <InlineMutationNotification mutation={prepareMutation} />}
       <InlineMutationNotification mutation={removeMutation} />
     </>
+  )
+}
+
+function FileApplicationLinks({
+  file,
+  fileId,
+  status,
+}: {
+  file: FileModel | undefined
+  fileId: string
+  status: PrepareStatus | null
+}) {
+  const canPreview = isDocumentPrepared(status)
+
+  return (
+    <Stack orientation="horizontal" gap={3}>
+      <Text.Helper as="span">
+        {file ? (
+          <a href={resolveFileDownloadUrl(file)} rel="noopener noreferrer">
+            Скачать файл
+          </a>
+        ) : (
+          "Скачивание недоступно"
+        )}
+      </Text.Helper>
+      <Text.Helper as="span">
+        {canPreview ? (
+          <Link
+            to="/prepared-document"
+            search={preparedDocumentPreviewSearch(fileId)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Просмотр разметки
+          </Link>
+        ) : (
+          "Просмотр разметки недоступен"
+        )}
+      </Text.Helper>
+    </Stack>
   )
 }
 
@@ -125,19 +183,21 @@ function ViewFileApplicationDialog({
     includeMeta: true,
   })
   const file = files[0]
+  const {
+    data: prepareStatus,
+    isPending: isPrepareStatusPending,
+  } = usePreparedStatus(fileId)
+  const prepareMutation = usePrepareDocument(fileId)
+  const status = prepareStatus?.status ?? null
 
-  const downloadAction: DialogButtonConfig[] = [
+  const middleActions: DialogButtonConfig[] = [
     {
-      label: "Скачать",
-      icon: <Download size={16} />,
-      variant: "tertiary",
-      disabled: !file,
+      label: "Подготовить",
+      icon: <ScanText size={16} />,
+      variant: "secondary",
+      disabled: isPrepareStatusPending || !canEnqueuePrepare(status, prepareMutation.isPending),
       onClick: () => {
-        if (!file) return
-        const link = document.createElement("a")
-        link.href = resolveFileDownloadUrl(file)
-        link.rel = "noopener"
-        link.click()
+        prepareMutation.mutate()
       },
     },
   ]
@@ -145,7 +205,7 @@ function ViewFileApplicationDialog({
   const { actions, removeMutation } = useViewApplicationActions(
     application,
     onClose,
-    downloadAction,
+    middleActions,
   )
 
   return (
@@ -155,7 +215,8 @@ function ViewFileApplicationDialog({
       onClose={onClose}
       actions={actions}
     >
-      <ApplicationDialogFooter removeMutation={removeMutation}>
+      <ApplicationDialogFooter removeMutation={removeMutation} prepareMutation={prepareMutation}>
+        <FileApplicationLinks file={file} fileId={fileId} status={status} />
         {isPending && <Text.Helper as="p">Загрузка файла…</Text.Helper>}
         {isError && <Text.Helper as="p">Не удалось загрузить файл</Text.Helper>}
         {!isPending && !isError && file && (

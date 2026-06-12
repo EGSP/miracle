@@ -1,8 +1,7 @@
 import { Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import type { PrepareStatus, PreparedDocument, Stored } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { DocumentPrepareService } from './document-prepare.service.js';
-
-type PreparedDocumentResponse = NonNullable<Awaited<ReturnType<DocumentPrepareService['getLatestByFile']>>>;
 
 @Controller('documents')
 @UseGuards(AuthGuard)
@@ -11,7 +10,7 @@ export class DocumentPrepareController {
 
     /** Подготовленный документ по файлу или `null`, если подготовки ещё не было. */
     @Get(':fileId')
-    getPrepared(@Param('fileId') fileId: string): Promise<PreparedDocumentResponse | null> {
+    getPrepared(@Param('fileId') fileId: string): Promise<Stored<PreparedDocument> | null> {
         return this.documentPrepare.getLatestByFile(fileId);
     }
 
@@ -19,7 +18,7 @@ export class DocumentPrepareController {
     @Get(':fileId/status')
     async getStatus(
         @Param('fileId') fileId: string,
-    ): Promise<{ status: PreparedDocumentResponse['status'] | null }> {
+    ): Promise<{ status: PrepareStatus | null }> {
         const prepared = await this.documentPrepare.getLatestByFile(fileId);
         return { status: prepared?.status ?? null };
     }

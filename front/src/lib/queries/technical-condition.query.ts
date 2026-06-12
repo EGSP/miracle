@@ -87,8 +87,3 @@ export const useLinkedProductType = (tcId: string | undefined) => {
   })
 }
 
-export const useExtractTcDetails = (id: string) => {
-  return useMutation({
-    mutationFn: () => technicalConditions.extractDetails(id),
-  })
-}

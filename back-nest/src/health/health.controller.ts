@@ -1,11 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
-import type { KreuzbergHealthStatus } from '../document-prepare/adapters/kreuzberg-http.extractor.js';
 import { KreuzbergHttpExtractor } from '../document-prepare/adapters/kreuzberg-http.extractor.js';
 
 type HealthResponse = {
     status: 'ok';
     timestamp: string;
-    kreuzberg: KreuzbergHealthStatus;
+    kreuzberg: {
+        status: 'up' | 'down';
+        version?: string;
+        error?: string;
+    };
 };
 
 @Controller()

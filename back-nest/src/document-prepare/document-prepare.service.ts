@@ -1,12 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { FileModel, JobRun } from '@miracle/types';
+import type { FileModel, JobRun, PreparedDocument, Stored } from '@miracle/types';
 import { PrismaService } from '../database/prisma.service.js';
 import { FilesService } from '../files/files.service.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import type { PreparedEngine, PreparedResult } from './extractor.port.js';
 import { PREPARE_DOCUMENT_JOB_ID, prepareJobKey, routePreparedEngine } from './router.js';
-
-type PreparedDocumentRow = Awaited<ReturnType<PrismaService['preparedDocument']['findFirst']>>;
 
 /**
  * {@link PreparedDocument}: постановка подготовки в очередь и чтение состояния.
@@ -47,11 +45,12 @@ export class DocumentPrepareService {
     }
 
     /** Актуальная (не удалённая) запись подготовки по файлу или `null`. */
-    async getLatestByFile(fileId: string): Promise<NonNullable<PreparedDocumentRow> | null> {
-        return this.prisma.preparedDocument.findFirst({
+    async getLatestByFile(fileId: string): Promise<Stored<PreparedDocument> | null> {
+        const row = await this.prisma.preparedDocument.findFirst({
             where: { fileId, deletedAt: null },
             orderBy: { updatedAt: 'desc' },
         });
+        return row as Stored<PreparedDocument> | null;
     }
 
     // ── Переходы статуса (вызываются джобой `prepare-document`, ключ — fileId) ──────────────

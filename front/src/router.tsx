@@ -10,6 +10,7 @@ import OperationsPage from "./pages/OperationsPage"
 import OrdersPage from "./pages/OrdersPage"
 import ProductTypesPage from "./pages/ProductTypesPage"
 import TechnicalConditionsPage from "./pages/TechnicalConditionsPage"
+import PreparedDocumentPage from "./pages/PreparedDocumentPage"
 
 const rootRoute = createRootRoute({
   component: App,
@@ -95,6 +96,15 @@ const technicalConditionsRoute = createRoute({
   }),
 })
 
+const preparedDocumentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/prepared-document",
+  component: PreparedDocumentPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    fileId: typeof search.fileId === "string" ? search.fileId : undefined,
+  }),
+})
+
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
@@ -115,6 +125,7 @@ const routeTree = rootRoute.addChildren([
   operationsRoute,
   productTypesRoute,
   technicalConditionsRoute,
+  preparedDocumentRoute,
   adminRoute,
   authRoute.addChildren([loginRoute, registerRoute]),
 ])

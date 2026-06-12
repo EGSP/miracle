@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { Stored, TechnicalCondition } from '@miracle/types';
-import type { TechnicalConditionsGetLinkedProductTypeResponse, TechnicalConditionsExtractDetailsResponse } from './models';
+import type { TechnicalConditionsGetLinkedProductTypeResponse } from './models';
 
 export const technicalConditions = {
     list: (query: { productTypeId?: string }) => customInstance<Stored<TechnicalCondition>[]>({
@@ -33,9 +33,5 @@ export const technicalConditions = {
     remove: (id: string) => customInstance<Stored<TechnicalCondition>>({
         method: 'DELETE',
         url: formatPath('/technical-conditions/:id', { id }),
-    }),
-    extractDetails: (id: string) => customInstance<TechnicalConditionsExtractDetailsResponse>({
-        method: 'POST',
-        url: formatPath('/technical-conditions/:id/extract-details', { id }),
     }),
 };

@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { FileContent, Stored } from '@miracle/types';
-import type { FilesContentGetTokensResponse, SoftDeleteContentQueryDto, FileContentQueryDto, ExtractContentQueryDto } from './models';
+import type { FilesContentGetTokensResponse, SoftDeleteContentQueryDto, FileContentQueryDto } from './models';
 
 export const filesContent = {
     getTokens: (contentId: string) => customInstance<FilesContentGetTokensResponse>({
@@ -21,9 +21,8 @@ export const filesContent = {
         url: formatPath('/files-content/:fileId', { fileId }),
         params: fileContentQueryDto,
     }),
-    extract: (fileId: string, extractContentQueryDto: ExtractContentQueryDto) => customInstance<void>({
+    extract: (_fileId: string) => customInstance<void>({
         method: 'POST',
-        url: formatPath('/files-content/:fileId/extract', { fileId }),
-        params: extractContentQueryDto,
+        url: formatPath('/files-content/:fileId/extract', { _fileId }),
     }),
 };
