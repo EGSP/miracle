@@ -72,6 +72,11 @@ export class AppConfigService {
         return this.config.get('KREUZBERG_URL', { infer: true });
     }
 
+    /** Базовый URL сервиса конвертации legacy .doc → .docx (LibreOffice headless). */
+    get libreofficeConvertUrl(): string {
+        return this.config.get('LIBREOFFICE_CONVERT_URL', { infer: true });
+    }
+
     /** Лимит одновременных HTTP-запросов к kreuzberg. */
     get dpsMaxConcurrency(): number {
         return this.config.get('DPS_MAX_CONCURRENCY', { infer: true });

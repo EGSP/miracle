@@ -5,6 +5,7 @@ import { DocumentPrepareController } from './document-prepare.controller.js';
 import { DocumentPrepareService } from './document-prepare.service.js';
 import { DocumentPrepareUploadListener } from './document-prepare-upload.listener.js';
 import { KreuzbergHttpExtractor } from './adapters/kreuzberg-http.extractor.js';
+import { LibreOfficeHttpConverter } from './adapters/libreoffice-http.converter.js';
 import { LlmVisionExtractor } from './adapters/llm-vision.extractor.js';
 import { KreuzbergConcurrencyLimiter } from './kreuzberg-concurrency.limiter.js';
 
@@ -15,12 +16,14 @@ import { KreuzbergConcurrencyLimiter } from './kreuzberg-concurrency.limiter.js'
         DocumentPrepareService,
         DocumentPrepareUploadListener,
         KreuzbergConcurrencyLimiter,
+        LibreOfficeHttpConverter,
         KreuzbergHttpExtractor,
         LlmVisionExtractor,
     ],
     exports: [
         DocumentPrepareService,
         KreuzbergConcurrencyLimiter,
+        LibreOfficeHttpConverter,
         KreuzbergHttpExtractor,
         LlmVisionExtractor,
     ],

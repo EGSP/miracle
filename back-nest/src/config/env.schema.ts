@@ -23,6 +23,8 @@ export const envSchema = z.object({
     YANDEX_CLOUD_FOLDER_ID: z.string().optional(),
     /** Базовый URL REST-сервиса Kreuzberg (Docker). */
     KREUZBERG_URL: z.string().url().default('http://localhost:8000'),
+    /** Базовый URL сервиса конвертации legacy .doc → .docx (Docker, LibreOffice unoserver REST). */
+    LIBREOFFICE_CONVERT_URL: z.string().url().default('http://localhost:2004'),
     /** Лимит одновременных HTTP-запросов к kreuzberg. */
     DPS_MAX_CONCURRENCY: z.coerce.number().int().positive().default(4),
     /**

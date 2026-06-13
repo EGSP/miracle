@@ -13,6 +13,14 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # Конвертация legacy .doc → .docx перед Kreuzberg (см. data-prepare-services/libreoffice).
+  # Готовый образ unoserver + REST API; наружу не публикуем (REST без auth) — только во внутр. сети.
+  libreoffice-convert:
+    image: libreofficedocker/libreoffice-unoserver:3.19
+    ports:
+      - '${LIBREOFFICE_CONVERT_HOST_PORT:-2004}:2004'
+    restart: unless-stopped
+
   postgres:
     image: postgres:16
     container_name: miracle_postgres

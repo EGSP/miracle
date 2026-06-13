@@ -9,6 +9,7 @@ import type { PreparedResult } from '../extractor.port.js';
 import { ExtractError, extractError } from '../errors.js';
 import { KreuzbergConcurrencyLimiter } from '../kreuzberg-concurrency.limiter.js';
 import { dedupeMarkdownTableCells } from '../markdown-table-dedupe.js';
+import { LibreOfficeHttpConverter } from './libreoffice-http.converter.js';
 
 const EXTRACT_TIMEOUT_MS = 120_000;
 const HEALTH_TIMEOUT_MS = 5_000;
@@ -113,6 +114,7 @@ export class KreuzbergHttpExtractor {
     constructor(
         private readonly config: AppConfigService,
         private readonly limiter: KreuzbergConcurrencyLimiter,
+        private readonly docxConverter: LibreOfficeHttpConverter,
     ) {}
 
     extract(file: FileModel, filePath: string): Effect.Effect<PreparedResult, ExtractError> {
@@ -120,14 +122,42 @@ export class KreuzbergHttpExtractor {
         // ошибку транспорта, которую мы маппим в ExtractError. Лишний round-trip на каждый документ
         // не нужен. Здоровье сервиса отдельно отдаёт health.controller через checkHealth().
         return this.limiter.withPermit(
-            Effect.tryPromise({
-                try: () => this.postExtract(filePath),
-                catch: (error) =>
-                    error instanceof ExtractError
-                        ? error
-                        : extractError(`HTTP kreuzberg /extract: ${formatUnknown(error)}`),
+            Effect.gen(this, function* () {
+                const input = yield* this.loadInput(filePath);
+                return yield* Effect.tryPromise({
+                    try: () => this.postExtract(input.bytes, input.fileName),
+                    catch: (error) =>
+                        error instanceof ExtractError
+                            ? error
+                            : extractError(`HTTP kreuzberg /extract: ${formatUnknown(error)}`),
+                });
             }),
         );
+    }
+
+    /**
+     * Читает файл и, для legacy `.doc`, конвертирует его в `.docx` (Kreuzberg извлекает `.doc` битым:
+     * кириллица → CJK, обрыв текста, потеря таблиц). {@link ConvertError} маппится в {@link ExtractError}.
+     */
+    private loadInput(
+        filePath: string,
+    ): Effect.Effect<{ bytes: Uint8Array<ArrayBuffer>; fileName: string }, ExtractError> {
+        return Effect.gen(this, function* () {
+            const bytes = yield* Effect.tryPromise({
+                try: () => readFile(filePath),
+                catch: (error) => extractError(`Чтение файла: ${formatUnknown(error)}`),
+            });
+            const fileName = path.basename(filePath);
+
+            if (path.extname(filePath).toLowerCase() !== '.doc') {
+                return { bytes, fileName };
+            }
+
+            const docx = yield* this.docxConverter
+                .convert(bytes, fileName)
+                .pipe(Effect.mapError((error) => extractError(error.message)));
+            return { bytes: docx, fileName: fileName.replace(/\.doc$/i, '.docx') };
+        });
     }
 
     /** Быстрая проверка GET /health (fallback: GET /version). Используется health.controller. */
@@ -171,10 +201,10 @@ export class KreuzbergHttpExtractor {
         return { status: 'down', error: 'нет ответа от /health и /version' };
     }
 
-    private async postExtract(filePath: string): Promise<PreparedResult> {
-        const bytes = await readFile(filePath);
-        const fileName = path.basename(filePath);
-
+    private async postExtract(
+        bytes: Uint8Array<ArrayBuffer>,
+        fileName: string,
+    ): Promise<PreparedResult> {
         const form = new FormData();
         form.append('files', new Blob([bytes]), fileName);
         form.append('output_format', 'markdown');
