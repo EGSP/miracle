@@ -1,32 +1,45 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { FileModel, JobRun, PreparedDocument, Stored } from '@miracle/types';
+import {
+    BadRequestException,
+    Inject,
+    Injectable,
+    NotFoundException,
+    type OnApplicationBootstrap,
+} from '@nestjs/common';
+import { Effect } from 'effect';
+import type { FileModel, PreparedDocument, Stored } from '@miracle/types';
+import { formatUnknown } from '../common/effect-errors.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { FilesService } from '../files/files.service.js';
-import { JobsService } from '../jobs/jobs.service.js';
-import type { PreparedEngine, PreparedResult } from './extractor.port.js';
-import { PREPARE_DOCUMENT_JOB_ID, prepareJobKey, routePreparedEngine } from './router.js';
+import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
+import { DpsPipeline } from './dps-pipeline.service.js';
+import type { PreparedEngine } from './extractor.port.js';
+import { routePreparedEngine } from './router.js';
 
 /**
  * {@link PreparedDocument}: постановка подготовки в очередь и чтение состояния.
  *
- * Разделение ответственности: сервис лишь СТАВИТ в очередь (создаёт queued-строку и запускает
- * корневую джобу `prepare-document`), после чего ВСЕ переходы статуса (`running`/`succeed`/`failed`)
- * принадлежат самой джобе. `enqueuePrepare` — fire-and-forget: возвращает `JobRun` для трекинга,
- * актуальное состояние читается по `fileId` ({@link getLatestByFile}).
+ * Разделение ответственности: сервис СТАВИТ запрос (создаёт queued-строку) и передаёт его движку
+ * {@link DpsPipeline}; движок (линии обработки) ведёт переходы статуса (`running`/`succeed`/`failed`)
+ * прямо в `PreparedDocument`. Джобы для kreuzberg/libre не используются — обработка идёт «в моменте»
+ * через линии; durable-состояние целиком в `PreparedDocument`.
  */
 @Injectable()
-export class DocumentPrepareService {
+export class DocumentPrepareService implements OnApplicationBootstrap {
+    private readonly logger: AppLogger;
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly files: FilesService,
-        private readonly jobs: JobsService,
-    ) {}
+        private readonly pipeline: DpsPipeline,
+        @Inject(AppLoggerService) loggerFactory: AppLoggerService,
+    ) {
+        this.logger = loggerFactory.forContext(DocumentPrepareService.name);
+    }
 
     /**
      * Процесс-локальные мьютексы постановки — по одному на `fileId`. Гарантируют 1:1 «файл →
      * актуальный PreparedDocument» на уровне сервиса (без уникального индекса в БД): конкурентные
-     * триггеры (хук `onFileSaved` + ручной POST, двойной upload) сериализуются, дублей строки и
-     * двойного запуска джобы не возникает.
+     * триггеры (хук `onFileSaved` + ручной POST, двойной upload) сериализуются.
      */
     private readonly enqueueLocks = new Map<string, Promise<unknown>>();
 
@@ -44,6 +57,27 @@ export class DocumentPrepareService {
         return result;
     }
 
+    /**
+     * Реконсиляция при старте: линии эфемерны, поэтому незавершённые запросы (`queued`/`running`)
+     * из durable-`PreparedDocument` повторно отправляем в движок. Идемпотентность — на уровне линий
+     * (повторная обработка просто перезапишет результат).
+     */
+    async onApplicationBootstrap(): Promise<void> {
+        const pending = await this.prisma.preparedDocument.findMany({
+            where: { deletedAt: null, status: { in: ['queued', 'running'] } },
+        });
+        if (pending.length === 0) return;
+        this.logger.info(`Реконсиляция DPS: повторная отправка ${pending.length} запросов`);
+        for (const row of pending) {
+            void Effect.runPromise(this.pipeline.submit(row.fileId)).catch((error) =>
+                this.logger.error(`Реконсиляция: submit упал (fileId=${row.fileId})`, error, {
+                    fileId: row.fileId,
+                    detail: formatUnknown(error),
+                }),
+            );
+        }
+    }
+
     /** Актуальная (не удалённая) запись подготовки по файлу или `null`. */
     async getLatestByFile(fileId: string): Promise<Stored<PreparedDocument> | null> {
         const row = await this.prisma.preparedDocument.findFirst({
@@ -53,65 +87,30 @@ export class DocumentPrepareService {
         return row as Stored<PreparedDocument> | null;
     }
 
-    // ── Переходы статуса (вызываются джобой `prepare-document`, ключ — fileId) ──────────────
-
-    async markRunning(fileId: string, jobRunId: string): Promise<void> {
-        await this.prisma.preparedDocument.updateMany({
-            where: { fileId, deletedAt: null },
-            data: { status: 'running', jobRunId, error: null },
-        });
-    }
-
-    async markSucceeded(
-        fileId: string,
-        data: Pick<PreparedResult, 'markdown' | 'pages' | 'meta'>,
-    ): Promise<void> {
-        await this.prisma.preparedDocument.updateMany({
-            where: { fileId, deletedAt: null },
-            data: {
-                status: 'succeed',
-                markdown: data.markdown,
-                pages: data.pages as object | undefined,
-                meta: data.meta as object | undefined,
-                error: null,
-            },
-        });
-    }
-
-    async markFailed(fileId: string, error: string): Promise<void> {
-        await this.prisma.preparedDocument.updateMany({
-            where: { fileId, deletedAt: null },
-            data: { status: 'failed', error },
-        });
-    }
-
     // ── Постановка в очередь ───────────────────────────────────────────────────────────────
 
     /**
-     * Ставит подготовку файла в очередь и возвращает `JobRun` для трекинга. Идемпотентно по
-     * `fileId`: пока прогон `running`/`queued` — возвращает его как есть. Завершённый прогон
-     * (`succeed`/`failed`/…) при повторном вызове сносится — re-prepare всегда делает свежее
-     * извлечение. Дальнейшие статусы `PreparedDocument` проставляет джоба.
+     * Ставит подготовку файла в движок и возвращает актуальную `PreparedDocument`. Идемпотентно по
+     * `fileId`: пока запись `running`/`queued` — возвращает её как есть (не пере-обрабатывает).
+     * Завершённая (`succeed`/`failed`) при повторном вызове сносится — re-prepare всегда свежий.
      */
-    async enqueuePrepare(fileId: string): Promise<JobRun> {
+    async enqueuePrepare(fileId: string): Promise<Stored<PreparedDocument>> {
         return this.withFileLock(fileId, () => this.enqueueInternal(fileId));
     }
 
-    private async enqueueInternal(fileId: string): Promise<JobRun> {
+    private async enqueueInternal(fileId: string): Promise<Stored<PreparedDocument>> {
         const file = await this.requireSupportedFile(fileId);
         const engine = routePreparedEngine(file)!;
-        const key = prepareJobKey(fileId);
 
-        const existingRun = await this.jobs.findByKey([...key]);
-        if (existingRun?.status === 'running' || existingRun?.status === 'queued') {
-            return existingRun;
-        }
-        if (existingRun) {
-            await this.jobs.deleteRunTree(existingRun.id);
+        const existing = await this.getLatestByFile(fileId);
+        if (existing && (existing.status === 'running' || existing.status === 'queued')) {
+            return existing;
         }
 
         await this.createQueued(fileId, engine);
-        return this.jobs.start(PREPARE_DOCUMENT_JOB_ID, { fileId, engine }, [...key]);
+        // submit помечает running и кладёт заказ в линию (offer может suspend-иться — backpressure).
+        await Effect.runPromise(this.pipeline.submit(fileId));
+        return (await this.getLatestByFile(fileId))!;
     }
 
     /**

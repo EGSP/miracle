@@ -77,9 +77,19 @@ export class AppConfigService {
         return this.config.get('LIBREOFFICE_CONVERT_URL', { infer: true });
     }
 
+    /** Лимит одновременных конвертаций .doc → .docx (unoserver — один файл за раз). */
+    get libreofficeConvertMaxConcurrency(): number {
+        return this.config.get('LIBREOFFICE_CONVERT_MAX_CONCURRENCY', { infer: true });
+    }
+
     /** Лимит одновременных HTTP-запросов к kreuzberg. */
     get dpsMaxConcurrency(): number {
         return this.config.get('DPS_MAX_CONCURRENCY', { infer: true });
+    }
+
+    /** Включена ли LLM Vision-разметка VISUAL-файлов (Yandex). По умолчанию выключена. */
+    get llmVisionEnabled(): boolean {
+        return this.config.get('LLM_VISION_ENABLED', { infer: true });
     }
 
     /** Глобальный лимит одновременных запросов к Yandex AI (поверх rate-лимитеров). */

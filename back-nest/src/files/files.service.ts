@@ -5,7 +5,7 @@ import {
     PayloadTooLargeException,
     type OnApplicationBootstrap,
 } from '@nestjs/common';
-import { mkdir, stat, unlink } from 'fs/promises';
+import { mkdir, readdir, stat, unlink, writeFile } from 'fs/promises';
 import fs, { createWriteStream } from 'fs';
 import path from 'path';
 import { pipeline } from 'stream/promises';
@@ -84,11 +84,76 @@ export class FilesService implements OnApplicationBootstrap {
 
     async onApplicationBootstrap(): Promise<void> {
         await mkdir(this.getUploadsDir(), { recursive: true });
+        await mkdir(this.getTempDir(), { recursive: true });
         await this.runEncodingFix();
+        // Подметаем осиротевшие временные файлы (например, после краша во время обработки).
+        await Effect.runPromise(this.sweepTemp());
     }
 
     getUploadsDir(): string {
         return this.config.uploadsDir;
+    }
+
+    /** Подкаталог для временных файлов обработки (например, .docx после конвертации .doc). */
+    getTempDir(): string {
+        return path.join(this.getUploadsDir(), 'temp');
+    }
+
+    // ── Временные файлы (uploads/temp) ───────────────────────────────────────────────────
+
+    /** Пишет временный файл в `uploads/temp` и возвращает его путь. */
+    writeTemp(bytes: Uint8Array, ext: string): Effect.Effect<string, Error> {
+        return tryLabeledPromise('запись временного файла', async () => {
+            const name = ext ? `${randomUUID()}.${ext}` : randomUUID();
+            const target = path.join(this.getTempDir(), name);
+            await writeFile(target, bytes);
+            return target;
+        });
+    }
+
+    /** Удаляет временный файл. Best-effort: ошибки логируются, наверх не пробрасываются. */
+    removeTemp(filePath: string): Effect.Effect<void> {
+        return Effect.promise(async () => {
+            try {
+                await unlink(filePath);
+            } catch (error) {
+                this.logger.warn(`Не удалось удалить временный файл ${filePath}`, {
+                    detail: formatUnknown(error),
+                });
+            }
+        });
+    }
+
+    /**
+     * Даёт `use` путь к временному файлу и гарантированно удаляет его после (acquireRelease),
+     * и при успехе, и при ошибке. Удобно, когда временный файл нужен в пределах одного Effect.
+     */
+    withTempFile<A, E, R>(
+        bytes: Uint8Array,
+        ext: string,
+        use: (filePath: string) => Effect.Effect<A, E, R>,
+    ): Effect.Effect<A, E | Error, R> {
+        return Effect.acquireUseRelease(this.writeTemp(bytes, ext), use, (filePath) =>
+            this.removeTemp(filePath),
+        );
+    }
+
+    /** Чистит `uploads/temp` от всех файлов. Вызывается на старте (см. {@link onApplicationBootstrap}). */
+    sweepTemp(): Effect.Effect<void> {
+        return Effect.promise(async () => {
+            try {
+                const entries = await readdir(this.getTempDir());
+                await Promise.all(
+                    entries.map((name) =>
+                        unlink(path.join(this.getTempDir(), name)).catch(() => undefined),
+                    ),
+                );
+            } catch (error) {
+                this.logger.warn('Не удалось подмести uploads/temp', {
+                    detail: formatUnknown(error),
+                });
+            }
+        });
     }
 
     getStoredFileName(file: FileModel): string {

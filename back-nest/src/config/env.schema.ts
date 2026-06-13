@@ -25,8 +25,18 @@ export const envSchema = z.object({
     KREUZBERG_URL: z.string().url().default('http://localhost:8000'),
     /** Базовый URL сервиса конвертации legacy .doc → .docx (Docker, LibreOffice unoserver REST). */
     LIBREOFFICE_CONVERT_URL: z.string().url().default('http://localhost:2004'),
+    /**
+     * Лимит одновременных конвертаций .doc → .docx. unoserver обрабатывает один файл за раз и без
+     * балансировки — по умолчанию 1. Поднимать только при нескольких репликах конвертера.
+     */
+    LIBREOFFICE_CONVERT_MAX_CONCURRENCY: z.coerce.number().int().positive().default(1),
     /** Лимит одновременных HTTP-запросов к kreuzberg. */
     DPS_MAX_CONCURRENCY: z.coerce.number().int().positive().default(4),
+    /**
+     * Включает LLM Vision-разметку VISUAL-файлов (Yandex). По умолчанию ВЫКЛ: vision-джоба
+     * помечает запрос ошибкой, автоматическая разметка не идёт. Для включения — `=true`.
+     */
+    LLM_VISION_ENABLED: z.coerce.boolean().default(false),
     /**
      * Глобальный лимит одновременных запросов к Yandex AI (поверх rate-лимитеров).
      * Yandex отклоняет более ~10 параллельных запросов; держим запас.

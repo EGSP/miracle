@@ -23,11 +23,15 @@ export class DocumentPrepareController {
         return { status: prepared?.status ?? null };
     }
 
-    /** Ставит (повторную) подготовку в очередь; возвращает id прогона для трекинга. */
+    /**
+     * Ставит (повторную) подготовку в очередь; возвращает id записи подготовки для трекинга.
+     * Поле называется `runId` исторически (раньше — id job-прогона); теперь это id `PreparedDocument`.
+     * Фронт его не использует — состояние читается поллингом `GET :fileId/status`.
+     */
     @Post(':fileId/prepare')
     @HttpCode(200)
     async prepare(@Param('fileId') fileId: string): Promise<{ runId: string }> {
-        const run = await this.documentPrepare.enqueuePrepare(fileId);
-        return { runId: run.id };
+        const prepared = await this.documentPrepare.enqueuePrepare(fileId);
+        return { runId: prepared.id };
     }
 }

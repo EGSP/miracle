@@ -7,7 +7,8 @@ import { DocumentPrepareUploadListener } from './document-prepare-upload.listene
 import { KreuzbergHttpExtractor } from './adapters/kreuzberg-http.extractor.js';
 import { LibreOfficeHttpConverter } from './adapters/libreoffice-http.converter.js';
 import { LlmVisionExtractor } from './adapters/llm-vision.extractor.js';
-import { KreuzbergConcurrencyLimiter } from './kreuzberg-concurrency.limiter.js';
+import { DpsPipeline } from './dps-pipeline.service.js';
+import { PreparedDocumentStore } from './prepared-document.store.js';
 
 @Module({
     imports: [AuthModule, FilesModule],
@@ -15,16 +16,18 @@ import { KreuzbergConcurrencyLimiter } from './kreuzberg-concurrency.limiter.js'
     providers: [
         DocumentPrepareService,
         DocumentPrepareUploadListener,
-        KreuzbergConcurrencyLimiter,
+        PreparedDocumentStore,
         LibreOfficeHttpConverter,
         KreuzbergHttpExtractor,
+        DpsPipeline,
         LlmVisionExtractor,
     ],
     exports: [
         DocumentPrepareService,
-        KreuzbergConcurrencyLimiter,
+        PreparedDocumentStore,
         LibreOfficeHttpConverter,
         KreuzbergHttpExtractor,
+        DpsPipeline,
         LlmVisionExtractor,
     ],
 })

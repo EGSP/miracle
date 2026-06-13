@@ -2,14 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { Effect } from 'effect';
-import type { FileModel } from '@miracle/types';
 import { formatUnknown } from '../../common/effect-errors.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import type { PreparedResult } from '../extractor.port.js';
 import { ExtractError, extractError } from '../errors.js';
-import { KreuzbergConcurrencyLimiter } from '../kreuzberg-concurrency.limiter.js';
 import { dedupeMarkdownTableCells } from '../markdown-table-dedupe.js';
-import { LibreOfficeHttpConverter } from './libreoffice-http.converter.js';
+
+/** Маппинг ошибки шага Kreuzberg /extract в {@link ExtractError} (ExtractError пробрасывается как есть). */
+const kreuzbergCatch = (error: unknown): ExtractError =>
+    error instanceof ExtractError
+        ? error
+        : extractError(`HTTP kreuzberg /extract: ${formatUnknown(error)}`);
 
 const EXTRACT_TIMEOUT_MS = 120_000;
 const HEALTH_TIMEOUT_MS = 5_000;
@@ -111,52 +114,17 @@ export function parseKreuzbergExtractBody(
 /** HTTP-адаптер kreuzberg: multipart POST /extract → markdown (single-step extract). */
 @Injectable()
 export class KreuzbergHttpExtractor {
-    constructor(
-        private readonly config: AppConfigService,
-        private readonly limiter: KreuzbergConcurrencyLimiter,
-        private readonly docxConverter: LibreOfficeHttpConverter,
-    ) {}
-
-    extract(file: FileModel, filePath: string): Effect.Effect<PreparedResult, ExtractError> {
-        // Без предварительного health-check: при недоступности kreuzberg сам POST /extract вернёт
-        // ошибку транспорта, которую мы маппим в ExtractError. Лишний round-trip на каждый документ
-        // не нужен. Здоровье сервиса отдельно отдаёт health.controller через checkHealth().
-        return this.limiter.withPermit(
-            Effect.gen(this, function* () {
-                const input = yield* this.loadInput(filePath);
-                return yield* Effect.tryPromise({
-                    try: () => this.postExtract(input.bytes, input.fileName),
-                    catch: (error) =>
-                        error instanceof ExtractError
-                            ? error
-                            : extractError(`HTTP kreuzberg /extract: ${formatUnknown(error)}`),
-                });
-            }),
-        );
-    }
+    constructor(private readonly config: AppConfigService) {}
 
     /**
-     * Читает файл и, для legacy `.doc`, конвертирует его в `.docx` (Kreuzberg извлекает `.doc` битым:
-     * кириллица → CJK, обрыв текста, потеря таблиц). {@link ConvertError} маппится в {@link ExtractError}.
+     * Чистый HTTP-вызов Kreuzberg: читает файл по пути и шлёт POST /extract. Без лимитеров и без
+     * конвертации форматов — оркестрацией (линии/backpressure, .doc → .docx) занимается {@link DpsPipeline}.
+     * Без предварительного health-check: при недоступности kreuzberg сам POST вернёт ошибку транспорта.
      */
-    private loadInput(
-        filePath: string,
-    ): Effect.Effect<{ bytes: Uint8Array<ArrayBuffer>; fileName: string }, ExtractError> {
-        return Effect.gen(this, function* () {
-            const bytes = yield* Effect.tryPromise({
-                try: () => readFile(filePath),
-                catch: (error) => extractError(`Чтение файла: ${formatUnknown(error)}`),
-            });
-            const fileName = path.basename(filePath);
-
-            if (path.extname(filePath).toLowerCase() !== '.doc') {
-                return { bytes, fileName };
-            }
-
-            const docx = yield* this.docxConverter
-                .convert(bytes, fileName)
-                .pipe(Effect.mapError((error) => extractError(error.message)));
-            return { bytes: docx, fileName: fileName.replace(/\.doc$/i, '.docx') };
+    runExtract(filePath: string): Effect.Effect<PreparedResult, ExtractError> {
+        return Effect.tryPromise({
+            try: async () => this.postExtract(await readFile(filePath), path.basename(filePath)),
+            catch: kreuzbergCatch,
         });
     }
 
