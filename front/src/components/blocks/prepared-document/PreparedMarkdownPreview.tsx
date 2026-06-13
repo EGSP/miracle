@@ -12,6 +12,13 @@ import { Markdown } from "@/components/ui/external/markdown"
  */
 type PreviewMode = "markdown" | "native" | "marked"
 
+/** Описания источников каждого варианта markdown — показываются над превью. */
+const SOURCE_DESCRIPTION = {
+  markdown: "Итоговый markdown после постпроцесса (дедуп горизонтальных дублей ячеек).",
+  native: "Исходный markdown из Kreuzberg до постпроцесса.",
+  marked: "Итоговый markdown с подсветкой мест дедупа (зачёркивание).",
+} as const
+
 type PreparedMarkdownPreviewProps = {
   /** Итоговый markdown (после постпроцесса/дедупа). */
   markdown: string
@@ -19,6 +26,31 @@ type PreparedMarkdownPreviewProps = {
   nativeMarkdown?: string
   /** Маркированный markdown с подсветкой дедупа (meta.dedup.markedMarkdown). Нет — режим недоступен. */
   markedMarkdown?: string
+}
+
+/** Превью одного варианта markdown: заголовок + описание источника + счётчик символов. */
+function PreviewPane({
+  title,
+  description,
+  content,
+}: {
+  title: string
+  description: string
+  content: string
+}) {
+  return (
+    <Stack gap={1}>
+      <div>
+        <Text.Label as="span">{title}</Text.Label>
+        <Text.Helper as="p">
+          {description} · символов: {content.length.toLocaleString("ru-RU")}
+        </Text.Helper>
+      </div>
+      <div className="markdown-host">
+        <Markdown>{content}</Markdown>
+      </div>
+    </Stack>
+  )
 }
 
 /**
@@ -69,27 +101,31 @@ export function PreparedMarkdownPreview({
       </Checkbox.Group>
 
       {effectiveMode === "markdown" ? (
-        <div className="markdown-host">
-          <Markdown>{markdown}</Markdown>
-        </div>
+        <PreviewPane
+          title="Markdown"
+          description={SOURCE_DESCRIPTION.markdown}
+          content={markdown}
+        />
       ) : (
         <div className="markdown-split">
-          <Stack gap={1}>
-            <Text.Label as="span">Markdown (после дедупа)</Text.Label>
-            <div className="markdown-host">
-              <Markdown>{markdown}</Markdown>
-            </div>
-          </Stack>
-          <Stack gap={1}>
-            <Text.Label as="span">
-              {effectiveMode === "native" ? "Исходный (Kreuzberg)" : "Разметка дедупа"}
-            </Text.Label>
-            <div className="markdown-host">
-              <Markdown>
-                {(effectiveMode === "native" ? nativeMarkdown : markedMarkdown) as string}
-              </Markdown>
-            </div>
-          </Stack>
+          <PreviewPane
+            title="Markdown (после дедупа)"
+            description={SOURCE_DESCRIPTION.markdown}
+            content={markdown}
+          />
+          {effectiveMode === "native" ? (
+            <PreviewPane
+              title="Исходный (Kreuzberg)"
+              description={SOURCE_DESCRIPTION.native}
+              content={nativeMarkdown as string}
+            />
+          ) : (
+            <PreviewPane
+              title="Разметка дедупа"
+              description={SOURCE_DESCRIPTION.marked}
+              content={markedMarkdown as string}
+            />
+          )}
         </div>
       )}
     </Stack>
