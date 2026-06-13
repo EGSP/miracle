@@ -1,10 +1,23 @@
 import { Column, Grid, Stack, Text } from "@miracle/aramid"
 import { useSearch } from "@tanstack/react-router"
 import { PreparedDocumentInfo } from "@/components/blocks/prepared-document/PreparedDocumentInfo"
+import { PreparedMarkdownPreview } from "@/components/blocks/prepared-document/PreparedMarkdownPreview"
 import { Tile } from "@/components/ui/ds/tile"
-import { Markdown } from "@/components/ui/external/markdown"
 import { useGetPreparedDocument } from "@/lib/queries/document-prepare.query"
 import { useGetFiles } from "@/lib/queries/file.query"
+
+/** Безопасно читает строковое поле по вложенному пути из meta (Record<string, unknown>). */
+function readMetaString(
+  meta: Record<string, unknown> | null | undefined,
+  ...path: string[]
+): string | undefined {
+  let cursor: unknown = meta
+  for (const key of path) {
+    if (typeof cursor !== "object" || cursor === null) return undefined
+    cursor = (cursor as Record<string, unknown>)[key]
+  }
+  return typeof cursor === "string" ? cursor : undefined
+}
 
 export default function PreparedDocumentPage() {
   const { fileId } = useSearch({ from: "/prepared-document" })
@@ -40,9 +53,11 @@ export default function PreparedDocumentPage() {
               <Stack gap={1}>
                 <Text.Label as="span">Markdown</Text.Label>
                 {prepared.markdown ? (
-                  <div className="markdown-host">
-                    <Markdown>{prepared.markdown}</Markdown>
-                  </div>
+                  <PreparedMarkdownPreview
+                    markdown={prepared.markdown}
+                    nativeMarkdown={readMetaString(prepared.meta, "nativeMarkdown")}
+                    markedMarkdown={readMetaString(prepared.meta, "dedup", "markedMarkdown")}
+                  />
                 ) : (
                   <Text.Helper as="p">Текст markdown пока пуст.</Text.Helper>
                 )}

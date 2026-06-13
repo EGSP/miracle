@@ -8,10 +8,36 @@ import { AppConfigService } from '../../config/app-config.service.js';
 import type { PreparedResult } from '../extractor.port.js';
 import { ExtractError, extractError } from '../errors.js';
 import { KreuzbergConcurrencyLimiter } from '../kreuzberg-concurrency.limiter.js';
+import { dedupeMarkdownTableCells } from '../markdown-table-dedupe.js';
 
 const EXTRACT_TIMEOUT_MS = 120_000;
 const HEALTH_TIMEOUT_MS = 5_000;
 const RESPONSE_FRAGMENT_MAX = 500;
+
+/**
+ * Конфиг извлечения, отправляемый в поле `config` (JSON) формы POST /extract.
+ *
+ * Профиль: офисные документы (DOCX/XLSX/PPTX) с нативным текстовым слоем —
+ * НЕ сканы и НЕ визуальные PDF. Воспроизводит набор питон-прототипа, который
+ * давал качественный markdown без дублирования объединённых ячеек (в отличие от docling):
+ * дублирование merged-cells — артефакт OCR/VLM/layout-пути, поэтому выбираем нативное извлечение.
+ *
+ * Без этого поля Kreuzberg работает на дефолтах по всему, кроме `output_format`.
+ */
+const KREUZBERG_EXTRACT_CONFIG = {
+    /** Кэш результата по контенту файла — повторный extract того же документа бесплатный. */
+    use_cache: true,
+    /** Постобработка качества markdown (нормализация пробелов, структуры, артефактов). */
+    enable_quality_processing: true,
+    /** Не форсировать OCR: офисные доки уже содержат текст, OCR только портит и тормозит. */
+    force_ocr: false,
+    /** Полностью отключить OCR-путь для не-визуальных форматов — нативное извлечение. */
+    disable_ocr: true,
+    /** Сохранять структуру документа (заголовки, списки, таблицы) при конвертации в markdown. */
+    include_document_structure: true,
+    /** Формат результата (дублирует form-поле output_format для совместимости версий). */
+    output_format: 'markdown',
+} as const;
 
 export type KreuzbergHealthStatus = {
     readonly status: 'up' | 'down';
@@ -152,6 +178,7 @@ export class KreuzbergHttpExtractor {
         const form = new FormData();
         form.append('files', new Blob([bytes]), fileName);
         form.append('output_format', 'markdown');
+        form.append('config', JSON.stringify(KREUZBERG_EXTRACT_CONFIG));
 
         const url = `${this.config.kreuzbergUrl.replace(/\/$/, '')}/extract`;
         const response = await fetch(url, {
@@ -200,8 +227,23 @@ export class KreuzbergHttpExtractor {
             if (item.tables !== undefined) meta.tables = item.tables;
         }
 
+        // Постпроцесс: гасим горизонтальные дубли ячеек в таблицах. Если дедуп что-то изменил —
+        // сохраняем исходный markdown Kreuzberg (для сравнения) и размеченный вариант (для подсветки
+        // мест дедупа в предпросмотре). Если изменений нет — meta не раздуваем.
+        const deduped = dedupeMarkdownTableCells(extracted.markdown);
+        let markdown = extracted.markdown;
+        if (deduped.spots.length > 0) {
+            markdown = deduped.markdown;
+            meta.nativeMarkdown = extracted.markdown;
+            meta.dedup = {
+                count: deduped.spots.length,
+                spots: deduped.spots,
+                markedMarkdown: deduped.marked,
+            };
+        }
+
         return {
-            markdown: extracted.markdown,
+            markdown,
             meta,
         };
     }
