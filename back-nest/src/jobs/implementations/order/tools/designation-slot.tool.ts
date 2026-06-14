@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Effect } from 'effect';
 import { z } from 'zod';
-import { CONFIDENCE_VALUES, type Confidence } from '@miracle/types';
+import { CONFIDENCE_VALUES, estimateTokens, type Confidence } from '@miracle/types';
 import { brandJobToolType, type JobTool } from '../../../framework/job-tool.js';
 import { ToolMemo } from '../../../framework/context.js';
 import { wrapUnknown } from '../../../../common/effect-errors.js';
@@ -25,6 +25,13 @@ export type DesignationSlotInput = {
     readonly slotName: string;
     readonly slotRuleText: string;
     readonly decodeExamples: string | null;
+    /**
+     * Название типа продукции группы (групповой, а не per-position: группа однотипна по ТУ).
+     * Подаётся одной строкой в шапку запроса как явный контекст изделия; `null` — если у позиций
+     * группы тип не проставлен. Дешевле per-position-дублирования и помогает модели не путать
+     * параметр обозначения с похожими по форме значениями из других типов продукции.
+     */
+    readonly productTypeName: string | null;
     readonly positions: ReadonlyArray<DesignationSlotPosition>;
 };
 
@@ -36,9 +43,28 @@ export type DesignationSlotValue = {
     readonly reasoning: string;
 };
 
+/**
+ * Расход токенов этого LLM-вызова. Сохраняется в памяти инструмента (его и вызвал Yandex), отдельной
+ * записью на каждый вызов слота.
+ *
+ * Трио `inputTokens`/`outputTokens`/`totalTokens` — фактические значения из `usage` ответа Yandex;
+ * `null`, если провайдер не вернул `usage`. `heuristicTokens` — наша эвристическая оценка (символы÷4)
+ * по финальному промпту и ответу: фолбэк и сверка, когда фактического `usage` нет. Метрика
+ * best-effort, на результат анализа не влияет.
+ */
+export type DesignationSlotUsage = {
+    readonly inputTokens: number | null;
+    readonly outputTokens: number | null;
+    readonly totalTokens: number | null;
+    readonly heuristicTokens: number;
+};
+
 type DesignationSlotMemo = {
     opId?: string;
+    /** Финальный промпт вызова (system + user) — для диагностики, как в джобах v1. */
+    finalPrompt?: { system: string; user: string };
     values?: DesignationSlotValue[];
+    usage?: DesignationSlotUsage;
 };
 
 const DesignationSlotZodSchema = z.object({
@@ -64,9 +90,10 @@ const DesignationSlotJsonSchema = z.toJSONSchema(DesignationSlotZodSchema) as Re
 const SLOT_PROMPT = `Ты определяешь значение ОДНОГО параметра условного обозначения промышленной продукции для набора позиций заказа.
 
 На вход поступает:
-1. Один параметр обозначения (слот): его название и правило выбора значения из Технического Условия (ТУ).
-2. (Опционально) Примеры расшифровки похожих фрагментов из заявок.
-3. Массив позиций: для каждой — локальный индекс, дословное название (часто содержит шифр/обозначение) и требования заказчика.
+1. Тип продукции группы (все позиции — одного типа по одному ТУ).
+2. Один параметр обозначения (слот): его название и правило выбора значения из Технического Условия (ТУ).
+3. (Опционально) Примеры расшифровки похожих фрагментов из заявок.
+4. Массив позиций: для каждой — локальный индекс, дословное название (часто содержит шифр/обозначение) и требования заказчика.
 
 Для КАЖДОЙ позиции определи значение ТОЛЬКО этого слота:
 - Подбери значение строго из допустимых вариантов правила ТУ. Не придумывай новые коды.
@@ -78,6 +105,10 @@ const SLOT_PROMPT = `Ты определяешь значение ОДНОГО �
 Верни ответ строго в JSON по схеме.`;
 
 function buildUserMessage(input: DesignationSlotInput): string {
+    const productTypeBlock = input.productTypeName
+        ? ['=== ТИП ПРОДУКЦИИ ===', '', input.productTypeName].join('\n')
+        : null;
+
     const slotBlock = [
         '=== ПАРАМЕТР ОБОЗНАЧЕНИЯ ===',
         '',
@@ -104,7 +135,7 @@ function buildUserMessage(input: DesignationSlotInput): string {
         }),
     ].join('\n\n');
 
-    return [slotBlock, examplesBlock, positionsBlock].filter(Boolean).join('\n\n');
+    return [productTypeBlock, slotBlock, examplesBlock, positionsBlock].filter(Boolean).join('\n\n');
 }
 
 /**
@@ -136,6 +167,7 @@ export class DesignationSlotTool
 
             let opId = yield* memo.get((m) => m.opId);
             if (!opId) {
+                yield* memo.set((m) => m.finalPrompt, { system: SLOT_PROMPT, user: userMessage });
                 opId = yield* this.yandex.createResponse({
                     model: YANDEX_MODELS.text,
                     instructions: SLOT_PROMPT,
@@ -154,7 +186,17 @@ export class DesignationSlotTool
                 catch: wrapUnknown(`parse designation slot response; opId=${opId}`),
             });
 
+            // Трио токенов сохраняет тот, кто вызвал Yandex, — сам инструмент, в свою память.
+            // Трио — фактические из usage (best-effort, null если не вернулся); heuristic — наша оценка.
+            const usage: DesignationSlotUsage = {
+                inputTokens: completed.response.usage?.input_tokens ?? null,
+                outputTokens: completed.response.usage?.output_tokens ?? null,
+                totalTokens: completed.response.usage?.total_tokens ?? null,
+                heuristicTokens: estimateTokens(SLOT_PROMPT + userMessage + completed.outputText),
+            };
+
             yield* memo.set((m) => m.values, parsed.values);
+            yield* memo.set((m) => m.usage, usage);
             return parsed.values;
         });
 }

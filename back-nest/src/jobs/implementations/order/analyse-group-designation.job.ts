@@ -28,6 +28,9 @@ export type AnalyseGroupDesignationInput = {
  * Возобновляемость: каждый слот — отдельный вызов инструмента с durable-памятью (submit-once `opId`),
  * запись слота идемпотентна. Соответствие «локальный индекс → id позиции» не хранится, а
  * восстанавливается детерминированной сортировкой позиций по id.
+ *
+ * Расход токенов джоб не считает: трио токенов на каждый Yandex-вызов сохраняет сам
+ * {@link DesignationSlotTool} в своей `ToolMemo` (тот, кто вызвал Yandex, тот и пишет usage).
  */
 @Injectable()
 @JobImpl()
@@ -74,6 +77,8 @@ export class AnalyseGroupDesignationJob implements Job<AnalyseGroupDesignationIn
                     requirements: position.data.requirements ?? [],
                 }));
                 const decodeExamples = condition.designationDecodeExamples?.trim() || null;
+                // Группа однотипна по ТУ — тип берём из первой позиции с проставленным типом (групповой).
+                const productTypeName = ordered.find((position) => position.productTypeName)?.productTypeName ?? null;
 
                 // Пошаговый обход слотов — последовательно (ограничения Яндекса; см. README, тумблеры).
                 for (const [slotPosition, slot] of slotRules.entries()) {
@@ -90,6 +95,7 @@ export class AnalyseGroupDesignationJob implements Job<AnalyseGroupDesignationIn
                             slotName: slot.name,
                             slotRuleText: slot.text,
                             decodeExamples,
+                            productTypeName,
                             positions: slotPayload,
                         },
                         { key: ['slot', String(slot.index)] },

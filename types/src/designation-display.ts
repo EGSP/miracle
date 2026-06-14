@@ -130,7 +130,11 @@ export function renderDesignationTemplate(
     });
 }
 
-/** Слот попадает в инспектор: пропуск в диапазоне, пустое значение или `low` confidence при заданном value. */
+/**
+ * Слот попадает в инспектор «требует проверки»: пропуск в диапазоне, пустое значение или
+ * неуверенность при заданном value — как `low` (критично), так и `medium` (с сомнением).
+ * Не попадают только заполненные значения с `high`.
+ */
 export function isDesignationInspectorIssue(entry: DesignationValue | undefined): boolean {
     if (!entry) {
         return true;
@@ -138,7 +142,7 @@ export function isDesignationInspectorIssue(entry: DesignationValue | undefined)
     if (isUnsetDesignationValue(entry.value)) {
         return true;
     }
-    return entry.confidence === 'low';
+    return entry.confidence !== 'high';
 }
 
 export type DesignationInspectorRow = {
@@ -150,7 +154,7 @@ export type DesignationInspectorRow = {
 };
 
 /**
- * Строки инспектора: слоты min…max с проблемами (пропуск, пусто, critical).
+ * Строки инспектора: слоты min…max с проблемами (пропуск, пусто, неуверенность low/medium).
  * `slotNames` — SlotRule.name по index из TC.
  */
 export function buildDesignationInspectorRows(

@@ -101,22 +101,6 @@
   color: var(--aramid-color-red-60);
 }
 
-.application-item__spin {
-  animation: application-item-spin 0.9s linear infinite;
-}
-
-@keyframes application-item-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .application-item__spin {
-    animation: none;
-  }
-}
-
 .application-item__label {
   min-width: 0;
   flex: 1 1 auto;

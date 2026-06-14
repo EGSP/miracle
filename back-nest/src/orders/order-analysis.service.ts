@@ -12,6 +12,24 @@ const analyseOrderKey = (orderId: string) => ['analyse-order', orderId] as const
 /** Стабильный ключ корневого прогона анализа заказа (v2). */
 const analyseOrderV2Key = (orderId: string) => ['analyse-order-v2', orderId] as const;
 
+const ACTIVE_STATUSES = new Set(['queued', 'running']);
+
+/**
+ * Выбирает «текущий» прогон анализа из прогонов всех вариантов (variant-agnostic): активный
+ * (одновременно допустим только один — см. readiness) важнее, иначе — самый свежий по `updatedAt`.
+ */
+function pickCurrentAnalysisRun(runs: Array<Stored<JobRun> | null>): Stored<JobRun> | null {
+    const present = runs.filter((run): run is Stored<JobRun> => run !== null);
+    if (present.length === 0) return null;
+
+    const active = present.find((run) => ACTIVE_STATUSES.has(run.status));
+    if (active) return active;
+
+    return present.reduce((latest, run) =>
+        new Date(run.updatedAt).getTime() > new Date(latest.updatedAt).getTime() ? run : latest,
+    );
+}
+
 /**
  * Триггер-слой анализа заказа. Здесь живут деструктивные операции переанализа (вне джоб, чтобы
  * тело `analyse-order` оставалось replay-safe): супрессия прежнего дерева прогонов и чистка данных
@@ -89,12 +107,16 @@ export class OrderAnalysisService {
     }
 
     /**
-     * Текущий корневой прогон анализа заказа (по стабильному ключу) или `null`, если анализ ещё не
-     * запускался. Чтение без побочных эффектов — для тайла прогресса в карточке заказа.
+     * Текущий корневой прогон анализа заказа — variant-agnostic: смотрит прогоны ОБОИХ вариантов
+     * (v1/v2) и возвращает активный, иначе самый свежий, иначе `null`. Чтение без побочных эффектов —
+     * для тайла прогресса в карточке заказа (карточка не знает, каким вариантом запустили анализ).
      */
     async getRun(orderId: string): Promise<Stored<JobRun> | null> {
-        const run = await this.jobs.findByKey([...analyseOrderKey(orderId)]);
-        return run as Stored<JobRun> | null;
+        const [v1, v2] = await Promise.all([
+            this.jobs.findByKey([...analyseOrderKey(orderId)]),
+            this.jobs.findByKey([...analyseOrderV2Key(orderId)]),
+        ]);
+        return pickCurrentAnalysisRun([v1 as Stored<JobRun> | null, v2 as Stored<JobRun> | null]);
     }
 
     /** Прогон анализа конкретного варианта (v1/v2) по его стабильному ключу или `null`. */

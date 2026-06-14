@@ -1,6 +1,6 @@
 import type { JobRun, Stored } from "@miracle/types"
 import { createStore, type StoreApi } from "zustand"
-import { buildIndexes } from "./job-tree.utils"
+import { buildIndexes, compareChildrenByCreatedAt } from "./job-tree.utils"
 
 export type JobTreeState = {
   rootId: string
@@ -57,11 +57,12 @@ export function createJobTreeStore(rootId: string): StoreApi<JobTreeState> {
             nodes: { ...s.nodes, [run.id]: run },
           }
         }
+        const nextNodes = { ...s.nodes, [run.id]: run }
         return {
-          nodes: { ...s.nodes, [run.id]: run },
+          nodes: nextNodes,
           childrenByParent: {
             ...s.childrenByParent,
-            [parentKey]: [...siblings, run.id].sort(),
+            [parentKey]: [...siblings, run.id].sort(compareChildrenByCreatedAt(nextNodes)),
           },
         }
       }),

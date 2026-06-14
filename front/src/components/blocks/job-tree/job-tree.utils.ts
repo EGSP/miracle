@@ -111,6 +111,17 @@ export type JobTreeIndexes = {
   childrenByParent: Record<string, string[]>
 }
 
+/**
+ * Компаратор дочерних узлов по дате создания (по возрастанию): старые сверху, новые снизу.
+ * Принимает карту узлов, т.к. сортируются их id. Отсутствующий узел → в начало (defensive).
+ */
+export function compareChildrenByCreatedAt(
+  nodes: Record<string, Stored<JobRun>>,
+): (a: string, b: string) => number {
+  const at = (id: string): number => (nodes[id] ? new Date(nodes[id].createdAt).getTime() : 0)
+  return (a, b) => at(a) - at(b)
+}
+
 export function buildIndexes(flat: Stored<JobRun>[], rootId: string): JobTreeIndexes {
   const nodes: Record<string, Stored<JobRun>> = {}
   const childrenByParent: Record<string, string[]> = {}
@@ -124,8 +135,9 @@ export function buildIndexes(flat: Stored<JobRun>[], rootId: string): JobTreeInd
     }
   }
 
+  const compare = compareChildrenByCreatedAt(nodes)
   for (const key of Object.keys(childrenByParent)) {
-    childrenByParent[key].sort()
+    childrenByParent[key].sort(compare)
   }
 
   return { nodes, childrenByParent }

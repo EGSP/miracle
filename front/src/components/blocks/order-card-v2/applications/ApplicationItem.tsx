@@ -5,7 +5,7 @@ import {
   CircleHelp,
   Clock,
   FileIcon,
-  LoaderCircle,
+  Loader,
   type LucideIcon,
   MessageSquareText,
 } from "lucide-react"
@@ -23,13 +23,12 @@ type PrepareIconState = "loading" | "none" | "queued" | "running" | "succeed" | 
 
 const PREPARE_ICON: Record<
   PrepareIconState,
-  { Icon: LucideIcon; modifier: string; title: string; spin?: boolean }
+  { Icon: LucideIcon; modifier: string; title: string }
 > = {
   loading: {
-    Icon: LoaderCircle,
+    Icon: Loader,
     modifier: "application-item__status--muted",
     title: "Проверка статуса подготовки…",
-    spin: true,
   },
   none: {
     Icon: CircleHelp,
@@ -42,10 +41,9 @@ const PREPARE_ICON: Record<
     title: "В очереди на подготовку",
   },
   running: {
-    Icon: LoaderCircle,
+    Icon: Loader,
     modifier: "application-item__status--running",
     title: "Идёт подготовка документа",
-    spin: true,
   },
   succeed: {
     Icon: CircleCheck,
@@ -77,7 +75,7 @@ function PrepareStatusIcon({
       ? "none"
       : (status ?? "none")
 
-  const { Icon, modifier, title, spin } = PREPARE_ICON[state]
+  const { Icon, modifier, title } = PREPARE_ICON[state]
 
   return (
     <span
@@ -86,7 +84,7 @@ function PrepareStatusIcon({
       aria-label={title}
       title={title}
     >
-      <Icon size={16} className={spin ? "application-item__spin" : undefined} />
+      <Icon size={16} />
     </span>
   )
 }

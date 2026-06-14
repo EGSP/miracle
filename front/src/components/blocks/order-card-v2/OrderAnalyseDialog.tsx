@@ -2,6 +2,7 @@ import { Stack, Text } from "@miracle/aramid"
 import type { AnalysisBlocker, AnalysisParamDef, AnalysisVariantInfo } from "@miracle/types"
 import { ScanText } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
+import { isJobStatusActive } from "@/components/blocks/job-tree/job-tree.utils"
 import { Button } from "@/components/ui/ds/button"
 import { Checkbox } from "@/components/ui/ds/checkbox"
 import { Input } from "@/components/ui/ds/input"
@@ -14,7 +15,9 @@ import {
   useGetAnalysisParams,
   useGetAnalysisReadiness,
   useGetAnalysisVariants,
+  usePollOrderJob,
 } from "@/lib/queries/order.query"
+import { OrderAnalyseProgress } from "./OrderAnalyseProgress"
 
 type Props = {
   orderId: string
@@ -66,6 +69,9 @@ function PrepareVisualBlocker({
 }
 
 export function OrderAnalyseDialog({ orderId, onClose }: Props) {
+  const { data: run } = usePollOrderJob(orderId)
+  const hasActiveRun = run ? isJobStatusActive(run.status) : false
+
   const variantsQuery = useGetAnalysisVariants(orderId)
   const variants = variantsQuery.data ?? EMPTY_VARIANTS
   const [selectedVariant, setSelectedVariant] = useState<AnalysisVariantInfo | null>(null)
@@ -88,7 +94,11 @@ export function OrderAnalyseDialog({ orderId, onClose }: Props) {
   }, [params])
 
   const readinessQuery = useGetAnalysisReadiness(orderId, variantId)
-  const blockers = readinessQuery.data?.blockers ?? []
+  // Активный прогон показываем прогрессом (ниже), а не как блокер-«ошибку» — оставляем только VISUAL.
+  const visualBlockers = (readinessQuery.data?.blockers ?? []).filter(
+    (blocker): blocker is Extract<AnalysisBlocker, { kind: "unprepared-visual" }> =>
+      blocker.kind === "unprepared-visual",
+  )
   const canRun = readinessQuery.data?.canRun ?? false
 
   const analyseMutation = useAnalyseOrder(orderId)
@@ -117,78 +127,82 @@ export function OrderAnalyseDialog({ orderId, onClose }: Props) {
     selectedVariant,
   ])
 
+  // Кнопки действий всегда видны; «Запустить» недоступна при активном прогоне или неготовности.
   const actions: DialogButtonConfig[] = [
     { label: "Отмена", onClick: onClose, variant: "secondary" },
     {
       label: analyseMutation.isPending ? "Запуск…" : "Запустить анализ",
       onClick: handleStart,
-      disabled: !variantId || isBusy || !canRun,
+      disabled: hasActiveRun || !variantId || isBusy || !canRun,
     },
   ]
 
   return (
     <Dialog
-      title="Запуск анализа заказа"
-      description="Выберите вариант анализа и параметры запуска."
+      title={hasActiveRun ? "Анализ заказа" : "Запуск анализа заказа"}
+      description={
+        hasActiveRun
+          ? "Анализ выполняется. Дождитесь завершения — окно можно закрыть, прогресс не прервётся."
+          : "Выберите вариант анализа и параметры запуска."
+      }
       size="md"
       onClose={onClose}
       actions={actions}
     >
-      <Stack gap={4}>
-        <Input.Dropdown<AnalysisVariantInfo>
-          label="Вариант анализа"
-          items={variants}
-          value={selectedVariant}
-          onChange={setSelectedVariant}
-          getItemKey={(variant) => variant.id}
-          renderSelectedItem={(variant) => variant?.name ?? "Выберите вариант"}
-          renderListItem={(variant) => (
-            <Text as="span" compact>
-              {variant?.name ?? "Не выбрано"}
-            </Text>
+      {hasActiveRun ? (
+        <OrderAnalyseProgress orderId={orderId} />
+      ) : (
+        <Stack gap={4}>
+          <Input.Dropdown<AnalysisVariantInfo>
+            label="Вариант анализа"
+            items={variants}
+            value={selectedVariant}
+            onChange={setSelectedVariant}
+            getItemKey={(variant) => variant.id}
+            renderSelectedItem={(variant) => variant?.name ?? "Выберите вариант"}
+            renderListItem={(variant) => (
+              <Text as="span" compact>
+                {variant?.name ?? "Не выбрано"}
+              </Text>
+            )}
+            helperText={helperText}
+            disabled={variantsQuery.isPending || variants.length === 0 || analyseMutation.isPending}
+            fluid
+          >
+            <Input.Dropdown.Selected />
+            <Input.Dropdown.List emptyText="Нет вариантов анализа" />
+          </Input.Dropdown>
+
+          {variantId && params.length > 0 && (
+            <Stack gap={3}>
+              {params.map((param) => (
+                <Stack gap={1} key={param.key}>
+                  <Checkbox.Item
+                    label={param.label}
+                    checked={paramValues[param.key] ?? param.default}
+                    onChange={(checked) =>
+                      setParamValues((prev) => ({ ...prev, [param.key]: checked }))
+                    }
+                    disabled={analyseMutation.isPending}
+                  />
+                  <Text.Helper as="p">{param.description}</Text.Helper>
+                </Stack>
+              ))}
+            </Stack>
           )}
-          helperText={helperText}
-          disabled={variantsQuery.isPending || variants.length === 0 || analyseMutation.isPending}
-          fluid
-        >
-          <Input.Dropdown.Selected />
-          <Input.Dropdown.List emptyText="Нет вариантов анализа" />
-        </Input.Dropdown>
 
-        {variantId && params.length > 0 && (
-          <Stack gap={3}>
-            {params.map((param) => (
-              <Stack gap={1} key={param.key}>
-                <Checkbox.Item
-                  label={param.label}
-                  checked={paramValues[param.key] ?? param.default}
-                  onChange={(checked) =>
-                    setParamValues((prev) => ({ ...prev, [param.key]: checked }))
-                  }
-                  disabled={analyseMutation.isPending}
-                />
-                <Text.Helper as="p">{param.description}</Text.Helper>
-              </Stack>
-            ))}
-          </Stack>
-        )}
+          {visualBlockers.length > 0 && (
+            <Stack gap={2}>
+              <Text.Label as="span">Перед запуском нужно подготовить файлы:</Text.Label>
+              {visualBlockers.map((blocker) => (
+                <AnalysisBlockerRow key={blocker.fileId} blocker={blocker} />
+              ))}
+            </Stack>
+          )}
 
-        {blockers.length > 0 && (
-          <Stack gap={2}>
-            <Text.Label as="span">Запуск недоступен — требуется:</Text.Label>
-            {blockers.map((blocker, index) => (
-              <AnalysisBlockerRow
-                key={
-                  blocker.kind === "unprepared-visual" ? blocker.fileId : `${blocker.kind}-${index}`
-                }
-                blocker={blocker}
-              />
-            ))}
-          </Stack>
-        )}
-
-        <InlineMutationNotification mutation={analyseMutation} successMessage="Анализ запущен" />
-      </Stack>
+          <InlineMutationNotification mutation={analyseMutation} successMessage="Анализ запущен" />
+        </Stack>
+      )}
     </Dialog>
   )
 }

@@ -17,7 +17,7 @@ export const ANALYSE_ORDER_V2_VARIANT: AnalysisVariant = {
             description:
                 'Снести прежний прогон и запустить заново. Без флага — вернуть текущий, если он уже есть.',
             type: 'boolean',
-            default: true,
+            default: false,
         },
         {
             key: 'forcePositions',
