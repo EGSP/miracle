@@ -4,92 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>От промисов к Effect: миграция кода и интеграция Promise-библиотек</title>
+<link rel="stylesheet" href="../../lecture.css">
 <style>
-  :root {
-    --bg: #ffffff; --panel: #f7f8fa; --ink: #19191c; --muted: #6c707e;
-    --accent: #7048e8; --accent2: #3573f0; --warn: #b25f00; --line: #ebecf0;
-    --code-bg: #f7f8fa; --code-ink: #19191c; --cmt: #8c8c8c; --kw: #0033b3;
-    --str: #067d17; --fn: #00627a;
-    --maxw: 980px;
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 17px/1.7 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 120px; }
-  header.top {
-    border-bottom: 1px solid var(--line); margin-bottom: 28px;
-    padding: 40px 22px 26px; background: linear-gradient(180deg, #ffffff, #f7f8fa);
-  }
-  header.top .inner { max-width: var(--maxw); margin: 0 auto; }
-  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -.2px; color: var(--ink); }
-  .sub { color: var(--muted); font-size: 16px; margin: 0; }
-  .badge {
-    display: inline-block; margin-top: 14px; padding: 5px 11px; border-radius: 999px;
-    background: #f1f2f4; border: 1px solid var(--line); color: var(--muted); font-size: 13px;
-  }
-  h2 {
-    font-size: 23px; margin: 52px 0 14px; padding-top: 14px; letter-spacing: -.2px;
-    border-top: 1px solid var(--line);
-  }
-  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 10px; }
-  h3 { font-size: 18px; margin: 28px 0 10px; color: #383a42; }
-  p { margin: 12px 0; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  code.inl {
-    background: #f1f2f4; border: 1px solid #e3e5e8; border-radius: 5px;
-    padding: 1px 6px; font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: .88em;
-    color: #0a3069;
-  }
-  pre {
-    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
-    padding: 16px 18px; overflow-x: auto; margin: 16px 0;
-    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.62;
-    color: var(--code-ink);
-  }
-  pre .c { color: var(--cmt); font-style: italic; }
-  pre .k { color: var(--kw); }
-  pre .s { color: var(--str); }
-  pre .f { color: var(--fn); }
-  .lead { font-size: 18px; color: #383a42; }
-  .why, .note, .warnbox {
-    border-radius: 10px; padding: 14px 16px 14px 18px; margin: 18px 0;
-    border: 1px solid var(--line);
-  }
-  .why { border-left: 3px solid var(--accent); background: #f4f1fd; }
-  .note { border-left: 3px solid var(--accent2); background: #eef3fe; }
-  .warnbox { border-left: 3px solid var(--warn); background: #fff7ea; }
-  .why .t, .note .t, .warnbox .t {
-    display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; letter-spacing: .3px;
-    text-transform: uppercase;
-  }
-  .why .t { color: var(--accent); }
-  .note .t { color: var(--accent2); }
-  .warnbox .t { color: var(--warn); }
-  nav.toc {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 18px 22px; margin: 8px 0 10px;
-  }
-  nav.toc h2 { border: 0; margin: 0 0 10px; padding: 0; font-size: 16px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .5px; }
-  nav.toc ol { margin: 0; padding-left: 22px; }
-  nav.toc li { margin: 3px 0; }
-  nav.toc .part { list-style: none; margin: 12px 0 4px -22px; font-weight: 600; color: #383a42; }
-  table.cmp { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px; }
-  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
-  table.cmp th { background: #f2f3f5; color: var(--ink); }
-  table.cmp td code { white-space: nowrap; }
-  hr.soft { border: 0; border-top: 1px dashed var(--line); margin: 26px 0; }
-  .pill { display:inline-block; padding:1px 8px; border-radius:6px; background:#f1f2f4; border:1px solid var(--line); font-size:12.5px; color:var(--muted); }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
-  .col h4 { margin: 0 0 6px; font-size: 14px; letter-spacing:.3px; text-transform: uppercase; color: var(--muted); }
+  /* Уникальные отличия этой лекции от общего lecture.css */
   .before h4 { color: #c9362c; } .after h4 { color: var(--str); }
-  footer { color: var(--muted); font-size: 14px; margin-top: 60px; border-top: 1px solid var(--line); padding-top: 18px; }
 </style>
 </head>
 <body>

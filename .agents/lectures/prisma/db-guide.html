@@ -4,52 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Работа с базой данных в miracle — практическое руководство</title>
+<link rel="stylesheet" href="../lecture.css">
 <style>
+  /* Уникальные отличия и дрейф этой лекции относительно общего lecture.css.
+     Идёт после <link>, поэтому каскадно переопределяет канон. */
   :root {
-    --bg: #ffffff; --panel: #f7f8fa; --ink: #19191c; --muted: #6c707e;
-    --accent: #7048e8; --accent2: #3573f0; --warn: #b25f00; --ok: #1a7f37;
-    --line: #ebecf0; --code-bg: #f7f8fa; --cmt: #8c8c8c;
-    --kw: #0033b3; --str: #067d17; --fn: #00627a; --num: #1750eb;
+    --code-bg: #f7f8fa; --num: #1750eb;
     --maxw: 990px;
   }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 17px/1.72 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 120px; }
-  header.top {
-    border-bottom: 1px solid var(--line); margin-bottom: 28px;
-    padding: 40px 22px 26px; background: linear-gradient(180deg,#fff,#f7f8fa);
-  }
-  header.top .inner { max-width: var(--maxw); margin: 0 auto; }
-  h1 { font-size: 29px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -.2px; }
-  .sub { color: var(--muted); font-size: 16px; margin: 0; }
-  .badge {
-    display: inline-block; margin-top: 14px; padding: 5px 11px; border-radius: 999px;
-    background: #f1f2f4; border: 1px solid var(--line); color: var(--muted); font-size: 13px;
-  }
-  h2 {
-    font-size: 22px; margin: 52px 0 14px; padding-top: 14px; letter-spacing: -.2px;
-    border-top: 1px solid var(--line);
-  }
-  h2 .num { color: var(--accent); margin-right: 10px; }
+  body { font: 17px/1.72 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  header.top { background: linear-gradient(180deg,#fff,#f7f8fa); }
+  h1 { font-size: 29px; color: var(--ink); }
+  h2 { font-size: 22px; }
+  h2 .num { font-variant-numeric: normal; }
   h3 { font-size: 17px; margin: 30px 0 10px; color: #2d2f38; font-weight: 600; }
   p { margin: 10px 0; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
   ul, ol { margin: 10px 0; padding-left: 24px; }
   li { margin: 5px 0; }
   code.inl {
-    background: #f1f2f4; border: 1px solid #e3e5e8; border-radius: 5px;
-    padding: 1px 6px; font-family: "JetBrains Mono","SF Mono",Consolas,monospace;
-    font-size: .87em; color: #0a3069;
+    font-family: "JetBrains Mono","SF Mono",Consolas,monospace;
+    font-size: .87em;
   }
   pre {
-    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
-    padding: 15px 18px; overflow-x: auto; margin: 14px 0;
+    padding: 15px 18px; margin: 14px 0;
     font-family: "JetBrains Mono","SF Mono",Consolas,monospace;
     font-size: 13.5px; line-height: 1.65; color: var(--ink);
     position: relative;
@@ -58,51 +35,30 @@
     position: absolute; top: 8px; right: 12px;
     font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px;
   }
-  pre .c { color: var(--cmt); font-style: italic; }
-  pre .k { color: var(--kw); }
-  pre .s { color: var(--str); }
-  pre .f { color: var(--fn); }
   pre .n { color: var(--num); }
   pre .t { color: #7048e8; }   /* type / interface */
   pre .h { color: #b25f00; }   /* highlight / важное */
-  .lead { font-size: 18px; color: #383a42; }
+  /* Коробки: эта лекция использует .okbox (вместо .instr) и меньший отступ/кегль заголовка */
   .why, .note, .warnbox, .okbox {
     border-radius: 10px; padding: 14px 16px 14px 18px; margin: 16px 0;
     border: 1px solid var(--line);
   }
-  .why   { border-left: 3px solid var(--accent);  background: #f4f1fd; }
-  .note  { border-left: 3px solid var(--accent2); background: #eef3fe; }
-  .warnbox { border-left: 3px solid var(--warn);  background: #fff7ea; }
-  .okbox { border-left: 3px solid var(--ok);      background: #f0fdf4; }
+  .okbox { border-left: 3px solid var(--ok); background: #f0fdf4; }
   .why .t,.note .t,.warnbox .t,.okbox .t {
     display: block; font-weight: 600; margin-bottom: 4px; font-size: 13.5px;
     letter-spacing: .3px; text-transform: uppercase;
   }
-  .why .t   { color: var(--accent); }
-  .note .t  { color: var(--accent2); }
-  .warnbox .t { color: var(--warn); }
   .okbox .t { color: var(--ok); }
-  nav.toc {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 18px 22px; margin: 6px 0 10px;
-  }
-  nav.toc h2 { border: 0; margin: 0 0 10px; padding: 0; font-size: 15px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .5px; }
-  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc { margin: 6px 0 10px; }
+  nav.toc h2 { font-size: 15px; }
   nav.toc li { margin: 4px 0; }
-  nav.toc .part { list-style: none; margin: 12px 0 4px -22px; font-weight: 600; color: #383a42; font-size: 15px; }
-  table.cmp { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
-  table.cmp th, table.cmp td {
-    border: 1px solid var(--line); padding: 9px 12px;
-    text-align: left; vertical-align: top;
-  }
-  table.cmp th { background: #f2f3f5; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
-  .col h4 { margin: 0 0 6px; font-size: 13px; letter-spacing: .4px;
-    text-transform: uppercase; color: var(--muted); }
+  nav.toc .part { font-size: 15px; }
+  table.cmp { margin: 14px 0; font-size: 14px; }
+  table.cmp th { color: revert; }
+  table.cmp td code { white-space: normal; }
+  .col h4 { font-size: 13px; letter-spacing: .4px; }
   .before h4 { color: #c9362c; } .after h4 { color: var(--ok); }
-  hr.soft { border: 0; border-top: 1px dashed var(--line); margin: 24px 0; }
+  hr.soft { margin: 24px 0; }
   .schema-box {
     background: #0d1117; color: #e6edf3; border-radius: 10px;
     padding: 16px 18px; font-family: "JetBrains Mono","SF Mono",Consolas,monospace;
@@ -113,8 +69,6 @@
   .schema-box .sv { color: #a5d6ff; }
   .schema-box .sc { color: #8b949e; font-style: italic; }
   .schema-box .sd { color: #d2a8ff; }
-  footer { color: var(--muted); font-size: 14px; margin-top: 60px;
-    border-top: 1px solid var(--line); padding-top: 18px; }
   .tag {
     display: inline-block; padding: 2px 8px; border-radius: 5px;
     font-size: 12px; font-weight: 600; letter-spacing: .2px;
