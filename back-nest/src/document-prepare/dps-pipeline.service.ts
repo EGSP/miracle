@@ -1,9 +1,10 @@
-import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { Cause, Effect } from 'effect';
 import { formatUnknown } from '../common/effect-errors.js';
 import { AppConfigService } from '../config/app-config.service.js';
+import { AppLoggerService, type AppLogger } from '../logger/app-logger.service.js';
 import { FilesService } from '../files/files.service.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { KreuzbergHttpExtractor } from './adapters/kreuzberg-http.extractor.js';
@@ -47,6 +48,8 @@ export class DpsPipeline implements OnModuleInit {
     private readonly kreuzbergLane = new Lane<KreuzbergItem>('kreuzberg');
     private readonly yandexLane = new Lane<YandexItem>('yandex');
 
+    private readonly logger: AppLogger;
+
     constructor(
         private readonly config: AppConfigService,
         private readonly store: PreparedDocumentStore,
@@ -54,7 +57,15 @@ export class DpsPipeline implements OnModuleInit {
         private readonly converter: LibreOfficeHttpConverter,
         private readonly kreuzberg: KreuzbergHttpExtractor,
         private readonly jobs: JobsService,
-    ) {}
+        @Inject(AppLoggerService) loggerFactory: AppLoggerService,
+    ) {
+        this.logger = loggerFactory.forContext(DpsPipeline.name);
+    }
+
+    /** Непредвиденный исход обработчика линии (ошибка/дефект): логируем, воркер продолжает (см. {@link Lane}). */
+    private readonly onLaneError = (label: string, cause: Cause.Cause<unknown>): void => {
+        this.logger.error(`Линия "${label}": ошибка обработки элемента`, Cause.pretty(cause));
+    };
 
     onModuleInit(): void {
         const kreuzbergWorkers = this.config.dpsMaxConcurrency;
@@ -65,9 +76,9 @@ export class DpsPipeline implements OnModuleInit {
         this.libreofficeLane.init(Math.max(libreofficeWorkers * 2, 2));
         this.yandexLane.init(4);
 
-        this.kreuzbergLane.startWorkers(kreuzbergWorkers, this.handleKreuzberg);
-        this.libreofficeLane.startWorkers(libreofficeWorkers, this.handleLibreOffice);
-        this.yandexLane.startWorkers(1, this.handleYandex);
+        this.kreuzbergLane.startWorkers(kreuzbergWorkers, this.handleKreuzberg, this.onLaneError);
+        this.libreofficeLane.startWorkers(libreofficeWorkers, this.handleLibreOffice, this.onLaneError);
+        this.yandexLane.startWorkers(1, this.handleYandex, this.onLaneError);
     }
 
     /**

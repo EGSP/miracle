@@ -1,4 +1,4 @@
-import { Effect, Queue } from 'effect';
+import { Cause, Effect, Queue } from 'effect';
 
 /**
  * Линия обработки: bounded-очередь + фиксированное число воркеров-демонов.
@@ -8,9 +8,16 @@ import { Effect, Queue } from 'effect';
  * стадия естественно притормаживает быструю через цепочку bounded-очередей, без явного знания одной
  * стадии о загрузке другой.
  *
- * Воркеры стартуют как корневые fiber'ы рантайма (`Effect.runFork`) и крутят бесконечный цикл
- * `take → handle`. `handle` обязан быть бесконечно-живущим (тип ошибки `never`): любая ошибка работы
- * должна обрабатываться внутри (например, через резолв `Deferred` заказа), иначе воркер бы «умер».
+ * **Устойчивость воркера.** Линии всё равно на исход отдельного элемента: каждая итерация
+ * `take → handle` обёрнута в `catchAllCause`, поэтому любой исход `handle` — типизированная ошибка
+ * ИЛИ дефект (неожиданный throw / реджект промиса / баг) — логируется через `onError`, и воркер
+ * берёт следующий элемент. Воркер останавливается ТОЛЬКО на прерывании (shutdown). Без этой обёртки
+ * дефект всплыл бы через `forever` и убил бы fiber воркера (а при гибели всех — линия встала бы:
+ * очередь забивается, `offer` виснут навсегда).
+ *
+ * `handle` типизирован как `Effect<unknown, never>` — бизнес-обработчики всё равно должны сами
+ * приводить ожидаемые ошибки к результату (например, `markFailed`/резолв `Deferred`); `catchAllCause`
+ * здесь — страховка от непредвиденного, а не основной путь обработки ошибок.
  */
 export class Lane<Item> {
     private queue: Queue.Queue<Item> | undefined;
@@ -29,9 +36,25 @@ export class Lane<Item> {
         return this.queue;
     }
 
-    /** Запускает `workers` воркеров-демонов, бесконечно потребляющих очередь через `handle`. */
-    startWorkers(workers: number, handle: (item: Item) => Effect.Effect<unknown, never>): void {
-        const loop = Queue.take(this.requireQueue()).pipe(Effect.flatMap(handle), Effect.forever);
+    /**
+     * Запускает `workers` воркеров-демонов, бесконечно потребляющих очередь через `handle`.
+     * `onError` вызывается на любом непредвиденном исходе `handle` (ошибка/дефект) — воркер при этом
+     * выживает и продолжает. Прерывание (shutdown) пробрасывается и останавливает воркер.
+     */
+    startWorkers(
+        workers: number,
+        handle: (item: Item) => Effect.Effect<unknown, never>,
+        onError: (label: string, cause: Cause.Cause<unknown>) => void,
+    ): void {
+        const guarded = (item: Item): Effect.Effect<unknown> =>
+            handle(item).pipe(
+                Effect.catchAllCause((cause) =>
+                    Cause.isInterruptedOnly(cause)
+                        ? Effect.failCause(cause) // прерывание (shutdown) — даём воркеру остановиться
+                        : Effect.sync(() => onError(this.label, cause)), // иначе логируем и продолжаем
+                ),
+            );
+        const loop = Queue.take(this.requireQueue()).pipe(Effect.flatMap(guarded), Effect.forever);
         for (let i = 0; i < workers; i += 1) {
             Effect.runFork(loop);
         }
