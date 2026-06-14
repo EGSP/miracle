@@ -52,7 +52,8 @@ export function usePrepareDocument(fileId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: () => documentPrepare.prepare(fileId),
+    // Ручная подготовка всегда разрешает LLM Vision (для VISUAL-файлов) — в обход глобального гейта.
+    mutationFn: () => documentPrepare.prepare(fileId, { allowVision: true }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: [...DOCUMENT_PREPARE_STATUS_KEY, fileId],

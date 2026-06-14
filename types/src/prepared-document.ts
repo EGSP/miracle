@@ -14,6 +14,8 @@ export type PreparedDocument = {
     fileId: string;
     status: PrepareStatus;
     engine: PreparedEngine;
+    /** Ручной запрос разрешил LLM Vision для этого файла в обход глобального `LLM_VISION_ENABLED`. */
+    allowVision: boolean;
     markdown?: string | null;
     pages?: PreparedPage[] | null;
     meta?: Record<string, unknown> | null;

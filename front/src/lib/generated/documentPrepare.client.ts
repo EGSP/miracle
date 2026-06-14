@@ -4,7 +4,7 @@
 import { customInstance } from '../api';
 import { formatPath } from './http';
 import type { PrepareStatus, PreparedDocument, Stored } from '@miracle/types';
-import type { DocumentPreparePrepareResponse } from './models';
+import type { PrepareDocumentDto, DocumentPreparePrepareResponse } from './models';
 
 export const documentPrepare = {
     getPrepared: (fileId: string) => customInstance<Stored<PreparedDocument> | null>({
@@ -15,8 +15,9 @@ export const documentPrepare = {
         method: 'GET',
         url: formatPath('/documents/:fileId/status', { fileId }),
     }),
-    prepare: (fileId: string) => customInstance<DocumentPreparePrepareResponse>({
+    prepare: (fileId: string, prepareDocumentDto: PrepareDocumentDto) => customInstance<DocumentPreparePrepareResponse>({
         method: 'POST',
         url: formatPath('/documents/:fileId/prepare', { fileId }),
+        data: prepareDocumentDto,
     }),
 };

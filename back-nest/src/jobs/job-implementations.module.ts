@@ -9,6 +9,9 @@ import { ExtractPositionsFromChunkJob } from './implementations/order/extract-po
 import { AnalyseDesignationJob } from './implementations/order/analyse-designation.job.js';
 import { AnalyseApplicationJob } from './implementations/order/analyse-application.job.js';
 import { AnalyseOrderJob } from './implementations/order/analyse-order.job.js';
+import { AnalyseOrderV2Job } from './implementations/order/analyse-order-v2.job.js';
+import { AnalyseGroupDesignationJob } from './implementations/order/analyse-group-designation.job.js';
+import { DesignationSlotTool } from './implementations/order/tools/designation-slot.tool.js';
 import { VisionExtractTool } from './implementations/document-prepare/tools/vision-extract.tool.js';
 import { VisionPrepareJob } from './implementations/document-prepare/vision-prepare.job.js';
 
@@ -28,6 +31,9 @@ import { VisionPrepareJob } from './implementations/document-prepare/vision-prep
         AnalyseDesignationJob,
         AnalyseApplicationJob,
         AnalyseOrderJob,
+        AnalyseOrderV2Job,
+        AnalyseGroupDesignationJob,
+        DesignationSlotTool,
         VisionExtractTool,
         VisionPrepareJob,
     ],

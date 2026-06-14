@@ -15,6 +15,9 @@ import {
 } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
+    AnalysisParamDef,
+    AnalysisReadiness,
+    AnalysisVariantInfo,
     JobRun,
     Order,
     OrderApplication,
@@ -32,9 +35,10 @@ import { OrdersService } from './orders.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
 import { OrderPositionsService } from './order-positions.service.js';
 import { OrderAnalysisService } from './order-analysis.service.js';
+import { OrderAnalysisVariantsService } from './order-analysis-variants.service.js';
 import { OrderReportService } from './order-report.service.js';
 import { CreateTextApplicationDto } from './dto/create-text-application.dto.js';
-import { AnalyseOrderDto } from './dto/analyse-order.dto.js';
+import { AnalyseOrderRequestDto } from './dto/analyse-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 
 @Controller('order')
@@ -45,6 +49,7 @@ export class OrdersController {
         private readonly orderApplications: OrderApplicationsService,
         private readonly orderPositions: OrderPositionsService,
         private readonly orderAnalysis: OrderAnalysisService,
+        private readonly analysisVariants: OrderAnalysisVariantsService,
         private readonly orderReport: OrderReportService,
         private readonly files: FilesService,
     ) {}
@@ -70,14 +75,41 @@ export class OrdersController {
     }
 
     /**
-     * (Пере)анализ заказа: запускает джоб `analyse-order` (чтение приложений → позиции → обозначения).
-     * Тело — {@link AnalyseOrderDto}: `deleteJobs` (умолч. true) супрессирует прежний прогон,
-     * `deleteFileContent` (умолч. false) дополнительно сбрасывает вычитки FileContent.
+     * Унифицированный (пере)анализ заказа: тело — {@link AnalyseOrderRequestDto} `{ variantId, params }`.
+     * Вариант (v1/v2) и интерпретацию параметров разводит {@link OrderAnalysisVariantsService};
+     * он же проверяет готовность (нет активного прогона, VISUAL подготовлены) — иначе `409`.
      */
     @Post(':id/analyse')
-    async analyse(@Param('id') id: string, @Body() body: AnalyseOrderDto): Promise<Stored<JobRun>> {
+    async analyse(@Param('id') id: string, @Body() body: AnalyseOrderRequestDto): Promise<Stored<JobRun>> {
         await this.orders.getOrThrow(id);
-        return this.orderAnalysis.analyse(id, body) as Promise<Stored<JobRun>>;
+        return this.analysisVariants.run(id, body.variantId, body.params) as Promise<Stored<JobRun>>;
+    }
+
+    /** Доступные варианты анализа заказа (id+name+description) — для дропдауна. */
+    @Get(':id/analysis-variants')
+    async listAnalysisVariants(@Param('id') id: string): Promise<AnalysisVariantInfo[]> {
+        await this.orders.getOrThrow(id);
+        return this.analysisVariants.listVariants();
+    }
+
+    /** Схема параметров запуска выбранного варианта — для динамического рендера формы. */
+    @Get(':id/analysis-variants/:variantId/params')
+    async getAnalysisParams(
+        @Param('id') id: string,
+        @Param('variantId') variantId: string,
+    ): Promise<AnalysisParamDef[]> {
+        await this.orders.getOrThrow(id);
+        return this.analysisVariants.getParams(variantId);
+    }
+
+    /** Готовность заказа к запуску варианта: блокеры (активный прогон, неподготовленные VISUAL). */
+    @Get(':id/analysis-readiness')
+    async analysisReadiness(
+        @Param('id') id: string,
+        @Query('variantId') variantId: string,
+    ): Promise<AnalysisReadiness> {
+        await this.orders.getOrThrow(id);
+        return this.analysisVariants.readiness(id, variantId);
     }
 
     /** Текущий корневой прогон анализа заказа (или `null`, если не запускался) — для тайла прогресса. */

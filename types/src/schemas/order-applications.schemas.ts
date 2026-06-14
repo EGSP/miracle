@@ -17,3 +17,15 @@ export const AnalyseOrderSchema = z.object({
 });
 
 export type AnalyseOrderOptions = z.infer<typeof AnalyseOrderSchema>;
+
+/**
+ * Тело унифицированного запуска анализа: выбранный вариант + значения булевых параметров.
+ * Параметры свободной формы (`Record<string, boolean>`) валидируются по схеме конкретного варианта
+ * на сервере (`OrderAnalysisVariantsService`).
+ */
+export const AnalyseOrderRequestSchema = z.object({
+    variantId: z.string().min(1, 'Не передан id варианта анализа'),
+    params: z.record(z.string(), z.boolean()).default({}),
+});
+
+export type AnalyseOrderRequestInput = z.infer<typeof AnalyseOrderRequestSchema>;

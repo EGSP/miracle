@@ -57,4 +57,26 @@ export class DesignationsService {
         });
         return toDesignation(row as DesignationRow);
     }
+
+    /**
+     * Идемпотентная запись ОДНОГО слота обозначения (пошаговый анализ v2): создаёт обозначение,
+     * если его ещё нет, иначе merge'ит значение по `slotIndex` (replace-by-index), сохраняя порядок.
+     *
+     * Read-modify-write безопасен в рамках последовательного обхода слотов группы (см. README).
+     * Повторное применение того же значения ничего не ломает — это и даёт возобновляемость.
+     */
+    async patchSlot(orderPositionId: string, tcId: string, value: DesignationValue): Promise<Stored<Designation>> {
+        const existing = await this.prisma.designation.findUnique({ where: { orderPositionId } });
+        const previous = (existing?.values ?? []) as DesignationValue[];
+        const next = [...previous.filter((entry) => entry.slotIndex !== value.slotIndex), value].sort(
+            (a, b) => a.slotIndex - b.slotIndex,
+        );
+
+        const row = await this.prisma.designation.upsert({
+            where: { orderPositionId },
+            create: { orderPositionId, tcId, values: next as object },
+            update: { tcId, values: next as object },
+        });
+        return toDesignation(row as DesignationRow);
+    }
 }

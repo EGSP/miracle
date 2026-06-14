@@ -98,6 +98,8 @@ model PreparedDocument {
   fileId   String
   status   PrepareStatus
   engine   String        // 'kreuzberg' | 'llm-vision'
+  // Ручной запрос разрешает LLM Vision для этого файла в обход глобального LLM_VISION_ENABLED.
+  allowVision Boolean    @default(false)
   markdown String?
   pages    Json?         // [{ page, markdown }]
   meta     Json?

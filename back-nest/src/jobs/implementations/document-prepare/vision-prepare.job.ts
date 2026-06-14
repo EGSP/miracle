@@ -38,13 +38,16 @@ export class VisionPrepareJob implements Job<VisionPrepareInput, void> {
     ) {
         this.run = (input) =>
             Effect.gen(function* () {
-                if (!config.llmVisionEnabled) {
-                    // БЛОК: автоматическая LLM-разметка VISUAL отключена (LLM_VISION_ENABLED=false).
-                    // Падаем ошибкой — catchAll пометит PreparedDocument failed, а прогон станет failed
-                    // (повторный re-prepare сможет перезапустить его, когда флаг включат).
+                // Ручной запрос (allowVision на PreparedDocument) разрешает разметку в обход глобального
+                // флага. БЛОК действует только для авто-пути при выключенном LLM_VISION_ENABLED.
+                const allowVision = yield* store.loadAllowVision(input.fileId);
+                if (!config.llmVisionEnabled && !allowVision) {
+                    // catchAll пометит PreparedDocument failed, а прогон станет failed (повторный
+                    // re-prepare — в т.ч. ручной с allowVision — сможет перезапустить).
                     return yield* Effect.fail(
                         new ExtractError({
-                            message: 'LLM Vision разметка отключена (LLM_VISION_ENABLED=false)',
+                            message:
+                                'LLM Vision разметка отключена (LLM_VISION_ENABLED=false). Запустите ручной анализ файла.',
                         }),
                     );
                 }

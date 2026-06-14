@@ -93,12 +93,18 @@ export class DocumentPrepareService implements OnApplicationBootstrap {
      * Ставит подготовку файла в движок и возвращает актуальную `PreparedDocument`. Идемпотентно по
      * `fileId`: пока запись `running`/`queued` — возвращает её как есть (не пере-обрабатывает).
      * Завершённая (`succeed`/`failed`) при повторном вызове сносится — re-prepare всегда свежий.
+     *
+     * `allowVision` (ручной запрос) разрешает LLM Vision для VISUAL-файла в обход глобального
+     * `LLM_VISION_ENABLED` — флаг сохраняется в `PreparedDocument` и читается vision-джобой.
      */
-    async enqueuePrepare(fileId: string): Promise<Stored<PreparedDocument>> {
-        return this.withFileLock(fileId, () => this.enqueueInternal(fileId));
+    async enqueuePrepare(
+        fileId: string,
+        options?: { allowVision?: boolean },
+    ): Promise<Stored<PreparedDocument>> {
+        return this.withFileLock(fileId, () => this.enqueueInternal(fileId, options?.allowVision ?? false));
     }
 
-    private async enqueueInternal(fileId: string): Promise<Stored<PreparedDocument>> {
+    private async enqueueInternal(fileId: string, allowVision: boolean): Promise<Stored<PreparedDocument>> {
         const file = await this.requireSupportedFile(fileId);
         const engine = routePreparedEngine(file)!;
 
@@ -107,7 +113,7 @@ export class DocumentPrepareService implements OnApplicationBootstrap {
             return existing;
         }
 
-        await this.createQueued(fileId, engine);
+        await this.createQueued(fileId, engine, allowVision);
         // submit помечает running и кладёт заказ в линию (offer может suspend-иться — backpressure).
         await Effect.runPromise(this.pipeline.submit(fileId));
         return (await this.getLatestByFile(fileId))!;
@@ -117,9 +123,15 @@ export class DocumentPrepareService implements OnApplicationBootstrap {
      * Создаёт свежую `queued`-строку подготовки файла, предварительно удалив прежнюю из БД.
      * Re-prepare не накапливает историю и не оставляет устаревших данных — всегда чистая строка.
      */
-    private async createQueued(fileId: string, engine: PreparedEngine): Promise<void> {
+    private async createQueued(
+        fileId: string,
+        engine: PreparedEngine,
+        allowVision: boolean,
+    ): Promise<void> {
         await this.prisma.preparedDocument.deleteMany({ where: { fileId } });
-        await this.prisma.preparedDocument.create({ data: { fileId, status: 'queued', engine } });
+        await this.prisma.preparedDocument.create({
+            data: { fileId, status: 'queued', engine, allowVision },
+        });
     }
 
     /** Проверяет, что файл существует и поддерживается роутером DPS. */

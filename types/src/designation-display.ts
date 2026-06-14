@@ -1,3 +1,4 @@
+import type { Confidence } from './confidence.js';
 import type { Designation, DesignationValue } from './designation.js';
 import type { TechnicalCondition } from './technical-condition.js';
 
@@ -14,10 +15,6 @@ export type DesignationDisplayPart = {
     text: string;
     tone: DesignationDisplayTone;
 };
-
-/** Пороги подсветки (согласованы с DesignationValue.confidence в типах). */
-export const DESIGNATION_CONFIDENCE_WARN = 0.7;
-export const DESIGNATION_CONFIDENCE_CRITICAL = 0.5;
 
 /** `null`, пустая строка и литерал `"null"` (иногда приходит от LLM) — «не задано». */
 export function isUnsetDesignationValue(value: string | null | undefined): boolean {
@@ -41,10 +38,10 @@ export function designationDisplayTone(value: DesignationValue | undefined): Des
     if (!value || isUnsetDesignationValue(value.value)) {
         return 'warn';
     }
-    if (value.confidence < DESIGNATION_CONFIDENCE_CRITICAL) {
+    if (value.confidence === 'low') {
         return 'critical';
     }
-    if (value.confidence < DESIGNATION_CONFIDENCE_WARN) {
+    if (value.confidence === 'medium') {
         return 'warn';
     }
     return 'none';
@@ -133,7 +130,7 @@ export function renderDesignationTemplate(
     });
 }
 
-/** Слот попадает в инспектор: пропуск в диапазоне, пустое значение или confidence < 0.5 при заданном value. */
+/** Слот попадает в инспектор: пропуск в диапазоне, пустое значение или `low` confidence при заданном value. */
 export function isDesignationInspectorIssue(entry: DesignationValue | undefined): boolean {
     if (!entry) {
         return true;
@@ -141,14 +138,14 @@ export function isDesignationInspectorIssue(entry: DesignationValue | undefined)
     if (isUnsetDesignationValue(entry.value)) {
         return true;
     }
-    return entry.confidence < DESIGNATION_CONFIDENCE_CRITICAL;
+    return entry.confidence === 'low';
 }
 
 export type DesignationInspectorRow = {
     slotIndex: number;
     slotName: string | null;
     tone: DesignationDisplayTone;
-    confidence: number | null;
+    confidence: Confidence | null;
     reasoning: string | null;
 };
 

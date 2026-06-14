@@ -1,5 +1,5 @@
 import { Stack, Text } from "@miracle/aramid"
-import type { Designation } from "@miracle/types"
+import type { Confidence, Designation } from "@miracle/types"
 import { useMemo } from "react"
 import { buildDesignationInspectorRows, designationToneClassName } from "@/lib/designation-display"
 import { useTechnicalCondition } from "@/lib/queries/technical-condition.query"
@@ -10,16 +10,19 @@ export type DesignationInspectorProps = {
   designation: Designation
 }
 
-function formatConfidence(confidence: number | null): string {
-  if (confidence === null) {
-    return "0%"
-  }
-  return `${Math.round(confidence * 100)}%`
+const CONFIDENCE_LABEL: Record<Confidence, string> = {
+  high: "Высокая уверенность",
+  medium: "Средняя уверенность",
+  low: "Низкая уверенность",
+}
+
+function formatConfidence(confidence: Confidence | null): string {
+  return confidence === null ? "Не определено" : CONFIDENCE_LABEL[confidence]
 }
 
 /**
  * Таблица слотов, требующих проверки: пропуск в диапазоне, пустое значение,
- * низкая уверенность при заданном value (confidence < 0.5).
+ * низкая уверенность при заданном value (confidence === "low").
  * Имена параметров — из TC по `designation.tcId`.
  * Колонка «Позиция» — 1-based (как в редакторе слотов ТУ), в данных остаётся `slotIndex` 0-based.
  */

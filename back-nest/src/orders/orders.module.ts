@@ -12,6 +12,7 @@ import { OrderPositionsService } from './order-positions.service.js';
 import { DesignationsService } from './designations.service.js';
 import { ApplicationChunkReader } from './application-chunk-reader.js';
 import { OrderAnalysisService } from './order-analysis.service.js';
+import { OrderAnalysisVariantsService } from './order-analysis-variants.service.js';
 import { OrderReportService } from './order-report.service.js';
 import { _1C_ERP_Commerce_Offer } from './reports/1c-erp-commerce-offer.report.js';
 import { _1C_ERP_Commerce_Offer_Extended } from './reports/1c-erp-commerce-offer-extended.report.js';
@@ -33,6 +34,7 @@ import { _1C_ERP_Commerce_Offer_Extended } from './reports/1c-erp-commerce-offer
         DesignationsService,
         ApplicationChunkReader,
         OrderAnalysisService,
+        OrderAnalysisVariantsService,
         OrderReportService,
         _1C_ERP_Commerce_Offer,
         _1C_ERP_Commerce_Offer_Extended,

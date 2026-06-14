@@ -3,8 +3,8 @@
 
 import { customInstance } from '../api';
 import { formatPath } from './http';
-import type { JobRun, Order, OrderApplication, OrderPositionWithDesignation, OrderQuery, OrderReportInfo, Stored } from '@miracle/types';
-import type { UpdateOrderDto, AnalyseOrderDto, CreateTextApplicationDto } from './models';
+import type { AnalysisParamDef, AnalysisReadiness, AnalysisVariantInfo, JobRun, Order, OrderApplication, OrderPositionWithDesignation, OrderQuery, OrderReportInfo, Stored } from '@miracle/types';
+import type { UpdateOrderDto, AnalyseOrderRequestDto, CreateTextApplicationDto } from './models';
 
 export const orders = {
     create: () => customInstance<Stored<Order>>({
@@ -25,10 +25,23 @@ export const orders = {
         url: formatPath('/order/:id', { id }),
         data: updateOrderDto,
     }),
-    analyse: (id: string, analyseOrderDto: AnalyseOrderDto) => customInstance<Stored<JobRun>>({
+    analyse: (id: string, analyseOrderRequestDto: AnalyseOrderRequestDto) => customInstance<Stored<JobRun>>({
         method: 'POST',
         url: formatPath('/order/:id/analyse', { id }),
-        data: analyseOrderDto,
+        data: analyseOrderRequestDto,
+    }),
+    listAnalysisVariants: (id: string) => customInstance<AnalysisVariantInfo[]>({
+        method: 'GET',
+        url: formatPath('/order/:id/analysis-variants', { id }),
+    }),
+    getAnalysisParams: (id: string, variantId: string) => customInstance<AnalysisParamDef[]>({
+        method: 'GET',
+        url: formatPath('/order/:id/analysis-variants/:variantId/params', { id, variantId }),
+    }),
+    analysisReadiness: (id: string, query: { variantId: string }) => customInstance<AnalysisReadiness>({
+        method: 'GET',
+        url: formatPath('/order/:id/analysis-readiness', { id }),
+        params: query,
     }),
     getJob: (id: string) => customInstance<Stored<JobRun> | null>({
         method: 'GET',

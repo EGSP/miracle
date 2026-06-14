@@ -12,6 +12,15 @@ import type { PreparedResult } from './extractor.port.js';
 export class PreparedDocumentStore {
     constructor(private readonly prisma: PrismaService) {}
 
+    /** Разрешён ли LLM Vision для файла ручным запросом (флаг `allowVision` актуальной записи). */
+    loadAllowVision(fileId: string): Effect.Effect<boolean> {
+        return Effect.promise(() =>
+            this.prisma.preparedDocument
+                .findFirst({ where: { fileId, deletedAt: null }, orderBy: { updatedAt: 'desc' } })
+                .then((row) => row?.allowVision ?? false),
+        );
+    }
+
     markRunning(fileId: string): Effect.Effect<void> {
         return Effect.promise(() =>
             this.prisma.preparedDocument

@@ -1,4 +1,5 @@
 import { createZodDto } from 'nestjs-zod';
-import { AnalyseOrderSchema } from '@miracle/types';
+import { AnalyseOrderRequestSchema } from '@miracle/types';
 
-export class AnalyseOrderDto extends createZodDto(AnalyseOrderSchema) {}
+/** Тело унифицированного запуска анализа: `{ variantId, params }`. */
+export class AnalyseOrderRequestDto extends createZodDto(AnalyseOrderRequestSchema) {}

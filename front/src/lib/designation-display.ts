@@ -1,20 +1,18 @@
 // Чистая логика отображения обозначения переехала в `@miracle/types` (общая с бэкенд-отчётом).
 // Здесь — ре-экспорт для существующих импортов `@/lib/designation-display` + UI-специфика (CSS-классы).
 export {
-  type DesignationDisplayTone,
+  buildDesignationDisplayCopyText,
+  buildDesignationDisplayParts,
+  buildDesignationInspectorRows,
   type DesignationDisplayPart,
+  type DesignationDisplayTone,
   type DesignationInspectorRow,
-  DESIGNATION_CONFIDENCE_WARN,
-  DESIGNATION_CONFIDENCE_CRITICAL,
-  isUnsetDesignationValue,
-  isSetDesignationValue,
   designationDisplayText,
   designationDisplayTone,
-  buildDesignationDisplayParts,
-  buildDesignationDisplayCopyText,
-  renderDesignationTemplate,
   isDesignationInspectorIssue,
-  buildDesignationInspectorRows,
+  isSetDesignationValue,
+  isUnsetDesignationValue,
+  renderDesignationTemplate,
 } from "@miracle/types"
 
 import type { DesignationDisplayTone } from "@miracle/types"

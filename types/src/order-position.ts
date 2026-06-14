@@ -1,7 +1,9 @@
 import type { Stored } from './db.js';
+import type { Confidence } from './confidence.js';
 import type { Designation } from './designation.js';
 
-export type OrderPositionConfidence = 'high' | 'medium' | 'low';
+/** Уверенность в выделении позиции (сегментация). Алиас общего {@link Confidence}. */
+export type OrderPositionConfidence = Confidence;
 
 /**
  * Полезные данные позиции, не используемые как идентификаторы/для выборок. Хранится как JSON.

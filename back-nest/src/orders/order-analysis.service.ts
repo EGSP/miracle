@@ -6,8 +6,11 @@ import { OrderPositionsService } from './order-positions.service.js';
 import { DesignationsService } from './designations.service.js';
 import { FilesContentService } from '../files-content/files-content.service.js';
 
-/** Стабильный ключ корневого прогона анализа заказа. */
+/** Стабильный ключ корневого прогона анализа заказа (v1). */
 const analyseOrderKey = (orderId: string) => ['analyse-order', orderId] as const;
+
+/** Стабильный ключ корневого прогона анализа заказа (v2). */
+const analyseOrderV2Key = (orderId: string) => ['analyse-order-v2', orderId] as const;
 
 /**
  * Триггер-слой анализа заказа. Здесь живут деструктивные операции переанализа (вне джоб, чтобы
@@ -50,12 +53,63 @@ export class OrderAnalysisService {
     }
 
     /**
+     * (Пере)анализ заказа второй версией алгоритма (`analyse-order-v2`, см. README алгоритма).
+     *
+     * Ключевое отличие от {@link analyse}: при переанализе по умолчанию **переиспользуются уже
+     * извлечённые позиции** — стираются только обозначения (они переопределяются каждый прогон).
+     * Это «не платить за выведение позиций дважды». Принудительное переизвлечение — `forcePositions`:
+     * тогда позиции (и обозначения) стираются, и джоб извлекает их заново.
+     */
+    async analyseV2(
+        orderId: string,
+        options: AnalyseOrderOptions,
+        forcePositions = false,
+    ): Promise<JobRun> {
+        const key = analyseOrderV2Key(orderId);
+        const existing = await this.jobs.findByKey([...key]);
+
+        if (existing && !options.deleteJobs) {
+            return existing;
+        }
+
+        if (existing) {
+            if (existing.status === 'running' || existing.status === 'queued') {
+                await this.jobs.cancel(existing.id);
+            }
+            await this.jobs.deleteRunTree(existing.id);
+        }
+
+        if (forcePositions) {
+            await this.wipeOrderData(orderId, options.deleteFileContent); // позиции + обозначения
+        } else {
+            await this.wipeDesignations(orderId); // позиции сохраняем для переиспользования
+        }
+
+        return this.jobs.start('analyse-order-v2', { orderId }, [...key]);
+    }
+
+    /**
      * Текущий корневой прогон анализа заказа (по стабильному ключу) или `null`, если анализ ещё не
      * запускался. Чтение без побочных эффектов — для тайла прогресса в карточке заказа.
      */
     async getRun(orderId: string): Promise<Stored<JobRun> | null> {
         const run = await this.jobs.findByKey([...analyseOrderKey(orderId)]);
         return run as Stored<JobRun> | null;
+    }
+
+    /** Прогон анализа конкретного варианта (v1/v2) по его стабильному ключу или `null`. */
+    async findRunForVariant(orderId: string, variantId: string): Promise<Stored<JobRun> | null> {
+        const key = variantId === 'analyse-order-v2' ? analyseOrderV2Key(orderId) : analyseOrderKey(orderId);
+        const run = await this.jobs.findByKey([...key]);
+        return run as Stored<JobRun> | null;
+    }
+
+    /** Сносит только обозначения заказа, сохраняя позиции (переиспользование извлечения в v2). */
+    private async wipeDesignations(orderId: string): Promise<void> {
+        const apps = await this.applications.listByOrder(orderId);
+        const positionLists = await Promise.all(apps.map((app) => this.positions.listByApplication(app.id)));
+        const positionIds = positionLists.flat().map((p) => p.id);
+        await this.designations.deleteByPositions(positionIds);
     }
 
     /** Чистый лист: всегда сносит позиции и обозначения заказа; FileContent — по флагу. */

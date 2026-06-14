@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Effect, Option } from 'effect';
 import { z } from 'zod';
-import { type OrderPosition, type Stored, type TechnicalCondition } from '@miracle/types';
+import { CONFIDENCE_VALUES, type OrderPosition, type Stored, type TechnicalCondition } from '@miracle/types';
 import { brandJobId, defineJob, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs, Memo, Progress } from '../../framework/context.js';
@@ -18,7 +18,9 @@ const DesignationResultZodSchema = z.object({
             z.object({
                 slotIndex: z.number().describe('Индекс SlotRule.index из переданного списка'),
                 value: z.string().nullable().describe('Значение строго из вариантов правил ТУ; null если не определимо'),
-                confidence: z.number().min(0).max(1).describe('Уверенность 0..1'),
+                confidence: z
+                    .enum(CONFIDENCE_VALUES)
+                    .describe('Уверенность: high — однозначно по требованиям/ТУ; medium — вероятно; low — догадка'),
                 reasoning: z.string().describe('1–2 фразы обоснования; для null — чего не хватило'),
             }),
         )
@@ -41,7 +43,7 @@ const DESIGNATION_PROMPT = `Ты определяешь значения пар�
 - Если правила ТУ задают значение по умолчанию или единственный вариант — используй его.
 - Если определить нельзя даже приблизительно — value: null с пояснением в reasoning.
 
-Для каждого значения: slotIndex, value (или null), confidence (0..1), reasoning (1–2 фразы).
+Для каждого значения: slotIndex, value (или null), confidence (high/medium/low), reasoning (1–2 фразы).
 Верни ответ строго в JSON по схеме.`;
 
 function formatRequirements(position: Stored<OrderPosition>): string {

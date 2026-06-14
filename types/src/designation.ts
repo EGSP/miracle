@@ -1,3 +1,5 @@
+import type { Confidence } from './confidence.js';
+
 /**
  * Условное обозначение позиции — отдельная сущность (таблица `designations`), 1:1 с позицией.
  * Результат шага designation-analyse. Связь плоская через `orderPositionId`.
@@ -21,10 +23,10 @@ export type DesignationValue = {
      */
     value: string | null;
     /**
-     * Уверенность LLM: 0–1.
-     * Значения < 0.7 подсвечиваются в UI для ручной проверки.
+     * Уверенность LLM: `low` подсвечивается в UI как критичная, `medium` — как предупреждение,
+     * `high` — без подсветки (см. `designation-display.ts`).
      */
-    confidence: number;
+    confidence: Confidence;
     /** Объяснение выбора значения — конструктор видит логику LLM. */
     reasoning: string;
 };

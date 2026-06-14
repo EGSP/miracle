@@ -1,7 +1,8 @@
-import { Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
 import type { PrepareStatus, PreparedDocument, Stored } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { DocumentPrepareService } from './document-prepare.service.js';
+import { PrepareDocumentDto } from './dto/prepare-document.dto.js';
 
 @Controller('documents')
 @UseGuards(AuthGuard)
@@ -30,8 +31,13 @@ export class DocumentPrepareController {
      */
     @Post(':fileId/prepare')
     @HttpCode(200)
-    async prepare(@Param('fileId') fileId: string): Promise<{ runId: string }> {
-        const prepared = await this.documentPrepare.enqueuePrepare(fileId);
+    async prepare(
+        @Param('fileId') fileId: string,
+        @Body() body: PrepareDocumentDto,
+    ): Promise<{ runId: string }> {
+        const prepared = await this.documentPrepare.enqueuePrepare(fileId, {
+            allowVision: body.allowVision,
+        });
         return { runId: prepared.id };
     }
 }
