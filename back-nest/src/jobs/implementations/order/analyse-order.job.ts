@@ -4,6 +4,7 @@ import { brandJobId, type Job, type JobEnv } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { Jobs, Progress } from '../../framework/context.js';
 import { tryLabeledPromise } from '../../../common/effect-errors.js';
+import { withTokensUsageScope } from '../../../common/tokens-usage.js';
 import { runFanout, decideFanout } from '../../framework/fanout.js';
 import { JobPartialError } from '../../framework/runtime.js';
 import { OrderApplicationsService } from '../../../orders/order-applications.service.js';
@@ -89,6 +90,9 @@ export class AnalyseOrderJob implements Job<AnalyseOrderInput, void> {
                         ? error
                         : new Error(`Не удалось проанализировать заказ "${input.orderId}"`, { cause: error }),
                 ),
+                // Корень кладёт orderId в ambient-теги — наследуется всем подтриём и доезжает до
+                // ledger расхода токенов в YandexService (симметрично analyse-order-v2).
+                withTokensUsageScope({ orderId: input.orderId }),
             );
     }
 }

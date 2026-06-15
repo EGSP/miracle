@@ -1,12 +1,16 @@
-import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Optional, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { Duration, Effect, Exit, RateLimiter, Scope } from 'effect';
 import { AppConfigService } from '../config/app-config.service.js';
+import { currentTokensUsage } from '../common/tokens-usage.js';
+import { LLM_USAGE_SINK, NoopLlmUsageSink, type LlmUsageSink } from './llm-usage.sink.js';
 import { YandexOpenAiTransport } from './yandex-openai.transport.js';
 import { YandexSdkTransport } from './yandex-sdk.transport.js';
 import {
+    estimateInputTokens,
     hasImageInput,
     parseResponseId,
     tagResponseId,
+    YANDEX_MODELS,
     YandexResponseError,
     type YandexCompletedResponse,
     type YandexCreateResponseRequest,
@@ -66,9 +70,16 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
      */
     private concurrencyLimit: Limit = (effect) => effect;
 
-    constructor(private readonly appConfig: AppConfigService) {
+    /** Приёмник ledger расхода токенов. Best-effort: его ошибки не влияют на LLM-вызов. */
+    private readonly usageSink: LlmUsageSink;
+
+    constructor(
+        private readonly appConfig: AppConfigService,
+        @Optional() @Inject(LLM_USAGE_SINK) usageSink?: LlmUsageSink,
+    ) {
         this.openaiTransport = new YandexOpenAiTransport(appConfig);
         this.sdkTransport = new YandexSdkTransport(appConfig);
+        this.usageSink = usageSink ?? new NoopLlmUsageSink();
     }
 
     async onModuleInit(): Promise<void> {
@@ -118,10 +129,24 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
      * ```
      */
     createResponse(request: YandexCreateResponseRequest): Effect.Effect<string, YandexError> {
+        const self = this;
         const transport: YandexTransport = hasImageInput(request.input) ? this.openaiTransport : this.sdkTransport;
-        return this.submitLimit(this.concurrencyLimit(transport.submit(request))).pipe(
-            Effect.map((rawId) => tagResponseId(transport.tag, rawId)),
-        );
+        return Effect.gen(function* () {
+            const rawId = yield* self.submitLimit(self.concurrencyLimit(transport.submit(request)));
+            const id = tagResponseId(transport.tag, rawId);
+
+            // Фаза submit ledger: атрибуция (ambient-теги + явный override) и оценка отправленных
+            // токенов. Best-effort — на исход createResponse не влияет.
+            const ambient = yield* currentTokensUsage;
+            yield* self.usageSink.onRequest({
+                responseId: id,
+                transport: transport.tag,
+                model: request.model ?? YANDEX_MODELS.text,
+                tags: { ...ambient, ...(request.tags ?? {}) },
+                estimatedInputTokens: estimateInputTokens(request),
+            });
+            return id;
+        });
     }
 
     /**
@@ -132,9 +157,34 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
      * terminal failure. Транспорт определяется по тегу в id.
      */
     retrieveResponse(id: string): Effect.Effect<YandexResponsePollResult, YandexError> {
+        const self = this;
         const { tag, rawId } = parseResponseId(id);
         const transport: YandexTransport = tag === 'sdk' ? this.sdkTransport : this.openaiTransport;
-        return this.pollLimit(this.concurrencyLimit(transport.retrieve(rawId)));
+        return this.pollLimit(this.concurrencyLimit(transport.retrieve(rawId))).pipe(
+            // Фаза response ledger: доводим строку фактическим usage при завершении и помечаем failed
+            // при terminal-ошибке модели. Best-effort, дедуп по responseId внутри sink.
+            Effect.tap((result) =>
+                result.done
+                    ? self.usageSink.onResponse({
+                          responseId: id,
+                          status: 'completed',
+                          inputTokens: result.response.usage?.input_tokens ?? null,
+                          outputTokens: result.response.usage?.output_tokens ?? null,
+                          totalTokens: result.response.usage?.total_tokens ?? null,
+                      })
+                    : Effect.void,
+            ),
+            Effect.tapErrorTag('YandexResponseError', (error) =>
+                self.usageSink.onResponse({
+                    responseId: id,
+                    status: 'failed',
+                    inputTokens: null,
+                    outputTokens: null,
+                    totalTokens: null,
+                    error: error.message,
+                }),
+            ),
+        );
     }
 
     /**

@@ -12,6 +12,7 @@ import {
     type ToolCall,
 } from '@miracle/types';
 import { formatUnknown } from '../../common/effect-errors.js';
+import { withTokensUsageScope } from '../../common/tokens-usage.js';
 import type { Job } from './job.js';
 import { Jobs, JobTools, Memo, Progress, ToolMemo } from './context.js';
 import { hashKey } from './hash-key.js';
@@ -288,6 +289,9 @@ export function execute<Input, Output>(
             Effect.provideService(JobTools, makeJobTools(store, node, memoRef)),
             Effect.provideService(Memo, makeMemo(store, node, memoRef)),
             Effect.provideService(Progress, progressSvc),
+            // Атрибуция расхода токенов: каждый узел добавляет свой jobRunId в ambient-теги,
+            // наследуя orderId/userId от предка. Читается в YandexService при записи ledger.
+            withTokensUsageScope({ jobRunId: node.id }),
         );
 
         if (latestJobProgressState(node.progress)?.percentNormalized !== 1) {

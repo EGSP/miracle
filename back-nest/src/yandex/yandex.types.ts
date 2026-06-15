@@ -8,6 +8,7 @@ import type {
     ResponseInputText,
 } from 'openai/resources/responses/responses.js';
 import { formatUnknown } from '../common/effect-errors.js';
+import { countTokens } from '../common/count-tokens.js';
 import type { AppConfigService } from '../config/app-config.service.js';
 
 export const YANDEX_MODELS = {
@@ -36,6 +37,12 @@ export type YandexCreateResponseRequest = {
     readonly maxOutputTokens?: number;
     readonly jsonSchema?: YandexJsonSchemaFormat;
     readonly metadata?: ResponseCreateParamsNonStreaming['metadata'];
+    /**
+     * Явные теги атрибуции для ledger расхода токенов. Сливаются ПОВЕРХ ambient-тегов (см.
+     * `withTokensUsageScope`), позволяя вызывающему переопределить/дополнить атрибуцию точечно.
+     * Обычно не нужны — orderId/userId/jobRunId доезжают сами через ambient-контекст.
+     */
+    readonly tags?: Record<string, string>;
 };
 
 export type YandexCompletedResponse = {
@@ -106,6 +113,37 @@ export const hasImageInput = (input: ResponseCreateParamsNonStreaming['input']):
         }
     }
     return false;
+};
+
+/**
+ * Эвристическая оценка отправленных токенов запроса (символы÷4) по `instructions` и текстовым частям
+ * `input`. Картинки не учитываются. Нужна для фазы submit ledger, пока фактический usage неизвестен;
+ * `null`, если текста нет.
+ */
+export const estimateInputTokens = (request: YandexCreateResponseRequest): number | null => {
+    const parts: string[] = [];
+    if (request.instructions) parts.push(request.instructions);
+
+    const { input } = request;
+    if (typeof input === 'string') {
+        parts.push(input);
+    } else if (input) {
+        for (const item of input) {
+            const content = (item as { content?: unknown }).content;
+            if (typeof content === 'string') {
+                parts.push(content);
+            } else if (Array.isArray(content)) {
+                for (const part of content) {
+                    if (part && typeof part === 'object' && (part as { type?: unknown }).type === 'input_text') {
+                        parts.push(String((part as { text?: unknown }).text ?? ''));
+                    }
+                }
+            }
+        }
+    }
+
+    const text = parts.join('\n');
+    return text ? countTokens(text) : null;
 };
 
 /** Приводит модель к `gpt://<folderId>/<model>`-форме, если она задана коротким именем. */

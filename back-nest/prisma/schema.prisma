@@ -35,6 +35,13 @@ enum PrepareStatus {
   failed
 }
 
+// Жизненный цикл записи расхода токенов: submitted (запрос отправлен) → completed/failed.
+enum LlmUsageStatus {
+  submitted
+  completed
+  failed
+}
+
 // ── Модели ────────────────────────────────────────────────────────────────────
 
 model User {
@@ -236,4 +243,33 @@ model JobRun {
   @@index([parentId])
   @@index([status])
   @@map("job_runs")
+}
+
+// Долговечный ledger расхода токенов LLM — одна строка на запрос к модели, пишется YandexService
+// двухфазно: submit (status=submitted, оценка отправленных токенов) → ответ (факт из usage).
+// Биллинг/аналитика; переживает удаление джоб и заказов, поэтому связи МЯГКИЕ — id измерений лежат
+// значениями в открытом `tags` (orderId/userId/jobRunId/…), без FK-каскада.
+model LlmUsageRecord {
+  id         String         @id @default(uuid())
+  // Помеченный тегом транспорта id запроса (sdk:<opId> / openai:<respId>) — ключ дедупликации.
+  responseId String         @unique
+  transport  String
+  model      String
+  status     LlmUsageStatus @default(submitted)
+  // Открытый набор измерений атрибуции (orderId/userId/jobRunId/fileId/…). Срезы — JSON-путями;
+  // под «горячие» ключи добавляются expression-индексы по мере надобности.
+  tags       Json           @default("{}")
+  // Оценка отправленных токенов на submit (символы÷4), пока факт ещё неизвестен.
+  estimatedInputTokens Int?
+  // Фактические значения из usage ответа; null, если провайдер не вернул usage.
+  inputTokens  Int?
+  outputTokens Int?
+  totalTokens  Int?
+  error        String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([createdAt])
+  @@index([status])
+  @@map("llm_usage_records")
 }

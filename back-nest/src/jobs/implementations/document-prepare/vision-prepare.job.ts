@@ -4,6 +4,7 @@ import { brandJobId, type Job } from '../../framework/job.js';
 import { JobImpl } from '../../framework/job-impl.decorator.js';
 import { JobTools } from '../../framework/context.js';
 import { formatUnknown } from '../../../common/effect-errors.js';
+import { withTokensUsageScope } from '../../../common/tokens-usage.js';
 import { AppConfigService } from '../../../config/app-config.service.js';
 import { ExtractError } from '../../../document-prepare/errors.js';
 import { PreparedDocumentStore } from '../../../document-prepare/prepared-document.store.js';
@@ -64,6 +65,9 @@ export class VisionPrepareJob implements Job<VisionPrepareInput, void> {
                         return yield* Effect.fail(error instanceof Error ? error : new Error(message));
                     }),
                 ),
+                // Корень разметки кладёт fileId в ambient-теги — vision-вызов Yandex попадёт в ledger
+                // расхода токенов с атрибуцией по файлу (симметрично orderId в анализе заказа).
+                withTokensUsageScope({ fileId: input.fileId }),
             );
     }
 }
