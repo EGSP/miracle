@@ -16,3 +16,11 @@ export function useLlmUsageByOrder() {
     queryFn: () => analytics.byOrder(),
   })
 }
+
+/** Суммарный расход по типам джоб внутри одного заказа (pie «какая джоба сколько съела»). */
+export function useLlmUsageByJob(orderId: string) {
+  return useQuery({
+    queryKey: ["analytics", "llm-usage", "by-job", orderId],
+    queryFn: () => analytics.byJob(orderId),
+  })
+}

@@ -1,5 +1,5 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import type { LlmUsageByOrder, LlmUsageRecord } from '@miracle/types';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import type { LlmUsageByJob, LlmUsageByOrder, LlmUsageRecord } from '@miracle/types';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { LlmUsageAnalyticsService } from './llm-usage-analytics.service.js';
 
@@ -19,5 +19,11 @@ export class AnalyticsController {
     @Get('by-order')
     byOrder(): Promise<LlmUsageByOrder[]> {
         return this.analytics.byOrder();
+    }
+
+    /** Суммарный расход по типам джоб внутри одного заказа (pie-чарт «какая джоба сколько съела»). */
+    @Get('by-order/:orderId/by-job')
+    byJob(@Param('orderId') orderId: string): Promise<LlmUsageByJob[]> {
+        return this.analytics.byJob(orderId);
     }
 }

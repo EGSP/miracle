@@ -52,3 +52,17 @@ export type LlmUsageByOrder = {
     /** Число завершённых LLM-запросов заказа. */
     requests: number;
 };
+
+/**
+ * Суммарный расход токенов по типу джобы внутри одного заказа (агрегат ledger по `tags->>'orderId'`
+ * с join на `job_runs` по `tags->>'jobRunId'`). Только завершённые записи с привязкой к заказу.
+ */
+export type LlmUsageByJob = {
+    /** Идентификатор типа джобы (`job_runs.job`): analyse-order-v2, extract-positions-from-chunk, … */
+    jobId: string;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    /** Число завершённых LLM-запросов этого типа джобы в заказе. */
+    requests: number;
+};

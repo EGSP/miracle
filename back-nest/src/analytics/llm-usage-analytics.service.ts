@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { LlmUsageByOrder, LlmUsageRecord } from '@miracle/types';
+import type { LlmUsageByJob, LlmUsageByOrder, LlmUsageRecord } from '@miracle/types';
 import type { LlmUsageRecord as LlmUsageRow } from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 
@@ -84,5 +84,36 @@ export class LlmUsageAnalyticsService {
             totalTokens: row.totalTokens,
             requests: row.requests,
         }));
+    }
+
+    /**
+     * Суммарный расход по типам джоб внутри одного заказа: join ledger → `job_runs` по
+     * `tags->>'jobRunId'`, группировка по `job_runs.job`. Записи без `orderId` или без связанного
+     * прогона джобы не попадают в выборку.
+     */
+    async byJob(orderId: string): Promise<LlmUsageByJob[]> {
+        const aggregates = await this.prisma.$queryRaw<
+            Array<{
+                jobId: string;
+                inputTokens: number;
+                outputTokens: number;
+                totalTokens: number;
+                requests: number;
+            }>
+        >`
+            SELECT jr.job AS "jobId",
+                   sum(coalesce(lur."inputTokens", 0))::int AS "inputTokens",
+                   sum(coalesce(lur."outputTokens", 0))::int AS "outputTokens",
+                   sum(coalesce(lur."totalTokens", 0))::int AS "totalTokens",
+                   count(*)::int AS "requests"
+            FROM llm_usage_records lur
+            INNER JOIN job_runs jr ON jr.id = (lur.tags->>'jobRunId')
+            WHERE lur.status = 'completed'
+              AND lur.tags->>'orderId' = ${orderId}
+            GROUP BY jr.job
+            ORDER BY sum(coalesce(lur."totalTokens", 0)) DESC
+        `;
+
+        return aggregates;
     }
 }

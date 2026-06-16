@@ -15,7 +15,7 @@ import {
   YAxis,
 } from "recharts"
 import { Tile } from "@/components/ui/ds/tile"
-import { useLlmUsageByOrder, useLlmUsageRecent } from "@/lib/queries/llm-usage.query"
+import { useLlmUsageByJob, useLlmUsageByOrder, useLlmUsageRecent } from "@/lib/queries/llm-usage.query"
 import "@/design/statistics.css"
 
 /** Точка графика total — один завершённый LLM-запрос. `null`-usage трактуем как 0. */
@@ -88,50 +88,100 @@ const AXIS_TICK = { fill: "var(--muted-foreground)", fontSize: 11 } as const
 const TOTAL_HEIGHT = 280
 const PIE_HEIGHT = 160
 
-/** Карточка заказа: имя-ссылка + donut-pie суммарного usage (вход/выход) за всё время. */
+const JOB_CHART_COLORS = [
+  "#ef4444", // red-500
+  "#f59e0b", // amber-500
+  "#10b981", // emerald-500
+  "#eab308", // yellow-500
+  "#f97316", // orange-500
+  "#22c55e", // green-500
+] as const
+
+type PieSlice = {
+  key: string
+  label: string
+  value: number
+  color: string
+}
+
+function UsagePieChart({ slices, emptyLabel }: { slices: PieSlice[]; emptyLabel?: string }) {
+  const hasData = slices.some((slice) => slice.value > 0)
+  const chartSlices = hasData
+    ? slices
+    : [{ key: "empty", label: emptyLabel ?? "нет данных", value: 1, color: "var(--muted)" }]
+
+  return (
+    <div className="usage-order-card__chart">
+      <ResponsiveContainer width="100%" height={PIE_HEIGHT}>
+        <PieChart>
+          <Pie
+            data={chartSlices}
+            dataKey="value"
+            nameKey="label"
+            innerRadius={32}
+            outerRadius={52}
+            stroke="var(--card)"
+          >
+            {chartSlices.map((slice) => (
+              <Cell key={slice.key} fill={slice.color} />
+            ))}
+          </Pie>
+          <Tooltip
+            content={({ active, payload }) =>
+              active && payload?.[0] ? (
+                <div className="usage-tooltip">
+                  {payload[0].name}: {Number(payload[0].value).toLocaleString("ru-RU")}
+                </div>
+              ) : null
+            }
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+/** Карточка заказа: имя-ссылка + две donut-pie (вход/выход и по типам джоб). */
 function OrderUsageCard({ order }: { order: LlmUsageByOrder }) {
+  const byJob = useLlmUsageByJob(order.orderId)
   const name = orderDisplayName({ id: order.orderId, name: order.orderName })
-  const slices = [
-    { key: "input", label: "вход", value: order.inputTokens, color: "var(--chart-2)" },
-    { key: "output", label: "выход", value: order.outputTokens, color: "var(--chart-3)" },
-  ]
+  const ioSlices: PieSlice[] =
+    order.inputTokens > 0 || order.outputTokens > 0
+      ? [
+          { key: "input", label: "вход", value: order.inputTokens, color: "var(--chart-2)" },
+          { key: "output", label: "выход", value: order.outputTokens, color: "var(--chart-3)" },
+        ]
+      : [{ key: "total", label: "total", value: order.totalTokens, color: "var(--chart-1)" }]
+  const jobSlices: PieSlice[] = (byJob.data ?? []).map((job, index) => ({
+    key: job.jobId,
+    label: job.jobId,
+    value: job.totalTokens,
+    color: JOB_CHART_COLORS[index % JOB_CHART_COLORS.length],
+  }))
 
   return (
     <Tile as="article">
       <Stack gap={2}>
-        <Link
-          to="/orders"
-          search={{ orderId: order.orderId, positionId: undefined }}
-          className="usage-order-card__title"
-        >
-          {name}
-        </Link>
+        <Text as="p" compact>
+          <Link
+            to="/orders"
+            search={{ orderId: order.orderId, positionId: undefined }}
+            className="usage-order-card__title"
+          >
+            {name}
+          </Link>
+        </Text>
 
-        <ResponsiveContainer width="100%" height={PIE_HEIGHT}>
-          <PieChart>
-            <Pie
-              data={slices}
-              dataKey="value"
-              nameKey="label"
-              innerRadius={38}
-              outerRadius={62}
-              stroke="var(--card)"
-            >
-              {slices.map((slice) => (
-                <Cell key={slice.key} fill={slice.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              content={({ active, payload }) =>
-                active && payload?.[0] ? (
-                  <div className="usage-tooltip">
-                    {payload[0].name}: {Number(payload[0].value).toLocaleString("ru-RU")}
-                  </div>
-                ) : null
-              }
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="usage-order-card__charts">
+          <UsagePieChart slices={ioSlices} />
+          {byJob.isLoading ? (
+            <UsagePieChart slices={[]} emptyLabel="загрузка" />
+          ) : byJob.error ? (
+            <UsagePieChart slices={[]} emptyLabel="ошибка" />
+          ) : (
+            <UsagePieChart slices={jobSlices} emptyLabel="Нет данных по джобам" />
+          )}
+        </div>
 
         <Text.Helper as="p">
           Всего: {order.totalTokens.toLocaleString("ru-RU")} · вход{" "}
@@ -186,7 +236,7 @@ export default function StatisticsPage() {
         </Tile>
       </Column>
 
-      {/* ── Карточки по заказам: суммарный usage за всё время (pie вход/выход) ── */}
+      {/* ── Карточки по заказам: вход/выход и разбивка по типам джоб (две pie рядом) ── */}
       <Column span={16}>
         <Text.Heading as="h2" variant="compact-01">
           По заказам

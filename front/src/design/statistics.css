@@ -19,16 +19,23 @@
   color: var(--muted-foreground);
 }
 
-/* Заголовок-ссылка карточки заказа: имя ведёт на страницу заказа. */
+/* Имя заказа — обычная ссылка; цвет из глобальных стилей `a` (aramid blue). */
 .usage-order-card__title {
-  font-weight: 500;
-  color: var(--primary);
-  text-decoration: none;
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.usage-order-card__title:hover {
-  text-decoration: underline;
+/* Две donut-pie в карточке заказа: вход/выход слева, по типам джоб справа. */
+.usage-order-card__charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.usage-order-card__chart {
+  width: 100%;
+  min-width: 0;
 }
