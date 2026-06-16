@@ -16,6 +16,7 @@ import { FilesContentModule } from './files-content/files-content.module.js';
 import { TechnicalConditionsModule } from './technical-conditions/technical-conditions.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { DocumentPrepareModule } from './document-prepare/document-prepare.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 
 @Module({
     imports: [
@@ -36,6 +37,7 @@ import { DocumentPrepareModule } from './document-prepare/document-prepare.modul
         TechnicalConditionsModule,
         OrdersModule,
         DocumentPrepareModule,
+        AnalyticsModule,
     ],
 })
 export class AppModule {}

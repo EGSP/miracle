@@ -8,6 +8,7 @@ import FilesPage from "./pages/FilesPage"
 import HomePage from "./pages/HomePage"
 import OperationsPage from "./pages/OperationsPage"
 import OrdersPage from "./pages/OrdersPage"
+import StatisticsPage from "./pages/StatisticsPage"
 import ProductTypesPage from "./pages/ProductTypesPage"
 import TechnicalConditionsPage from "./pages/TechnicalConditionsPage"
 import PreparedDocumentPage from "./pages/PreparedDocumentPage"
@@ -105,6 +106,16 @@ const preparedDocumentRoute = createRoute({
   }),
 })
 
+const statisticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/statistics",
+  component: () => (
+    <AccessRouteGuard roles={[USER_ROLES.ADMIN]}>
+      <StatisticsPage />
+    </AccessRouteGuard>
+  ),
+})
+
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
@@ -126,6 +137,7 @@ const routeTree = rootRoute.addChildren([
   productTypesRoute,
   technicalConditionsRoute,
   preparedDocumentRoute,
+  statisticsRoute,
   adminRoute,
   authRoute.addChildren([loginRoute, registerRoute]),
 ])

@@ -11,3 +11,4 @@ export * from './filesContent.client';
 export * from './technicalConditions.client';
 export * from './orders.client';
 export * from './documentPrepare.client';
+export * from './analytics.client';

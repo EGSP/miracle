@@ -1,6 +1,6 @@
 import { Text } from "@miracle/aramid"
 import { Link } from "@tanstack/react-router"
-import { FileIcon, FileText, House, ListOrdered, Settings, Tags } from "lucide-react"
+import { BarChart3, FileIcon, FileText, House, ListOrdered, Settings, Tags } from "lucide-react"
 import { WorkerIcon } from "@/components/blocks/WorkerIcon"
 import { AccessGuard } from "@/contexts/access"
 import { useAuthContext } from "@/contexts/AuthContext"
@@ -53,6 +53,12 @@ export function NavBar() {
         <Link to="/technical-conditions" search={{ tcId: undefined }} className={navLinkClass}>
           <FileText className="size-3.5 shrink-0" />
           <Text.Label as="span">Технические условия</Text.Label>
+        </Link>
+      </AccessGuard>
+      <AccessGuard roles={[USER_ROLES.ADMIN]}>
+        <Link to="/statistics" className={navLinkClass}>
+          <BarChart3 className="size-3.5 shrink-0" />
+          <Text.Label as="span">Статистика</Text.Label>
         </Link>
       </AccessGuard>
       <AccessGuard roles={[USER_ROLES.ADMIN]}>
