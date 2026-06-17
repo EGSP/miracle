@@ -5,6 +5,7 @@ import { PreparedMarkdownPreview } from "@/components/blocks/prepared-document/P
 import { Tile } from "@/components/ui/ds/tile"
 import { useGetPreparedDocument } from "@/lib/queries/document-prepare.query"
 import { useGetFiles } from "@/lib/queries/file.query"
+import { usePageTitle } from "@/lib/hooks/usePageTitle"
 
 /** Безопасно читает строковое поле по вложенному пути из meta (Record<string, unknown>). */
 function readMetaString(
@@ -29,6 +30,8 @@ export default function PreparedDocumentPage() {
   } = useGetPreparedDocument(fileId)
   const { data: files = [] } = useGetFiles({ id: fileId })
   const fileName = files[0]?.name
+
+  usePageTitle(fileName)
 
   return (
     <Grid as="main" withRowGap fullWidth>
