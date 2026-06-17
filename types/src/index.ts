@@ -14,6 +14,7 @@ export * from './analysis-variant.js';
 export * from './db.js';
 export * from './confidence.js';
 export * from './tokens.js';
+export * from './llm-model-tariffs.js';
 export * from './file-content.js';
 export * from './prepared-document.js';
 export * from './product-type.js';

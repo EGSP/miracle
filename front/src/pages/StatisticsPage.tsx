@@ -1,5 +1,11 @@
 import { Column, Grid, Stack, Text } from "@miracle/aramid"
-import { type LlmUsageByOrder, type LlmUsageRecord, orderDisplayName } from "@miracle/types"
+import {
+  aggregateLlmUsageCostRub,
+  formatLlmCostRub,
+  type LlmUsageByOrder,
+  type LlmUsageRecord,
+  orderDisplayName,
+} from "@miracle/types"
 import { Link } from "@tanstack/react-router"
 import { useMemo } from "react"
 import {
@@ -15,7 +21,7 @@ import {
   YAxis,
 } from "recharts"
 import { Tile } from "@/components/ui/ds/tile"
-import { useLlmUsageByJob, useLlmUsageByOrder, useLlmUsageRecent } from "@/lib/queries/llm-usage.query"
+import { useLlmUsageByOrder, useLlmUsageRecent } from "@/lib/queries/llm-usage.query"
 import "@/design/statistics.css"
 
 /** Точка графика total — один завершённый LLM-запрос. `null`-usage трактуем как 0. */
@@ -141,9 +147,58 @@ function UsagePieChart({ slices, emptyLabel }: { slices: PieSlice[]; emptyLabel?
   )
 }
 
+function UsageCostTable({
+  totalTokens,
+  inputTokens,
+  outputTokens,
+  cost,
+}: {
+  totalTokens: number
+  inputTokens: number
+  outputTokens: number
+  cost: ReturnType<typeof aggregateLlmUsageCostRub>
+}) {
+  const columns = [
+    { key: "total", label: "Всего", tokens: totalTokens, rub: cost.totalRub },
+    { key: "input", label: "Вход", tokens: inputTokens, rub: cost.inputRub },
+    { key: "output", label: "Выход", tokens: outputTokens, rub: cost.outputRub },
+  ] as const
+
+  return (
+    <div className="usage-order-card__cost">
+      <table className="usage-order-card__cost-table">
+        <thead>
+          <tr>
+            {columns.map((col) => (
+              <th key={col.key} scope="col">
+                {col.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            {columns.map((col) => (
+              <td key={col.key}>{col.tokens.toLocaleString("ru-RU")}</td>
+            ))}
+          </tr>
+          <tr>
+            {columns.map((col) => (
+              <td key={col.key}>≈ {formatLlmCostRub(col.rub)}</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+      {cost.hasUnknownModels && (
+        <p className="usage-order-card__cost-note">Часть моделей без тарифа — сумма занижена.</p>
+      )}
+    </div>
+  )
+}
+
 /** Карточка заказа: имя-ссылка + две donut-pie (вход/выход и по типам джоб). */
 function OrderUsageCard({ order }: { order: LlmUsageByOrder }) {
-  const byJob = useLlmUsageByJob(order.orderId)
+  const cost = useMemo(() => aggregateLlmUsageCostRub(order.byModel), [order.byModel])
   const name = orderDisplayName({ id: order.orderId, name: order.orderName })
   const ioSlices: PieSlice[] =
     order.inputTokens > 0 || order.outputTokens > 0
@@ -152,7 +207,7 @@ function OrderUsageCard({ order }: { order: LlmUsageByOrder }) {
           { key: "output", label: "выход", value: order.outputTokens, color: "var(--chart-3)" },
         ]
       : [{ key: "total", label: "total", value: order.totalTokens, color: "var(--chart-1)" }]
-  const jobSlices: PieSlice[] = (byJob.data ?? []).map((job, index) => ({
+  const jobSlices: PieSlice[] = order.byJob.map((job, index) => ({
     key: job.jobId,
     label: job.jobId,
     value: job.totalTokens,
@@ -174,20 +229,17 @@ function OrderUsageCard({ order }: { order: LlmUsageByOrder }) {
 
         <div className="usage-order-card__charts">
           <UsagePieChart slices={ioSlices} />
-          {byJob.isLoading ? (
-            <UsagePieChart slices={[]} emptyLabel="загрузка" />
-          ) : byJob.error ? (
-            <UsagePieChart slices={[]} emptyLabel="ошибка" />
-          ) : (
-            <UsagePieChart slices={jobSlices} emptyLabel="Нет данных по джобам" />
-          )}
+          <UsagePieChart slices={jobSlices} emptyLabel="Нет данных по джобам" />
         </div>
 
-        <Text.Helper as="p">
-          Всего: {order.totalTokens.toLocaleString("ru-RU")} · вход{" "}
-          {order.inputTokens.toLocaleString("ru-RU")} · выход{" "}
-          {order.outputTokens.toLocaleString("ru-RU")} · запросов {order.requests}
-        </Text.Helper>
+        <UsageCostTable
+          totalTokens={order.totalTokens}
+          inputTokens={order.inputTokens}
+          outputTokens={order.outputTokens}
+          cost={cost}
+        />
+
+        <Text.Helper as="p">Запросов: {order.requests}</Text.Helper>
       </Stack>
     </Tile>
   )

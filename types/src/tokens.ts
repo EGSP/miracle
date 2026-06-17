@@ -51,6 +51,10 @@ export type LlmUsageByOrder = {
     totalTokens: number;
     /** Число завершённых LLM-запросов заказа. */
     requests: number;
+    /** Разбивка по типам джоб — для pie-чарта в карточке заказа. */
+    byJob: LlmUsageByJob[];
+    /** Разбивка по моделям — для расчёта примерной стоимости. */
+    byModel: LlmUsageByModel[];
 };
 
 /**
@@ -64,5 +68,18 @@ export type LlmUsageByJob = {
     outputTokens: number;
     totalTokens: number;
     /** Число завершённых LLM-запросов этого типа джобы в заказе. */
+    requests: number;
+};
+
+/**
+ * Суммарный расход токенов по модели внутри одного заказа (агрегат ledger по `tags->>'orderId'`,
+ * группировка по полю `model`). Только завершённые записи с привязкой к заказу.
+ */
+export type LlmUsageByModel = {
+    /** Значение `model` из ledger (короткое имя или `gpt://…` URI). */
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
     requests: number;
 };

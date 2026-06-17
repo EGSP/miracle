@@ -39,3 +39,41 @@
   width: 100%;
   min-width: 0;
 }
+
+.usage-order-card__cost {
+  width: 50%;
+  max-width: 100%;
+}
+
+.usage-order-card__cost-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.usage-order-card__cost-table th,
+.usage-order-card__cost-table td {
+  padding: 0;
+  text-align: left;
+  vertical-align: baseline;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-order-card__cost-table thead th {
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.usage-order-card__cost-table thead th + th,
+.usage-order-card__cost-table tbody td + td {
+  padding-left: 0.25rem;
+}
+
+.usage-order-card__cost-note {
+  margin: 0.125rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}

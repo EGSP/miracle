@@ -9,18 +9,10 @@ export function useLlmUsageRecent() {
   })
 }
 
-/** Суммарный расход по каждому заказу за всё время (карточки с pie-чартами). */
+/** Суммарный расход по заказам с разбивкой по джобам и моделям (карточки статистики). */
 export function useLlmUsageByOrder() {
   return useQuery({
     queryKey: ["analytics", "llm-usage", "by-order"],
     queryFn: () => analytics.byOrder(),
-  })
-}
-
-/** Суммарный расход по типам джоб внутри одного заказа (pie «какая джоба сколько съела»). */
-export function useLlmUsageByJob(orderId: string) {
-  return useQuery({
-    queryKey: ["analytics", "llm-usage", "by-job", orderId],
-    queryFn: () => analytics.byJob(orderId),
   })
 }
