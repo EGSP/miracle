@@ -1,0 +1,107 @@
+/* ─── Accordion ───────────────────────────────────────────────────────────────
+   Раскрывающиеся секции (адаптация Carbon Accordion v11). Только Aramid-токены.
+   Разделители-границы сверху/снизу списка; шеврон-каретка справа (align="end")
+   или слева (align="start"), поворачивается на 180° при раскрытии.
+───────────────────────────────────────────────────────────────────────────── */
+
+.accordion {
+  font-family: var(--aramid-font-family-sans);
+  font-size: var(--aramid-font-size-sm);
+  line-height: var(--aramid-font-line-height-tight);
+  border-top: 1px solid var(--aramid-layer-1-border-strong);
+  /* Тянемся на всю ширину контейнера — ширина не зависит от содержимого секций,
+     поэтому свёрнутое и развёрнутое состояния одинаковой ширины. */
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.accordion-item {
+  border-bottom: 1px solid var(--aramid-layer-1-border-strong);
+}
+
+/* ── Заголовок-кнопка ── */
+.accordion-item__heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.accordion-item__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aramid-spacing-3);
+  width: 100%;
+  min-height: var(--aramid-spacing-9); /* 48px */
+  padding-block: var(--aramid-spacing-3);
+  padding-inline: var(--aramid-spacing-4);
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  user-select: none;
+}
+
+.accordion-item__trigger:hover:not(:disabled) {
+  background-color: var(--aramid-color-gray-20);
+}
+
+.accordion-item__trigger:focus-visible {
+  outline: 2px solid var(--aramid-color-semantic-interactive);
+  outline-offset: -2px;
+}
+
+.accordion-item__trigger:disabled {
+  cursor: not-allowed;
+  color: var(--aramid-color-gray-50);
+}
+
+/* align="start" — шеврон перед заголовком */
+.accordion[data-align="start"] .accordion-item__trigger {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.accordion-item__title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Шеврон-каретка (вниз; вверх при раскрытии) ── */
+.accordion-item__chevron {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform 70ms ease;
+}
+
+.accordion-item__chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ── Панель ── */
+.accordion-item__panel[hidden] {
+  display: none;
+}
+
+.accordion-item__content {
+  padding-block: var(--aramid-spacing-2) var(--aramid-spacing-4);
+  padding-inline: var(--aramid-spacing-4);
+}
+
+/* ── Компактный режим — ниже по высоте: меньше вертикальные паддинги и min-height ── */
+.accordion[data-compact] .accordion-item__trigger {
+  min-height: var(--aramid-spacing-7); /* 32px */
+  padding-block: var(--aramid-spacing-2);
+}
+
+.accordion[data-compact] .accordion-item__content {
+  padding-block: var(--aramid-spacing-1) var(--aramid-spacing-3);
+}

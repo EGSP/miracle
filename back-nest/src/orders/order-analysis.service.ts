@@ -4,7 +4,6 @@ import { JobsService } from '../jobs/jobs.service.js';
 import { OrderApplicationsService } from './order-applications.service.js';
 import { OrderPositionsService } from './order-positions.service.js';
 import { DesignationsService } from './designations.service.js';
-import { FilesContentService } from '../files-content/files-content.service.js';
 
 /** Стабильный ключ корневого прогона анализа заказа (v1). */
 const analyseOrderKey = (orderId: string) => ['analyse-order', orderId] as const;
@@ -42,7 +41,6 @@ export class OrderAnalysisService {
         private readonly applications: OrderApplicationsService,
         private readonly positions: OrderPositionsService,
         private readonly designations: DesignationsService,
-        private readonly filesContent: FilesContentService,
     ) {}
 
     /**
@@ -65,7 +63,7 @@ export class OrderAnalysisService {
             await this.jobs.deleteRunTree(existing.id);
         }
 
-        await this.wipeOrderData(orderId, options.deleteFileContent);
+        await this.wipeOrderData(orderId);
 
         return this.jobs.start('analyse-order', { orderId }, [...key]);
     }
@@ -98,7 +96,7 @@ export class OrderAnalysisService {
         }
 
         if (forcePositions) {
-            await this.wipeOrderData(orderId, options.deleteFileContent); // позиции + обозначения
+            await this.wipeOrderData(orderId); // позиции + обозначения
         } else {
             await this.wipeDesignations(orderId); // позиции сохраняем для переиспользования
         }
@@ -134,8 +132,8 @@ export class OrderAnalysisService {
         await this.designations.deleteByPositions(positionIds);
     }
 
-    /** Чистый лист: всегда сносит позиции и обозначения заказа; FileContent — по флагу. */
-    private async wipeOrderData(orderId: string, deleteFileContent: boolean): Promise<void> {
+    /** Чистый лист: сносит позиции и обозначения заказа. */
+    private async wipeOrderData(orderId: string): Promise<void> {
         const apps = await this.applications.listByOrder(orderId);
         const appIds = apps.map((a) => a.id);
 
@@ -144,10 +142,5 @@ export class OrderAnalysisService {
 
         await this.designations.deleteByPositions(positionIds);
         await this.positions.deleteByApplications(appIds);
-
-        if (deleteFileContent) {
-            const fileIds = apps.flatMap((a) => (a.data.type === 'file' ? [a.data.fileId] : []));
-            await Promise.all(fileIds.map((fileId) => this.filesContent.deleteByFile(fileId)));
-        }
     }
 }

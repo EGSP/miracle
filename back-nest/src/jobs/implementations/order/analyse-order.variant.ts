@@ -18,12 +18,5 @@ export const ANALYSE_ORDER_VARIANT: AnalysisVariant = {
             type: 'boolean',
             default: false,
         },
-        {
-            key: 'deleteFileContent',
-            label: 'Очистить вычитки файлов',
-            description: 'Дополнительно удалить промежуточные извлечения из файлов (FileContent).',
-            type: 'boolean',
-            default: false,
-        },
     ],
 };

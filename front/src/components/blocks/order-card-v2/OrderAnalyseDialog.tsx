@@ -3,6 +3,7 @@ import type { AnalysisBlocker, AnalysisParamDef, AnalysisVariantInfo } from "@mi
 import { ScanText } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { isJobStatusActive } from "@/components/blocks/job-tree/job-tree.utils"
+import { Accordion } from "@/components/ui/ds/accordion"
 import { Button } from "@/components/ui/ds/button"
 import { Checkbox } from "@/components/ui/ds/checkbox"
 import { Input } from "@/components/ui/ds/input"
@@ -80,7 +81,8 @@ export function OrderAnalyseDialog({ orderId, onClose }: Props) {
     setSelectedVariant((current) => {
       if (variants.length === 0) return null
       if (current && variants.some((variant) => variant.id === current.id)) return current
-      return variants[0]
+      // По умолчанию выбираем вторую версию алгоритма, если она есть.
+      return variants[1] ?? variants[0]
     })
   }, [variants])
 
@@ -174,21 +176,25 @@ export function OrderAnalyseDialog({ orderId, onClose }: Props) {
           </Input.Dropdown>
 
           {variantId && params.length > 0 && (
-            <Stack gap={3}>
-              {params.map((param) => (
-                <Stack gap={1} key={param.key}>
-                  <Checkbox.Item
-                    label={param.label}
-                    checked={paramValues[param.key] ?? param.default}
-                    onChange={(checked) =>
-                      setParamValues((prev) => ({ ...prev, [param.key]: checked }))
-                    }
-                    disabled={analyseMutation.isPending}
-                  />
-                  <Text.Helper as="p">{param.description}</Text.Helper>
+            <Accordion compact>
+              <Accordion.Item title="Дополнительные опции анализа">
+                <Stack gap={3}>
+                  {params.map((param) => (
+                    <Stack gap={1} key={param.key}>
+                      <Checkbox.Item
+                        label={param.label}
+                        checked={paramValues[param.key] ?? param.default}
+                        onChange={(checked) =>
+                          setParamValues((prev) => ({ ...prev, [param.key]: checked }))
+                        }
+                        disabled={analyseMutation.isPending}
+                      />
+                      <Text.Helper as="p">{param.description}</Text.Helper>
+                    </Stack>
+                  ))}
                 </Stack>
-              ))}
-            </Stack>
+              </Accordion.Item>
+            </Accordion>
           )}
 
           {visualBlockers.length > 0 && (

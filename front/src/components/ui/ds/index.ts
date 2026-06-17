@@ -1,3 +1,8 @@
+export {
+  Accordion,
+  type AccordionItemProps,
+  type AccordionProps,
+} from "./accordion"
 export { Button } from "./button"
 export { ButtonGroup } from "./button-group"
 export type { ButtonSize } from "./button-variants"

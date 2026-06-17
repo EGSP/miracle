@@ -74,7 +74,6 @@ export class OrderAnalysisVariantsService {
         const resolved = resolveParams(variant.params, params);
         const options = {
             deleteJobs: resolved.deleteJobs ?? true,
-            deleteFileContent: resolved.deleteFileContent ?? false,
         };
 
         if (variantId === ANALYSE_ORDER_V2_ID) {
