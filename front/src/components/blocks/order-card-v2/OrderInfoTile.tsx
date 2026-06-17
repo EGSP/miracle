@@ -1,23 +1,44 @@
 import { Stack, Text } from "@miracle/aramid"
+import { USER_ROLES } from "@miracle/types"
+import { Link } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/ds/button"
 import { Input } from "@/components/ui/ds/input"
 import { Tile } from "@/components/ui/ds/tile"
+import { AccessGuard } from "@/contexts/access"
 import { useGetOrder, useGetOrderJob, useUpdateOrder } from "@/lib/queries/order.query"
 import { OrderAnalyseProgress } from "./OrderAnalyseProgress"
 
-function OrderOperationLink({ orderId }: { orderId: string }) {
+/** Ссылки заказа: на операцию анализа (если прогон есть) и на статистику расхода токенов по заказу. */
+function OrderLinks({ orderId }: { orderId: string }) {
   const { data: run } = useGetOrderJob(orderId)
-  if (!run) return null
-
-  const href = `/operations?rootId=${encodeURIComponent(run.id)}`
 
   return (
-    <Text.Helper as="p">
-      <a href={href} target="_blank" rel="noopener noreferrer">
-        Операция анализа
-      </a>
-    </Text.Helper>
+    <Stack orientation="horizontal" gap={3}>
+      {run && (
+        <Text.Helper as="span">
+          <a
+            href={`/operations?rootId=${encodeURIComponent(run.id)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Операция анализа
+          </a>
+        </Text.Helper>
+      )}
+      <AccessGuard roles={[USER_ROLES.ADMIN]}>
+        <Text.Helper as="span">
+          <Link
+            to="/statistics/order"
+            search={{ orderId }}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Статистика
+          </Link>
+        </Text.Helper>
+      </AccessGuard>
+    </Stack>
   )
 }
 
@@ -66,7 +87,7 @@ export function OrderInfoTile({ orderId }: { orderId: string }) {
           />
         </Stack>
         <OrderAnalyseProgress orderId={orderId} />
-        <OrderOperationLink orderId={orderId} />
+        <OrderLinks orderId={orderId} />
       </Stack>
     </Tile>
   )

@@ -7,11 +7,12 @@ import AdminPage from "./pages/admin/AdminPage"
 import FilesPage from "./pages/FilesPage"
 import HomePage from "./pages/HomePage"
 import OperationsPage from "./pages/OperationsPage"
+import OrderStatisticsPage from "./pages/OrderStatisticsPage"
 import OrdersPage from "./pages/OrdersPage"
-import StatisticsPage from "./pages/StatisticsPage"
-import ProductTypesPage from "./pages/ProductTypesPage"
-import TechnicalConditionsPage from "./pages/TechnicalConditionsPage"
 import PreparedDocumentPage from "./pages/PreparedDocumentPage"
+import ProductTypesPage from "./pages/ProductTypesPage"
+import StatisticsPage from "./pages/StatisticsPage"
+import TechnicalConditionsPage from "./pages/TechnicalConditionsPage"
 
 const rootRoute = createRootRoute({
   component: App,
@@ -116,6 +117,19 @@ const statisticsRoute = createRoute({
   ),
 })
 
+const orderStatisticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/statistics/order",
+  component: () => (
+    <AccessRouteGuard roles={[USER_ROLES.ADMIN]}>
+      <OrderStatisticsPage />
+    </AccessRouteGuard>
+  ),
+  validateSearch: (search: Record<string, unknown>) => ({
+    orderId: typeof search.orderId === "string" ? search.orderId : undefined,
+  }),
+})
+
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
@@ -138,6 +152,7 @@ const routeTree = rootRoute.addChildren([
   technicalConditionsRoute,
   preparedDocumentRoute,
   statisticsRoute,
+  orderStatisticsRoute,
   adminRoute,
   authRoute.addChildren([loginRoute, registerRoute]),
 ])

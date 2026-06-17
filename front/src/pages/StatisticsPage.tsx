@@ -197,7 +197,7 @@ function UsageCostTable({
 }
 
 /** Карточка заказа: имя-ссылка + две donut-pie (вход/выход и по типам джоб). */
-function OrderUsageCard({ order }: { order: LlmUsageByOrder }) {
+export function OrderUsageCard({ order }: { order: LlmUsageByOrder }) {
   const cost = useMemo(() => aggregateLlmUsageCostRub(order.byModel), [order.byModel])
   const name = orderDisplayName({ id: order.orderId, name: order.orderName })
   const ioSlices: PieSlice[] =
