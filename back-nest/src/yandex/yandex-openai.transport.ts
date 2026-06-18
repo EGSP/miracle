@@ -6,6 +6,7 @@ import type {
     ResponseOutputItem,
 } from 'openai/resources/responses/responses.js';
 import type { AppConfigService } from '../config/app-config.service.js';
+import type { YandexAuthService } from './yandex-auth.service.js';
 import {
     YandexConfigError,
     YandexResponseError,
@@ -87,15 +88,23 @@ export class YandexOpenAiTransport implements YandexTransport {
 
     private client?: OpenAI;
 
-    constructor(private readonly appConfig: AppConfigService) {}
+    constructor(
+        private readonly auth: YandexAuthService,
+        private readonly appConfig: AppConfigService,
+    ) {}
 
     submit(request: YandexCreateResponseRequest): Effect.Effect<string, YandexError> {
         const self = this;
         return Effect.gen(function* () {
             const client = yield* self.openAi();
             const config = yield* readYandexConfig(self.appConfig);
+            const token = yield* self.auth.getIamToken();
             const response = yield* Effect.tryPromise({
-                try: (signal) => client.responses.create(self.toCreateParams(config, request), { signal }),
+                try: (signal) =>
+                    client.responses.create(self.toCreateParams(config, request), {
+                        signal,
+                        headers: { Authorization: `Bearer ${token}` },
+                    }),
                 catch: (cause) => new YandexTransportError({ operation: 'create', cause }),
             });
             if (!response.id) {
@@ -113,8 +122,13 @@ export class YandexOpenAiTransport implements YandexTransport {
         const self = this;
         return Effect.gen(function* () {
             const client = yield* self.openAi();
+            const token = yield* self.auth.getIamToken();
             const response = yield* Effect.tryPromise({
-                try: (signal) => client.responses.retrieve(rawId, { stream: false }, { signal }),
+                try: (signal) =>
+                    client.responses.retrieve(rawId, { stream: false }, {
+                        signal,
+                        headers: { Authorization: `Bearer ${token}` },
+                    }),
                 catch: (cause) => new YandexTransportError({ operation: 'retrieve', cause }),
             });
 
@@ -145,9 +159,12 @@ export class YandexOpenAiTransport implements YandexTransport {
         const self = this;
         return Effect.gen(function* () {
             if (!self.client) {
-                const { apiKey, folderId } = yield* readYandexConfig(self.appConfig);
+                const { folderId } = yield* readYandexConfig(self.appConfig);
+                // Авторизацию задаём per-request заголовком `Bearer <IAM-токен>` (см. submit/retrieve):
+                // IAM-токен короткоживущий, поэтому в конструктор его зашивать нельзя. `apiKey` —
+                // обязательный плейсхолдер, чтобы OpenAI-клиент сконструировался; в запрос он не идёт.
                 self.client = new OpenAI({
-                    apiKey,
+                    apiKey: 'iam-bearer-per-request',
                     baseURL: 'https://ai.api.cloud.yandex.net/v1',
                     project: folderId,
                 });

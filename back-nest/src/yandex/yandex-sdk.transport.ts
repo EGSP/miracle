@@ -1,9 +1,9 @@
-import { Session } from '@yandex-cloud/nodejs-sdk';
 import { textGenerationService } from '@yandex-cloud/nodejs-sdk/ai-foundation_models-v1';
 import { operationService } from '@yandex-cloud/nodejs-sdk/operation';
 import { Effect } from 'effect';
 import type { Response } from 'openai/resources/responses/responses.js';
 import type { AppConfigService } from '../config/app-config.service.js';
+import type { YandexAuthService } from './yandex-auth.service.js';
 import type { AsyncLlmClient, AsyncOperationClient } from './yandex-sdk.types.js';
 import {
     YandexConfigError,
@@ -13,7 +13,6 @@ import {
     hasImageInput,
     readYandexConfig,
     YANDEX_MODELS,
-    type YandexConfig,
     type YandexCreateResponseRequest,
     type YandexError,
     type YandexResponsePollResult,
@@ -120,11 +119,13 @@ const pendingResponse = (operationId: string): Response =>
 export class YandexSdkTransport implements YandexTransport {
     readonly tag = 'sdk' as const;
 
-    private session?: Session;
     private llm?: AsyncLlmClient;
     private operations?: AsyncOperationClient;
 
-    constructor(private readonly appConfig: AppConfigService) {}
+    constructor(
+        private readonly auth: YandexAuthService,
+        private readonly appConfig: AppConfigService,
+    ) {}
 
     submit(request: YandexCreateResponseRequest): Effect.Effect<string, YandexError> {
         const self = this;
@@ -140,7 +141,7 @@ export class YandexSdkTransport implements YandexTransport {
             }
 
             const config = yield* readYandexConfig(self.appConfig);
-            const client = yield* self.llmClient(config);
+            const client = yield* self.llmClient();
 
             const op = yield* Effect.tryPromise({
                 try: () =>
@@ -172,8 +173,7 @@ export class YandexSdkTransport implements YandexTransport {
     retrieve(rawId: string): Effect.Effect<YandexResponsePollResult, YandexError> {
         const self = this;
         return Effect.gen(function* () {
-            const config = yield* readYandexConfig(self.appConfig);
-            const client = yield* self.operationClient(config);
+            const client = yield* self.operationClient();
 
             const op = yield* Effect.tryPromise({
                 try: () => client.get({ operationId: rawId }),
@@ -210,34 +210,31 @@ export class YandexSdkTransport implements YandexTransport {
         });
     }
 
-    private getSession(config: YandexConfig): Session {
-        if (!this.session) {
-            // SDK всегда шлёт `Authorization: Bearer <token>`. Yandex различает тип по префиксу:
-            // IAM-токены начинаются с `t1.`, API-ключи — с `AQVN`. Оба формата принимаются.
-            this.session = new Session({ iamToken: config.apiKey });
-        }
-        return this.session;
-    }
-
-    private llmClient(config: YandexConfig): Effect.Effect<AsyncLlmClient, YandexConfigError> {
-        return Effect.sync(() => {
-            if (!this.llm) {
-                this.llm = this.getSession(config).client(
+    /** Ленивый клиент асинхронной генерации текста на общей IAM-сессии. */
+    private llmClient(): Effect.Effect<AsyncLlmClient, YandexConfigError> {
+        const self = this;
+        return Effect.gen(function* () {
+            if (!self.llm) {
+                const session = yield* self.auth.getSession();
+                self.llm = session.client(
                     textGenerationService.TextGenerationAsyncServiceClient,
                 ) as unknown as AsyncLlmClient;
             }
-            return this.llm;
+            return self.llm;
         });
     }
 
-    private operationClient(config: YandexConfig): Effect.Effect<AsyncOperationClient, YandexConfigError> {
-        return Effect.sync(() => {
-            if (!this.operations) {
-                this.operations = this.getSession(config).client(
+    /** Ленивый клиент сервиса операций на общей IAM-сессии (опрос статуса фоновой генерации). */
+    private operationClient(): Effect.Effect<AsyncOperationClient, YandexConfigError> {
+        const self = this;
+        return Effect.gen(function* () {
+            if (!self.operations) {
+                const session = yield* self.auth.getSession();
+                self.operations = session.client(
                     operationService.OperationServiceClient,
                 ) as unknown as AsyncOperationClient;
             }
-            return this.operations;
+            return self.operations;
         });
     }
 }

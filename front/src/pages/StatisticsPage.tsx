@@ -20,6 +20,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { BalanceHeader } from "@/components/blocks/BalanceHeader"
 import { Tile } from "@/components/ui/ds/tile"
 import { useLlmUsageByOrder, useLlmUsageRecent } from "@/lib/queries/llm-usage.query"
 import "@/design/statistics.css"
@@ -255,9 +256,12 @@ export default function StatisticsPage() {
   return (
     <Grid as="main" fullWidth withRowGap>
       <Column span={16}>
-        <Text.Heading as="h1" variant="02">
-          Статистика расхода токенов
-        </Text.Heading>
+        <div className="statistics-heading-row">
+          <Text.Heading as="h1" variant="02">
+            Статистика расхода токенов
+          </Text.Heading>
+          <BalanceHeader />
+        </div>
       </Column>
 
       {/* ── График total по последним завершённым запросам (старые слева, новые справа) ── */}

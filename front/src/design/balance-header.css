@@ -1,0 +1,34 @@
+/* Шапка страниц статистики: баланс биллинг-аккаунта Yandex Cloud. */
+
+/* Ряд заголовка страницы: title слева, баланс справа. */
+.statistics-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.balance-header {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--card-foreground);
+}
+
+.balance-header__label {
+  color: var(--muted-foreground);
+}
+
+.balance-header__value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Нулевой/отрицательный баланс подсвечиваем — деньги на исходе. */
+.balance-header__value--low {
+  color: var(--destructive, #ef4444);
+}

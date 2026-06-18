@@ -1,6 +1,7 @@
 import { Column, Grid, Text } from "@miracle/aramid"
 import { Link, useSearch } from "@tanstack/react-router"
 import { useMemo } from "react"
+import { BalanceHeader } from "@/components/blocks/BalanceHeader"
 import { useLlmUsageByOrder } from "@/lib/queries/llm-usage.query"
 import { OrderUsageCard } from "./StatisticsPage"
 
@@ -21,9 +22,12 @@ export default function OrderStatisticsPage() {
   return (
     <Grid as="main" fullWidth withRowGap>
       <Column span={16}>
-        <Text.Heading as="h1" variant="02">
-          Статистика заказа
-        </Text.Heading>
+        <div className="statistics-heading-row">
+          <Text.Heading as="h1" variant="02">
+            Статистика заказа
+          </Text.Heading>
+          <BalanceHeader />
+        </div>
       </Column>
 
       <Column span={16}>

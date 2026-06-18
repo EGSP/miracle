@@ -59,12 +59,31 @@ export class AppConfigService {
         return dir ? path.resolve(dir) : path.resolve(process.cwd(), 'uploads');
     }
 
-    get yandexApiKey(): string | undefined {
-        return this.config.get('YANDEX_CLOUD_API_KEY', { infer: true });
+    /** Идентификатор авторизованного ключа сервис-аккаунта (поле `id`, идёт в `kid` JWT). */
+    get yandexIamKeyId(): string | undefined {
+        return this.config.get('YANDEX_CLOUD_IAM_ID', { infer: true });
+    }
+
+    /** Идентификатор сервис-аккаунта (поле `service_account_id`, идёт в `iss` JWT). */
+    get yandexServiceAccountId(): string | undefined {
+        return this.config.get('YANDEX_CLOUD_IAM_SERVICE_ID', { infer: true });
+    }
+
+    /**
+     * Приватный ключ сервис-аккаунта (PEM PKCS8, поле `private_key`). В `.env` переносы строк обычно
+     * экранированы как `\n` в одну строку — нормализацию в реальные переносы делает {@link YandexAuthService}.
+     */
+    get yandexPrivateKey(): string | undefined {
+        return this.config.get('YANDEX_CLOUD_IAM_PRIVATE_KEY', { infer: true });
     }
 
     get yandexFolderId(): string | undefined {
         return this.config.get('YANDEX_CLOUD_FOLDER_ID', { infer: true });
+    }
+
+    /** ID биллинг-аккаунта Yandex Cloud для виджета баланса (опционально). */
+    get yandexBillingAccountId(): string | undefined {
+        return this.config.get('YANDEX_CLOUD_BILLING_ACCOUNT_ID', { infer: true });
     }
 
     /** Базовый URL REST-сервиса Kreuzberg. */

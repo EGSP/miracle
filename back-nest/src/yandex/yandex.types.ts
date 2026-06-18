@@ -16,7 +16,11 @@ export const YANDEX_MODELS = {
     vision: 'qwen3.6-35b-a3b/latest',
 } as const;
 
-export type YandexConfig = { apiKey: string; folderId: string };
+/**
+ * Конфигурация, не относящаяся к аутентификации. Учётные данные сервис-аккаунта живут отдельно в
+ * {@link YandexAuthService}; здесь — только `folderId`, нужный для построения `gpt://`-URI модели.
+ */
+export type YandexConfig = { folderId: string };
 
 export type YandexJsonSchemaFormat = {
     readonly name: string;
@@ -74,7 +78,19 @@ export class YandexResponseError extends Data.TaggedError('YandexResponseError')
     readonly response?: Response;
 }> {}
 
-export type YandexError = YandexConfigError | YandexTransportError | YandexResponseError;
+/**
+ * Сбой получения IAM-токена для OpenAI-совместимого пути: подпись JWT или обмен на эндпоинте
+ * `iam/v1/tokens`. Нативные gRPC-клиенты сюда не попадают — там токеном управляет SDK-сессия.
+ */
+export class YandexAuthError extends Data.TaggedError('YandexAuthError')<{
+    readonly cause: unknown;
+}> {
+    override get message(): string {
+        return `Yandex IAM auth: ${formatUnknown(this.cause)}`;
+    }
+}
+
+export type YandexError = YandexConfigError | YandexTransportError | YandexResponseError | YandexAuthError;
 
 export const YandexInput = {
     text: (text: string): ResponseInputText => ({ type: 'input_text', text }),
@@ -184,16 +200,18 @@ export interface YandexTransport {
     retrieve(rawId: string): Effect.Effect<YandexResponsePollResult, YandexError>;
 }
 
-/** Читает и валидирует конфигурацию Yandex Cloud из окружения. */
+/**
+ * Читает и валидирует не-аутентификационную конфигурацию Yandex Cloud (`folderId`) из окружения.
+ * Учётные данные сервис-аккаунта валидирует отдельно {@link YandexAuthService}.
+ */
 export const readYandexConfig = (appConfig: AppConfigService): Effect.Effect<YandexConfig, YandexConfigError> => {
-    const apiKey = appConfig.yandexApiKey;
     const folderId = appConfig.yandexFolderId;
-    if (!apiKey || !folderId) {
+    if (!folderId) {
         return Effect.fail(
             new YandexConfigError({
-                message: 'Yandex Cloud не сконфигурирован: задайте YANDEX_CLOUD_API_KEY и YANDEX_CLOUD_FOLDER_ID',
+                message: 'Yandex Cloud не сконфигурирован: задайте YANDEX_CLOUD_FOLDER_ID',
             }),
         );
     }
-    return Effect.succeed({ apiKey, folderId });
+    return Effect.succeed({ folderId });
 };

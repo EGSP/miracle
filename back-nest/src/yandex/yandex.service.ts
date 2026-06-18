@@ -3,6 +3,7 @@ import { Duration, Effect, Exit, RateLimiter, Scope } from 'effect';
 import { AppConfigService } from '../config/app-config.service.js';
 import { currentTokensUsage } from '../common/tokens-usage.js';
 import { LLM_USAGE_SINK, NoopLlmUsageSink, type LlmUsageSink } from './llm-usage.sink.js';
+import { YandexAuthService } from './yandex-auth.service.js';
 import { YandexOpenAiTransport } from './yandex-openai.transport.js';
 import { YandexSdkTransport } from './yandex-sdk.transport.js';
 import {
@@ -75,10 +76,11 @@ export class YandexService implements OnModuleInit, OnModuleDestroy {
 
     constructor(
         private readonly appConfig: AppConfigService,
+        auth: YandexAuthService,
         @Optional() @Inject(LLM_USAGE_SINK) usageSink?: LlmUsageSink,
     ) {
-        this.openaiTransport = new YandexOpenAiTransport(appConfig);
-        this.sdkTransport = new YandexSdkTransport(appConfig);
+        this.openaiTransport = new YandexOpenAiTransport(auth, appConfig);
+        this.sdkTransport = new YandexSdkTransport(auth, appConfig);
         this.usageSink = usageSink ?? new NoopLlmUsageSink();
     }
 

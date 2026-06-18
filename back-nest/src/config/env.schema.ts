@@ -16,11 +16,22 @@ export const envSchema = z.object({
     // Директория для загружаемых файлов. По умолчанию — <cwd>/uploads.
     UPLOADS_DIR: z.string().optional(),
     /**
-     * Yandex Cloud — опциональны на старте: приложение поднимается без них, но Job, использующие
-     * Yandex (OCR/LLM/Vision), упадут с понятной ошибкой при первом обращении (см. YandexService).
+     * Yandex Cloud — авторизованный ключ сервис-аккаунта (IAM). Опциональны на старте: приложение
+     * поднимается без них, но Job/биллинг, использующие Yandex, упадут с понятной ошибкой при первом
+     * обращении (см. YandexAuthService). Поля соответствуют скачанному `authorized_key.json`:
+     *   YANDEX_CLOUD_IAM_ID         ← `id`                 (идентификатор ключа, kid в JWT)
+     *   YANDEX_CLOUD_IAM_SERVICE_ID ← `service_account_id` (идентификатор сервис-аккаунта, iss в JWT)
+     *   YANDEX_CLOUD_IAM_PRIVATE_KEY← `private_key`        (PEM PKCS8; `\n` экранируются в одну строку)
      */
-    YANDEX_CLOUD_API_KEY: z.string().optional(),
+    YANDEX_CLOUD_IAM_ID: z.string().optional(),
+    YANDEX_CLOUD_IAM_SERVICE_ID: z.string().optional(),
+    YANDEX_CLOUD_IAM_PRIVATE_KEY: z.string().optional(),
     YANDEX_CLOUD_FOLDER_ID: z.string().optional(),
+    /**
+     * ID биллинг-аккаунта Yandex Cloud для виджета баланса. Опционален: если не задан,
+     * {@link YandexBillingService} берёт первый доступный аккаунт через `BillingAccountService.List`.
+     */
+    YANDEX_CLOUD_BILLING_ACCOUNT_ID: z.string().optional(),
     /** Базовый URL REST-сервиса Kreuzberg (Docker). */
     KREUZBERG_URL: z.string().url().default('http://localhost:8000'),
     /** Базовый URL сервиса конвертации legacy .doc → .docx (Docker, LibreOffice unoserver REST). */
