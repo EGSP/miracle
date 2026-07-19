@@ -21,7 +21,8 @@ export const envSchema = z.object({
      * обращении (см. YandexAuthService). Поля соответствуют скачанному `authorized_key.json`:
      *   YANDEX_CLOUD_IAM_ID         ← `id`                 (идентификатор ключа, kid в JWT)
      *   YANDEX_CLOUD_IAM_SERVICE_ID ← `service_account_id` (идентификатор сервис-аккаунта, iss в JWT)
-     *   YANDEX_CLOUD_IAM_PRIVATE_KEY← `private_key`        (PEM PKCS8; `\n` экранируются в одну строку)
+     *   YANDEX_CLOUD_IAM_PRIVATE_KEY← `private_key`        (PEM PKCS8; `\n` в одну строку;
+     *                                                      преамбула Yandex SA Key ID допустима)
      */
     YANDEX_CLOUD_IAM_ID: z.string().optional(),
     YANDEX_CLOUD_IAM_SERVICE_ID: z.string().optional(),

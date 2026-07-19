@@ -70,8 +70,9 @@ export class AppConfigService {
     }
 
     /**
-     * Приватный ключ сервис-аккаунта (PEM PKCS8, поле `private_key`). В `.env` переносы строк обычно
-     * экранированы как `\n` в одну строку — нормализацию в реальные переносы делает {@link YandexAuthService}.
+     * Приватный ключ сервис-аккаунта (поле `private_key`). В `.env` переносы обычно экранированы
+     * как `\n`; преамбулу `PLEASE DO NOT REMOVE THIS LINE! …` можно оставлять — для jose её срезает
+     * {@link YandexAuthService}, исходное значение отдаёт {@link YandexAuthService.getRawPrivateKey}.
      */
     get yandexPrivateKey(): string | undefined {
         return this.config.get('YANDEX_CLOUD_IAM_PRIVATE_KEY', { infer: true });

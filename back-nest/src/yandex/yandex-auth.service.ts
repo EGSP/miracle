@@ -20,15 +20,44 @@ const TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
 /** Фолбэк-TTL кеша токена, если ответ IAM не содержит `expiresAt`. */
 const DEFAULT_TOKEN_TTL_MS = 50 * 60 * 1000;
 
-/** Учётные данные авторизованного ключа сервис-аккаунта (после нормализации PEM). */
+/**
+ * Маркер PKCS#8 PEM. В `private_key` из authorized_key.json Yandex часто ставит перед ним
+ * строку `PLEASE DO NOT REMOVE THIS LINE! Yandex.Cloud SA Key ID <...>`; jose её не принимает.
+ */
+const PKCS8_PEM_RE =
+    /-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/;
+
+/** Учётные данные авторизованного ключа сервис-аккаунта (после нормализации переносов). */
 type ServiceAccountCredentials = {
     /** Идентификатор ключа (`id` из authorized_key.json) → `kid` JWT и `accessKeyId` для SDK. */
     readonly keyId: string;
     /** Идентификатор сервис-аккаунта (`service_account_id`) → `iss` JWT. */
     readonly serviceAccountId: string;
-    /** Приватный ключ PEM PKCS8 с реальными переносами строк. */
+    /**
+     * Исходный `private_key` с реальными переносами (включая комментарий Yandex SA Key ID).
+     * Для Session/SDK — как есть; для jose — через {@link extractPkcs8Pem}.
+     */
     readonly privateKey: string;
 };
+
+/** Экранированные `\n` из `.env` → реальные переносы; сам PEM не трогаем. */
+function unescapePemNewlines(raw: string): string {
+    return raw.replace(/\\n/g, '\n');
+}
+
+/**
+ * Вырезает блок `BEGIN/END PRIVATE KEY` для jose.importPKCS8: отбрасывает преамбулу
+ * `PLEASE DO NOT REMOVE THIS LINE! …`, которую Yandex кладёт в authorized_key.json.
+ */
+function extractPkcs8Pem(privateKey: string): string {
+    const match = PKCS8_PEM_RE.exec(privateKey);
+    if (!match) {
+        throw new Error(
+            'YANDEX_CLOUD_IAM_PRIVATE_KEY: нет блока -----BEGIN PRIVATE KEY----- … -----END PRIVATE KEY-----',
+        );
+    }
+    return match[0];
+}
 
 /** Закешированный IAM-токен и момент, после которого его пора перевыпускать. */
 type CachedToken = { readonly token: string; readonly expiresAtMs: number };
@@ -102,6 +131,18 @@ export class YandexAuthService {
     }
 
     /**
+     * Исходный `private_key` из окружения: `\n` уже развёрнуты, комментарий Yandex SA Key ID
+     * сохранён. Нужен там, где формат authorized_key ожидается целиком (SDK Session и т.п.).
+     */
+    getRawPrivateKey(): Effect.Effect<string, YandexConfigError> {
+        const self = this;
+        return Effect.gen(function* () {
+            const creds = yield* self.credentials();
+            return creds.privateKey;
+        });
+    }
+
+    /**
      * Возвращает валидный токен из кеша или запускает обмен. Параллельные промахи разделяют один
      * in-flight запрос, чтобы не плодить лишние обмены (на корректность не влияет — токены аддитивны).
      */
@@ -123,7 +164,7 @@ export class YandexAuthService {
      * {@link IAM_TOKENS_URL}. Это тот же документированный поток, что выполняет `yc iam create-token`.
      */
     private async requestIamToken(creds: ServiceAccountCredentials): Promise<CachedToken> {
-        const key = await importPKCS8(creds.privateKey, JWT_ALG);
+        const key = await importPKCS8(extractPkcs8Pem(creds.privateKey), JWT_ALG);
         const jwt = await new SignJWT({})
             .setProtectedHeader({ alg: JWT_ALG, kid: creds.keyId, typ: 'JWT' })
             .setIssuer(creds.serviceAccountId)
@@ -153,8 +194,9 @@ export class YandexAuthService {
     }
 
     /**
-     * Читает учётные данные сервис-аккаунта из окружения и нормализует PEM (экранированные `\n` →
-     * реальные переносы). Падает с {@link YandexConfigError}, если ключ не сконфигурирован полностью.
+     * Читает учётные данные сервис-аккаунта из окружения и разворачивает экранированные `\n`.
+     * Преамбулу Yandex не срезает — это делает {@link extractPkcs8Pem} только на пути jose.
+     * Падает с {@link YandexConfigError}, если ключ не сконфигурирован полностью.
      */
     private credentials(): Effect.Effect<ServiceAccountCredentials, YandexConfigError> {
         const self = this;
@@ -169,7 +211,11 @@ export class YandexAuthService {
                         'YANDEX_CLOUD_IAM_SERVICE_ID и YANDEX_CLOUD_IAM_PRIVATE_KEY',
                 });
             }
-            return { keyId, serviceAccountId, privateKey: rawKey.replace(/\\n/g, '\n') };
+            return {
+                keyId,
+                serviceAccountId,
+                privateKey: unescapePemNewlines(rawKey),
+            };
         });
     }
 }
